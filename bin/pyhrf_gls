@@ -1,0 +1,157 @@
+#! /usr/bin/python
+
+import os, sys
+import os.path as op
+import pyhrf
+from pyhrf.verbose import dictToString
+
+from optparse import OptionParser
+from collections import OrderedDict
+from pyhrf.tools import set_leaf
+
+minArgs = 1
+maxArgs = 1
+
+usage = 'usage: %prog [options] PATH'
+description = 'List files in PATH and group file sequences, eg:\n'\
+  '"file_001.txt, file_002.txt, file_003.txt"\n'\
+  'will be grouped as:\n' \
+  'file_[1...3].txt'
+
+parser = OptionParser(usage=usage,description=description)
+
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+parser.add_option('-g','--group-rule',dest='group_rules',metavar='REGEXP',
+                  default=[],
+                  action='append', help='Regular expression to group specific '\
+                  'file names. Must contain a symbolic group name' \
+                  ' labeled as "group_name".')
+
+parser.add_option('-r','--recursive', action='store_true', default=False,
+                  help='List subdirectories recursively')
+
+parser.add_option('-t','--tree', action='store_true', default=False,
+                  help='Display in tree-like format')
+
+parser.add_option('-c','--colors', type='choice', default='on',
+                  choices=['on','off','always'],
+                  help='If "on", display colors (using ANSI escape sequences)'\
+                    ' only on TTY. If "always", display colors even if not '\
+                    'on TTY. If "off", no colors. Default is "%default"')
+
+
+(options,args) = parser.parse_args()
+pyhrf.verbose.setVerbosity(options.verbose)
+
+nba = len(args)
+if  nba<minArgs or (maxArgs>=0 and nba>maxArgs):
+    parser.print_help()
+    sys.exit(1)
+
+path = args[0]
+
+from pyhrf.tools import colorizer, group_file_series, extract_file_series
+import re
+
+if options.colors == 'always':
+    colorizer.no_tty_check()
+    colorizer.enable()
+elif options.colors == 'on':
+    colorizer.tty_check()
+    colorizer.enable()
+elif options.colors == 'off':
+    colorizer.disable()
+
+
+def gls(startpath, fmt='tree', recursive=False, group_rules=None):
+    group_rules = [re.compile(gr) for gr in group_rules]
+    tree = OrderedDict()
+    for root, dirs, files in os.walk(startpath):
+        #print 'root:',root
+        #root = root.rstrip('/')
+        if root == startpath:
+            branches = [startpath]
+        else:
+            branches = [startpath] + op.relpath(root, startpath).split('/')
+        #print '-> branches:', branches
+        grouped_files = group_file_series(extract_file_series(files),
+                                          group_rules)
+        set_leaf(tree, branches,
+                 OrderedDict([(d,{}) for d in sorted(dirs)]+ \
+                             [(f,None) for f in grouped_files]))
+        if 0:
+            print 'after appending files & dirs:'
+            print tree
+
+    if 0:
+        print 'final tree:'
+        print tree
+        print ''
+
+    if recursive:
+        maxlevel = -1
+    else:
+        maxlevel = 2
+
+    #TODO: tree_to_string(tree, fmt=[tree|list])
+    if fmt == 'tree':
+        tree_after_root = tree.pop(startpath)
+        print startpath
+
+        print_file_tree_as_tree(tree_after_root, maxlevel=maxlevel-1)
+    elif fmt == 'list':
+        print_file_tree_as_list(tree, maxlevel=maxlevel)
+
+def print_file_tree_as_tree(t, prefix='', maxlevel=-1):
+
+    if maxlevel!=-1 and maxlevel==0:
+        return
+
+    items = t.items()
+    nitems = len(items)
+    for i,(k,v) in enumerate(items):
+        if v is not None:
+            k = colorizer(k, 'blue', bright=True)
+        if i != nitems-1: #there are remaining siblings
+            print prefix + '\xe2\x94\x9c\xe2\x94\x80 ' + k
+            prefix_addition = '\xe2\x94\x82  '
+        else: #no more siblings
+            print prefix + '\xe2\x94\x94\xe2\x94\x80 ' + k
+            prefix_addition = '   '
+        if isinstance(v, OrderedDict):
+            print_file_tree_as_tree(v, prefix + prefix_addition +  \
+                           ' '*(2-len(prefix_addition)), maxlevel=maxlevel-1)
+
+def print_file_tree_as_list(t, root='', maxlevel=-1):
+    if maxlevel!=-1 and maxlevel==0:
+        return
+
+    if len(t) == 0:
+        print '<empty directory>\n'
+
+    count = 0
+    for k,v in t.iteritems():
+        if v is None:
+            print k
+            count += 1
+
+    if count > 0:
+        print ''
+
+    for k,v in t.iteritems():
+        if v is not None:
+            print colorizer(op.join(root,k), 'blue', bright=True) + \
+              ['',':'][maxlevel>1 or maxlevel<=-1]
+            print_file_tree_as_list(v, op.join(root,k), maxlevel=maxlevel-1)
+
+fmt = 'list'
+if options.tree:
+    fmt = 'tree'
+
+
+gls(path, fmt=fmt, recursive=options.recursive, group_rules=options.group_rules)
+

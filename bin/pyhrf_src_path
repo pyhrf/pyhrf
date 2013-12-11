@@ -1,0 +1,24 @@
+#! /bin/env python
+import os, sys, string
+from optparse import OptionParser
+
+def get_pyhrf_src_path():
+    import pyhrf
+    return os.path.join(os.path.dirname(pyhrf.__file__),'../../')
+
+def get_pyhrf_gpl_src_path():
+    import ndview
+    return os.path.join(os.path.dirname(ndview.__file__),'../../')
+
+parser = OptionParser()
+
+parser.add_option('-g','--gpl-tools', dest='gpl', default=False, 
+                  metavar='BOOL', action='store_true',
+                  help='get source path of pyhrf-gpl ')
+
+(options,args) = parser.parse_args()
+
+if options.gpl:
+    print get_pyhrf_gpl_src_path()
+else:
+    print get_pyhrf_src_path()

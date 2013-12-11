@@ -1,0 +1,9 @@
+#! /usr/bin/python
+# -*- coding: utf-8 -*-
+from pyhrf.ui.treatment import run_pyhrf_cmd_treatment
+from pyhrf.ui.jde import DEFAULT_CFG_FILE
+
+PROFILE_FILE = 'detectestim.prf'
+
+run_pyhrf_cmd_treatment('pyhrf_glm_buildcfg', 'pyhrf_glm_estim',
+                        'glm.xml', 'glm.prf','GLM')

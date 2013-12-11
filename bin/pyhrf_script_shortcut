@@ -1,0 +1,90 @@
+#!/usr/bin/python
+import os.path as op
+import os
+import stat
+import sys
+import pyhrf
+from optparse import OptionParser
+from pyhrf.verbose import dictToString
+from pyhrf import get_src_path
+import fnmatch
+
+
+
+usage = 'usage: %%prog [options] SCRIPT_SHORTCUT.PY'
+description = 'Create a python script invoking a pyhrf script located in the '\
+  'pyhrf source path'
+
+parser = OptionParser(usage=usage, description=description)
+
+minArgs = 1
+maxArgs = 1
+
+parser.add_option('-f','--script-file', dest='script_file',
+                  metavar='PYHRF_SCRIPT_FILE', default='',
+                  help='Script path. If it does not exist then attempt'\
+                      'to search for it within the script of pyhrf')
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+parser.add_option('-s','--shell',metavar='VERBOSELEVEL',
+                  action="store_true",
+                  help="Make a shell script rather than a python script")
+
+
+(options,args) = parser.parse_args()
+
+pyhrf.verbose.setVerbosity(options.verbose)
+
+nba = len(args)
+
+if  nba<minArgs or (maxArgs>=0 and nba>maxArgs):
+    parser.print_help()
+    sys.exit(1)
+
+def make_script(script_fn, pyhrf_script=''):
+    script_path = op.join(get_src_path(),'script')
+    if pyhrf_script != '':
+        if op.exists(pyhrf_script):
+            if op.commonprefix([script_path, op.dirname(pyhrf_script)]) != \
+                script_path:
+                raise Exception('Script %s exists but is not in pyhrf '\
+                                    'script path' %(pyhrf_script))
+            pyhrf_script = op.relpath(pyhrf_script, script_path)
+        else:
+            pyhrf.verbose(2, 'Input script "%s" does not exist. '\
+                              'Search it...' %pyhrf_script)
+            matches = []
+            for root, dirnames, filenames in os.walk(script_path):
+                for filename in fnmatch.filter(filenames, pyhrf_script):
+                    matches.append(os.path.join(root, filename))
+
+            if len(matches) == 1:
+                pyhrf_script = op.relpath(matches[0], script_path)
+            elif len(matches) > 1:
+                print 'Multiple scripts found for %s:' %(pyhrf_script)
+                print '\n'.join(matches)
+                sys.exit(1)
+            else:
+                print 'Script "%s" not found' %(pyhrf_script)
+                sys.exit(1)
+
+    pyhrf.verbose(1, 'Linked pyhrf script: %s' %pyhrf_script)
+    if options.shell:
+            content = 'python `pyhrf_src_path`/script/%s\n' %pyhrf_script
+    else:
+        content = '#! /usr/bin/python\n'
+        content += 'import pyhrf, os\n'\
+          'execfile(os.path.join(pyhrf.get_src_path(),' \
+          '"script/%s"))\n' %pyhrf_script
+    pyhrf.verbose(2, 'Shortcut content:\n%s' %content)
+    fout = open(script_fn, 'w')
+    fout.write(content)
+    fout.close()
+
+    os.chmod(script_fn, stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
+
+out_script_fn = args[0]
+make_script(out_script_fn, options.script_file)

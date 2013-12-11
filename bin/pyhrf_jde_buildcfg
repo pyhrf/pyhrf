@@ -1,0 +1,116 @@
+#! /bin/env python
+# -*- coding: utf-8 -*-
+import os, sys, string
+from optparse import OptionParser
+
+import pyhrf
+from pyhrf import xmlio, FMRISessionVolumicData, FMRISessionSurfacicData, \
+    FMRISessionSimulationData
+from pyhrf.verbose import dictToString
+from pyhrf import DEFAULT_MASK_SMALL_VOL_FILE, \
+    REALISTIC_REAL_DATA_MASK_VOL_FILE, REALISTIC_REAL_DATA_BOLD_VOL_FILE, \
+    DEFAULT_ONSETS, DEFAULT_STIM_DURATIONS
+from pyhrf.jde.models import availableModels, defaultModel
+from pyhrf.ui.jde import JDEMCMCAnalyser, DEFAULT_CFG_FILE
+from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
+from pyhrf.ui.treatment import *
+from pyhrf.paradigm import *
+import pyhrf.jde.asl
+
+usage = 'usage: %%prog [options]'
+
+description = 'Manage parametrization of a joint detection-estimation'\
+              'treatment of fMRI data: build a template parameter file in ' \
+              'xml format.'
+if pyhrf.__usemode__ == pyhrf.DEVEL:
+    description += 'Several models are available, see --help.'
+
+parser = OptionParser(usage=usage, description=description)
+
+modelChoice = []
+helpOnModels= ['Available models::']
+for modelLabel, modelDef in availableModels.items():
+    modelChoice.append(modelLabel)
+    helpOnModels.append(modelLabel+': '+modelDef['doc'])
+helpOnModels.append('  ~default~: '+defaultModel)
+helpOnModels = string.join(helpOnModels, '  *')
+
+parser.add_option('-l','--model', type='choice', choices=modelChoice,
+                  metavar='STRING',
+                  default=defaultModel, help=helpOnModels)
+
+parser.add_option('-o','--output-cfg-file', metavar='XMLFILE', dest='cfgFile',
+                  default=DEFAULT_CFG_FILE,
+                  help='XML file to store parameters')
+
+parser.add_option('-n','--nb-iteration', dest='nbIterations', default=None,
+                  metavar='INT', type='int',
+                  help='Set up the number of iterations')
+
+append_common_treatment_options(parser) #de treatment.py
+
+parser.add_option('-e','--vem',dest='variational_bayes',metavar='BOOL',
+                  default=False, action='store_true',
+                  help='Enable Variational EM approach')
+
+parser.add_option('-j','--jpde',dest='jpde',metavar='BOOL',
+                  default=False, action='store_true',
+                  help='Enable joint parcellation estimation (Variational EM approach)')
+
+
+parser.add_option('-C','--contrasts', dest='contrasts', metavar='BOOL',
+                  default=False, action='store_true',
+                  help='Include default contrasts')
+
+parser.add_option('-u','--output-result-directory', dest='OuputDirectory',
+                  default=None, help='Outputs results directory')
+
+(options,args) = parser.parse_args()
+pyhrf.verbose.setVerbosity(options.verbose)
+
+if options.contrasts:
+    contrasts = eval('pyhrf.paradigm.default_contrasts_%s' %options.paradigm)
+else:
+    contrasts = {'dummy_contrast_example' : '3*audio - video/3'}
+
+
+if options.jpde:
+    options.variational_bayes = True
+# Treat result of option parsing:
+if not options.variational_bayes:
+    if pyhrf.__usemode__ == pyhrf.DEVEL:
+        currentModel = availableModels[options.model]['class']
+    else:
+        currentModel = availableModels[defaultModel]['class']
+    pyhrf.verbose(6,'Instanciating analyser ...')
+    analyser = JDEMCMCAnalyser( sampler=currentModel() )
+
+    if options.nbIterations is not None:
+        s = analyser.sampler
+        s.parameters[s.P_NB_ITERATIONS] = options.nbIterations
+    try:
+        analyser.sampler.getVariable('nrl').parameters['contrasts'] = contrasts
+        #print 'Contrasts not set!'
+    except:
+        pass
+else:
+    if options.nbIterations is not None:
+        analyser = JDEVEMAnalyser(nItMax=options.nbIterations,
+                                  contrasts=contrasts, jpde=options.jpde)
+    else:
+        analyser = JDEVEMAnalyser(contrasts=contrasts, jpde=options.jpde)
+
+
+#print 'options:', options
+fdata = parse_data_options(options) #de treatment.py
+
+if options.OuputDirectory is not None:
+    treatment = FMRITreatment(analyser=analyser, fmri_data=fdata, output_dir=options.OuputDirectory)
+else:
+    treatment = FMRITreatment(analyser=analyser, fmri_data=fdata)
+
+sXml = xmlio.toXML(treatment, handler=NumpyXMLHandler(),
+                   objName='fMRI_treatment')
+fOut = open(options.cfgFile,'w')
+fOut.write(sXml)
+fOut.close()

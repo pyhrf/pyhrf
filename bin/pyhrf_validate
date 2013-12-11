@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+import unittest
+from optparse import OptionParser
+import matplotlib
+
+import pyhrf
+from pyhrf.validation import *
+from pyhrf.verbose import dictToString
+
+from pyhrf.validation import config
+
+usage = 'usage: %prog [options]'
+
+description = 'Numerical validation of implemented methods in PyHRF.\n' \
+    'Processes launched by this command are not only code validation but also '\
+    'assert method consistency and rightness. Therefore, tey are likely to '\
+    'take some time to execute. For quick code validation see pyhrf_maketests.'
+
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='INTEGER',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+parser.add_option('-p','--plots',dest='savePlots', action='store_true',
+                  default=False,
+                  help='Enable plot saving. See -d option to define '\
+                      'target path' )
+
+parser.add_option('-d','--plot-dir',dest='saveDir', metavar='PATH', 
+                  default='./',
+                  help='Define path where to save plots. Default: %default')
+
+parser.add_option('-e','--plot-ext',dest='plotExt', metavar='STRING', 
+                  default='png',
+                  help='Figure file extension. Default: %default')
+
+parser.add_option('-x','--clean-cache',dest='cleanCache', 
+                  default=False, action='store_true',
+                  help='Clean cache before launching validation tests')
+
+parser.add_option('-u','--update-cache',dest='updateCache', 
+                  default=False, action='store_true',
+                  help='Update cache for validation tests')
+
+
+parser.add_option('-c','--cache-dir', dest='cacheDir', metavar='PATH', 
+                  default=config.cacheDir,
+                  help='Path where to save cache files. Default: %default')
+
+
+(options,args) = parser.parse_args()
+
+pyhrf.verbose.setVerbosity(options.verbose)
+
+minArgs = 0
+maxArgs = -1
+nba = len(args) 
+if  nba<minArgs or (maxArgs>0 and nba>maxArgs):
+    parser.print_help()
+    sys.exit(1)
+
+config.savePlots = options.savePlots
+config.plotSaveDir = options.saveDir
+config.figext = options.plotExt
+
+if config.figext == 'svg':
+    matplotlib.use('SVG')
+
+config.cacheDir = options.cacheDir
+config.updateCache = options.updateCache
+if options.cleanCache:
+    config.clean_cache()
+
+if options.verbose > 0:
+    args = [sys.argv[0]] + ['-v'] + args
+else:
+    args = [sys.argv[0]] + args
+unittest.main(argv=args)

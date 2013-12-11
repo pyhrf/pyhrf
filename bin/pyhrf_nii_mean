@@ -1,0 +1,48 @@
+#! /usr/bin/env python
+import os, sys, string
+import os.path as op
+from optparse import OptionParser
+import numpy as np
+import pyhrf
+from pyhrf.verbose import dictToString
+from pyhrf.tools.io import read_volume, write_volume
+from pyhrf.tools import add_suffix
+from pyhrf.ndarray import xndarray
+
+usage = 'usage: %%prog [options] VOL_FILE AXIS'
+description = 'Compute the volume mean along a given axis'
+
+parser = OptionParser(usage=usage, description=description)
+
+minArgs = 2
+maxArgs = 2
+
+parser.add_option('-o','--output', dest='output', default=None,
+                  help='Output file name.' \
+                      'Default is: <input filename>_mean_<axis>.png')
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+
+(options,args) = parser.parse_args()
+
+pyhrf.verbose.setVerbosity(options.verbose)
+
+nba = len(args) 
+
+if  nba<minArgs or (maxArgs>=0 and nba>maxArgs):
+    parser.print_help()
+    sys.exit(1)
+
+vol_fn, axis = args
+
+cfunc = xndarray.load(vol_fn)
+
+cfunc = cfunc.mean(axis)
+
+if options.output is None:
+    options.output = add_suffix(vol_fn, '_mean_%s' %axis)
+
+cfunc.save(options.output)

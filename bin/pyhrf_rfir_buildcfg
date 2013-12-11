@@ -1,0 +1,66 @@
+#! /bin/env python
+# -*- coding: utf-8 -*-
+import os, sys, string
+from optparse import OptionParser
+
+from pyhrf import xmlio
+from pyhrf.verbose import dictToString
+#from pyhrf.analyse.jdetectestim.models import availableModels, defaultModel
+
+from pyhrf.ui.treatment import *
+from pyhrf.ui.rfir_ui import RFIRAnalyser, DEFAULT_CFG_FILE
+
+from pyhrf.paradigm import *
+from pyhrf.tools.io.spmio import load_paradigm_from_mat
+
+from pyhrf import xmlio
+from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
+
+from pyhrf.core import FmriData
+
+usage = 'usage: %%prog [options]'
+
+description = 'Point by point HRF estimation using a regularized FIR '\
+    'approach'
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-o','--output-cfg-file', metavar='XMLFILE', 
+                  dest='cfgFile',
+                  default=DEFAULT_CFG_FILE,
+                  help='XML file to store parameters in')
+
+parser.add_option('-n','--nb-iteration', dest='nbIterations', default=None, 
+                  metavar='INT', type='int', 
+                  help='Set up the maximum number of iterations')
+
+parser.add_option('-u','--output-result-directory', dest='OuputDirectory',
+default=None, help='Outputs results directory')
+
+append_common_treatment_options(parser)
+
+(options,args) = parser.parse_args()
+
+pyhrf.verbose.setVerbosity(options.verbose)
+
+
+analyser = RFIRAnalyser()
+if options.nbIterations is not None:
+    from pyhrf.ui.rfir_ui import RFIREstim
+    he = RFIREstim({'nbIterations':options.nbIterations})
+    analyser = RFIRAnalyser(HrfEstimator=he)
+
+fdata = parse_data_options(options)
+
+if options.OuputDirectory is not None:
+    treatment = FMRITreatment(analyser=analyser, fmri_data=fdata, output_dir=options.OuputDirectory)
+else:
+        treatment = FMRITreatment(analyser=analyser, fmri_data=fdata)
+
+#print ''
+#print 'treatment created !'
+
+sXml = xmlio.toXML(treatment, handler=NumpyXMLHandler())
+fOut = open(options.cfgFile,'w')
+fOut.write(sXml)
+fOut.close()

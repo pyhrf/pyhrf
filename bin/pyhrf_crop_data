@@ -1,0 +1,49 @@
+#! /usr/bin/env python
+import os, sys, string
+import os.path as op
+from optparse import OptionParser
+import pyhrf
+from pyhrf.verbose import dictToString
+from pyhrf.tools.io import crop_data_file
+from pyhrf.tools import add_suffix
+
+usage = 'usage: %%prog [options] MASK DATA_FILE'
+description = 'Create a new data file where all position outside the mask are 0.'
+
+parser = OptionParser(usage=usage, description=description)
+
+minArgs = 2
+maxArgs = 2
+
+
+parser.add_option('-o','--output', dest='outFile', default=None,
+                  help='Output file for the cropped data file, default appends'\
+                  '"_cropped" to the input file name.')
+
+parser.add_option('-m','--crop-mask', dest='crop_mask', default=False,
+                  action='store_true',
+                  help='Also crop the input mask')
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+
+(options,args) = parser.parse_args()
+
+pyhrf.verbose.setVerbosity(options.verbose)
+
+nba = len(args)
+if  nba<minArgs or (maxArgs>=0 and nba>maxArgs):
+    parser.print_help()
+    sys.exit(1)
+
+mask_fn, data_fn = args
+
+if options.outFile is None:
+    options.outFile = add_suffix(data_fn, '_cropped')
+
+crop_data_file(data_fn, mask_fn, options.outFile)
+
+if options.crop_mask:
+    crop_data_file(mask_fn, mask_fn, add_suffix(mask_fn, '_cropped'))

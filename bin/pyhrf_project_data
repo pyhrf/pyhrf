@@ -1,0 +1,58 @@
+#! /bin/env python
+# -*- coding: utf-8 -*-
+import os, sys
+import os.path as op
+import numpy as np
+from optparse import OptionParser
+
+import pyhrf
+from pyhrf.verbose import dictToString
+from pyhrf.ndarray import xndarray
+from pyhrf.tools import add_suffix
+
+usage = 'usage: %%prog [options] MESH_FILE VOL_DATA_FILE'
+
+description = 'Project volumic data (3D or 3D+time) onto a cortical mesh. '\
+            'Produce a gitfi texture file. This command is roughly a wrapper '\
+            'of the command AimsFunctionProjection.'
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+parser.add_option('-o','--output',metavar='TEXTURE_FILE', default=None,
+                  help=dictToString('Output texture file (gifti format). '\
+                                        'Default is built from the input '\
+                                        'data file name by replacing the .nii ' \
+                                        'extension with .gii. Gzipping is '\
+                                        'preserved.'))
+
+parser.add_option('-t','--bin-threshold',dest='bin_thresh',
+                  metavar='FLOAT',
+                  type='float',default=None,
+                  help=dictToString(pyhrf.verboseLevels))
+
+
+(options,args) = parser.parse_args()
+pyhrf.verbose.setVerbosity(options.verbose)
+
+# Treat result of option parsing:
+if len(args) != 2 :
+    parser.print_help()
+    sys.exit(1)
+
+input_mesh = args[0]
+input_data = args[1]
+
+from pyhrf.tools import replace_ext
+
+if options.output is None:
+    options.output = replace_ext(input_data, 'gii')
+
+pyhrf.verbose(1, 'Output will be saved as: %s' %options.output)
+
+from pyhrf.surface import project_fmri
+project_fmri(input_mesh, input_data, options.output, 
+             tex_bin_threshold=options.bin_thresh)

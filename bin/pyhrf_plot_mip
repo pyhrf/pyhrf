@@ -1,0 +1,244 @@
+#! /usr/bin/env python
+import os, sys, string
+import os.path as op
+from optparse import OptionParser
+import numpy as np
+import pyhrf
+from pyhrf.verbose import dictToString
+from pyhrf.tools.io import read_volume, write_volume, read_spatial_resolution
+from pyhrf.tools import add_suffix
+from pyhrf.ndarray import xndarray, MRI3Daxes, MRI4Daxes
+from pyhrf.plot import autocrop, fig_orientations
+
+def plot_mip(cub, tag, output_dir, res, show_colbar=False, group_views=False):
+
+    cm = plt.get_cmap(options.colormap)
+    norm = plt.normalize(vmin=cub.min(), vmax=cub.max())
+    if not group_views:
+        for i,axis in enumerate(MRI3Daxes):
+            mip = cub.max(i)
+            orientation = fig_orientations[axis]
+            mip.set_orientation(orientation)
+            plt.figure()
+            ax = plt.imshow(np.flipud(mip.data), interpolation='nearest',
+                            cmap=cm, norm=norm)
+            ax.get_axes().set_axis_off()
+            ax.get_axes().set_aspect(res[orientation[0]] / res[orientation[1]])
+        
+            if show_colbar:
+                plt.colorbar()
+            
+            output_fig_fn = op.join(options.output_dir, 
+                                    '%s_mip_%s.png' %(tag, axis))
+            pyhrf.verbose(1, 'Save to: %s' %output_fig_fn)
+            plt.savefig(output_fig_fn)
+            autocrop(output_fig_fn)
+        
+    else:
+    
+        if 0:
+            print 'res:'
+            print res
+            print 'shape:'
+            print cub.get_shape()
+    
+        brain_p = res['coronal']*cub.get_shape()['coronal']
+        brain_h = res['axial']*cub.get_shape()['axial']
+        brain_w = res['sagittal']*cub.get_shape()['sagittal']
+        gap_w = 1.
+        gap_h = 1.
+        gap_bot = 0.
+        gap_top = 0.
+        gap_left = 0.
+        gap_right = 0.
+        fig_h = brain_p + gap_h + brain_h + gap_top + gap_bot
+        fig_w = brain_w + gap_w + brain_p + gap_left + gap_right
+    
+        #print 'fig_h:', fig_h
+        #print 'fig_w:', fig_w
+        fig = plt.figure(figsize=(fig_w/40, fig_h/40), dpi=150)
+    
+        # Coronal
+        axis = 'coronal'
+        mip = cub.max(axis)
+        orientation = fig_orientations[axis]
+        mip.set_orientation(orientation)
+        ext = [0, brain_w, 0, brain_h]
+        ax_cor = plt.axes([gap_left/fig_w, (brain_p+gap_h+gap_bot)/fig_h, 
+                           brain_w/fig_w, brain_h/fig_h])    
+        plt.imshow(mip.data, interpolation='nearest', extent=ext,
+                   origin='lower', cmap=cm)
+        
+        ax_cor.get_axes().set_axis_off()
+    
+    
+        # sagittal
+        axis = 'sagittal'
+        mip = cub.max(axis)
+        orientation = fig_orientations[axis]
+        mip.set_orientation(orientation)
+        ext = [0, brain_p, 0, brain_h]
+        ax_sag = plt.axes([(brain_w+gap_w+gap_left)/fig_w, 
+                           (brain_p+gap_h+gap_bot)/fig_h, 
+                           brain_p/fig_w, brain_h/fig_h], sharey=ax_cor)
+    
+        plt.imshow(mip.data, interpolation='nearest', extent=ext,
+                   origin='lower', cmap=cm)
+        
+        ax_sag.get_axes().set_axis_off()
+    
+        # Axial
+        axis = 'axial'
+        mip = cub.max(axis)
+        orientation = fig_orientations[axis]
+        mip.set_orientation(orientation)
+        ext = [0, brain_w, 0, brain_p]
+        ax_ax = plt.axes([gap_left/fig_w, gap_bot/fig_h, 
+                          brain_w/fig_w, brain_p/fig_h], sharex=ax_cor)
+    
+        plt.imshow(mip.data, interpolation='nearest', extent=ext,
+                   origin='lower', cmap=cm, norm=norm)
+        
+        ax_ax.get_axes().set_axis_off()
+    
+        if 0:
+            from mpl_toolkits.mplot3d import Axes3D
+            from matplotlib import cm
+            r = [(gap_left+brain_w+gap_w)/fig_w, 
+                 (gap_bot)/fig_h, 
+                 (brain_w)/fig_w, (brain_p)/fig_h]
+            ax = Axes3D(fig, elev=35, azim=-40, rect=r)
+    
+            ax.view_init(elev=35, azim=-40)
+        
+            data = cub.max('coronal')
+            Y = np.arange(data.data.shape[0])
+            Z = np.arange(data.data.shape[1])
+            Y, Z = np.meshgrid(Y, Z)
+            X = np.zeros_like(Z)
+            surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                                   facecolors=cm.jet(data.data.T/data.max()),
+                                   linewidth=0, antialiased=False)
+        
+            data = cub.max('axial')
+            Y = np.arange(data.data.shape[0])
+            X = np.arange(data.data.shape[1])
+            X, Y = np.meshgrid(X, Y)
+            Z = np.zeros_like(X)
+            surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                                   facecolors=cm.jet(data.data/data.max()),
+                                   linewidth=0, antialiased=False)
+        
+        
+            data = cub.max('sagittal')
+            X = np.arange(data.data.shape[0])
+            Z = np.arange(data.data.shape[1])
+            X, Z = np.meshgrid(X, Z)
+            Y = np.zeros_like(Z) + 105
+            surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                                   facecolors=cm.jet(data.data.T/data.max()),
+                                   linewidth=0, antialiased=False)
+        
+    
+            
+        if options.colorbar:
+            ax_col_bar = plt.axes([(gap_left+brain_w+gap_w+10)/fig_w, 
+                                   (5+gap_bot)/fig_h, 
+                                   (brain_w/10)/fig_w, (brain_p-10)/fig_h])
+            plt.colorbar(cax=ax_col_bar) #, ax=ax_ax)
+    
+        
+        output_fig_fn = op.join(options.output_dir, 
+                                '%s_mips.png' %(tag))
+        pyhrf.verbose(1, 'Save to: %s' %output_fig_fn)
+        plt.savefig(output_fig_fn)
+        autocrop(output_fig_fn)
+
+
+
+usage = 'usage: %%prog [options] VOL_FILE'
+description = 'Plot Maximum Intensity Maps of a given volume '
+
+parser = OptionParser(usage=usage, description=description)
+
+minArgs = 1
+maxArgs = 1
+
+
+parser.add_option('-o','--output', dest='output_tag', default=None,
+                  help='Output tag default is ' \
+                      '<input_file>_mip_<orientation>.png for multiple images '\
+                      'or <input_file>_mips.png if all MIPs are grouped within '\
+                      'one image with the option "group-views".')
+
+parser.add_option('-d','--output-dir', dest='output_dir', default='./',
+                  metavar='PATH',
+                  help='Output directory. Default is %default.')
+
+parser.add_option('-p','--colormap', dest='colormap', default='Greys_r',
+                  metavar='Matplotlib colormap name',
+                  help='Color map for image plots. Default is %default.')
+
+# parser.add_option('-m','--roi-mask',dest='mask_file',metavar='MASK_FILE',
+#                   default=None,
+#                   help="Mask file of ROIs to be contoured on the plots")
+
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+parser.add_option('-c','--colorbar',
+                  default=False, action='store_true',
+                  help='Plot colorbar')
+
+
+parser.add_option('-g','--goup-views', dest='group',
+                  default=False, action='store_true',
+                  help='Group all views in a single image')
+
+(options,args) = parser.parse_args()
+
+pyhrf.verbose.setVerbosity(options.verbose)
+
+nba = len(args) 
+if  nba<minArgs or (maxArgs>=0 and nba>maxArgs):
+    parser.print_help()
+    sys.exit(1)
+
+vol_fn = args[0]
+
+cv = xndarray.load(vol_fn)
+if cv.get_ndims() > 3:
+    cv.set_orientation(MRI4Daxes)
+else:
+    cv.set_orientation(MRI3Daxes)
+
+# if options.mask_file is not None:
+#     cmask = xndarray.load(option.mask_file)
+#     cmask.set_orientation(MRI3Daxes)
+
+import matplotlib.pyplot as plt
+from pyhrf.ndarray import MRI3Daxes
+
+tag = options.output_tag
+if tag is None:
+    tag = op.splitext(op.basename(vol_fn))[0]
+
+
+res = dict( (a,r) for a,r in zip(MRI4Daxes,read_spatial_resolution(vol_fn)) )
+
+
+if cv.get_ndims() < 4:
+    plot_mip(cv, tag, options.output_dir, res, show_colbar=options.colorbar, 
+             group_views=options.group)
+else:
+    plot_mip(cv.mean('time'), tag+'_mean_time', options.output_dir, res, 
+             show_colbar=options.colorbar, 
+             group_views=options.group)
+
+    plot_mip(cv.var('time'), tag+'_var_time', options.output_dir, res, 
+             show_colbar=options.colorbar, 
+             group_views=options.group)
+
+#plt.show()

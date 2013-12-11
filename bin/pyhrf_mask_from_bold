@@ -1,0 +1,54 @@
+#! /usr/bin/python
+import os, sys, string
+import os.path as op
+from optparse import OptionParser
+import numpy as np
+import pyhrf
+from pyhrf.verbose import dictToString
+from pyhrf.tools import non_existent_file
+from pyhrf.tools.io import readImageWithPynifti, writeImageWithPynifti
+
+from nipy.labs import compute_mask_files
+
+usage = 'usage: %%prog [options] 4D_BOLD_FILE '
+description = 'Compute a mask'
+
+parser = OptionParser(usage=usage, description=description)
+
+minArgs = 1
+maxArgs = -1
+
+parser.add_option('-o','--output', dest='outFile', default=None,
+                  help='Output file for the mask, default is "mask.nii"'
+                  )
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+parser.add_option('-c','--cc',dest='cc',metavar='BOOLEAN',
+                  type='int',default=1,
+                  help="Keep only the largest connected component")
+
+
+parser.add_option('-m','--min-frac',dest='min_frac',metavar='FLOAT',
+                  type='float',default=.4,
+                  help="Lower fraction of the histogram to be discarded.")
+
+parser.add_option('-M','--max-frac',dest='max_frac',metavar='FLOAT',
+                  type='float',default=.9,
+                  help="Upper fraction of the histogram to be discarded.")
+
+
+(options,args) = parser.parse_args()
+
+pyhrf.verbose.setVerbosity(options.verbose)
+ 
+bold_file = args[0]
+if options.outFile is None:
+    options.outFile = non_existent_file('./mask.nii')
+
+pyhrf.verbose(1, 'Save result to %s' %options.outFile)
+mask_array = compute_mask_files(bold_file, options.outFile, False, 
+                                options.min_frac, options.max_frac, 
+                                cc=options.cc)
