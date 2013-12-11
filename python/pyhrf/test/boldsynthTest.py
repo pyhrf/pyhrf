@@ -112,7 +112,7 @@ class FieldFuncsTest(unittest.TestCase):
     def test_swendsenwang(self):    
         
         nbLabels = 2
-        shape = (15,15)
+        shape = (5,5)
         mask = np.ones(shape, dtype=int)
         g = graph_from_lattice(mask, kerMask=kerMask2D_4n)
         labels = genPepperSaltField(mask.size, nbLabels)
