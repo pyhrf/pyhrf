@@ -4,5 +4,8 @@ from pyhrf.test import *
 import unittest
 
 #TODO : create different test scenarios ...
-import cProfile
-cProfile.run("unittest.main()", 'unittest.prf')
+if 0:
+    import cProfile
+    cProfile.run("unittest.main()", 'unittest.prf')
+else:
+    unittest.main()

@@ -71,13 +71,23 @@ class NipyGLMTest(unittest.TestCase):
 
         from pyhrf import FmriData
         from pyhrf.glm import glm_nipy
-        
+
         #pyhrf.verbose.setVerbosity(3)
         fdata = FmriData.from_vol_ui()
         # print 'fdata:'
         # print fdata.getSummary()
         glm_nipy(fdata, hrf_model='FIR', fir_delays=range(10))
 
+
+    def makeQuietOutputs(self, xmlFile):
+
+        from pyhrf import xmlio
+        from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
+        t = xmlio.fromXML(file(xmlFile).read())
+        t.set_init_param('output_dir', None)
+        f = open(xmlFile, 'w')
+        f.write(xmlio.toXML(t, handler=NumpyXMLHandler()))
+        f.close()
 
 
     def test_command_line(self):
@@ -86,7 +96,8 @@ class NipyGLMTest(unittest.TestCase):
         import os
         if os.system(cmd) != 0 :
             raise Exception('"' + cmd + '" did not execute correctly')
-
+        self.makeQuietOutputs(cfg_file)
+        
         cmd = 'pyhrf_glm_estim -c %s' %cfg_file
         if os.system(cmd) != 0 :
             raise Exception('"' + cmd + '" did not execute correctly')
