@@ -13,7 +13,7 @@ from field import genPotts
 from pyhrf.graph import graph_from_lattice, kerMask2D_4n , kerMask3D_6n
 
 from numpy.random import randn
-from scipy.misc import fromimage
+
 from scipy.signal.signaltools import lfilter
 import Image
 from pyhrf import paradigm
@@ -166,6 +166,7 @@ def load_drawn_labels(name):
     if not op.exists(fn):
         raise Exception('Unknown label map %s (%s)' %(name,fn))
 
+    from scipy.misc import fromimage
     labels = fromimage(Image.open(fn))
     return labels[np.newaxis,:,:]
 
@@ -345,6 +346,7 @@ def load_hrf_territories(nb_hrf_territories=0, hrf_territories_name=None):
         fn = pyhrf.get_data_file_name('simu_hrf_%d_territories.png' \
                                       %nb_hrf_territories)
     assert op.exists(fn)
+    from scipy.misc import fromimage
     territories = fromimage(Image.open(fn))
     territories = territories[np.newaxis,:,:]
     t=territories[np.where(np.ones_like(territories))]
