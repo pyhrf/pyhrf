@@ -20,8 +20,11 @@ import re
 
 from collections import defaultdict
 import pyhrf
-from joblib.memory import MemorizedFunc
-
+try:
+    from joblib.memory import MemorizedFunc
+except ImportError:
+    class MemorizedFunc: pass #Dummy class
+        
 try:
     from itertools import product as iproduct
 except ImportError:
@@ -528,7 +531,7 @@ def convex_hull_mask(mask):
 
     result = np.zeros_like(mask)
     m = np.where(np.ones_like(mask))
-    result[m] = hull.find_simplex(np.array(m).T)>=0 
+    result[m] = hull.find_simplex(np.array(m).T)>=0
 
     return result
 
