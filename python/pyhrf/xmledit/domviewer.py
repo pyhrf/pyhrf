@@ -11,10 +11,10 @@ debug = False
 debug2 = True
 
 def get_pic_fn(fn):
-    """ Convenience to retrieve package data file name 
+    """ Convenience to retrieve package data file name
     """
-    req = Requirement.parse('pyhrf-gpl')
-    pyhrfDataSubPath = 'xmledit/pics'
+    req = Requirement.parse('pyhrf')
+    pyhrfDataSubPath = 'pyhrf/xmledit/pics'
     fn2 = os.path.join(pyhrfDataSubPath, fn)
     return resource_filename(req, fn2)
 
@@ -22,7 +22,7 @@ def get_pic_fn(fn):
 class DomModel(QtCore.QAbstractItemModel):
     """
     Class wrapping a QDomDocument and exposing an editable QAbstractItemModel
-    which supports item duplication (duplication of the underlying DOM subtree) 
+    which supports item duplication (duplication of the underlying DOM subtree)
     Here is how the model provides access to data:
 
      - Example of Data (DOM) structure:
@@ -31,7 +31,7 @@ class DomModel(QtCore.QAbstractItemModel):
         |  |-<tag_2 attr1='a1t2>
         |     |- val
         |-<tag3>
-        
+
      - Corresponding structure exposed by the model:
        (root index)
         |
@@ -40,7 +40,7 @@ class DomModel(QtCore.QAbstractItemModel):
         |   |
         |   |  col 0   | col 1
         |   |- 'tag_1' | attribute map object      #row=0
-        |       | 
+        |       |
         |       |
         |       |  col 0  | col 1
         |       |- 'tag_2'| attribute map object    #row=0
@@ -49,20 +49,20 @@ class DomModel(QtCore.QAbstractItemModel):
         |           |  col 0  | col 1
         |           |- 'val   | None                 #row=0
         |
-        |  col 0  | col 1                        
+        |  col 0  | col 1
         |- tag3   | None                         #row=1
 
 
      The following conventions are applied:
-      - There are two types of node : 
-         * structure nodes which have a tag name and can have attributes 
+      - There are two types of node :
+         * structure nodes which have a tag name and can have attributes
          * leaf nodes which have a value and no attributes
-      - The columns are fixed : 
-         * col 0 -> node label ( = tag name if structure node 
+      - The columns are fixed :
+         * col 0 -> node label ( = tag name if structure node
                                  or = value if leaf node)
          * col 1 -> node attributes
-    """ 
-    
+    """
+
 
     def __init__(self, doc, parent, showComments=True):
         QtCore.QAbstractItemModel.__init__(self, parent)
@@ -81,7 +81,7 @@ class DomModel(QtCore.QAbstractItemModel):
         self.showCommentsFlag = showComments
 
     def flags(self, index):
-        """ Return flags for the model behaviour. All indexes are enabled, 
+        """ Return flags for the model behaviour. All indexes are enabled,
         editable, and selectable. Indexes that concern nodes of type bool
         are also checkable.
         """
@@ -120,7 +120,7 @@ class DomModel(QtCore.QAbstractItemModel):
                 return QVariant("Attributes")
             else:
                 return QVariant()
-            
+
         return QVariant()
 
     def index(self, row, col, parent):
@@ -138,14 +138,14 @@ class DomModel(QtCore.QAbstractItemModel):
             parentItem = self.rootItem
         else:
             parentItem = parent.internalPointer()
-        
+
         childItem = parentItem.child(row)
 
         if childItem is not None:
             return self.createIndex(row, col, childItem)
         else:
             return QtCore.QModelIndex()
-                                           
+
     def rowCount(self, parent):
         if debug:
             print 'rowCount - parent:', parent
@@ -173,14 +173,14 @@ class DomModel(QtCore.QAbstractItemModel):
         return self.createIndex(parentItem.row(), 0, parentItem)
 
     def data(self, index, role):
-        
+
         if debug:
             print 'model.data ...'
             print 'index :', index
             print 'role :', role
         if not index.isValid():
             return QVariant()
-        
+
 
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole \
                 and role != QtCore.Qt.DecorationRole and role != QtCore.Qt.CheckStateRole:
@@ -196,7 +196,7 @@ class DomModel(QtCore.QAbstractItemModel):
             elif nodeItem.is_text_node():
                 return QVariant(self.textIcon)
             else:
-                return QVariant(self.nodeIcon)            
+                return QVariant(self.nodeIcon)
 
         if role == QtCore.Qt.CheckStateRole:
             if not nodeItem.is_bool_node():
@@ -209,7 +209,7 @@ class DomModel(QtCore.QAbstractItemModel):
         if not self.showCommentsFlag and nodeItem.is_comment_node():
             return QVariant()
 
-    
+
         if role == QtCore.Qt.DisplayRole and nodeItem.is_bool_node():
             return QVariant()
 
@@ -222,7 +222,7 @@ class DomModel(QtCore.QAbstractItemModel):
             print 'value:', value.toString()
         if role != QtCore.Qt.EditRole and role != QtCore.Qt.CheckStateRole:
             return False
-        
+
         nodeItem = index.internalPointer()
         if role == QtCore.Qt.CheckStateRole:
             if nodeItem.is_bool_node():
@@ -238,7 +238,7 @@ class DomModel(QtCore.QAbstractItemModel):
             result = nodeItem.setData(index.column(), value)
 
         if result:
-            self.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'),    
+            self.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'),
                       index, index)
         return result
 
@@ -256,9 +256,9 @@ class DomModel(QtCore.QAbstractItemModel):
         self.beginInsertRows(parent, position, position + rows - 1)
         success = parentItem.insertChildren(position, rows)
         self.endInsertRows()
-        
+
         return success
-    
+
     def copy_node(self, index):
         if not index.isValid():
             item = self.rootItem
@@ -276,9 +276,9 @@ class DomModel(QtCore.QAbstractItemModel):
         self.beginInsertRows(parent, position, position)
         success = parentItem.insert_child_node(position, node)
         self.endInsertRows()
-        
+
         return success
-        
+
 
     def take_node(self, position, parent):
         if not parent.isValid():
@@ -293,7 +293,7 @@ class DomModel(QtCore.QAbstractItemModel):
 
 
     def removeRows(self, position, rows, parent):
-        
+
         if not parent.isValid():
             parentItem = self.rootItem
         else:
@@ -327,7 +327,7 @@ class DomModel(QtCore.QAbstractItemModel):
 
 
 class DomItem:
-    
+
     DEFAULT_TAG_NAME = 'anonym'
 
     def __init__(self, node, row, parent=None):
@@ -355,11 +355,11 @@ class DomItem:
 
     def is_comment_node(self):
         n = self.domNode.nodeName()
-        return n == '#comment' 
+        return n == '#comment'
 
     def is_text_node(self):
         n = self.domNode.nodeName()
-        return n == '#text' 
+        return n == '#text'
 
     def is_bool_node(self):
         """ Return True if the value of the associated DOM node is of type 'bool'
@@ -373,7 +373,7 @@ class DomItem:
         self.ensureChildItemsSize()
         if self.childItems[i] is not None:
             return self.childItems[i]
-        
+
         if i>=0 and i<self.domNode.childNodes().count():
             childNode = self.domNode.childNodes().item(i)
             childItem = DomItem(childNode, i, self)
@@ -406,7 +406,7 @@ class DomItem:
 
         if i < 0 or i + count > len(self.childItems):
             return False
-        
+
         if debug2:
             print 'Children Before remove:'
             for j in xrange(self.domNode.childNodes().count()):
@@ -418,7 +418,7 @@ class DomItem:
         success = False
         for j in xrange(i,count):
             child = self.domNode.childNodes().item(j)
-            
+
             if not self.domNode.removeChild(child).isNull():
                 self.childItems.pop(j)
                 success = True
@@ -516,7 +516,7 @@ class DomItem:
             return False
         newChildItem = DomItem(node, i, self)
         self.childItems.insert(i, newChildItem)
-        
+
         print 'Children after insertion:'
         print 'count:', self.domNode.childNodes().length()
         print 'childItems:'
@@ -533,7 +533,7 @@ class DomItem:
 
         return True
 
-                       
+
 
     def data(self, col):
         if debug:
@@ -545,7 +545,7 @@ class DomItem:
             if self.is_leaf_node():
                 r = self.domNode.nodeValue()#.split("\n").join(" ")
                 if self.is_text_node():
-                    t = self.get_parent_attribute('type') 
+                    t = self.get_parent_attribute('type')
                     if t == 'int':
                         r = QVariant(int(r))
                     elif t == 'bool':
@@ -566,7 +566,7 @@ class DomItem:
         else:
             r = QVariant()
         #print 'returning : ', r
-        return QVariant(r)        
+        return QVariant(r)
 
     def get_attributes(self):
         attributeMap = self.domNode.attributes()
@@ -593,7 +593,7 @@ class DomItem:
             n = self.domNode.nodeName()
             if n == '#comment' or n == '#text':
                 if self.get_parent_attribute('type') == 'bool':
-                    if debug: 
+                    if debug:
                         print 'setting a bool value ...'
                         print str(value.toInt()[0])
                     self.domNode.setNodeValue(str(int(value.toBool())))
@@ -616,14 +616,14 @@ class DomItem:
 class XMLEditorDelegate(QtGui.QStyledItemDelegate):
 
     def __init__(self, parent=None, *args):
-        if debug: 
+        if debug:
             print 'XMLEditorDelegate.__init__ ...'
             print 'args:', args
         QtGui.QItemDelegate.__init__(self, parent, *args)
 
     def createEditor(self, parent, viewItem, index):
         #editor = QtGui.QLineEdit(parent)
-        if debug: 
+        if debug:
             print 'createEditor ...'
             print 'viewItem:', viewItem
             print 'index.col:', index.column()
@@ -650,7 +650,7 @@ class XMLEditorDelegate(QtGui.QStyledItemDelegate):
                     fileChooser.setFileMode(QtGui.QFileDialog.AnyFile)
                 else:
                     fileChooser.setFileMode(QtGui.QFileDialog.ExistingFile)
-                    fileChooser.setAcceptMode(QtGui.QFileDialog.AcceptOpen) 
+                    fileChooser.setAcceptMode(QtGui.QFileDialog.AcceptOpen)
 
                 curFn = str(nodeItem.data(0).toString())
                 print 'curFn:', curFn
@@ -664,7 +664,7 @@ class XMLEditorDelegate(QtGui.QStyledItemDelegate):
                 #             self.commit_and_close_editor)
                 return fileChooser
 
-        if debug: 
+        if debug:
             print 'comment node ?', nodeItem.is_comment_node()
             print 'text node ?', nodeItem.is_text_node()
 
@@ -699,11 +699,11 @@ class XMLEditorDelegate(QtGui.QStyledItemDelegate):
                     model.setData(index, fn, QtCore.Qt.EditRole)
             else:
                 QtGui.QStyledItemDelegate.setModelData(self, editor, model, index)
-                    
+
 
 ##### Main Window ####################
 class DomViewer(QtGui.QMainWindow):
-    
+
     def __init__(self, xmlFile=None, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.options = {
@@ -739,13 +739,13 @@ class DomViewer(QtGui.QMainWindow):
 
         self.connect(self.ui.treeView, QtCore.SIGNAL('clicked(QModelIndex)'),
                      self.updateAttributeInfo)
-        self.connect(self.ui.attributeTable, 
+        self.connect(self.ui.attributeTable,
                      QtCore.SIGNAL('cellChanged(int,int)'),
                      self.updateAttribute)
-        self.connect(self.ui.actionShow_attributes, 
+        self.connect(self.ui.actionShow_attributes,
                      QtCore.SIGNAL('triggered()'),
                      self.showAttributeTable)
-        self.connect(self.ui.actionShow_comments, 
+        self.connect(self.ui.actionShow_comments,
                      QtCore.SIGNAL('triggered()'),
                      self.showComments)
         self.setWindowTitle(self.getCommandName())
@@ -801,7 +801,7 @@ class DomViewer(QtGui.QMainWindow):
         if debug: print 'Resize ...'
         self.ui.treeView.resizeColumnToContents(0)
         if debug: print 'Connect ...'
-        self.connect(self.domModel, 
+        self.connect(self.domModel,
                      QtCore.SIGNAL('dataChanged(QModelIndex, QModelIndex)'),
                      self.setModifiedState)
         self.setFileState(modified=False)
@@ -834,7 +834,7 @@ class DomViewer(QtGui.QMainWindow):
         fn = os.path.basename(self.fileName)
         self.setWindowTitle(self.getCommandName()+' - '+fn+['','*'][modified])
         self.statusLabel.setText(fn + ['',' UNSAVED'][modified])
-    
+
     def saveXML(self, fn):
         try:
             f = open(fn, 'w')
@@ -845,7 +845,7 @@ class DomViewer(QtGui.QMainWindow):
                                        "Saving of "+self.fileName+" failed!\n" \
                                            "Error was :\n"+e.message)
             return False
-                                       
+
         return True
 
     # SLOTS
@@ -886,7 +886,7 @@ class DomViewer(QtGui.QMainWindow):
         # access to attribute data
         # -> could be more powerfull for concurrent access
         # -> could be easier to expose in a table view
-        self.disconnect(self.ui.attributeTable, 
+        self.disconnect(self.ui.attributeTable,
                         QtCore.SIGNAL('cellChanged(int,int)'),
                         self.updateAttribute)
         if index.isValid():
@@ -901,7 +901,7 @@ class DomViewer(QtGui.QMainWindow):
                 item = QtGui.QTableWidgetItem(av) #value
                 self.ui.attributeTable.setItem(row,1,item)
                 row += 1
-        self.connect(self.ui.attributeTable, 
+        self.connect(self.ui.attributeTable,
                      QtCore.SIGNAL('cellChanged(int,int)'),
                      self.updateAttribute)
 
@@ -928,7 +928,7 @@ class DomViewer(QtGui.QMainWindow):
         model = self.ui.treeView.model()
         if model.removeRow(index.row(),index.parent()):
             self.setFileState(modified=True)
-        
+
     def cutSelected(self):
         index = self.ui.treeView.selectionModel().currentIndex()
         model = self.ui.treeView.model()
