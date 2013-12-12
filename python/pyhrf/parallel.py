@@ -479,8 +479,8 @@ def remote_map(func, largs=None, lkwargs=None, mode='local'):
             from joblib import Parallel, delayed
         except ImportError:
             raise ImportError('Can not import joblib. It is '\
-                                  'required to enable parallel '\
-                                  'processing on a local machine.')
+                              'required to enable parallel '\
+                              'processing on a local machine.')
 
         if pyhrf.verbose.verbosity == 6:
             parallel_verb = 10
