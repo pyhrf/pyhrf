@@ -15,7 +15,6 @@ from pyhrf.graph import graph_from_lattice, kerMask2D_4n , kerMask3D_6n
 from numpy.random import randn
 
 from scipy.signal.signaltools import lfilter
-import Image
 from pyhrf import paradigm
 from pyhrf.boldsynth import hrf as shrf
 import pyhrf.paradigm as mpar
@@ -167,6 +166,7 @@ def load_drawn_labels(name):
         raise Exception('Unknown label map %s (%s)' %(name,fn))
 
     from scipy.misc import fromimage
+    import Image
     labels = fromimage(Image.open(fn))
     return labels[np.newaxis,:,:]
 
@@ -347,6 +347,7 @@ def load_hrf_territories(nb_hrf_territories=0, hrf_territories_name=None):
                                       %nb_hrf_territories)
     assert op.exists(fn)
     from scipy.misc import fromimage
+    import Image
     territories = fromimage(Image.open(fn))
     territories = territories[np.newaxis,:,:]
     t=territories[np.where(np.ones_like(territories))]
