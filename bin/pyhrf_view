@@ -1,0 +1,40 @@
+#! /bin/env python
+# -*- coding: utf-8 -*-
+import sys
+from optparse import OptionParser
+
+import pyhrf
+from pyhrf.verbose import dictToString
+
+from PyQt4 import QtGui
+from pyhrf.viewer.viewer_main_window import ViewerMainWindow
+
+usage = 'usage: %%prog [options] FILES '
+
+description = 'Viewer of niftii files'
+
+parser = OptionParser(usage=usage, description=description)
+
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+parser.add_option('-m','--mask-file',dest='maskFile',metavar='FILE',
+                  help="n-ary mask to be applied on viewed data "\
+                  "[not yet available]")
+parser.add_option('-n','--mask-name',dest='maskName',metavar='STRING',
+                  help="Name of mask [not yet available]", default='mask')
+
+
+(options,args) = parser.parse_args()
+pyhrf.verbose.setVerbosity(options.verbose)
+
+files = args
+
+app = QtGui.QApplication(sys.argv)
+
+main_win = ViewerMainWindow()
+for fn in files:
+    main_win.add_file(fn, open_plot=False)
+main_win.show()
+app.exec_()
