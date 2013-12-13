@@ -121,6 +121,15 @@ class MeasureTest(unittest.TestCase):
         self.assertEqual(dist, 4)
 
 
+
+def is_importable(module_name):
+    try:
+        __import__(module_name)
+    except ImportError:
+        return False
+    else:
+        return True
+
 class ParcellationMethodTest(unittest.TestCase):
 
     def setUp(self):
@@ -130,6 +139,7 @@ class ParcellationMethodTest(unittest.TestCase):
                             [0,2,2,2],
                             [0,0,2,4]], dtype=np.int32)
 
+    @unittest.skipIf(not is_importable('sklearn'))
     def test_ward_spatial_scikit(self):
         from pyhrf.parcellation import parcellation_dist, \
                parcellation_ward_spatial
@@ -150,6 +160,7 @@ class ParcellationMethodTest(unittest.TestCase):
         dist = parcellation_dist(self.p1+1, labels+1)[0] #+1 because parcellation_dist sees 0 as background
         self.assertEqual(dist, 0)
 
+    @unittest.skipIf(is_importable('sklearn'))        
     def test_ward_spatial_scikit_with_mask(self):
         from pyhrf.parcellation import parcellation_dist, parcellation_ward_spatial
         from pyhrf.graph import graph_from_lattice, kerMask2D_4n
