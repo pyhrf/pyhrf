@@ -101,6 +101,7 @@ optional_deps = {
     'PIL' : 'loading of image file as simulation maps',
     'munkres' : 'computation of distance between parcellations',
     'pygraphviz' : '(python-graph-core) -- save plot of simulation pipelines',
+    'PyQt4': 'viewer and xml editor',
     }
 
 def check_opt_dep(dep_name, dep_descrip):
