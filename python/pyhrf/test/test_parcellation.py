@@ -102,6 +102,7 @@ class MeasureTest(unittest.TestCase):
                            "Intersection graph not OK", 1)
 
 
+    @unittest.skipIf(not is_importable('munkres'))    
     def test_parcellation_distance(self):
 
         from pyhrf.parcellation import parcellation_dist
@@ -216,6 +217,7 @@ class CmdParcellationTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
+    @unittest.skipIf(is_importable('sklearn'))        
     def test_ward_spatial_cmd(self):
         from pyhrf.parcellation import parcellation_dist
 
@@ -238,6 +240,7 @@ class CmdParcellationTest(unittest.TestCase):
         self.assertEqual(dist, 0)
 
 
+    @unittest.skipIf(is_importable('sklearn'))        
     def test_ward_spatial_real_data(self):
         from pyhrf.glm import glm_nipy_from_files
         #pyhrf.verbose.verbosity = 2
