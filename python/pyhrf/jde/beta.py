@@ -3488,14 +3488,20 @@ def Cpt_Distrib_P_beta_graph(RefGraph,GraphNodesLabels,VecEstim_lnZ,VecBetaVal,
     for i in xrange(VecEstim_lnZ.shape[0]):
         #print 'VecBetaVal:', VecBetaVal[i]
         #print thresh
-        if VecBetaVal[i]<thresh:
-            P_beta=1.
+        if VecBetaVal[i] < thresh:
+            log_P_Beta = -VecEstim_lnZ[i]+Energy*VecBetaVal[i]
+            #print 'log_P_Beta:', log_P_Beta
+            Vec_P_Beta[i]=np.exp(log_P_Beta.astype(float_hires))
+        elif (VecBetaVal[-1] - VecBetaVal[i]) == 0.:
+            Vec_P_Beta[i] = 0.
         else:
-            P_beta=(VecBetaVal[-1]-VecBetaVal[i])/(VecBetaVal[-1]-thresh)
-        #print 'P_beta:', P_beta
-        log_P_Beta=-VecEstim_lnZ[i]+Energy*VecBetaVal[i]+np.log(P_beta/PriorDenomi)
-        #print 'log_P_Beta:', log_P_Beta
-        Vec_P_Beta[i]=np.exp(log_P_Beta.astype(float_hires))
+            P_beta = (VecBetaVal[-1] - VecBetaVal[i]) / (VecBetaVal[-1]-thresh)
+            #print 'P_beta:', P_beta
+            log_P_Beta = -VecEstim_lnZ[i]+Energy*VecBetaVal[i] + \
+              np.log(P_beta/PriorDenomi)
+            #print 'log_P_Beta:', log_P_Beta
+            Vec_P_Beta[i]=np.exp(log_P_Beta.astype(float_hires))
+
         if np.isnan(Vec_P_Beta[i]):
             Vec_P_Beta[i] = 0.
         #print 'Vec_P_Beta[i]', Vec_P_Beta[i]
