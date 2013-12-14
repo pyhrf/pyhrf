@@ -38,7 +38,6 @@ Site content:
 
 ..     code_documentation.rst
     
-    
 ..       
     Indices and tables
     ==================
@@ -47,15 +46,13 @@ Site content:
     * :ref:`modindex`
     * :ref:`search`
 
-
-
 Licence and authors
 -------------------
 
-PyHRF is currently under the `CeCILL licence version 2 <http://www.cecill.info>`_. It is mainly developed at the `LNAO <http://www.lnao.fr>`_ (Neurospin, CEA) and is also involved in a collaboration with the `MISTIS team <http://mistis.inrialpes.fr/>`_ (INRIA Rhones-Alpes).
+PyHRF is currently under the `CeCILL licence version 2 <http://www.cecill.info>`_. It is mainly developed at the `LNAO <http://www.lnao.fr>`_ (Neurospin, CEA) and the `MISTIS team <http://mistis.inrialpes.fr/>`_ (INRIA Rhones-Alpes).
 
 Authors are:
-         Thomas Vincent\ :sup:`(1)`, Philippe Ciuciu\ :sup:`(1)`, Lotfi Chaari\ :sup:`(2)`, Solveig Badillo\ :sup:`(1)`, Christine Bakhous\ :sup:`(2)`
+         Thomas Vincent\ :sup:`(2)`, Philippe Ciuciu\ :sup:`(1)`, Lotfi Chaari\ :sup:`(2)`, Solveig Badillo\ :sup:`(1)`, Christine Bakhous\ :sup:`(2)`
 
          1. CEA/DSV/I2BM/Neurospin, LNAO, Gif-Sur-Yvette, France
          2. INRIA, MISTIS, Grenoble, France
@@ -63,4 +60,4 @@ Authors are:
 Contacts
 ++++++++
 
-thomas.vincent@cea.fr, philippe.ciuciu@cea.fr        
+thomas.tv.vincent@gmail.com, philippe.ciuciu@cea.fr        
