@@ -1,0 +1,6 @@
+include distribute_setup.py
+include python/pyhrf/datafiles/*
+include README.md
+prune script/misc
+prune snap_default.sh
+prune snap_default_tag_dat.sh
