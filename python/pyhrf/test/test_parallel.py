@@ -4,6 +4,7 @@ import unittest
 import pyhrf
 from pyhrf.parallel import remote_map, RemoteException
 from pyhrf.configuration import cfg
+from pyhrf import tools
 
 def foo(a, b):
     return a+b
@@ -23,11 +24,15 @@ class ParallelTest(unittest.TestCase):
     def test_remote_map_serial(self):
         self._test_remote_map_basic(mode='serial')
 
+
+    @unittest.skipIf(not tools.is_importable('joblib'),
+                     'joblib (optional dep) is N/A')
     def test_remote_map_local(self):
         self._test_remote_map_basic(mode='local')
 
 
-
+    @unittest.skipIf(not tools.is_importable('joblib'),
+                     'joblib (optional dep) is N/A')
     def test_remote_map_local_cartesian_args(self):
         from pyhrf.tools import cartesian_combine_args
 

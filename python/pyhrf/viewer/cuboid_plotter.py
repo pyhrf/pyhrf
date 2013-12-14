@@ -15,7 +15,7 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as \
 
 
 from matplotlib.backends.qt4_compat import _getSaveFileName
-from matplotlib.colors import normalize
+from matplotlib.colors import Normalize
 
 import pyhrf
 from pyhrf.ndarray import xndarray
@@ -270,7 +270,7 @@ class xndarrayPlotter(QtGui.QWidget):
 
         if not self.options['image']['norms'].has_key(self.cuboid.value_label):
             self.options['image']['norms'][self.cuboid.value_label] = \
-              normalize(self.cuboid.min(), self.cuboid.max())
+              Normalize(self.cuboid.min(), self.cuboid.max())
 
         self.value_label_changed.emit(self.cuboid.value_label)
         self.norm_changed.emit(self.cuboid.min(), self.cuboid.max())
@@ -482,7 +482,7 @@ class xndarrayPlotter(QtGui.QWidget):
         self.on_draw()
 
     def set_normalize(self, aname, min_val, max_val):
-        self.options['image']['norms'][str(aname)] = normalize(min_val, max_val)
+        self.options['image']['norms'][str(aname)] = Normalize(min_val, max_val)
         self.on_draw()
 
     def set_domain_color(self, aname, dval, color):

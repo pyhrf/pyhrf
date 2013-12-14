@@ -219,9 +219,8 @@ class FMRITreatment(XMLable2):
             try:
                 from joblib import Parallel, delayed
             except ImportError:
-                print 'Can not import joblib. It is required to enable '\
-                    'parallel processing on a local machine.'
-                sys.exit(1)
+                raise Exception('Can not import joblib. It is required to '\
+                                'enable parallel processing on a local machine.')
 
             parallel_verb = pyhrf.verbose.verbosity
             if pyhrf.verbose.verbosity == 6:

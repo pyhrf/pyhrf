@@ -13,7 +13,7 @@ from pyhrf.plot import autocrop, fig_orientations
 def plot_mip(cub, tag, output_dir, res, show_colbar=False, group_views=False):
 
     cm = plt.get_cmap(options.colormap)
-    norm = plt.normalize(vmin=cub.min(), vmax=cub.max())
+    norm = plt.Normalize(vmin=cub.min(), vmax=cub.max())
     if not group_views:
         for i,axis in enumerate(MRI3Daxes):
             mip = cub.max(i)

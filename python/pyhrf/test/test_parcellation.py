@@ -10,6 +10,7 @@ import shutil
 import numpy as np
 from pyhrf.graph import graph_from_lattice, kerMask3D_6n
 import pyhrf.parcellation as pm
+from pyhrf import tools
 
 import numpy.testing as npt
 
@@ -102,7 +103,8 @@ class MeasureTest(unittest.TestCase):
                            "Intersection graph not OK", 1)
 
 
-    @unittest.skipIf(not is_importable('munkres'))    
+    @unittest.skipIf(not tools.is_importable('munkres'),
+                     'munkres (optional dep) is N/A')
     def test_parcellation_distance(self):
 
         from pyhrf.parcellation import parcellation_dist
@@ -123,13 +125,6 @@ class MeasureTest(unittest.TestCase):
 
 
 
-def is_importable(module_name):
-    try:
-        __import__(module_name)
-    except ImportError:
-        return False
-    else:
-        return True
 
 class ParcellationMethodTest(unittest.TestCase):
 
@@ -140,7 +135,8 @@ class ParcellationMethodTest(unittest.TestCase):
                             [0,2,2,2],
                             [0,0,2,4]], dtype=np.int32)
 
-    @unittest.skipIf(not is_importable('sklearn'))
+    @unittest.skipIf(not tools.is_importable('sklearn'),
+                     'scikit-learn (optional dep) is N/A')
     def test_ward_spatial_scikit(self):
         from pyhrf.parcellation import parcellation_dist, \
                parcellation_ward_spatial
@@ -161,7 +157,8 @@ class ParcellationMethodTest(unittest.TestCase):
         dist = parcellation_dist(self.p1+1, labels+1)[0] #+1 because parcellation_dist sees 0 as background
         self.assertEqual(dist, 0)
 
-    @unittest.skipIf(is_importable('sklearn'))        
+    @unittest.skipIf(not tools.is_importable('sklearn'),
+                     'scikit-learn (optional dep) is N/A')
     def test_ward_spatial_scikit_with_mask(self):
         from pyhrf.parcellation import parcellation_dist, parcellation_ward_spatial
         from pyhrf.graph import graph_from_lattice, kerMask2D_4n
@@ -217,7 +214,8 @@ class CmdParcellationTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
-    @unittest.skipIf(is_importable('sklearn'))        
+    @unittest.skipIf(not tools.is_importable('sklearn'),
+                     'scikit-learn (optional dep) is N/A')
     def test_ward_spatial_cmd(self):
         from pyhrf.parcellation import parcellation_dist
 
@@ -240,7 +238,8 @@ class CmdParcellationTest(unittest.TestCase):
         self.assertEqual(dist, 0)
 
 
-    @unittest.skipIf(is_importable('sklearn'))        
+    @unittest.skipIf(not tools.is_importable('sklearn'),
+                     'scikit-learn (optional dep) is N/A')
     def test_ward_spatial_real_data(self):
         from pyhrf.glm import glm_nipy_from_files
         #pyhrf.verbose.verbosity = 2

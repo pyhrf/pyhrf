@@ -24,7 +24,7 @@ try:
     from joblib.memory import MemorizedFunc
 except ImportError:
     class MemorizedFunc: pass #Dummy class
-        
+
 try:
     from itertools import product as iproduct
 except ImportError:
@@ -37,6 +37,16 @@ except ImportError:
             result = [x+[y] for x in result for y in pool]
             for prod in result:
                 yield tuple(prod)
+
+
+def is_importable(module_name):
+    """ Return True if given *module_name* (str) is importable """
+    try:
+        __import__(module_name)
+    except ImportError:
+        return False
+    else:
+        return True
 
 
 def report_arrays_in_obj(o):

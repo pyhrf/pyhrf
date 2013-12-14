@@ -1,14 +1,12 @@
-
 import unittest
 import pyhrf
 import os
-import numpy as np
 import cPickle
 import os.path as op
-import shutil
 
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.configuration import cfg
+from pyhrf import tools
 
 class TreatmentTest(unittest.TestCase):
 
@@ -63,6 +61,8 @@ class TreatmentTest(unittest.TestCase):
         t.enable_draft_testing()
         t.run(parallel='local')
 
+    @unittest.skipIf(not tools.is_importable('joblib'),
+                     'joblib (optional dep) is N/A')
     def test_default_jde_cmd_parallel_local(self):
         t = FMRITreatment(make_outputs=False, result_dump_file=None)
         t.enable_draft_testing()
@@ -84,7 +84,7 @@ class TreatmentTest(unittest.TestCase):
             t.run(parallel='LAN')
         else:
             print 'LAN testing is off '\
-              '([parallel-LAN][enable_unit_test] = 0 in config.cfg'
+              '([parallel-LAN][enable_unit_test] = 0 in ~/.pyhrf/config.cfg'
 
     def test_remote_dir_writable(self):
         if cfg['parallel-LAN']['enable_unit_test'] == 1:

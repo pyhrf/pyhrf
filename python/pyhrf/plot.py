@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from matplotlib import mpl
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from pyhrf.tools import rebin
 
@@ -15,10 +15,10 @@ def mix_cmap(img1, cmap1, img2, cmap2, norm1=None, norm2=None, blend_r=.5):
 
     assert img1.shape == img2.shape
     if norm1 is None:
-        norm1 = plt.normalize()
+        norm1 = plt.Normalize()
     cols1 = cmap1(norm1(img1))
     if norm2 is None:
-        norm2 = plt.normalize()
+        norm2 = plt.Normalize()
     cols2 = cmap2(norm2(img2))
 
     blend_r = np.zeros(cols1.shape) + blend_r
@@ -240,7 +240,7 @@ def flip(img_fn, direction='horizontal'):
 def plot_palette(cmap, norm=None, fontsize=None):
 
     if norm is None:
-        norm = plt.normalize()
+        norm = plt.Normalize()
     fig = plt.figure()
     ax1 = fig.add_axes([0.05, 0.05, 0.05, .9])
     colbar = mpl.colorbar.ColorbarBase(ax1, cmap=cmap,

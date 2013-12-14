@@ -137,7 +137,7 @@ class PlotFunctionsTest(unittest.TestCase):
 
         ori = ['condition', 'sagittal']
         cm = matplotlib.cm.get_cmap('winter')
-        norm = matplotlib.colors.normalize(vmin=5, vmax=20)
+        norm = matplotlib.colors.Normalize(vmin=5, vmax=20)
         plot_cub_as_image(c1.reorient(ori), cmap=cm, norm=norm, axes=ax,
                           show_axes=True, show_axis_labels=True,
                           show_colorbar=True,
@@ -158,7 +158,7 @@ class PlotFunctionsTest(unittest.TestCase):
         ax = f.add_subplot(111)
 
         cm = matplotlib.cm.get_cmap('winter')
-        norm = matplotlib.colors.normalize(vmin=0., vmax=3.)
+        norm = matplotlib.colors.Normalize(vmin=0., vmax=3.)
         plot_cub_as_image(c2, cmap=cm, norm=norm, axes=ax,
                           show_axes=True, show_axis_labels=True,
                           show_tick_labels=True)

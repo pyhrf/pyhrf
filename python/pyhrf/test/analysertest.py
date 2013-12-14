@@ -8,7 +8,7 @@ from pyhrf.boldsynth.field import genPotts, count_homo_cliques
 from pyhrf.graph import *
 
 class BetaEstimESTest(unittest.TestCase):
-    
+
     def test_obs_3Dfield_MAP(self):
         """ Test estimation of beta with an observed field: a small 3D case.
         Partition function estimation method : extrapolation scheme.
@@ -44,6 +44,7 @@ class BetaEstimESTest(unittest.TestCase):
         nbClasses = 2
         labels = genPotts(g, beta, nbClasses)
         # partition function estimation
+        np.seterr('raise')
         gridLnz = Cpt_Vec_Estim_lnZ_Graph(g, nbClasses)
         gridPace = gridLnz[1][1] - gridLnz[1][0]
         # beta estimation

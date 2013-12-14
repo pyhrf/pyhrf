@@ -2720,7 +2720,11 @@ def simulate_bold(output_dir=None, noise_scenario='high_snr',
     simulation = simu_graph.get_values()
 
     if output_dir is not None:
-        simu_graph.save_graph_plot(op.join(output_dir, 'simulation_graph.png'))
+        try:
+            simu_graph.save_graph_plot(op.join(output_dir,
+                                               'simulation_graph.png'))
+        except ImportError: #if pygraphviz not available
+            pass
 
         sim.simulation_save_vol_outputs(simulation, output_dir)
 
