@@ -41,30 +41,80 @@ Dependencies are:
     - a C compiler 
 
 Optional dependencies:
-    - PyQt4 (viewer)
+    - PyQt4 (viewer and xml editor)
+    - joblib (local distributed computation)
+    - soma-workflow (remote distributed computation)
+    - scikit-learn (clustering)
+
 
 Linux-based
------------
+***********
 
 It is advised to install python (with development headers) and all above-mentioned dependencies through distribution tools such as apt-get or urpmi. Eg, for a Debian-based linux::
 
     sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-nibabel python-nipy
 
-MAC
----
+Optional dependencies::
 
-It is advised to install `canopy <http://www.enthought.com/store/>`_
- which contains a whole developmenet environment for python with *numpy*, *scipy* and *matplotlib* (and more). 
-For the C compiler, you can install the package Command Line Tools for Xcode from the `XCode website <https://developer.apple.com/technologies/tools/>`_ (you may have to create a developer Apple account). Note: you do not need the complete XCode package which will take 5Gb, only the "Command Line Tools".
+    sudo apt-get install python2.7-qt4 python-scikits-learn python-joblib
 
-.. and  `cmake <http://www.cmake.org/cmake/resources/software.html>`_.
+MAC OS X
+********
 
-If there is error installing nipy (eg package cannot be safely installed by EasyInstall), it has to be installed manually. Get 
+For the C compiler, if you don't have X-code installed, you can install the `"Command Line Tools for X-code" <https://developer.apple.com/downloads/index.action>`_. Else, if X-code is installed, make sure that Command Line Tools are installed in the menue "preferences" -> "download".
+
+It is recommended to install part of the "scipy stack" from `individual binary source packages <http://www.scipy.org/install.html#individual-binary-and-source-packages>`_. In this page, follow the links and install binary packages in the following order: 
+
+ * python (Even if a python installation is already available on your system, it is preferable to get the "official" installation. Otherwise, other python package may not install correctly).
+ * numpy
+ * scipy
+ * matplotlib
+
+Install PyQt4 from the following `link <http://sourceforge.net/projects/pyqtx/files/latest/download>`_.
+
+Install nibabel via easy_install:
+
+    if you want a system installation (require root privilege)::
+
+      $ sudo easy_install nibabel
+
+    If you want a local installation in a custom directory 
+    (see "Setup a local python installation" before running this)::
+
+      $ easy_install --prefix=/custom/path nibabel
+
+Sympy (required by nipy) is not available as .dmg, but can be installed via easy_install:
+
+    if you want a system installation (require root privilege)::
+
+      $ sudo easy_install sympy
+
+    If you want a local installation in a custom directory 
+    (see "Setup a local python installation" before running this)::
+
+      $ easy_install --prefix=/custom/path sympy
+
+
+It is recommended to install the bleeding edge version of nipy. 
+
+    Grab the code::
+
+      $ git clone https://github.com/nipy/nipy.git nipy-dev
+      $ cd nipy-dev
+
+    Then, if you want a system installation (require root privilege)::
+
+      $ sudo python setup.py install
+
+    If you want a local installation in a custom directory 
+    (see "Setup a local python installation" before running this) ::
+
+      $ python setup.py install --prefix=~/.local
 
 
 
 Dependency troubleshooting
---------------------------
+**************************
 
 The pyhrf installation process relies on distribute (overlay of distutils), 
 therefore all python dependencies (numpy, scipy, PyXML, matplotlib,
@@ -72,55 +122,68 @@ PyQt, nipy, nibabel) should be *"egg installed"*.
 Python packages installed by the system might not compatible with the setuptools egg system. Special installation locations can be added to the ``'setup.cfg'`` file at the root directory of the pyhrf decompressed tarball. Simply append a line such as::
 ``site-dirs=/path/to/installed/package``
 
+.. If dependencies are not found on the system, the installation process tries to download (therefore needing an internet connection), compile and install them
+   automatically. For the compilation step, the following dependencies are
+   required (specifically for numpy):
 
-If dependencies are not found on the system, the installation process tries to download (therefore needing an internet connection), compile and install them
-automatically. For the compilation step, the following dependencies are
-required (specifically for numpy):
+   - C compiler
+   - fortran 95 compiler
 
-     - C compiler
-     - fortran 95 compiler
+Setup a local python installation
+#################################
+
+To setup a local python installation, first create a directory in your home folder where all "manually" installed python packages will go. Here we use "~/.local" but this can be replaced with any other suitable name::
+
+  $ mkdir ~/.local
+
+Create a folder for installed binaries::
+
+  $ mkdir ~/.local/bin
+
+Get the current python version, which will be used afterwards::
+
+  $ python -c "import distutils.sysconfig as ds; print ds.get_python_version()"`/site-packages/"
+
+Create a folder for python packages, **replace XX with the current python version**::
+
+  $ mkdir -p ~/.local/lib/pythonXX/site-packages/
+
+Add a new entry in the PYTHONPATH environment variable  for the previous folder to be searchable by python. Also, add a new entre in the PATH environment variable for executable to be available.
+Edit your startup script (~/.profile or ~/.bashrc) and add the following lines, **replace XX with the current python version**::
+
+  export PYTHONPATH=$PYTHONPATH:$HOME/.local/lib/pythonXX/site-packages/
+  export PATH=$PATH:$HOME/.local/bin/
+
+
+.. _Pyhrf download:
 
 **PyHRF download**
 ##################
 
-PyHRF is distributed in two parts:
+Release tarball
+***************
 
-     `pyhrf-free <http://www.pyhrf.org/dist/pyhrf-0.2.tar.gz>`_
-                  This part is under the CeCILL v2 licence and contains the core algorithms and
-                  commands. Note that this part is independent from the other.
-     
-     `pyhrf-gpl <http://www.pyhrf.org/dist/pyhrf-gpl-0.2.tar.gz>`_
-                  This part depends on pyhrf-free and is under the GPL licence. It mainly
-                  provides GUIs: PyHRF's viewer and XML editor.                  
+The latest pyhrf release (v0.3) is available `here <http://www.pyhrf.org/dist/pyhrf-0.3.tar.gz>`_
 
 
 Source repository
 *****************
 
-The indev version of pyhrf is available via github. In a folder where you want to create the pyhrf repository, use the command::
+The bleeding edge version of pyhrf is available via github. In a folder where you want to create the pyhrf repository, use the command::
 
     $ git clone https://github.com/pyhrf/pyhrf.git pyhrf
   
-As advised in github doc (https://help.github.com/articles/fork-a-repo, Step 3), 
-you may want to set the original pyhrf git url as the upstream remote::
-
-    $ git remote add upstream https://github.com/pyhrf/pyhrf.git
-    $ git fetch upstream
-
 Then, to get the latest changes afterwards::
-  
-    $ git fetch upstream
-    $ # Fetches any new changes from the original repository
-    $ git merge upstream/master
-    $ # Merges any changes fetched into your working files
-  
+
+    $ cd pyhrf
+    $ git pull  
                   
 .. _Pyhrf installation:
 
 **PyHRF Installation**
 ######################
 
-In the directory where the pyhrf tarball has been decompressed, you can install it globally or locally:
+In the directory where the pyhrf tarball has been decompressed or in the pyhrf git repository, you can install it globally or locally:
 
 - global installation::
 
@@ -132,7 +195,7 @@ In the directory where the pyhrf tarball has been decompressed, you can install 
 
      $python setup.py install --prefix=/local/installation/path/
 
- Note: /local/installation/path/lib/python2.x/site-packages must exist and be in your ``PYTHONPATH`` environment variable. Pyhrf executables will be installed in /local/installation/bin/ and the latter should then be in the ``PATH`` environment variable.
+ Note: /local/installation/path/lib/python2.x/site-packages must exist and be in your ``PYTHONPATH`` environment variable. Pyhrf executables will be installed in /local/installation/bin/ and the latter should then be in the ``PATH`` environment variable (see "Setup a local installation").
 
 *** Run tests to check installation**::
 
