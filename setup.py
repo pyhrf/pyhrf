@@ -76,7 +76,7 @@ except ImportError:
 setup(
     name="pyhrf", author='Thomas VINCENT, Philippe CIUCIU',
     author_email='thomas.tv.vincent@gmail.com',
-    version='0.2',
+    version='0.3',
     setup_requires=['numpy>=1.0'],
     install_requires=['numpy>=1.0','matplotlib>=0.90.1','scipy>=0.7',
                       'nibabel', 'nipy', 'PyXML>=0.8.4'],
