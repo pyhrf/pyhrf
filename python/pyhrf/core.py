@@ -538,8 +538,8 @@ def get_roi_simulation(simu_sessions, mask, roi_id):
             roi_simu['drift'] = simu['drift'][:, m[0]]
         if simu.has_key('bold'):
                 roi_simu['bold'] = simu['bold'][:, m[0]]
-        if simu.has_key('stim_induced'):
-                roi_simu['stim_induced'] = simu['stim_induced'][:, m[0]]
+        if simu.has_key('stim_induced_signal'):
+                roi_simu['stim_induced_signal'] = simu['stim_induced_signal'][:, m[0]]
                 
         if simu.has_key('primary_hrf'):
             #TOCHECK: not ROI-specific?

@@ -42,6 +42,7 @@ class SpatialTest(unittest.TestCase):
         sizes (tolerance=1) on a 3D rectangular mask
         """
         pyhrf.verbose.setVerbosity(0)
+        np.random.seed(56437)
         shape = (5,5,5)
         mask = np.zeros(shape, dtype=int)
         mask[1:-1,1:-1,1:-1] = 1

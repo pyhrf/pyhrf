@@ -39,14 +39,17 @@ except ImportError:
                 yield tuple(prod)
 
 
-def is_importable(module_name):
+def is_importable(module_name, func_name=None):
     """ Return True if given *module_name* (str) is importable """
     try:
         __import__(module_name)
     except ImportError:
         return False
     else:
-        return True
+        if func_name is None:
+            return True
+        else:
+            return func_name in dir(module_name)
 
 
 def report_arrays_in_obj(o):

@@ -60,8 +60,7 @@ Optional dependencies::
 
 MAC OS X
 ********
-
-Note that between each step of the installation, you may have to reopen a new shell or resource your shell init file, eg ``source ~/.profile``. If something is not found, try to do this.
+.. note:: between each step of the installation, you may have to reopen a new shell or source again your shell init file, eg ``source ~/.profile``. If something is not found, try to do this.
 
 For the C compiler, if you don't have X-code installed, you can install the `"Command Line Tools for X-code" <https://developer.apple.com/downloads/index.action>`_. Else, if X-code is installed, make sure that "Command Line Tools" are installed in the menu "preferences" -> "download".
 
@@ -97,6 +96,8 @@ Sympy (required by nipy) is not available as .dmg, but can be installed via easy
 
       $ easy_install --prefix=/custom/path sympy
 
+
+A Fortran compile is required 
 
 It is recommended to install the bleeding edge version of nipy. 
 
@@ -172,6 +173,8 @@ The latest pyhrf release (v0.3) is available `here <http://www.pyhrf.org/dist/py
 Source repository
 *****************
 
+First, if git is not installed (``git --version`` does not work), you can install it from here TODO.
+
 The bleeding edge version of pyhrf is available via github. In a folder where you want to create the pyhrf repository, use the command::
 
     $ git clone https://github.com/pyhrf/pyhrf.git pyhrf
@@ -196,20 +199,17 @@ In the directory where the pyhrf tarball has been decompressed or in the pyhrf g
     
 - local installation::
 
-     $python setup.py install --prefix=/local/installation/path/
+     $python setup.py install --prefix=~/.local/
+
+- local installation in develop mode (only links to the source files are installed)::
+
+        $python setup.py develop --prefix=~/.local/
 
  Note: /local/installation/path/lib/python2.x/site-packages must exist and be in your ``PYTHONPATH`` environment variable. Pyhrf executables will be installed in /local/installation/bin/ and the latter should then be in the ``PATH`` environment variable (see "Setup a local installation").
 
 *** Run tests to check installation**::
 
     pyhrf_maketests
-
-*** Develop mode:**
-
-Installation in development mode (only links to the source files are installed)::
-
-        $python setup.py develop --prefix=/local/installation/path/
-
 
 Prior to the install, the installation path should have the following folders  :
  /local/installation/path/bin/
