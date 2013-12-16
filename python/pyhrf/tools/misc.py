@@ -780,7 +780,7 @@ class Pipeline:
                 self.setDepths(deper, depths, curDepth+1)
 
 
-    def update_all(self):
+    def resolve(self):
         self.update_subgraph(self.THE_ROOT)
 
     def get_value(self, label):
@@ -788,7 +788,7 @@ class Pipeline:
         Return the value associated with 'label'
         """
         if len(self.values) == 0:
-            self.update_all()
+            self.resolve()
 
         return self.values[label]
 
@@ -797,7 +797,7 @@ class Pipeline:
         Return all computed values. Perform a full update if not done yet.
         """
         if len(self.values) == 0:
-            self.update_all()
+            self.resolve()
 
         return self.values
 

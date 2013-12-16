@@ -2716,7 +2716,7 @@ def simulate_bold(output_dir=None, noise_scenario='high_snr',
     simu_graph = Pipeline(simulation_steps)
 
     # Compute everything
-    simu_graph.update_all()
+    simu_graph.resolve()
     simulation = simu_graph.get_values()
 
     if output_dir is not None:

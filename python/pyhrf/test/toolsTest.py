@@ -600,7 +600,7 @@ class PipelineTest(unittest.TestCase):
         data = Pipeline({'a' : foo_a,
                             'b' : foo_default_arg,
                             'd' : 7})
-        data.update_all()
+        data.resolve()
 
     def test_cached(self):
         try:
@@ -613,12 +613,12 @@ class PipelineTest(unittest.TestCase):
                 }
             data = Pipeline(dep_tree)
             t0 = time.time()
-            data.update_all()
+            data.resolve()
             delta = time.time() - t0
             #print 'delta 1:', delta
 
             t0 = time.time()
-            data.update_all()
+            data.resolve()
             delta = time.time() - t0
             assert delta < .1
             #print 'delta 2:', delta
@@ -631,7 +631,7 @@ class PipelineTest(unittest.TestCase):
         data = Pipeline({'e' : foo_a,
                             'b' : foo_default_arg,
                             ('a','d') : foo_multiple_returns})
-        data.update_all()
+        data.resolve()
 
         #data.save_graph_plot('./g.png')
 

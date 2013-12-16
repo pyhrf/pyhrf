@@ -3121,7 +3121,7 @@ def simulate_single_subject(output_dir, cdefs, var_subject_hrf,
     simu_graph = Pipeline(simulation_steps)
 
     # Compute everything
-    simu_graph.update_all()
+    simu_graph.resolve()
     if 0 and output_dir is not None:
         simu_graph.save_graph_plot(op.join(output_dir, 'simulation_graph.png'))
 

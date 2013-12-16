@@ -210,6 +210,16 @@ def flatten_labels_vol(labels_vol):
     mask = np.where(vol_mask)
     return np.vstack([labels_vol[ic][mask] for ic in range(labels_vol.shape[0])])
 
+def create_bigaussian_nrls(labels, mean_act, var_act, var_inact):
+    """
+    Simulate bi-Gaussian NRLs (zero-centered inactive component)
+    """
+    mask_activ = np.where(labels)
+    nrls = np.random.randn(*labels.shape) * var_inact**.5
+    nrls[mask_activ] = np.random.randn(labels.sum()) * var_act**.5 + mean_act
+
+    return nrls
+
 def create_time_invariant_gaussian_nrls(condition_defs, labels):
     nrls = []
     for ic,c in enumerate(condition_defs):
@@ -283,9 +293,9 @@ def createBiGaussCovarNRL(condition_defs, labels, covariance):
                                                                  sigma, size).T
     return nrls
 
-def create_gaussian_noise(bold_shape, v_gnoise, m_noise=0.):
+def create_gaussian_noise(bold_shape, v_noise, m_noise=0.):
     #print bold_shape
-    return np.random.randn(*bold_shape) * v_gnoise**.5 + m_noise
+    return np.random.randn(*bold_shape) * v_noise**.5 + m_noise
 
 def create_gaussian_noise_asl(asl_shape, v_gnoise, m_noise=0.):
     return create_gaussian_noise(asl_shape, v_gnoise, m_noise)
@@ -329,8 +339,8 @@ def create_polynomial_drift(bold_shape, tr, drift_order, drift_var):
 def create_null_drift(bold_shape):
     return np.zeros(bold_shape)
 
-def calc_bold_shape(stim_induced, dsf):
-    return stim_induced[0:-1:dsf,:].shape
+def get_bold_shape(stim_induced_signal, dsf):
+    return stim_induced_signal[0:-1:dsf,:].shape
 
 def calc_asl_shape(bold_stim_induced, dsf):
     return bold_stim_induced[0:-1:dsf,:].shape
@@ -515,8 +525,7 @@ def create_prf(prf_duration=25., dt=.5):
 #     hrfs[:,:] = primary_hrf
 #     return hrfs.transpose()
 
-def create_stim_induced_signal(nrls, rastered_paradigm, hrf, condition_defs,
-                               dt, hrf_territories=None):
+def create_stim_induced_signal(nrls, rastered_paradigm, hrf, dt):
     """
     Create a stimulus induced signal from neural response levels, paradigm and
     HRF (sum_{m=1}^M a^m X^m h)
@@ -530,11 +539,14 @@ def create_stim_induced_signal(nrls, rastered_paradigm, hrf, condition_defs,
     #print 'hrf:', hrf
     #print 'paradigm:', rastered_paradigm
     npos = nrls.shape[1]
-    duration_dt = len(hrf[:,0])+len(rastered_paradigm[0])-1
+    duration_dt = hrf.shape[0] + len(rastered_paradigm[0])-1
     bold = np.zeros((duration_dt , npos))
     for ipos in xrange(npos):
-        h = hrf[:,ipos]
-        for ic,c in enumerate(condition_defs):
+        if hrf.ndim == 2:
+            h = hrf[:,ipos]
+        else:
+            h = hrf #single HRF
+        for ic in xrange(nrls.shape[0]):
             activity = np.array(rastered_paradigm[ic,:], dtype=float)
             activity[np.where(activity==1)] = nrls[ic,ipos]
             #print 'activity:', activity.shape
@@ -702,6 +714,14 @@ def create_outliers(bold_shape, stim_induced, nb_outliers, outlier_scale=5.):
 
     return outliers
 
+def create_bold(stim_induced_signal, dsf, noise, drift=None,
+                outliers=None):
+    """
+    a short-cut for function create_bold_from_stim_induced
+    """
+    return create_bold_from_stim_induced(stim_induced_signal, dsf, noise, drift,
+                                         outliers)
+
 def create_bold_from_stim_induced(stim_induced, dsf, noise, drift=None,
                                   outliers=None):
     """
@@ -711,10 +731,10 @@ def create_bold_from_stim_induced(stim_induced, dsf, noise, drift=None,
     """
     bold = stim_induced[0:-1:dsf,:].copy()
     pyhrf.verbose(3, 'create_bold_from_stim_induced ...')
-    pyhrf.verbose(3, 'bold shape: %s, noise shape: %s, drift shape: %s' \
-                      %(str(bold.shape), str(noise.shape), str(drift.shape)))
-
+    pyhrf.verbose(3, 'bold shape: %s, noise shape: %s' %(str(bold.shape),
+                                                         str(noise.shape)))
     if drift is not None:
+        pyhrf.verbose(3, 'drift shape: %s' %str(drift.shape))
         bold += drift
     if outliers is not None:
         bold += outliers
@@ -788,6 +808,10 @@ def create_asl_from_stim_induced(bold_stim_induced, perf_stim_induced,
     return asl
 
 
+def save_simulation(simulation, output_dir):
+    """ short-hand for simulation_save_vol_outputs
+    """
+    simulation_save_vol_outputs(simulation, output_dir)
 
 def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
                                 simulation_graph_output=None, prefix=None,
@@ -802,8 +826,10 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     # Save all volumes in nifti format:
     if simulation.has_key('labels_vol'):
         mask_vol = np.ones_like(simulation['labels_vol'][0])
-    else:
-        mask_vol = simulation.get('mask',None)
+    elif simulation.has_key('labels_vol'):
+        mask_vol = simulation.get('mask', None)
+    elif simulation.has_key('labels'):
+        mask_vol = np.ones_like(simulation['labels'][0])
 
     pyhrf.verbose(1,'Vol mask of shape %s' %str(mask_vol.shape))
 
@@ -1083,14 +1109,14 @@ def create_small_bold_simulation(snr="high", output_dir=None, simu_items=None):
         # Stim induced
         'stim_induced' : create_stim_induced_signal,
         # Noise
-        'v_gnoise' : v_noise,
+        'v_noise' : v_noise,
         'noise' : create_gaussian_noise, #requires bold_shape, v_gnoise
         # Drift
         'drift_order' : 4,
         'drift_var' : 11.,
         'drift' : create_polynomial_drift,
         # Bold
-        'bold_shape' : calc_bold_shape,
+        'bold_shape' : get_bold_shape,
         'bold' : create_bold_from_stim_induced,
         }
 
@@ -1099,7 +1125,7 @@ def create_small_bold_simulation(snr="high", output_dir=None, simu_items=None):
 
     simu_graph = ptools.Pipeline(simulation_steps)
 
-    simu_graph.update_all()
+    simu_graph.resolve()
 
     if output_dir is not None:
         # Output of the simulation graph:

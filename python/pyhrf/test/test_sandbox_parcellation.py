@@ -730,7 +730,7 @@ def simulate_fmri_data(scenario='high_snr', output_path=None):
             'bold' : simu.create_bold_from_stim_induced,
             }
         simu_graph = Pipeline(simulation_steps)
-        simu_graph.update_all()
+        simu_graph.resolve()
         simu_vals = simu_graph.get_values()
 
         if output_path is not None:

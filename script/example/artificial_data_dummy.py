@@ -1,3 +1,4 @@
+#
 """
 Create dummy artificial data: very short paradigm, very few voxels.
 """
@@ -8,16 +9,18 @@ from pyhrf.tools import Pipeline
 
 simulation_steps = {
   'dt' : 0.6,
-  'labels' : np.array([0,0,1,1,0,1,1]),
+  'dsf' : 4, #downsampling factor -> tr = dt * dsf = 2.4
+  'labels' : np.array([[[0,0,1,1,0,1,1]]]),
   'mean_act' : 3.,
   'var_act' : 0.5,
   'mean_inact' : 0.,
   'var_inact' : 0.5,
   'nrls' : simu.create_bigaussian_nrls,
-  'paradigm' : np.array([0,0,1,0,0,0,1,0]),
+  'rastered_paradigm' : np.array([[0,0,1,0,0,0,1,0]]),
   'hrf' : simu.create_canonical_hrf,
   'v_noise' : 1.,
-  'noise' : simu.create_noise,
+  'bold_shape' : simu.get_bold_shape,
+  'noise' : simu.create_gaussian_noise,
   'stim_induced_signal' : simu.create_stim_induced_signal,
   'bold' : simu.create_bold,
   }
