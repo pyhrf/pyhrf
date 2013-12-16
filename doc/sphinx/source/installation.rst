@@ -61,7 +61,10 @@ Optional dependencies::
 MAC OS X
 ********
 
-For the C compiler, if you don't have X-code installed, you can install the `"Command Line Tools for X-code" <https://developer.apple.com/downloads/index.action>`_. Else, if X-code is installed, make sure that Command Line Tools are installed in the menue "preferences" -> "download".
+Note that between each step of the installation, you may have to reopen a new shell or resource your shell init file, eg ``source ~/.profile``. If something is not found, try to do this.
+
+For the C compiler, if you don't have X-code installed, you can install the `"Command Line Tools for X-code" <https://developer.apple.com/downloads/index.action>`_. Else, if X-code is installed, make sure that "Command Line Tools" are installed in the menu "preferences" -> "download".
+
 
 It is recommended to install part of the "scipy stack" from `individual binary source packages <http://www.scipy.org/install.html#individual-binary-and-source-packages>`_. In this page, follow the links and install binary packages in the following order: 
 
@@ -140,16 +143,16 @@ Create a folder for installed binaries::
 
   $ mkdir ~/.local/bin
 
-Get the current python version, which will be used afterwards::
+Get the current python version number, which will be used afterwards::
 
-  $ python -c "import distutils.sysconfig as ds; print ds.get_python_version()"`/site-packages/"
+  $ python -c "import distutils.sysconfig as ds; print ds.get_python_version()"
 
-Create a folder for python packages, **replace XX with the current python version**::
+Create a folder for python packages, **replace XX with the current python version number**::
 
   $ mkdir -p ~/.local/lib/pythonXX/site-packages/
 
 Add a new entry in the PYTHONPATH environment variable  for the previous folder to be searchable by python. Also, add a new entre in the PATH environment variable for executable to be available.
-Edit your startup script (~/.profile or ~/.bashrc) and add the following lines, **replace XX with the current python version**::
+Edit your startup script (~/.profile or ~/.bashrc) and add the following lines, **replace XX with the current python version number**::
 
   export PYTHONPATH=$PYTHONPATH:$HOME/.local/lib/pythonXX/site-packages/
   export PATH=$PATH:$HOME/.local/bin/
