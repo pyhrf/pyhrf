@@ -602,7 +602,7 @@ class HRF_Sampler(GibbsSamplerVariable) :
                 assert_almost_equal(self.dataInput.varMBY[subj], sd['bold'],
                                     verbose=err_verb)
                 assert_almost_equal(matPl, sd['drift'], verbose=err_verb)
-                assert_almost_equal(y, sd['stim_induced'][::osf] + sd['noise'],
+                assert_almost_equal(y, sd['stim_induced_signal'][::osf] + sd['noise'],
                                     verbose=err_verb)
 
         varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
@@ -1914,14 +1914,14 @@ class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             osf = int(sd['tr'] / sd['dt'])
             if not self.sampleFlag and  not smplHRF.sampleFlag and\
               self.useTrueValue and smplHRF.useTrueValue:
-              assert_almost_equal(self.sumaXh[s], sd['stim_induced'][::osf])
+              assert_almost_equal(self.sumaXh[s], sd['stim_induced_signal'][::osf])
               assert_almost_equal(self.varYtilde[s], sd['bold'] - \
-                                  sd['stim_induced'][::osf])
+                                  sd['stim_induced_signal'][::osf])
               if not smplDrift.sampleFlag and \
                 smplDrift.useTrueValue:
                 varYbar = self.varYtilde[s] - matPl[s]
                 assert_almost_equal(varYbar, sd['bold'] - \
-                                    sd['stim_induced'][::osf] - sd['drift'])
+                                    sd['stim_induced_signal'][::osf] - sd['drift'])
         return self.varYtilde
 
 
@@ -3102,7 +3102,7 @@ def simulate_single_subject(output_dir, cdefs, var_subject_hrf,
         # 'hrf_group' : rescale_hrf_group,
         'hrf' : sim.duplicate_hrf, #hrf for the subject
         # Stim induced
-        'stim_induced' : sim.create_stim_induced_signal,
+        'stim_induced_signal' : sim.create_stim_induced_signal,
         # Noise
         'v_gnoise' : v_noise,
         'v_noise' : sim.duplicate_noise_var,
@@ -3115,7 +3115,7 @@ def simulate_single_subject(output_dir, cdefs, var_subject_hrf,
         'drift_coeffs': sim.create_drift_coeffs,
         'drift' : sim.create_polynomial_drift_from_coeffs,
         # Bold
-        'bold_shape' : sim.calc_bold_shape,
+        'bold_shape' : sim.get_bold_shape,
         'bold' : sim.create_bold_from_stim_induced,
         }
     simu_graph = Pipeline(simulation_steps)

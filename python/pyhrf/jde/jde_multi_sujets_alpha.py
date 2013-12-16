@@ -676,7 +676,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
                 assert_almost_equal(self.dataInput.varMBY[subj], sd['bold'])
                 assert_almost_equal(matPl, sd['drift'])
-                assert_almost_equal(y, sd['stim_induced'][::osf] + sd['noise'])
+                assert_almost_equal(y, sd['stim_induced_signal'][::osf] + sd['noise'])
 
         varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
         varDeltaY = np.zeros((self.nbColX), dtype=float )
@@ -2293,14 +2293,14 @@ class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             osf = int(sd['tr'] / sd['dt'])
             if not self.sampleFlag and  not smplHRF.sampleFlag and\
               self.useTrueValue and smplHRF.useTrueValue:
-              assert_almost_equal(self.sumaXh[s], sd['stim_induced'][::osf])
+              assert_almost_equal(self.sumaXh[s], sd['stim_induced_signal'][::osf])
               assert_almost_equal(self.varYtilde[s], sd['bold'] - \
-                                  sd['stim_induced'][::osf])
+                                  sd['stim_induced_signal'][::osf])
               if not smplDrift.sampleFlag and \
                 smplDrift.useTrueValue:
                 varYbar = self.varYtilde[s] - matPl[s]
                 assert_almost_equal(varYbar, sd['bold'] - \
-                                    sd['stim_induced'][::osf] - sd['drift'])
+                                    sd['stim_induced_signal'][::osf] - sd['drift'])
         return self.varYtilde
 
 
@@ -3877,7 +3877,7 @@ class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
 ## for simulations #######################
 ##########################################
 from pyhrf import Condition
-from pyhrf.boldsynth.scenarios import create_alpha_for_hrfgroup, create_localizer_paradigm_avd, rasterize_paradigm, create_time_invariant_gaussian_nrls, create_gaussian_hrf_subject, create_stim_induced_signal, duplicate_hrf, duplicate_noise_var, create_gaussian_noise, create_drift_coeffs, create_polynomial_drift_from_coeffs, calc_bold_shape, create_bold_from_stim_induced, simulation_save_vol_outputs, create_canonical_hrf, create_labels_vol, flatten_labels_vol
+from pyhrf.boldsynth.scenarios import create_alpha_for_hrfgroup, create_localizer_paradigm_avd, rasterize_paradigm, create_time_invariant_gaussian_nrls, create_gaussian_hrf_subject, create_stim_induced_signal, duplicate_hrf, duplicate_noise_var, create_gaussian_noise, create_drift_coeffs, create_polynomial_drift_from_coeffs, get_bold_shape, create_bold_from_stim_induced, simulation_save_vol_outputs, create_canonical_hrf, create_labels_vol, flatten_labels_vol
 
 from pyhrf.tools import Pipeline
 
@@ -3907,7 +3907,7 @@ def simulate_single_subject(output_dir, cdefs, var_subject_hrf,
         'primary_hrf' : create_gaussian_hrf_subject,
         'hrf' : duplicate_hrf, #hrf for the subject
         # Stim induced
-        'stim_induced' : create_stim_induced_signal,
+        'stim_induced_signal' : create_stim_induced_signal,
         # Noise
         'v_gnoise' : v_noise,
         'v_noise' : duplicate_noise_var,
@@ -3920,7 +3920,7 @@ def simulate_single_subject(output_dir, cdefs, var_subject_hrf,
         'drift_coeffs': create_drift_coeffs,
         'drift' : create_polynomial_drift_from_coeffs,
         # Bold
-        'bold_shape' : calc_bold_shape,
+        'bold_shape' : get_bold_shape,
         'bold' : create_bold_from_stim_induced,
         }
     simu_graph = Pipeline(simulation_steps)

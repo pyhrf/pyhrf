@@ -728,7 +728,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
                 assert_almost_equal(self.dataInput.varMBY[sess], sd['bold'])
                 assert_almost_equal(matPl, sd['drift'])
-                assert_almost_equal(y, sd['stim_induced'][::osf] + sd['noise'])
+                assert_almost_equal(y, sd['stim_induced_signal'][::osf] + sd['noise'])
 
         varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
         varDeltaY = np.zeros((self.nbColX), dtype=float )
@@ -1267,7 +1267,7 @@ class HRF_MultiSess_Sampler_OLD(HRF_Drift_Sampler):
             if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
                 assert_almost_equal(self.dataInput.varMBY[sess], sd['bold'])
                 assert_almost_equal(matPl, sd['drift'])
-                assert_almost_equal(y, sd['stim_induced'][::osf] + sd['noise'])
+                assert_almost_equal(y, sd['stim_induced_signal'][::osf] + sd['noise'])
 
         varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
         varDeltaY = np.zeros((self.nbColX), dtype=float )
@@ -1673,13 +1673,13 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             osf = int(sd['tr'] / sd['dt'])
             if not self.sampleFlag and  not self.smplHRF.sampleFlag and\
               self.useTrueValue and self.smplHRF.useTrueValue:
-              assert_almost_equal(self.sumaXh[s], sd['stim_induced'][::osf])
+              assert_almost_equal(self.sumaXh[s], sd['stim_induced_signal'][::osf])
               assert_almost_equal(self.varYtilde[s], sd['bold'] - \
-                                  sd['stim_induced'][::osf])
+                                  sd['stim_induced_signal'][::osf])
               if not self.smplDrift.sampleFlag and \
                 self.smplDrift.useTrueValue:
                 assert_almost_equal(self.varYbar[s], sd['bold'] - \
-                                    sd['stim_induced'][::osf] - sd['drift'])
+                                    sd['stim_induced_signal'][::osf] - sd['drift'])
 
 
     def sampleNextAlt(self, variables):
@@ -3701,7 +3701,7 @@ def simulate_single_session(output_dir, var_sessions_nrls, cdefs, nrls_bar,
         'primary_hrf' : create_canonical_hrf,
         'hrf' : duplicate_hrf,
         # Stim induced
-        'stim_induced' : create_multisess_stim_induced_signal,
+        'stim_induced_signal' : create_multisess_stim_induced_signal,
         # Noise
         'v_gnoise' : v_noise,
         'v_noise' : duplicate_noise_var,
@@ -3714,7 +3714,7 @@ def simulate_single_session(output_dir, var_sessions_nrls, cdefs, nrls_bar,
         'drift_coeffs': create_drift_coeffs,
         'drift' : create_polynomial_drift_from_coeffs,
         # Bold
-        'bold_shape' : calc_bold_shape,
+        'bold_shape' : get_bold_shape,
         'bold' : create_bold_from_stim_induced,
         }
     simu_graph = Pipeline(simulation_steps)

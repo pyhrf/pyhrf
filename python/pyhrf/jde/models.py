@@ -2700,9 +2700,9 @@ def simulate_bold(output_dir=None, noise_scenario='high_snr',
         'normalize_hrf' : normalize_hrf,
         'hrf' : sim.duplicate_hrf,
         # Stim induced
-        'stim_induced' : sim.create_stim_induced_signal,
+        'stim_induced_signal' : sim.create_stim_induced_signal,
         # Noise
-        'v_gnoise' : v_noise,
+        'v_noise' : v_noise,
         'noise' : sim.create_gaussian_noise,
         # Drift
         'drift_order' : 4,
@@ -2710,7 +2710,7 @@ def simulate_bold(output_dir=None, noise_scenario='high_snr',
         'drift_coeffs': sim.create_drift_coeffs,
         'drift' : sim.create_polynomial_drift_from_coeffs,
         # Final BOLD signal
-        'bold_shape' : sim.calc_bold_shape,
+        'bold_shape' : sim.get_bold_shape,
         'bold' : sim.create_bold_from_stim_induced,
         }
     simu_graph = Pipeline(simulation_steps)

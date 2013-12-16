@@ -54,13 +54,14 @@ def create_hrf(picw,pic,under=2,hrf_duration=25., dt=.5):
     return h[1]
 
 
-def create_bold_from_stim_induced_RealNoise(stim_induced, dsf, noise, drift):
+def create_bold_from_stim_induced_RealNoise(stim_induced_signal, dsf, noise,
+                                            drift):
     """
     Downsample stim_induced signal according to downsampling factor 'dsf' and
     add noise and drift (nuisance signals) which has to be at downsampled
     temporal resolution.
     """
-    bold = stim_induced[0:-1:dsf,:]
+    bold = stim_induced_signal[0:-1:dsf,:]
     bold += drift
     TR = bold.shape[0]
     #nbvox = bold.shape[1]
@@ -698,15 +699,15 @@ def create_stim_induced_signal_Parsi(nrls, rastered_paradigm, hrf,
 
             return bold
 
-def create_outliers(bold_shape, stim_induced, nb_outliers, outlier_scale=5.):
+def create_outliers(bold_shape, stim_induced_signal, nb_outliers, outlier_scale=5.):
 
     #print 'test create outliers'
     nscans, nvoxels = bold_shape
     #print 'bold_shape:', bold_shape
-    outliers = np.zeros(bold_shape, dtype=stim_induced.dtype)
+    outliers = np.zeros(bold_shape, dtype=stim_induced_signal.dtype)
     outliers_idx = np.arange(nscans)
 
-    max_value = stim_induced.max() * 5.
+    max_value = stim_induced_signal.max() * 5.
     for ivoxel in xrange(nvoxels):
         np.random.shuffle(outliers_idx)
         mask_outliers = outliers_idx[:nb_outliers]
@@ -722,14 +723,14 @@ def create_bold(stim_induced_signal, dsf, noise, drift=None,
     return create_bold_from_stim_induced(stim_induced_signal, dsf, noise, drift,
                                          outliers)
 
-def create_bold_from_stim_induced(stim_induced, dsf, noise, drift=None,
+def create_bold_from_stim_induced(stim_induced_signal, dsf, noise, drift=None,
                                   outliers=None):
     """
     Downsample stim_induced signal according to downsampling factor 'dsf' and
     add noise and drift (nuisance signals) which has to be at downsampled
     temporal resolution.
     """
-    bold = stim_induced[0:-1:dsf,:].copy()
+    bold = stim_induced_signal[0:-1:dsf,:].copy()
     pyhrf.verbose(3, 'create_bold_from_stim_induced ...')
     pyhrf.verbose(3, 'bold shape: %s, noise shape: %s' %(str(bold.shape),
                                                          str(noise.shape)))
@@ -742,16 +743,16 @@ def create_bold_from_stim_induced(stim_induced, dsf, noise, drift=None,
 
     return bold
 
-def create_bold_controlled_variance(stim_induced, alpha, nb_voxels, dsf, nrls,
+def create_bold_controlled_variance(stim_induced_signal, alpha, nb_voxels, dsf, nrls,
                                     Xh, drift=None, outliers=None):
     """
     Create BOLD with controlled explained variance
     alpha: percentage of explained variance on total variance
     """
-    bold = stim_induced[0:-1:dsf,:].copy()
+    bold = stim_induced_signal[0:-1:dsf,:].copy()
     bold_shape = bold.shape
 
-    var_stim_induced = stim_induced.var(0)
+    var_stim_induced = stim_induced_signal.var(0)
 
     if drift is not None:
         var_drift = drift.var(0)
@@ -926,12 +927,12 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
 
 
-    if simulation.has_key('stim_induced'):
+    if simulation.has_key('stim_induced_signal'):
         fn_stim_induced = add_prefix(op.join(output_dir, 'stim_induced.nii'),
                                      prefix)
         pyhrf.verbose(1,'stim_induced flat shape %s' \
-                          %str(simulation['stim_induced'].shape))
-        stim_induced_vol = expand_array_in_mask(simulation['stim_induced'],
+                          %str(simulation['stim_induced_signal'].shape))
+        stim_induced_vol = expand_array_in_mask(simulation['stim_induced_signal'],
                                            mask_vol, flat_axis=1)
         write_volume(np.rollaxis(stim_induced_vol,0,4), fn_stim_induced)
 
@@ -980,7 +981,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
     for ic in xrange(simulation['labels'].shape[0]):
         if simulation.has_key('condition_defs'):
-            c_name = simulation['condition_defs'].name
+            c_name = simulation['condition_defs'][ic].name
         else:
             c_name = 'cond%d' %ic
         fn_labels = add_prefix(op.join(output_dir, 'labels_%s.nii' %c_name),
@@ -1118,7 +1119,7 @@ def create_small_bold_simulation(snr="high", output_dir=None, simu_items=None):
         'primary_hrf' : create_canonical_hrf, # one hrf
         'hrf' : duplicate_hrf, # duplicate all HRF along all voxels
         # Stim induced
-        'stim_induced' : create_stim_induced_signal,
+        'stim_induced_signal' : create_stim_induced_signal,
         # Noise
         'v_noise' : v_noise,
         'noise' : create_gaussian_noise, #requires bold_shape, v_gnoise
