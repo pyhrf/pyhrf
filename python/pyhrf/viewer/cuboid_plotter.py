@@ -197,9 +197,9 @@ class NavigationToolbar(NavigationToolbarQt):
 
 
 def is_range_domain(d):
-    print 'd:', d.dtype
+    #print 'd:', d.dtype
     if not (np.issubsctype(d.dtype, np.unicode) or \
-            np.issubsctype(d.dtype, np.str)):
+            np.issubsctype(d.dtype, np.str) or (d.size==1)):
         delta = np.diff(d)
         return (delta == delta[0]).all()
     else:

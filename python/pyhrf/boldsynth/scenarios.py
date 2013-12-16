@@ -294,7 +294,7 @@ def createBiGaussCovarNRL(condition_defs, labels, covariance):
     return nrls
 
 def create_gaussian_noise(bold_shape, v_noise, m_noise=0.):
-    #print bold_shape
+    print 'bold_shape:', bold_shape
     return np.random.randn(*bold_shape) * v_noise**.5 + m_noise
 
 def create_gaussian_noise_asl(asl_shape, v_gnoise, m_noise=0.):
@@ -826,10 +826,12 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     # Save all volumes in nifti format:
     if simulation.has_key('labels_vol'):
         mask_vol = np.ones_like(simulation['labels_vol'][0])
-    elif simulation.has_key('labels_vol'):
+    elif simulation.has_key('mask'):
         mask_vol = simulation.get('mask', None)
     elif simulation.has_key('labels'):
         mask_vol = np.ones_like(simulation['labels'][0])
+    else:
+        raise Exception('Dunno where to get mask')
 
     pyhrf.verbose(1,'Vol mask of shape %s' %str(mask_vol.shape))
 
@@ -847,7 +849,12 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
         from pyhrf.ndarray import MRI3Daxes
         fn_hrf = add_prefix(op.join(output_dir, 'hrf.nii'), prefix)
         pyhrf.verbose(1,'hrf flat shape %s' %str(simulation['hrf'].shape))
-        hrfs_vol = expand_array_in_mask(simulation['hrf'], mask_vol, flat_axis=1)
+        if simulation['hrf'].ndim == 1:
+            hrf = (np.ones(mask_vol.size) * simulation['hrf'][:,np.newaxis])
+        else:
+            hrf = simulation['hrf']
+
+        hrfs_vol = expand_array_in_mask(hrf, mask_vol, flat_axis=1)
         dt = simulation['dt']
         chrfs = xndarray(hrfs_vol, axes_names=['time',]+MRI3Daxes,
                        axes_domains={'time':np.arange(hrfs_vol.shape[0])*dt})
@@ -971,8 +978,12 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     labels_and_mask = mask_vol.copy()[m]
 
 
-    for ic,c in enumerate(simulation['condition_defs']):
-        fn_labels = add_prefix(op.join(output_dir, 'labels_%s.nii' %c.name),
+    for ic in xrange(simulation['labels'].shape[0]):
+        if simulation.has_key('condition_defs'):
+            c_name = simulation['condition_defs'].name
+        else:
+            c_name = 'cond%d' %ic
+        fn_labels = add_prefix(op.join(output_dir, 'labels_%s.nii' %c_name),
                                prefix)
         if simulation.has_key('labels'):
             labels_c = simulation['labels'][ic]
@@ -986,28 +997,28 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
         if simulation.has_key('nrls'):
             nrls_c = simulation['nrls'][ic]
-            fn = add_prefix(op.join(output_dir, 'nrls_%s.nii' %c.name), prefix)
+            fn = add_prefix(op.join(output_dir, 'nrls_%s.nii' %c_name), prefix)
             write_volume(expand_array_in_mask(nrls_c,mask_vol) , fn, vol_meta)
         if simulation.has_key('nrls_session'):
             nrls_session_c = simulation['nrls_session'][ic]
             fn = add_prefix(op.join(output_dir, 'nrls_session_%s.nii' \
-                                    %(c.name)), prefix)
+                                    %(c_name)), prefix)
             write_volume(expand_array_in_mask(nrls_session_c,mask_vol) ,
                          fn, vol_meta)
 
         if simulation.has_key('brls'):
             brls_c = simulation['brls'][ic]
-            fn = add_prefix(op.join(output_dir, 'brls_%s.nii' %c.name), prefix)
+            fn = add_prefix(op.join(output_dir, 'brls_%s.nii' %c_name), prefix)
             write_volume(expand_array_in_mask(brls_c,mask_vol) , fn, vol_meta)
         if simulation.has_key('prls'):
             prls_c = simulation['prls'][ic]
-            fn = add_prefix(op.join(output_dir, 'prls_%s.nii' %c.name), prefix)
+            fn = add_prefix(op.join(output_dir, 'prls_%s.nii' %c_name), prefix)
             write_volume(expand_array_in_mask(prls_c,mask_vol) , fn, vol_meta)
 
         if simulation.has_key('neural_efficacies'):
             ne_c = simulation['neural_efficacies'][ic]
             fn = add_prefix(op.join(output_dir, 'neural_efficacies_%s.nii' \
-                                    %c.name), prefix)
+                                    %c_name), prefix)
             write_volume(expand_array_in_mask(ne_c,mask_vol) , fn, vol_meta)
 
 

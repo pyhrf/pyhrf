@@ -10,7 +10,8 @@ from pyhrf.tools import Pipeline
 simulation_steps = {
   'dt' : 0.6,
   'dsf' : 4, #downsampling factor -> tr = dt * dsf = 2.4
-  'labels' : np.array([[[0,0,1,1,0,1,1]]]),
+  'mask' : np.array([[[1,1,1,1,1,1,1]]]),
+  'labels' : np.array([[0,0,1,1,0,1,1]]),
   'mean_act' : 3.,
   'var_act' : 0.5,
   'mean_inact' : 0.,
