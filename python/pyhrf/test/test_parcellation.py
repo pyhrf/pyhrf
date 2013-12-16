@@ -286,7 +286,7 @@ class CmdParcellationTest(unittest.TestCase):
         mask_file = pyhrf.get_data_file_name(fn)
 
         orientation = ['axial', 'coronal', 'sagittal']
-        seeds = xndarray.cuboid_like(xndarray.load(mask_file)).reorient(orientation)
+        seeds = xndarray.xndarray_like(xndarray.load(mask_file)).reorient(orientation)
 
         seed_coords = np.array([[24, 35, 8], #axial, coronal, sagittal
                                 [27, 35, 5],

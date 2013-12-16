@@ -2,7 +2,7 @@
 
 import unittest
 import numpy as np
-from numpy.testing import assert_array_equal, assert_almost_equal
+import numpy.testing as npt
 import os.path as op
 
 from pyhrf.ndarray import *
@@ -282,7 +282,7 @@ class xndarrayTest(unittest.TestCase):
         self.assertEqual(result, good_result,
             'to latex returned:\n' + result + '\n' + 'expected:\n' + good_result)
 
-        
+
 
     def test_to_latex_3d_hide_name_style(self):
 
@@ -343,6 +343,74 @@ class xndarrayTest(unittest.TestCase):
                        ]
         self.assertEqual(cdom, expectation)
 
+
+    def test_fill(self):
+        """
+        TODO
+        """
+
+        data = xndarray(np.array([[[1,1,2,2],
+                                   [2,3,3,4],
+                                   [4,4,4,4]],
+                                   [[2,2,3,3],
+                                    [3,4,4,5],
+                                    [5,5,5,5]]]),
+                                   axes_names=['time', 'axial','sagital'])
+
+        fill_data = xndarray(np.array([[10,10,10,10],
+                                       [20,20,20,20],
+                                       [30,30,30,30]]),
+                                       axes_names=['axial','sagital'])
+        data.fill(fill_data)
+
+        npt.assert_array_equal(data.data[0], fill_data.data)
+        npt.assert_array_equal(data.data[1], fill_data.data)
+
+    def test_explode(self):
+        mask = xndarray(np.array([[0,0,1,1],
+                                  [1,7,7,3],
+                                  [3,3,3,3]]), axes_names=['axial','sagital'])
+
+        data = xndarray(np.array([[[1,1,2,2],
+                                   [2,3,3,4],
+                                   [4,4,4,4]],
+                                  [[2,2,3,3],
+                                   [3,4,4,5],
+                                   [5,5,5,5]]]),
+                                   axes_names=['time', 'axial','sagital'])
+
+        exploded_data = data.explode(mask, new_axis='position')
+
+        self.assertEqual(len(exploded_data), len(np.unique(mask.data)))
+        self.assertEqual(exploded_data[0].axes_names, ['time', 'position'])
+        npt.assert_array_equal(exploded_data[0].data, np.array([[1,1],[2,2]]))
+        npt.assert_array_equal(exploded_data[7].data, np.array([[3,3],[4,4]]))
+        npt.assert_array_equal(exploded_data[3].data, np.array([[4,4,4,4,4],
+                                                                [5,5,5,5,5]]))
+
+
+    def test_merge(self):
+        """
+        TODO !!!
+        """
+        mask = xndarray(np.array([[0,0,1,1],
+                                  [1,7,7,3],
+                                  [3,3,3,3]]), axes_names=['axial','sagital'])
+
+        data = xndarray(np.array([[[1,1,2,2],
+                                   [2,3,3,4],
+                                   [4,4,4,4]],
+                                  [[2,2,3,3],
+                                   [3,4,4,5],
+                                   [5,5,5,5]]]),
+                                   axes_names=['time', 'axial','sagital'])
+
+        exploded_data = data.explode(mask, new_axis='position')
+
+        new_data = merge(exploded_data, mask, axis='position')
+
+        npt.assert_array_equal(new_data.data, data.data)
+        npt.assert_array_equal(new_data.axes_names, data.axes_names)
 
 
     def test_set_orientation(self):
@@ -472,18 +540,18 @@ class xndarrayTest(unittest.TestCase):
 
 
         r = 2 / c
-        assert_array_equal(r.data, 2 / c.data)
+        npt.assert_array_equal(r.data, 2 / c.data)
 
         r = 4 * c
-        assert_array_equal(r.data, 4 * c.data)
+        npt.assert_array_equal(r.data, 4 * c.data)
 
         r = 4 + c
-        assert_array_equal(r.data, 4 + c.data)
+        npt.assert_array_equal(r.data, 4 + c.data)
 
 
 
         r = 5 - c
-        assert_array_equal(r.data, 5 - c.data)
+        npt.assert_array_equal(r.data, 5 - c.data)
 
     def test_sub_cuboid_with_float_domain(self):
 

@@ -118,7 +118,7 @@ class xndarray:
     #__init__
 
     @staticmethod
-    def cuboid_like(c, data=None):
+    def xndarray_like(c, data=None):
         """
         Return a new cuboid from data with axes, domains and value label
         copied from 'c'. If 'data' is provided then set it as new cuboid's data,
@@ -129,7 +129,7 @@ class xndarray:
         if data is None:
             data = np.zeros_like(c.data)
         return xndarray(data, c.axes_names, c.axes_domains.copy(),
-                      c.value_label, c.meta_data)
+                        c.value_label, c.meta_data)
 
     def get_axes_ids(self, axes_names):
         """ Return the index of all axes in given axes_names
@@ -734,6 +734,41 @@ class xndarray:
         return xndarray(flat_data, new_axes, new_domains, self.value_label,
                       self.meta_data)
 
+    def explode_a(self, mask, axes, new_axis):
+        """
+        Explode array according to given n-ary *mask* so that *axes* are flatten
+        into *new_axis*.
+
+        Args:
+            - mask (numpy.ndarray[int]): n-ary mask that defines "regions" used
+                                         to split data
+            - axes (list of str): list of axes in the current object that are
+                                  mapped onto the mask
+            - new_axis (str): target flat axis
+
+        Return:
+            dict of xndarray that maps a mask value to a xndarray.
+
+        """
+        return dict( (i, self.flatten(mask==i, axes, new_axis)) \
+                     for i in np.unique(mask) )
+
+    def explode(self, cmask, new_axis='position'):
+        """
+        Explode array according to the given n-ary *mask* so that axes that
+        correspond to those of *mask* are flatten into *new_axis*.
+
+        Args:
+            - mask (xndarray[int]): n-ary mask that defines "regions" used
+                                    to split data
+            - new_axis (str): target flat axis
+
+        Return:
+            dict of xndarray that maps a mask value to a xndarray.
+        """
+        return dict((i, self.flatten(cmask.data==i,cmask.axes_names,new_axis)) \
+                     for i in np.unique(cmask.data))
+
     def cflatten(self, cmask, new_axis):
         return self.flatten(cmask.data, cmask.axes_names, new_axis)
 
@@ -836,6 +871,18 @@ class xndarray:
 
         return sub_c
 
+
+    def fill(self, c):
+        """
+        """
+        sm = []
+        for a in self.axes_names:
+            if c.has_axis(a):
+                sm.append(':')
+            else:
+                sm.append('np.newaxis')
+        self.data[:] = eval('c.data[%s]' %','.join(sm))
+        return self
 
 
     def copy(self, copy_meta_data=False):
@@ -954,7 +1001,7 @@ class xndarray:
                                     %(op_name, str(self.data.shape),
                                       str(c.shape)))
 
-            c = xndarray.cuboid_like(self, data=c)
+            c = xndarray.xndarray_like(self, data=c)
         elif np.isscalar(c):
             class Dummy:
                 def __init__(self, val):
@@ -1041,7 +1088,7 @@ class xndarray:
 
     def __rdiv__(self, c):
         if np.isscalar(c):
-            return cuboid_like(self, data=c/self.data)
+            return xndarray_like(self, data=c/self.data)
         else:
             c = self._prepare_for_operation(c)
             return c.divide(self)
@@ -1058,7 +1105,7 @@ class xndarray:
 
     def __pow__(self, c):
         if np.isscalar(c):
-            return cuboid_like(self, data=self.data**c)
+            return xndarray_like(self, data=self.data**c)
         else:
             raise NotImplementedError('Broadcast for pow operation not available')
 
@@ -1432,8 +1479,8 @@ class xndarray:
             raise Exception('Unrecognised file format (ext: %s)' %ext)
 
 
-def cuboid_like(c, data=None):
-    return xndarray.cuboid_like(c, data)
+def xndarray_like(c, data=None):
+    return xndarray.xndarray_like(c, data)
 
 
 def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
@@ -1513,6 +1560,8 @@ def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
     return targetCub
 
 
+
+
 def expand_array_in_mask(flat_data, mask, flat_axis=0, dest=None, m=None):
     """ Map the flat_axis of flat_data onto the region within mask.
     flat_data is then reshaped so that flat_axis is replaced with mask.shape
@@ -1568,6 +1617,29 @@ def expand_array_in_mask(flat_data, mask, flat_axis=0, dest=None, m=None):
 
     return dest
 
+
+def merge(arrays, mask, axis, fill_value=0):
+    """
+    Merge the given arrays into a single array according to the given
+    mask, with the given axis being mapped to those of mask.
+    Assume that arrays[id] corresponds to mask==id and that all arrays are in
+    the same orientation.
+
+    Arg:
+        - arrays (dict of xndarrays):
+        - mask (xndarray): defines the mapping between the flat axis in the
+                           arrays to merge and the target expanded axes.
+        - axis (str): flat axis for the
+    """
+    if len(arrays) == 0:
+        raise Exception('Empty list of arrays')
+
+    dest_c = None
+    for i,a in arrays.iteritems():
+        dest_c = a.expand(mask.data==i, axis, mask.axes_names,
+                          dest=dest_c, do_checks=False)
+
+    return dest_c
 
 def tree_to_cuboid(tree, branchLabels=None):
     #print 'tree_to_cuboid recieve:'
