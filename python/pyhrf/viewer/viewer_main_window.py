@@ -71,8 +71,8 @@ class ViewerMainWindow(QtGui.QMainWindow):
         Display file chooser, load xndarray and open new view
         """
         # ask for file names to open:
-        d = pyhrf.get_src_path()
-        fns = QtGui.QFileDialog.getOpenFileNames(self, "Open MRI data",d,
+        
+        fns = QtGui.QFileDialog.getOpenFileNames(self, "Open MRI data", './',
                                                  "MRI volume (*.img *.img.gz"\
                                                  "*.nii *.nii.gz)")
         # convert QStringList to list of str:
