@@ -56,6 +56,8 @@ class TreatmentTest(unittest.TestCase):
         if os.system(cmd) != 0:
             raise Exception('"' + cmd + '" did not execute correctly')
 
+    @unittest.skipIf(not tools.is_importable('joblib'),
+                     'joblib (optional dep) is N/A')
     def test_default_treatment_parallel_local(self):
         t = FMRITreatment(make_outputs=False, result_dump_file=None)
         t.enable_draft_testing()

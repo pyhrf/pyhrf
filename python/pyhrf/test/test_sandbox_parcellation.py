@@ -717,7 +717,7 @@ def simulate_fmri_data(scenario='high_snr', output_path=None):
             'hrf_territories' : simu.load_hrf_territories,
             'hrf' : simu.create_hrf_from_territories, # duplicate all HRF along all voxels
             # Stim induced
-            'stim_induced' : simu.create_stim_induced_signal,
+            'stim_induced_signal' : simu.create_stim_induced_signal,
             # Noise
             'v_gnoise' : v_noise,
             'noise' : simu.create_gaussian_noise, #requires bold_shape, v_gnoise
@@ -726,7 +726,7 @@ def simulate_fmri_data(scenario='high_snr', output_path=None):
             'drift_var' : 11.,
             'drift' : simu.create_polynomial_drift,
             # Bold
-            'bold_shape' : simu.calc_bold_shape,
+            'bold_shape' : simu.get_bold_shape,
             'bold' : simu.create_bold_from_stim_induced,
             }
         simu_graph = Pipeline(simulation_steps)

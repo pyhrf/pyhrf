@@ -2,6 +2,7 @@ import unittest
 import pyhrf
 import shutil
 
+from pyhrf import tools
 import pyhrf.boldsynth.scenarios as simu
 from pyhrf.rfir import rfir
 
@@ -16,6 +17,9 @@ class RFIRTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
+
+    @unittest.skipIf(not tools.is_importable('scipy.misc','fromimage'),
+                     'scipy.misc.fromimage (optional dep) is N/A')        
     def test_rfir_on_small_simulation(self):
         """ Check if pyhrf.rfir runs properly and that returned outputs
         contains the expected items """

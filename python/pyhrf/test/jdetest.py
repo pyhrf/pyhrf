@@ -19,6 +19,10 @@ from pyhrf.jde.hrf import HRFSampler as HS
 from pyhrf.jde.models import simulate_bold
 from pyhrf.jde.noise import NoiseVarianceSampler
 
+import pyhrf.sandbox.physio as phym
+from pyhrf import tools
+
+
 class JDETest(unittest.TestCase):
 
     def setUp(self):
@@ -217,9 +221,6 @@ class ASLTest(unittest.TestCase):
         self.tmp_dir = pyhrf.get_tmp_path()
         #self.tmp_dir = './'
 
-        simu = simulate_asl()
-        self.data_small_simu = FmriData.from_simulation_dict(simu)
-
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
@@ -228,11 +229,17 @@ class ASLTest(unittest.TestCase):
         pyhrf.verbose.setVerbosity(0)
         simulate_asl(None)
 
+    @unittest.skipIf(not tools.is_importable('scipy.misc', 'fromimage'),
+                     'scipy.misc.fromimage (optional dep) is N/A')
     def test_default_jde_small_simulation(self):
         """ Test ASL sampler on small simulation with small nb of iterations.
         Estimation accuracy is not tested.
         """
         pyhrf.verbose.setVerbosity(0)
+
+        
+        simu = simulate_asl()
+        fdata = FmriData.from_simulation_dict(simu)
 
         sampler = jde_asl.ASLSampler()
 
@@ -240,13 +247,10 @@ class ASLTest(unittest.TestCase):
                                    dt=.5, driftParam=4, driftType='polynomial',
                                    outputFile=None,outputPrefix='jde_mcmc_',
                                    randomSeed=None)
-
-        treatment = FMRITreatment(fmri_data=self.data_small_simu,
-                                  analyser=analyser)
+        
+        treatment = FMRITreatment(fmri_data=fdata, analyser=analyser)
 
         treatment.run()
-
-import pyhrf.sandbox.physio as phym
 
 class ASLPhysioTest(unittest.TestCase):
 
@@ -262,6 +266,8 @@ class ASLPhysioTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
+    @unittest.skipIf(not tools.is_importable('scipy.misc', 'fromimage'),
+                     'scipy.misc.fromimage (optional dep) is N/A')
     def test_default_jde_small_simulation(self):
         """ Test ASL Physio sampler on small simulation with small nb of
         iterations. Estimation accuracy is not tested.
