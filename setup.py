@@ -4,13 +4,13 @@ import sys
 from glob import glob
 
 try:
-    from distribute_setup import use_setuptools
-    use_setuptools()
+    import setuptools
 except ImportError:
     import ez_setup
     ez_setup.use_setuptools()
 
 from setuptools import setup, find_packages, Extension
+
 
 #######################
 #  Pre-install checks #
