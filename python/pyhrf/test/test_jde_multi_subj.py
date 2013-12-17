@@ -33,11 +33,7 @@ def simulate_subjects(output_dir, snr_scenario='high_snr',
     drift_amplitude = 10.
 
 
-    if spatial_size == 'tiny':
-        lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
-    else:
-        lmap1, lmap2, lmap3 = 'pacman', 'cat2', 'house_sun'
-
+    lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
 
     if snr_scenario == 'low_snr': #low snr
         vars_noise = np.zeros(nb_subjects) + 1.5
@@ -170,7 +166,7 @@ class MultiSubjTest(unittest.TestCase):
                                                               use_true_value=False),
             #BMSS.P_ALPHA_SUBJ : Alpha_hgroup_Sampler(dict_alpha_single),
             #BMSS.P_ALPHA_VAR_SUBJ : AlphaVar_Sampler(dict_alpha_var_single),
-            BMSS.P_CHECK_FINAL_VALUE : 'raise', #print or raise
+            BMSS.P_CHECK_FINAL_VALUE : 'none', #print or raise
         }
 
 
