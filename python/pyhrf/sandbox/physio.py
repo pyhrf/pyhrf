@@ -334,6 +334,8 @@ def simulate_asl_full_physio(output_dir=None, noise_scenario='high_snr',
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
+    elif spatial_size == 'random_small':
+        lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
     else:
         lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
 
@@ -447,6 +449,8 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
+    elif spatial_size == 'random_small':
+        lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
     else:
         lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
 

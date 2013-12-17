@@ -44,14 +44,8 @@ class JDETest(unittest.TestCase):
         self.nbIt = 3
         self.pfMethod = 'es'
 
-        simu = simulate_bold(self.tmp_dir, spatial_size='normal')
+        simu = simulate_bold(self.tmp_dir, spatial_size='random_small')
         self.data_simu = FmriData.from_simulation_dict(simu)
-
-
-        self.tmp_dir_small = tempfile.mkdtemp(prefix='small_simu',
-                                              dir=self.tmp_dir)
-        simu = simulate_bold(self.tmp_dir_small, spatial_size='small')
-        self.data_small_simu = FmriData.from_simulation_dict(simu)
 
         #print 'Create sampler_params_for_single_test ...'
         self.sampler_params_for_single_test = {
@@ -227,18 +221,16 @@ class ASLTest(unittest.TestCase):
     def test_simulation(self):
 
         pyhrf.verbose.setVerbosity(0)
-        simulate_asl(None)
+        simulate_asl(spatial_size='random_small')
 
-    @unittest.skipIf(not tools.is_importable('scipy.misc', 'fromimage'),
-                     'scipy.misc.fromimage (optional dep) is N/A')
     def test_default_jde_small_simulation(self):
         """ Test ASL sampler on small simulation with small nb of iterations.
         Estimation accuracy is not tested.
         """
         pyhrf.verbose.setVerbosity(0)
 
-        
-        simu = simulate_asl()
+
+        simu = simulate_asl(spatial_size='random_small')
         fdata = FmriData.from_simulation_dict(simu)
 
         sampler = jde_asl.ASLSampler()
@@ -247,7 +239,7 @@ class ASLTest(unittest.TestCase):
                                    dt=.5, driftParam=4, driftType='polynomial',
                                    outputFile=None,outputPrefix='jde_mcmc_',
                                    randomSeed=None)
-        
+
         treatment = FMRITreatment(fmri_data=fdata, analyser=analyser)
 
         treatment.run()
@@ -266,8 +258,6 @@ class ASLPhysioTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
-    @unittest.skipIf(not tools.is_importable('scipy.misc', 'fromimage'),
-                     'scipy.misc.fromimage (optional dep) is N/A')
     def test_default_jde_small_simulation(self):
         """ Test ASL Physio sampler on small simulation with small nb of
         iterations. Estimation accuracy is not tested.
@@ -300,7 +290,7 @@ class ASLPhysioTest(unittest.TestCase):
 
         sampler = jde_asl_physio.ASLPhysioSampler(sampler_params)
 
-        simu_items = phym.simulate_asl_physio_rfs()
+        simu_items = phym.simulate_asl_physio_rfs(spatial_size='random_small')
         simu_fdata = FmriData.from_simulation_dict(simu_items)
 
         dt = simu_items['dt']
@@ -351,7 +341,8 @@ class MultiSessTest(unittest.TestCase):
         self.tmp_dir = pyhrf.get_tmp_path()
 
         simu = simulate_sessions(output_dir = self.tmp_dir,
-                                 snr_scenario='high_snr', spatial_size='tiny')
+                                 snr_scenario='high_snr',
+                                 spatial_size='random_small')
         self.data_simu = merge_fmri_sessions(simu)
 
 

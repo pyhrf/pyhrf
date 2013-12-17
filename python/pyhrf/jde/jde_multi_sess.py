@@ -179,9 +179,9 @@ class Drift_MultiSess_Sampler(DriftSampler):
             #else:
             #self.currentValue = np.sqrt(varDrift) * \
                 #np.random.randn(self.nbSess, self.dimDrift, self.nbVox)
-                
+
             self.currentValue = np.array([np.dot(self.P[s].T, self.dataInput.varMBY[s]) for s in range(self.nbSess)])
-            
+
         self.updateNorm()
         self.matPl = np.zeros((self.nbSess, self.ny, self.nbVox))
 
@@ -3744,6 +3744,8 @@ def simulate_sessions(output_dir, snr_scenario='high_snr', spatial_size='tiny'):
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
+    elif spatial_size == 'random_small':
+        lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
     else:
         lmap1, lmap2, lmap3 = 'pacman', 'cat2', 'house_sun'
 

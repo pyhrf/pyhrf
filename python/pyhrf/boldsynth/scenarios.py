@@ -295,7 +295,6 @@ def createBiGaussCovarNRL(condition_defs, labels, covariance):
     return nrls
 
 def create_gaussian_noise(bold_shape, v_noise, m_noise=0.):
-    print 'bold_shape:', bold_shape
     return np.random.randn(*bold_shape) * v_noise**.5 + m_noise
 
 def create_gaussian_noise_asl(asl_shape, v_gnoise, m_noise=0.):
