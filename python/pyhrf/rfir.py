@@ -532,10 +532,11 @@ class RFIREstim(xmlio.XMLParamDrivenClass):
         n = numpy.arange(0,ny)
         lfdMat = numpy.zeros( (ny, fctNb), dtype=np.float32)
         lfdMat[:,0] = numpy.ones( (1,ny), dtype=np.float32)/sqrt(ny) #lfdMat[:,0] is actually lfdMat[:,0]' with matlab norms
-        samples = 1. + numpy.arange(fctNb-1)
+        samples = 1 + numpy.arange(fctNb-1, dtype=int)
 
         for k in samples:
-            lfdMat[:,k] = numpy.sqrt(2./ny) * numpy.cos( numpy.pi*(2.*n+1.)*k / (2.*ny) )
+            lfdMat[:,k] = numpy.sqrt(2./ny) * \
+              numpy.cos( numpy.pi*(2.*n+1.)*k / (2.*ny) )
         return lfdMat
 
 
