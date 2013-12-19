@@ -55,7 +55,7 @@ append_common_treatment_options(parser)
 #                   help='Include default contrasts')
 
 (options,args) = parser.parse_args()
-pyhrf.verbose.setVerbosity(options.verbose)
+pyhrf.verbose.set_verbosity(options.verbose)
 
 if options.contrasts:
     contrasts = eval('pyhrf.paradigm.default_contrasts_%s' %options.paradigm)

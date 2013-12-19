@@ -431,11 +431,11 @@ class treeToolsTest(unittest.TestCase):
 # class VerboseTest(unittest.TestCase):
 
 #     def test_new_line(self):
-#         pyhrf.verbose.setVerbosity(1)
+#         pyhrf.verbose.set_verbosity(1)
 #         pyhrf.verbose(1,'some text to be continued ...', new_line=False)
 #         pyhrf.verbose(1,'cont\'d!')
 #         pyhrf.verbose(1,'Some other text')
-#         pyhrf.verbose.setVerbosity(0)
+#         pyhrf.verbose.set_verbosity(0)
 
 
 def foo_func(a,b):
@@ -529,7 +529,7 @@ class PipelineTest(unittest.TestCase):
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.cache_dir = tmpDir
 
-        #pyhrf.verbose.setVerbosity(6)
+        #pyhrf.verbose.set_verbosity(6)
 
         # Be sure to put scalars in arrays so that they can be referenced
         self.a = np.array([3])
@@ -627,7 +627,7 @@ class PipelineTest(unittest.TestCase):
 
     def test_multiple_output_values(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         data = Pipeline({'e' : foo_a,
                             'b' : foo_default_arg,
                             ('a','d') : foo_multiple_returns})

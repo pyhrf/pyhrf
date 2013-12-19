@@ -40,10 +40,11 @@ if 1:
     for root, dirs, files in os.walk(binFolder):
     #for root, dirs, files in os.walk(pyhrfRoot):
         for f in filter(fn_match, files):
-            if '.svn' not in root and f not in exclude:
+            if '.svn' not in root and '.git' not in root and \
+              f not in exclude:
                 fn = join(root, f)
-                replaceInFile('pyhrf.boldsynth.graph',
-                              'pyhrf.graph',
+                replaceInFile("setVerbosity",
+                              "set_verbosity",
                               fn, dry=False) #dry=True --> launch sciprt but
                                              # do nothing
 

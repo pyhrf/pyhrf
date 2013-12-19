@@ -77,7 +77,7 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         P_LABELS_INI : None,
         P_LABELS_COLORS : np.array([0.0,0.0], dtype=float),
         P_CONTRASTS : {
-            'dummy_contrast_example' : '2*audio - video*3'
+            'dummy_contrast_example' : '0.5 * audio - 0.5 * video'
             },
         P_OUTPUT_NRL : True,
         P_OUTPUT_CONTRAST_VAR : True,
@@ -102,13 +102,13 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                             P_LABELS_COLORS, P_CONTRASTS, P_OUTPUT_CONTRAST,
                             P_OUTPUT_CONTRAST_VAR, P_OUTPUT_NRL,
                             P_WIP_VARIANCE, 'PPM_proba_threshold',
-                            'PPM_value_threshold','PPM_value_Multi_threshold', 'mean_activation_threshold',
+                            'PPM_value_threshold','PPM_value_Multi_threshold',
+                            'mean_activation_threshold',
                             'rescale_results']
 
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         defaultParameters[P_OUTPUT_LABELS] = False
-        parametersToShow = [P_CONTRASTS, P_OUTPUT_CONTRAST,
-                            P_OUTPUT_CONTRAST_VAR, P_OUTPUT_NRL]
+        parametersToShow = [P_CONTRASTS]
 
     parametersComments = {
         # P_CONTRASTS : 'Define contrasts as a string with the following format:'\
@@ -580,12 +580,12 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
         self.count_above_thresh += self.currentValue > self.ppm_value_thresh
         self.freq_above_thresh = self.count_above_thresh / self.nbItObservables
-        
+
         #print 'self.currentValue.shape =',self.currentValue.shape
         #print 'self.currentValue[2,:].sum() =',self.currentValue[2,:].sum()
-        
+
         for i in xrange(len(self.ppm_value_multi_thresh)):
-            self.count_above_Multi_thresh[i] += abs(self.currentValue) >= self.ppm_value_multi_thresh[i]   
+            self.count_above_Multi_thresh[i] += abs(self.currentValue) >= self.ppm_value_multi_thresh[i]
         self.freq_above_Multi_thresh = self.count_above_Multi_thresh / self.nbItObservables
 
         #print 'Mean labels at each iteration', self.meanLabels, self.meanLabels.shape
@@ -1161,7 +1161,7 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             pyhrf.verbose(2, "Weird NRL values detected ! %d/%d" \
                               %((self.currentValue >= 1000).sum(),
                                 self.nbVox*self.nbConditions) )
-            #pyhrf.verbose.setVerbosity(6)
+            #pyhrf.verbose.set_verbosity(6)
 
         if pyhrf.verbose.verbosity >= 4:
             self.reportDetection()
@@ -2268,7 +2268,7 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             #         outputName = 'nrl_con_var_' + con_name
             #         outputs[outputName] = xndarray(con_var, axes_names=axes_names,
             #                                      value_label="contrastVar")
-    
+
 
         if self.computeContrastsFlag and self.wip_variance_computation:
 
@@ -2824,7 +2824,7 @@ class NRLSamplerWithRelVar(NRLSampler):
             pyhrf.verbose(2, "Weird NRL values detected ! %d/%d" \
                               %((self.currentValue >= 1000).sum(),
                                 self.nbVox*self.nbConditions) )
-            #pyhrf.verbose.setVerbosity(6)
+            #pyhrf.verbose.set_verbosity(6)
 
         if pyhrf.verbose.verbosity >= 4:
             self.reportDetection()
@@ -4079,12 +4079,12 @@ class BiGaussMixtureParamsSamplerWithRelVar(BiGaussMixtureParamsSampler):
             A1 = self.varCIPrAlpha + 0.5*cardCIj
             B0 = self.varCIPrBeta + 0.5*np.dot(nrlsj, nrlsj)
             B1 = self.varCIPrBeta + 0.5*np.dot(self.nrlCI[j], self.nrlCI[j])
-            
+
             varCIj = (1 - wj) * (1.0/np.random.gamma(A0,1/B0)) + wj*(1.0/np.random.gamma(A1,1/B1))
-            
+
             #if j==1:
                 #print 'A1 =',A1,',  B1 =',B1,',     v0 =',varCIj
-            
+
         else :
             pyhrf.verbose(6,'using only hyper priors for CI (empty class) ...')
             varCIj = 1.0/np.random.gamma(self.varCIPrAlpha, 1/self.varCIPrBeta)
@@ -4112,7 +4112,7 @@ class BiGaussMixtureParamsSamplerWithRelVar(BiGaussMixtureParamsSampler):
         meanCAVarAPost = 1/(invVarLikelihood + 1/self.meanCAPrVar)
         rPrMV = self.meanCAPrMean/self.meanCAPrVar
         meanCAMeanAPost = meanCAVarAPost * (eta1j*invVarLikelihood+rPrMV)
-        meanCAj = (1 - wj) * np.random.normal(self.meanCAPrMean,self.meanCAPrVar**0.5) + wj * np.random.normal(meanCAMeanAPost,meanCAVarAPost**0.5) 
+        meanCAj = (1 - wj) * np.random.normal(self.meanCAPrMean,self.meanCAPrVar**0.5) + wj * np.random.normal(meanCAMeanAPost,meanCAVarAPost**0.5)
 
         #print 'Cond =',j,',     v0 =',varCIj,',  v1 =',varCAj,',     m1 =',meanCAj
 

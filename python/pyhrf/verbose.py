@@ -137,7 +137,7 @@ class Verbose:
     def set_log(self,log):
         self.log = log
 
-    def setVerbosity(self, verbosity):
+    def set_verbosity(self, verbosity):
         self.verbosity = verbosity
     
     def __call__(self, verbosity, msg, new_line=True):

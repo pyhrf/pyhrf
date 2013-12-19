@@ -337,7 +337,7 @@ class XMLable2Test(unittest.TestCase):
 
     def test_TreatmentXML(self):
 
-        #pyhrf.verbose.setVerbosity(6)
+        #pyhrf.verbose.set_verbosity(6)
         from pyhrf.ui.jde import JDEMCMCAnalyser
         from pyhrf.jde.models import BOLDGibbsSampler
         from pyhrf.ui.treatment import FMRITreatment
@@ -353,5 +353,5 @@ class XMLable2Test(unittest.TestCase):
         # print 't2 -- nbIterations:', t2.analyser.sampler.nbIterations
         self.assertEqual(t2.analyser.sampler.nbIterations, 42)
 
-        #pyhrf.verbose.setVerbosity(0)
+        #pyhrf.verbose.set_verbosity(0)
         

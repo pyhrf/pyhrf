@@ -304,7 +304,7 @@ class GibbsSampler:
 
 
         #HACK
-        #pyhrf.verbose.setVerbosity(6)
+        #pyhrf.verbose.set_verbosity(6)
 
         # Finalizing everything :
         for v in self.variables :

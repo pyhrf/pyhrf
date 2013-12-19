@@ -225,7 +225,7 @@ def runEstimationBetaEstim(params):
     pfmethod = params.get('PFMethod','ps')
     gridlnz = params.get('gridLnZ',None)
     sampleHRF = params.get('sampleHRF', True)
-    pyhrf.verbose.setVerbosity(params.get('verbose', 1))
+    pyhrf.verbose.set_verbosity(params.get('verbose', 1))
     #print 'pfmethod :', pfmethod
 
 
@@ -276,7 +276,7 @@ def runEstimationSupervised(params):
 
     sampleHRF = params.get('sampleHRF', True)
 
-    pyhrf.verbose.setVerbosity(params.get('verbose', 1))
+    pyhrf.verbose.set_verbosity(params.get('verbose', 1))
 
     prmCAm = params.get('prmCAm',10.)
     prmCAv = params.get('prmCAv',10.)

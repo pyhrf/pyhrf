@@ -137,7 +137,7 @@ class JDETest(unittest.TestCase):
 
 
     def testDefaultWithOutputs(self):
-        #pyhrf.verbose.setVerbosity(1)
+        #pyhrf.verbose.set_verbosity(1)
         treatment, xml_file = jde_vol_from_files(self.boldFiles,
                                                  self.parcelFile,
                                                  self.dt, self.tr,
@@ -165,7 +165,7 @@ class JDETest(unittest.TestCase):
             print parcellation_report(parcellation)
 
     def test_surface_treatment(self):
-        #pyhrf.verbose.setVerbosity(2)
+        #pyhrf.verbose.set_verbosity(2)
         treatment, xml_file, result = jde_surf_from_files(nbIterations=2,
                                                           outputDir=self.tmp_dir)
         #treatment.clean_output_files()
@@ -208,7 +208,7 @@ class ASLTest(unittest.TestCase):
 
     def setUp(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         np.random.seed(8652761)
 
@@ -220,14 +220,14 @@ class ASLTest(unittest.TestCase):
 
     def test_simulation(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         simulate_asl(spatial_size='random_small')
 
     def test_default_jde_small_simulation(self):
         """ Test ASL sampler on small simulation with small nb of iterations.
         Estimation accuracy is not tested.
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
 
         simu = simulate_asl(spatial_size='random_small')
@@ -248,7 +248,7 @@ class ASLPhysioTest(unittest.TestCase):
 
     def setUp(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         np.random.seed(8652761)
 
@@ -262,7 +262,7 @@ class ASLPhysioTest(unittest.TestCase):
         """ Test ASL Physio sampler on small simulation with small nb of
         iterations. Estimation accuracy is not tested.
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         sampler_params = {
             jde_asl_physio.ASLPhysioSampler.P_NB_ITERATIONS : 100,
@@ -354,7 +354,7 @@ class MultiSessTest(unittest.TestCase):
         simulation with small nb of iterations.
         Estimation accuracy is not tested.
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         sampler = BMSS()
 

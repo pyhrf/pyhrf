@@ -2185,7 +2185,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
             pyhrf.verbose(2, "Weird NRL values detected ! %d/%d" \
                               %((self.currentValue >= 1000).sum(),
                                 self.nbVox*self.nbConditions) )
-            #pyhrf.verbose.setVerbosity(6)
+            #pyhrf.verbose.set_verbosity(6)
 
         if pyhrf.verbose.verbosity >= 4:
             self.reportDetection()

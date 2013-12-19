@@ -50,7 +50,7 @@ class StatTest(unittest.TestCase):
         1D case.
         """
         plot = False
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.random.seed(2354) #make reproducible results
 
         # biGMM parameters:
@@ -124,7 +124,7 @@ class StatTest(unittest.TestCase):
         1D case.
         """
         plot = False
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.random.seed(2354) #make reproducible results
 
         # biGMM parameters:
@@ -203,7 +203,7 @@ class StatTest(unittest.TestCase):
         1D case.
         """
         plot = False
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.random.seed(2354) #make reproducible results
 
         # biGMM parameters:
@@ -282,7 +282,7 @@ class StatTest(unittest.TestCase):
         1D case.
         """
         plot = False
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.random.seed(2354) #make reproducible results
 
         # biGMM parameters:
@@ -361,7 +361,7 @@ class StatTest(unittest.TestCase):
         1D case.
         """
         plot = False
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.random.seed(2354) #make reproducible results
 
         # biGMM parameters:
@@ -434,7 +434,7 @@ class StatTest(unittest.TestCase):
         Check that merge is in favour of non-activ at the same feature level,
         starting from singleton clusters.
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         n_samples = 10000000
 
         # Generation of bi-Gaussian distribution
@@ -479,7 +479,7 @@ class StatTest(unittest.TestCase):
         Test biGMM update with posterior weights equal to 0
         """
         plot = False
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.random.seed(2354) #make reproducible results
 
         # biGMM parameters:
@@ -530,7 +530,7 @@ class StatTest(unittest.TestCase):
         """
         Test the log likelihood computation
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.random.seed(2354) #make reproducible results
 
         # biGMM parameters:
@@ -575,7 +575,7 @@ class FeatureExtractionTest(unittest.TestCase):
 
 
     def test_generate_features(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         p = np.array([1,1,1,1,1,2,2,2,2,2], dtype=int)
         act_labels = np.array([0,0,1,1,0,0,0,1,1,1], dtype=int)
         feat_levels = {1: (np.array([.4, .3]),    #feats non-activ for parc 1
@@ -599,7 +599,7 @@ class FeatureExtractionTest(unittest.TestCase):
 
     # Test feature extraction previous to parcellation
     def test_feature_extraction(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         method = 'glm_deriv'
         data0 = simulate_fmri_data()
         dt = data0.simulation[0]['dt']
@@ -630,7 +630,7 @@ class FeatureExtractionTest(unittest.TestCase):
     """
     # Test feature extraction previous to parcellation
     def test_feature_extraction(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         method = 'glm_deriv'
         data0 = simulate_fmri_data()
         dt = data0.simulation[0]['dt']
@@ -856,7 +856,7 @@ class ParcellationTest(unittest.TestCase):
         Check that pyhrf's spatial Ward parcellation is giving the same
         results as scikit's spatial Ward parcellation
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         true_parcellation, features, graph, var, act, act_labels, mask = \
           create_features("1D", "high", 0.)
 
@@ -875,7 +875,7 @@ class ParcellationTest(unittest.TestCase):
         Check that pyhrf's spatial Ward parcellation is giving the same
         results as scikit's spatial Ward parcellation
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         true_parcellation, features, graph, var, act, act_labels, mask = \
           create_features("2D", "high", 0.)
 
@@ -896,7 +896,7 @@ class ParcellationTest(unittest.TestCase):
         Check that pyhrf's Uncertain spatial Ward parcellation is giving the same
         results as Uncertain spatial Ward parcellation modified formula
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         true_parcellation, features, graph, var, act, act_labels, mask = \
           create_features("1D", "high", 0.)
 
@@ -920,7 +920,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test spatial Ward on forged features
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         self.tmp_path = './' #hack
         true_parcellation, features, graph, var, act, act_labels, mask = \
           create_features("2D", "high", 10.)
@@ -947,7 +947,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test spatial Ward with uncertainty on forged features
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         true_parcellation, features, graph, var, act, act_labels, mask = \
           create_features("2D", "high", 0.)
 
@@ -973,7 +973,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test spatial Ward with uncertainty on forged features
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         true_parcellation, features, graph, var, act, act_labels, mask = \
           create_features("2D", "high", 0.)
 
@@ -1002,7 +1002,7 @@ class ParcellationTest(unittest.TestCase):
         Test WPU on a simple case.
         """
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         features = np.array([[100.,100.,1.,1.],
                              [100.,100.,1.,1.],
                              [100.,100.,1.,1.]]).T
@@ -1023,7 +1023,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test the ability of WPU to 'jump' non-activating positions (1D case).
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.seterr('raise')
         true_parcellation = np.array([1,1,1,1,1,1,1,1,1,3,3,3])
         act_labels =        np.array([0,1,1,0,0,0,0,1,0,1,1,1])
@@ -1076,7 +1076,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test the ability of MMP to 'jump' non-activating positions (1D case).
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.seterr('raise')
 
         true_parcellation, features, graph, var, act, act_labels, mask = \
@@ -1103,7 +1103,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test the ability of WPU to 'jump' non-activating positions (2D case).
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         feat_contrast = "high"
         noise_var = 0.
@@ -1140,7 +1140,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test the ability of MMP to 'jump' non-activating positions (2D case).
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         feat_contrast = "high"
         noise_var = 3.
@@ -1177,7 +1177,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test the ability of WPU to 'jump' non-activating positions (1D case).
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         np.seterr('raise')
         true_parcellation = np.array([1,1,1,1,1,1,1,1,1,3,3,3])
         act_labels =        np.array([1,1,1,1,1,1,1,1,1,1,1,1])
@@ -1213,7 +1213,7 @@ class ParcellationTest(unittest.TestCase):
         """
         Test the sensibility to variance (2D case).
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         true_parcellation = np.array([[1,1,1,1],
                                       [1,1,1,2],
@@ -1280,7 +1280,7 @@ class ParcellationTest(unittest.TestCase):
 
     def test_render_ward_tree(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         features = np.array([[1.,2.,4.,8.,16,32]]).T
         act = np.array([1,1,1,0,0,0])
@@ -1305,7 +1305,7 @@ class ParcellationTest(unittest.TestCase):
 
     def test_ward_distance_1D_v1(self):
         # Test: inertia is high between clusters and 0 in the same cluster
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         features = np.array([[10.,10.,10.,5.,5.,5.]]).T
         var = np.ones_like(features)
         mom_1 = np.array([1.,1.,1.,1.,1.,1.])
@@ -1322,7 +1322,7 @@ class ParcellationTest(unittest.TestCase):
 
     def test_ward_distance_1D_v2(self):
         # Test effect non activation in limit between clusters
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         features = np.array([[10.3,10.1,10.7,5.1,5.3,5.2]]).T
         var = np.ones_like(features)
         mom_1 = np.array([1.,1.,1.,1.,1.,1.])
@@ -1339,7 +1339,7 @@ class ParcellationTest(unittest.TestCase):
 
     def test_ward_distance_2D(self):
         # Test
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         true_parcellation = np.array([[1,1,1,1],
                                       [1,1,1,2],
                                       [1,1,2,2],
@@ -1375,7 +1375,7 @@ class ParcellationTest(unittest.TestCase):
         #assert_array_almost_equal(act_clusters(np.where(act_clusters==0)), inertia())
 
     def test_parcellation_spatialWard_5_sklearn(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         features0 = np.ones((25,1))
         features0[10:] = 2
         n_samples, n_features = features0.shape
@@ -1391,7 +1391,7 @@ class ParcellationTest(unittest.TestCase):
 
 
     def test_parcellation_spatialWard_400_nonoise(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         n_samples = 400.
         n_features = 1.
         im = np.concatenate((np.zeros(math.ceil(n_samples/2))+1, \
@@ -1416,7 +1416,7 @@ class ParcellationTest(unittest.TestCase):
         test WPU on features extracted from a 2D artificial fMRI data set,
         at high SNR
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         data0 = simulate_fmri_data()
         method = 'glm_deriv'
         dt = data0.simulation[0]['dt']
@@ -1461,7 +1461,7 @@ class ParcellationTest(unittest.TestCase):
         """
         np.random.seed(5438)
         data0 = simulate_fmri_data('high_snr', self.tmp_path)
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         method = 'glm_deriv'
         dt = data0.simulation[0]['dt']
@@ -1521,7 +1521,7 @@ class ParcellationTest(unittest.TestCase):
 
 
     def test_parcellation_spatialWard_400_variance(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         n_samples = 400.
         n_features = 1.
         im = np.concatenate((np.zeros(math.ceil(n_samples/2))+1, \
@@ -1564,7 +1564,7 @@ class ParcellationTest(unittest.TestCase):
 
 
     def test_uward_tree_save(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         tp, feats, g, v, act, act_labs, mask = create_features()
         nc = len(np.unique(tp))
         ww = pm.spatial_ward_with_uncertainty(feats, g, v, act,
@@ -1592,7 +1592,7 @@ class ParcellationTest(unittest.TestCase):
 
 
     def test_ward_tree_save(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         tp, feats, g, v, act, act_labs, mask = create_features()
         nc = len(np.unique(tp))
         ww = pm.spatial_ward_with_uncertainty(feats, g, v, act,
@@ -1618,7 +1618,7 @@ class ParcellationTest(unittest.TestCase):
         Check that merge is in favour of non-activ at the same feature level,
         starting from singleton clusters.
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         features = np.array([[1.1, 9, 1.1]]).T
         alphas = np.array([ .1,.9,.9])

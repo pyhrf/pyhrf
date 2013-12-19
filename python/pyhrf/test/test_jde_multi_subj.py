@@ -104,7 +104,7 @@ class MultiSubjTest(unittest.TestCase):
 
     def setUp(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         np.random.seed(8652761)
 

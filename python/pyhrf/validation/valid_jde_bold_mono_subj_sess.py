@@ -236,7 +236,7 @@ class JDETest(unittest.TestCase):
 
 
     def test_noise_var_sampler(self):
-        pyhrf.verbose.setVerbosity(2)
+        pyhrf.verbose.set_verbosity(2)
         self._test_specific_samplers(['noiseVariance'],
                                      check_fv='raise')
 
@@ -247,7 +247,7 @@ class JDETest(unittest.TestCase):
         #    -  simulated gaussian smooth HRF is not normalized
         #       -> else the simulated HRF variance is not consistent
 
-        pyhrf.verbose.setVerbosity(2)
+        pyhrf.verbose.set_verbosity(2)
 
         simu = simulate_bold(self.tmp_dir, spatial_size='small',
                              normalize_hrf=False)
@@ -264,7 +264,7 @@ class JDETest(unittest.TestCase):
         #    -  simulated gaussian smooth HRF is not normalized
         #       -> else the simulated HRF variance is not consistent
 
-        pyhrf.verbose.setVerbosity(2)
+        pyhrf.verbose.set_verbosity(2)
 
         simu = simulate_bold(self.tmp_dir, spatial_size='small',
                              normalize_hrf=False)
@@ -280,7 +280,7 @@ class JDETest(unittest.TestCase):
         # estimation of HRF and its variance tested in the following situation:
         #    -  simulated gaussian smooth HRF is not normalized
 
-        pyhrf.verbose.setVerbosity(2)
+        pyhrf.verbose.set_verbosity(2)
 
         simu = simulate_bold(self.tmp_dir, spatial_size='small',
                              normalize_hrf=False)
@@ -294,7 +294,7 @@ class JDETest(unittest.TestCase):
         # estimation of HRF and its variance tested in the following situation:
         #    -  simulated gaussian smooth HRF is not normalized
 
-        pyhrf.verbose.setVerbosity(2)
+        pyhrf.verbose.set_verbosity(2)
 
         simu = simulate_bold(self.tmp_dir, spatial_size='small',
                              normalize_hrf=False)
@@ -310,7 +310,7 @@ class JDETest(unittest.TestCase):
         """ Test JDE on simulation with normal size.
         Estimation accuracy is tested.
         """
-        pyhrf.verbose.setVerbosity(2)
+        pyhrf.verbose.set_verbosity(2)
 
         simu = simulate_bold(self.tmp_dir, spatial_size='normal',
                              normalize_hrf=False)

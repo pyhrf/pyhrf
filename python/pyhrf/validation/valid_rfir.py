@@ -41,7 +41,7 @@ class RFIRTest(unittest.TestCase):
 
         fdata = simu.create_small_bold_simulation(output_dir=output_dir)
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         outputs = rfir(fdata, nb_its_max=500, nb_its_min=100)
 
         m = fdata.roiMask

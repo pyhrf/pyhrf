@@ -24,7 +24,7 @@ except ImportError, e:
     if 0 and pyhrf.__usemode__ == pyhrf.DEVEL:
         print '---------------------------------------------------'
         print 'Warning: pygraph is not available. Maybe it is not installed.'
-        print 'You may try "easy_install python-graph" or the package '\
+        print 'You may try "easy_install python-graph-core" or the package '\
             '"python-pygraph" may be available from ubuntu reps.'
         print '---------------------------------------------------'
     pygraph_available = False

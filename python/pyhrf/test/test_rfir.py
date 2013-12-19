@@ -2,7 +2,6 @@ import unittest
 import pyhrf
 import shutil
 
-from pyhrf import tools
 import pyhrf.boldsynth.scenarios as simu
 from pyhrf.rfir import rfir
 

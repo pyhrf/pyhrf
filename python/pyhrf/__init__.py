@@ -1,5 +1,3 @@
-
-
 # -*- coding: utf-8 -*-
 
 #Resolve current version
@@ -29,4 +27,4 @@ verbose = _verb.Verbose(verbosity=cfg['global']['verbosity'])
 
 
 from core import *
-#from cuboid import *
+

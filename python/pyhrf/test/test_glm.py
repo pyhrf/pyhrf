@@ -24,7 +24,7 @@ class NipyGLMTest(unittest.TestCase):
         from pyhrf import FmriData
         from pyhrf.glm import glm_nipy
 
-        #pyhrf.verbose.setVerbosity(3)
+        #pyhrf.verbose.set_verbosity(3)
         fdata = FmriData.from_vol_ui()
         # print 'fdata:'
         # print fdata.getSummary()
@@ -38,7 +38,7 @@ class NipyGLMTest(unittest.TestCase):
         cons = {'audio-video': 'audio - video',
                 'video-audio': 'video - audio',
                 }
-        #pyhrf.verbose.setVerbosity(3)
+        #pyhrf.verbose.set_verbosity(3)
         fdata = FmriData.from_vol_ui()
         # print 'fdata:'
         # print fdata.getSummary()
@@ -47,7 +47,7 @@ class NipyGLMTest(unittest.TestCase):
 
     def test_glm_with_files(self):
 
-        #pyhrf.verbose.setVerbosity(1)
+        #pyhrf.verbose.set_verbosity(1)
         output_dir = self.tmp_dir
 
         bold_name = 'subj0_bold_session0.nii.gz'
@@ -72,7 +72,7 @@ class NipyGLMTest(unittest.TestCase):
         from pyhrf import FmriData
         from pyhrf.glm import glm_nipy
 
-        #pyhrf.verbose.setVerbosity(3)
+        #pyhrf.verbose.set_verbosity(3)
         fdata = FmriData.from_vol_ui()
         # print 'fdata:'
         # print fdata.getSummary()

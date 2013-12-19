@@ -540,7 +540,7 @@ def get_roi_simulation(simu_sessions, mask, roi_id):
                 roi_simu['bold'] = simu['bold'][:, m[0]]
         if simu.has_key('stim_induced_signal'):
                 roi_simu['stim_induced_signal'] = simu['stim_induced_signal'][:, m[0]]
-                
+
         if simu.has_key('primary_hrf'):
             #TOCHECK: not ROI-specific?
             roi_simu['primary_hrf'] = simu['primary_hrf']
@@ -580,22 +580,24 @@ class FmriData(XMLable2):
     """
 
     parametersComments = {
-        'tr' : 'time of repetition in seconds',
+        'tr' : 'repetition time in seconds',
         'sessions_data' : 'List of data definition for all sessions',
-        'mask_file' : 'Input n-ary mask file. Only positive integers '\
-            'are allowed. \n'
-            'All zeros are treated as background positions.'
+        'mask_file' : 'Input n-ary mask file (= parcellation). '\
+                      'Only positive integers are allowed. \n'
+                      'All zeros are treated as background positions.'
         }
 
-    parametersToShow = ['tr', 'sessions_data',
-                        'mask_file', 'background_label']
+    parametersToShow = ['tr', 'sessions_data', 'mask_file']
+    
+    if pyhrf.__usemode__ == 'devel':
+        parametersToShow += ['background_label']
 
     def __init__(self, onsets, bold, tr, sessionsScans, roiMask, graphs=None,
                  stimDurations=None, meta_obj=None, simulation=None,
                  backgroundLabel=0, data_files=None, data_type=None,
                  edge_lengths=None, mask_loaded_from_file=False):
 
-        #pyhrf.verbose.setVerbosity(5)
+        #pyhrf.verbose.set_verbosity(5)
         pyhrf.verbose(3, 'Creation of FmriData object ...')
         if isinstance(bold, xndarray):
             pyhrf.verbose(3, 'bold shape: %s' %str(bold.data.shape))
@@ -791,7 +793,7 @@ class FmriData(XMLable2):
         """
         Convenient creation function intended to be used for XML I/O.
         'session_data' is a list of FMRISessionVolumicData objects.
-        'tr' is the time of repetition.
+        'tr' is the repetition time.
         'mask_file' is a path to a functional mask file.
 
         This represents the following hierarchy:
@@ -806,7 +808,7 @@ class FmriData(XMLable2):
                            - durations for session 2,
                            - fmri data file for session 2 (nii)
                   ],
-              - time of repetition
+              - repetition time
               - mask file
         """
         pyhrf.verbose(1,'Load volumic data ...')

@@ -88,7 +88,7 @@ class InitableTest(unittest.TestCase):
         assert_array_equal(d.array_p, d2.array_p)
 
     def test_to_ui_node_dict(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         subd = Dummy('a', 1.3, 5, np.arange(5), Dummy2('rr'))
         d = Dummy3(d={'subdummy':subd})
         root_node = d.to_ui_node('dummy')
@@ -109,7 +109,7 @@ class InitableTest(unittest.TestCase):
 
 
     def test_to_ui_node_complex(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         info = {'test':53}
         treatment = Treatment(FmriData(func_file='blah.nii'),
                               Analyser(nb_iterations=345),
@@ -153,7 +153,7 @@ class InitableTest(unittest.TestCase):
 
 
     def test_xml_io(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         info = {'test':53}
         treatment = Treatment(FmriData(func_file='blah.nii'),
@@ -242,7 +242,7 @@ class UiNodeTest(unittest.TestCase):
         self.assertEqual(d.__class__, f)
 
     def test_to_xml(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         d = Dummy2()
         n = UiNode.from_py_object('dummy', d)
 
@@ -254,7 +254,7 @@ class UiNodeTest(unittest.TestCase):
 
 
     def test_from_xml(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         d = Dummy2(p=56)
         n = UiNode.from_py_object('dummy', d)
@@ -311,7 +311,7 @@ class CoreTest(unittest.TestCase):
 
     def test_fmridata_ui_vol(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         fdui = xcore.FmriDataUI()
         fd = fdui.get_fmri_data()
         assert_almost_equal(self.bold_flat, fd.fdata)
@@ -319,7 +319,7 @@ class CoreTest(unittest.TestCase):
 
     def test_fmridata_ui_vol_paradigm_csv(self):
         # TODO: check onsets !
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         fdui = xcore.FmriDataUI.from_paradigm_csv()
         fd = fdui.get_fmri_data()
         assert_almost_equal(self.bold_flat, fd.fdata)
@@ -344,7 +344,7 @@ class CoreTest(unittest.TestCase):
             print 'xml:'
             print xml
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         fdui2 = xcore.FmriDataUI.from_xml(xml)
 
         self.assertEqual(fdui.mask_ui.data_type, fdui2.mask_ui.data_type)

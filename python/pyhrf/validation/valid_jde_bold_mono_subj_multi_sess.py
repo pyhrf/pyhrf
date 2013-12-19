@@ -6,7 +6,7 @@ class MultiSessTest(unittest.TestCase):
 
     def setUp(self):
 
-        #pyhrf.verbose.setVerbosity(2)
+        #pyhrf.verbose.set_verbosity(2)
 
         np.random.seed(8652761)
 
@@ -218,7 +218,7 @@ class MultiSessTest(unittest.TestCase):
 
     def test_simulation(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         simulate_sessions(output_dir=self.tmp_dir_small,
                           snr_scenario='high_snr', spatial_size='tiny')
 
@@ -227,7 +227,7 @@ class MultiSessTest(unittest.TestCase):
         simulation with small nb of iterations.
         Estimation accuracy is not tested.
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         sampler = BMSS()
 
@@ -311,7 +311,7 @@ class MultiSessTest(unittest.TestCase):
 
 
     def test_nrl_by_session_hrf(self):
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         self._test_specific_samplers(['responseLevels_by_session',BMSS.P_HRF],
                                      simu_scenario='big', nb_its=50,
                                      save_history=True)
@@ -365,7 +365,7 @@ class MultiSessTest(unittest.TestCase):
         """ Test JDE Multi-sessions sampler on simulation with normal size.
         Estimation accuracy is tested.
         """
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
         params = self.sampler_params_for_full_test.copy()
 
         params[BMSS.P_CHECK_FINAL_VALUE] = 'print' #print or raise

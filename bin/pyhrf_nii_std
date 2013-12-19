@@ -28,7 +28,7 @@ parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
 
 (options,args) = parser.parse_args()
 
-pyhrf.verbose.setVerbosity(options.verbose)
+pyhrf.verbose.set_verbosity(options.verbose)
 
 nba = len(args) 
 
