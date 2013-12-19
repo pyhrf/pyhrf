@@ -74,7 +74,7 @@ except ImportError:
     sys.exit(1)
 
 setup(
-    name="pyhrf", author='Thomas VINCENT, Philippe CIUCIU',
+    name="pyhrf", author='Thomas VINCENT, Philippe CIUCIU, Solveig BADILLO',
     author_email='thomas.tv.vincent@gmail.com',
     version='0.3',
     setup_requires=['numpy>=1.0'],
