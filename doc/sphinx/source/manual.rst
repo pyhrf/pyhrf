@@ -8,6 +8,7 @@ Manual
        :maxdepth: 1
 
        volume_treatment.rst
+       paradigm.rst
        surface_treatment.rst
        parallel_processing.rst
        commands.rst
