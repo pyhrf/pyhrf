@@ -56,7 +56,7 @@ gs.set_variables({'y':y, 'noise_var': .04, 'x_prior_var':1000.})
 gs.set_true_value('x', x_true)
 gs.run()
 
-pyhrf.verbose.setVerbosity(3)
+pyhrf.verbose.set_verbosity(3)
 # check with default atol=0.1, rtol=0.1
 gs.check_against_truth()
 
