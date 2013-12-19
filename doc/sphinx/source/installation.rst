@@ -45,7 +45,7 @@ Optional dependencies:
     - joblib (local distributed computation)
     - soma-workflow (remote distributed computation)
     - scikit-learn (clustering)
-
+    - sphinx (to generate documentation)
 
 Linux-based
 ***********
@@ -132,6 +132,16 @@ Python packages installed by the system might not compatible with the setuptools
 
    - C compiler
    - fortran 95 compiler
+
+
+Optional dependency
+
+
+ $ easy_install --prefix=~/.local python-graph-core
+
+ $ easy_install --prefix=~/.local joblib
+
+ $ easy_install --prefix=~/.local sphinx
 
 Setup a local python installation
 #################################
@@ -229,41 +239,45 @@ Add /local/installation/path/lib/pythonXX/site-packages/ to the PYTHONPATH envir
 
 Package options are stored in $HOME/.pyhrf/config.cfg, which is created after the installation. It handles global package options and the setup of parallel processing. Here is the default content of this file (section order may change)::
 
-    [parallel-cluster]
-    server_id = None
-    server = None
-    user = None
-    remote_path = None
-    
-    [parallel-local]
-    niceness = 10
-    nb_procs = 1
-    
+
     [global]
-    write_texture_minf = False
-    tmp_prefix = pyhrftmp
-    verbosity = 0
-    tmp_path = /tmp/
-    use_mode = enduser
-    spm_path = None
+    write_texture_minf = False          ; compatibility with Anatomist for texture file
+    tmp_prefix = pyhrftmp               ; prefix used for temporary folders in tmp_path
+    verbosity = 0                       ; default of verbosity, can be changed with option -v
+    tmp_path = /tmp/                    ; where to write file
+    use_mode = enduser                  ; "enduser": stable features only, "devel": +indev features
+    spm_path = None                     ; path to the SPM matlab toolbox (indev feature)
+                                        
+                                        
+    [parallel-cluster]                  ; Distributed computation on a cluster.
+                                        ; Soma-workflow is required.
+                                        ; Authentification by ssh keys must be 
+                                        ; configured
+                                        
+    server_id = None                    ; ID of the soma-workflow-engine server 
+    server = None                       ; hostname or IP adress of the server
+    user = None                         ; user name to log in the server
+    remote_path = None                  ; path on the server where data will be stored
+                                        
+    [parallel-local]                    ; distributed computation on the local cpu
+    niceness = 10                       ; niceness of remote jobs
+    nb_procs = 1                        ; number of distruted jobs, better not over 
+                                        ; the total number of CPU
+                                        ; 'cat /proc/cpuinfo | grep processor | wc -l' on linux
+                                        ; 'sysctl hw.ncpu' on MAC OS X
     
-    [parallel-LAN]
-    remote_host = None
-    niceness = 10
-    hosts = /home/tom/.pyhrf/hosts_LAN
-    user = None
-    remote_path = None
+    [parallel-LAN]                      ; Distributed computation on a LAN
+                                        ; Authentification by ssh keys must be 
+                                        ; configured
+    remote_host = None                  ; hostname or IP address of a host on the LAN
+    niceness = 10                       ; niceness for distributed jobs
+    hosts = /home/tom/.pyhrf/hosts_LAN  ; plain text file containing coma-separated list of hostnames on the LAN
+    user = None                         ; user name used to log in on any machine
+                                        ; on the LAN
+    remote_path = None                  ; path readable from the machine where
+                                        ; pyhrf is launched (to directly retrieve
+                                        ; results) 
     
-
-In the **global** section, parameters are used for:
-
-   * *tmp_path*: path where to store temporary data
-   * *tmp_prefix*: label used for temporary folders
-   * *use_mode* (enduser/devel): define the user level. 'enduser' implies simpler and ready-to-use default configuration steps. 'devel' enables all in-dev features and provides default configurations mainly used for testing. 
-   * *write_texture_minf* (True/False): enables writing extra header information in a minf file for texture output (Brainvisa format).
-
-All **parallel-XXX** sections concern an in-dev feature which enables distributed analyses across machines in a local network or on a multi-cores cluster. This is not yet documented (but soon will be ...).
-
 .. see :ref:`Parallel Computation <manual_parallel>`
 
 .. 
@@ -300,3 +314,33 @@ All **parallel-XXX** sections concern an in-dev feature which enables distribute
    cd pyhrf-free_trunk
    python setup.py develop --prefix ...
    #TODO: remove import of pyhrf at the end or remove creating tmp path at import
+
+
+Documentation
+#############
+
+Sphinx is used to build the document. You get it `here <http://sphinx-doc.org/install.html>`_.
+
+To build the pyhrf documentation, launch the following command in the folder ``doc/sphinx`` located in the pyhrf repository::
+ 
+   $ make html
+
+This will create a folder ``html`` with all the documentation (start page: ``html/index.html``.
+
+
+Troubleshooting
+***************
+
+On MAC, you can get the following error::
+
+  $ make html
+  ...
+  File "/opt/local/Library/Frameworks/Python.framework/Versions/2.5/lib/python2.5/locale.py", line 375, in _parse_localename
+  raise ValueError, 'unknown locale: %s' % localename
+  ValueError: unknown locale: UTF-8
+ 
+   
+To fix this, add the following lines to your shell init file (``~/.profile``)::
+
+  export LC_ALL=en_US.UTF-8
+  export LANG=en_US.UTF-8
