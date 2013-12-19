@@ -16,9 +16,9 @@ from pyhrf.core import FmriData, merge_fmri_sessions
 class FMRIDataTest(unittest.TestCase):
     
     def test_from_vol_ui_default(self):
-        #pyhrf.verbose.setVerbosity(1)
+        #pyhrf.verbose.set_verbosity(1)
         fmri_data = FmriData.from_vol_ui()
-        #pyhrf.verbose.setVerbosity(0)
+        #pyhrf.verbose.set_verbosity(0)
 
     def test_multisession_simu(self):
         fd1 = FmriData.from_simu_ui()

@@ -76,7 +76,7 @@ except ImportError:
     print 'Nipy is not installed, this command is not available.'
     sys.exit(1)
 
-pyhrf.verbose.setVerbosity(options.verbose)
+pyhrf.verbose.set_verbosity(options.verbose)
 
 nba = len(args)
 if  nba<minArgs or (maxArgs>=0 and nba>maxArgs):

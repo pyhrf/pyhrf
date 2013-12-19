@@ -250,7 +250,7 @@ class GiftiTest(unittest.TestCase):
 
 
         # graph, bold, session_scans, mask, edge lengthes
-        #pyhrf.verbose.setVerbosity(3)
+        #pyhrf.verbose.set_verbosity(3)
         g, b, ss, m, el = load_fmri_surf_data([bold_file, bold_file],
                                               mesh_file,
                                               parcel_file)

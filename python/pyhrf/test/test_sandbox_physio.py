@@ -31,7 +31,7 @@ class SimulationTest(unittest.TestCase):
 
     def test_simulate_asl_full_physio(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         r = phy.simulate_asl_full_physio()
         # let's just test the shapes of objects and the presence of some
@@ -45,7 +45,7 @@ class SimulationTest(unittest.TestCase):
 
     def test_simulate_asl_full_physio_outputs(self):
 
-        pyhrf.verbose.setVerbosity(1)
+        pyhrf.verbose.set_verbosity(1)
 
         phy.simulate_asl_full_physio(self.tmp_path)
 
@@ -59,7 +59,7 @@ class SimulationTest(unittest.TestCase):
 
     def test_simulate_asl_physio_rfs(self):
 
-        pyhrf.verbose.setVerbosity(0)
+        pyhrf.verbose.set_verbosity(0)
 
         r = phy.simulate_asl_physio_rfs()
         # let's just test the shapes of objects and the presence of some

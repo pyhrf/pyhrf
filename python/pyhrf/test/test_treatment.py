@@ -19,7 +19,7 @@ class TreatmentTest(unittest.TestCase):
 
     def test_default_treatment(self):
 
-        #pyhrf.verbose.setVerbosity(4)
+        #pyhrf.verbose.set_verbosity(4)
         t = FMRITreatment(make_outputs=False, result_dump_file=None)
         t.enable_draft_testing()
         t.run()
@@ -79,7 +79,7 @@ class TreatmentTest(unittest.TestCase):
 
 
     def test_default_treatment_parallel_LAN(self):
-        #pyhrf.verbose.setVerbosity(1)
+        #pyhrf.verbose.set_verbosity(1)
         if cfg['parallel-LAN']['enable_unit_test'] == 1:
             t = FMRITreatment(make_outputs=False, result_dump_file=None,
                               output_dir=self.tmp_dir)
@@ -109,7 +109,7 @@ class TreatmentTest(unittest.TestCase):
 
 
     def test_default_treatment_parallel_cluster(self):
-        #pyhrf.verbose.setVerbosity(1)
+        #pyhrf.verbose.set_verbosity(1)
         if cfg['parallel-cluster']['enable_unit_test'] == 1:
             t = FMRITreatment(make_outputs=False, result_dump_file=None,
                               output_dir=self.tmp_dir)

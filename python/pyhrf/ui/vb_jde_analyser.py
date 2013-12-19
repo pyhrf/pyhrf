@@ -988,7 +988,7 @@ class JDEVEMAnalyser(JDEAnalyser):
 def run_analysis(**params):
     # from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
     # import pyhrf
-    pyhrf.verbose.setVerbosity(1)
+    pyhrf.verbose.set_verbosity(1)
     fdata = params.pop('roi_data')
     # print 'doing params:'
     # print params

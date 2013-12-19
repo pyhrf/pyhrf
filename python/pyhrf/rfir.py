@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import numpy
 
 import numpy as np
 from numpy import array,int32, float32 ,fix, sqrt, eye, dot, linalg, kron, newaxis, log, array2string
 from numpy import zeros
-import scipy
+import scipy.stats
 from time import time
 
 from pyhrf.tools import array_summary
@@ -644,7 +641,7 @@ class RFIREstim(xmlio.XMLParamDrivenClass):
             #store the P-value
             SBS=self.K-1
             chi2=dot(self.h[m],dot(self.InvSigma[m*SBS:(m+1)*SBS,m*SBS:(m+1)*SBS],self.h[m]))
-            Pvalue=1-scipy.stats.chi2.cdf(chi2,self.h[m].shape[0])
+            Pvalue= 1 - scipy.stats.chi2.cdf(chi2,self.h[m].shape[0])
             self.Pvalues[m,POI]=Pvalue
 
             #store the sqrt of the diagonal of the covariance matrix (percentage of signal change)

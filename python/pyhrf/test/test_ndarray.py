@@ -468,7 +468,7 @@ class xndarrayTest(unittest.TestCase):
         assert c == c_flat
 
     def test_sub_cuboid(self):
-        #pyhrf.verbose.setVerbosity(6)
+        #pyhrf.verbose.set_verbosity(6)
 
         c = xndarray(self.arr_flat, self.arr_flat_names, self.arr_flat_domains)
 
@@ -645,7 +645,7 @@ class xndarrayTest(unittest.TestCase):
 
     def test_split(self):
 
-        #pyhrf.verbose.setVerbosity(4)
+        #pyhrf.verbose.set_verbosity(4)
         sh = (2,4,4,4)
         c = xndarray(np.arange(np.prod(sh)).reshape(sh), ['condition']+MRI3Daxes,
                    {'condition':['audio','video']})

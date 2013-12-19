@@ -192,7 +192,6 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
     P_USE_TRUE_VALUE = 'useTrueValue'
     P_NORMALISE = 'normalise'
     P_DERIV_ORDER = 'derivOrder'
-    P_OUTPUT_PMHRF = 'writeHrfOutput'
     P_COVAR_HACK = 'hackCovarApost'
     P_PRIOR_TYPE = 'priorType'
     P_VOXELWISE_OUTPUTS = 'voxelwiseOutputs'
@@ -211,7 +210,6 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #                   #-> we have to normalise h samples otherwise
         #                   #   there are some scale amibuity issues
         P_DERIV_ORDER : 2,
-        P_OUTPUT_PMHRF : True,
         P_COVAR_HACK : False,
         P_PRIOR_TYPE : 'voxelwiseIID', #voxelwiseIID or singleHRF
         P_VOXELWISE_OUTPUTS : True, #HACK
@@ -219,8 +217,8 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         }
 
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_DURATION, P_ZERO_CONSTR, P_SAMPLE_FLAG,
-                            P_OUTPUT_PMHRF,] #P_USE_TRUE_VALUE,
+        parametersToShow = [P_SAMPLE_FLAG, P_DURATION, P_ZERO_CONSTR]
+                           #P_USE_TRUE_VALUE,
 
 
 
@@ -280,7 +278,6 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.Ini = valIni
         self.derivOrder = self.parameters[self.P_DERIV_ORDER]
         self.varR = None
-        self.outputHrf = self.parameters[self.P_OUTPUT_PMHRF]
         self.covarHack = self.parameters[self.P_COVAR_HACK]
         self.priorType = self.parameters[self.P_PRIOR_TYPE]
         self.signErrorDetected = None
@@ -307,10 +304,10 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         else:
             #print 'GLOB!'
             #print self.Ini
-            #print self.trueValue 
+            #print self.trueValue
             if self.Ini is not None:
                 self.trueValue = self.Ini[:self.hrfLength]
-                #if self.zc : 
+                #if self.zc :
                     #self.trueValue = self.trueValue[1:-1]
                 #print 'GLOB!'
                 #print self.trueValue
@@ -336,12 +333,12 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         rh = smplRH.currentValue
         pyhrf.verbose(4, 'Hrf variance is :%1.3f' %rh)
         pyhrf.verbose(4, 'hrfValIni is None -> setting it ...')
-        
+
         if self.Ini is None:
             hrfValIni=None
         else:
             hrfValIni=self.Ini
-            
+
         if self.useTrueValue :
             if self.trueValue is not None:
                 hrfValIni = self.trueValue.copy()
@@ -400,7 +397,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         self.updateNorm()
         self.updateXh()
-        
+
         #else -> #TODO : check consistency between given init value
         # and self.hrfLength ...
 
@@ -463,7 +460,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.reportCurrentVal()
 
     def sampleNextInternal(self, variables):
-        
+
         #TODO : comment
 
         try:
@@ -1339,10 +1336,10 @@ class HRFSamplerWithRelVar(HRFSampler) :
         return (varDeltaS, varDeltaY)
 
     def sampleNextInternal(self, variables):
-        
+
         #print 'Step 2 : HRF Sampling *****RelVar*****'
 
-        
+
         #TODO : comment
 
         snrl = variables[self.samplerEngine.I_NRLS]
@@ -1640,7 +1637,6 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         self.derivOrder = self.parameters[self.P_DERIV_ORDER]
         self.varR = None
-        self.outputHrf = self.parameters[self.P_OUTPUT_PMHRF]
         self.covarHack = self.parameters[self.P_COVAR_HACK]
         self.priorType = self.parameters[self.P_PRIOR_TYPE]
         self.signErrorDetected = None
@@ -2256,7 +2252,8 @@ class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             P_USE_TRUE_VALUE : False,
             }
 
-    parametersToShow = [P_VAL_INI, P_SAMPLE_FLAG, P_PR_MEAN, P_PR_VAR]
+    if pyhrf.__usemode__ == pyhrf.ENDUSER:
+        parametersToShow = [P_VAL_INI, P_SAMPLE_FLAG]
 
     def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
                  xmlLabel=None, xmlComment=None):
@@ -2290,7 +2287,7 @@ class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         if self.dataInput.simulData is not None:
             if isinstance(self.dataInput.simulData[0], dict):
                 self.trueValue = dataInput.simulData[0].get('hrf_var', None)
-                
+
         if self.trueValue is not None and np.isscalar(self.trueValue):
             self.trueValue = np.array([self.trueValue])
 

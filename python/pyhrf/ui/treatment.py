@@ -73,8 +73,11 @@ class FMRITreatment(XMLable2):
         "\nTwo main parts:\n - data definition ('fmri_data')\n"\
         " - analysis parameters ('analyser')."
 
-    parametersToShow = ['fmri_data', 'result_dump_file',
-                        'output_dir', 'make_outputs', 'analyser']
+    parametersToShow = ['fmri_data', 'output_dir', 'analyser']
+
+    if pyhrf.__usemode__ == 'devel':
+        parametersToShow = ['make_outputs', 'result_dump_file']
+
 
     def __init__(self, fmri_data=FmriData.from_vol_ui(),
                  analyser=JDEMCMCAnalyser(), output_dir='./',
@@ -716,7 +719,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
 
     (options,args) = parser.parse_args()
 
-    pyhrf.verbose.setVerbosity(options.verbose)
+    pyhrf.verbose.set_verbosity(options.verbose)
 
     t0 = time.time()
 

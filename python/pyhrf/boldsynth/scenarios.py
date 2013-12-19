@@ -1085,6 +1085,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 from pyhrf.core import Condition
 import pyhrf.tools as ptools
 import pyhrf.core as pcore
+
 def create_small_bold_simulation(snr="high", output_dir=None, simu_items=None):
     """
     """
