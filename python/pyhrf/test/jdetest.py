@@ -171,7 +171,161 @@ class JDETest(unittest.TestCase):
         #treatment.clean_output_files()
         #if xml_file is not None:
         #    os.remove(xml_file)
+from pyhrf.jde.noise import NoiseVarianceARSampler
 
+class JDEARnoiseTest(unittest.TestCase):
+
+    def setUp(self):
+        np.random.seed(8652761)
+
+        tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
+                                  dir=pyhrf.cfg['global']['tmp_path'])
+        self.tmp_dir = tmpDir
+
+        bf = 'subj0_bold_session0.nii.gz'
+        self.boldFiles = [pyhrf.get_data_file_name(bf)]
+        pf = 'subj0_parcellation.nii.gz'
+        self.parcelFile = pyhrf.get_data_file_name(pf)
+        self.tr = 2.4
+        self.dt = .6
+        self.onsets = pyhrf.onsets_loc_av
+        self.durations = None
+        self.nbIt = 3
+        self.pfMethod = 'es'
+
+        simu = simulate_bold(self.tmp_dir, spatial_size='random_small')
+        self.data_simu = FmriData.from_simulation_dict(simu)
+
+        #print 'Create sampler_params_for_single_test ...'
+        self.sampler_params_for_single_test = {
+            BG.P_NB_ITERATIONS : 100,
+            BG.P_SMPL_HIST_PACE : 1,
+            BG.P_OBS_HIST_PACE : 1,
+            # level of spatial correlation = beta
+            BG.P_BETA : BS({
+                    BS.P_SAMPLE_FLAG : False,
+                    BS.P_USE_TRUE_VALUE : False,
+                    BS.P_VAL_INI : np.array([0.6]),
+                    }),
+            # HRF
+            BG.P_HRF : HRFARSampler({
+                    HS.P_SAMPLE_FLAG : False,
+                    HS.P_USE_TRUE_VALUE : True,
+                    HS.P_PRIOR_TYPE : 'singleHRF',
+                    }),
+            # HRF variance
+            BG.P_RH : HVS({
+                    HVS.P_USE_TRUE_VALUE : True,
+                    HVS.P_SAMPLE_FLAG : False,
+                    }),
+            # neural response levels (stimulus-induced effects)
+            BG.P_NRLS : NRLARSampler({
+                    NS.P_USE_TRUE_NRLS : True,
+                    NS.P_USE_TRUE_LABELS : True,
+                    NS.P_SAMPLE_FLAG : False,
+                    NS.P_SAMPLE_LABELS : False,
+                    }),
+            BG.P_MIXT_PARAM : BGMS({
+                    BGMS.P_SAMPLE_FLAG : False,
+                    BGMS.P_USE_TRUE_VALUE : True,
+                    }),
+            BG.P_NOISE_VAR : NoiseVarianceARSampler({
+                    NoiseVarianceARSampler.P_SAMPLE_FLAG : False,
+                    NoiseVarianceARSampler.P_USE_TRUE_VALUE : True,
+                    }),
+            BG.P_NOISE_ARP   : NoiseARParamsSampler({
+                    NoiseARParamsSampler.P_SAMPLE_FLAG : False,
+                    NoiseARParamsSampler.P_USE_TRUE_VALUE : True,
+                    }),
+
+            BG.P_CHECK_FINAL_VALUE : 'raise', #print or raise
+            }
+
+
+        #print 'Create sampler_params_for_full_test ...'
+        self.sampler_params_for_full_test = {
+            BG.P_NB_ITERATIONS : 500,
+            BG.P_SMPL_HIST_PACE : 1,
+            BG.P_OBS_HIST_PACE : 1,
+            # level of spatial correlation = beta
+            BG.P_BETA : BS({
+                    BS.P_SAMPLE_FLAG : True,
+                    BS.P_USE_TRUE_VALUE : False,
+                    BS.P_VAL_INI : np.array([0.6]),
+                    }),
+            # HRF
+            BG.P_HRF : HRFARSampler({
+                    HS.P_SAMPLE_FLAG : True,
+                    HS.P_USE_TRUE_VALUE : False,
+                    HS.P_NORMALISE : 1.,
+                    }),
+            # HRF variance
+            BG.P_RH : HVS({
+                    HVS.P_USE_TRUE_VALUE : False,
+                    HVS.P_SAMPLE_FLAG : True,
+                    }),
+            # neural response levels (stimulus-induced effects)
+            BG.P_NRLS : NRLARSampler({
+                    NS.P_USE_TRUE_NRLS : False,
+                    NS.P_USE_TRUE_LABELS : False,
+                    NS.P_SAMPLE_FLAG : True,
+                    NS.P_SAMPLE_LABELS : True,
+                    }),
+            BG.P_MIXT_PARAM : BGMS({
+                    BGMS.P_SAMPLE_FLAG : True,
+                    BGMS.P_USE_TRUE_VALUE : False,
+                    }),
+            BG.P_NOISE_VAR : NoiseVarianceARSampler({
+                    NoiseVarianceARSampler.P_SAMPLE_FLAG : True,
+                    NoiseVarianceARSampler.P_USE_TRUE_VALUE : False,
+                    }),
+            BG.P_NOISE_ARP : NoiseARParamsSampler({
+                    NoiseARParamsSampler.P_SAMPLE_FLAG : True,
+                    NoiseARParamsSampler.P_USE_TRUE_VALUE : False,
+                    }),
+            BG.P_CHECK_FINAL_VALUE : 'print', #print or raise
+            }
+
+    def tearDown(self):
+        if 1:
+            pyhrf.verbose(1, 'Remove tmp dir %s' %self.tmp_dir)
+            shutil.rmtree(self.tmp_dir)
+        else:
+            pyhrf.verbose(1, 'Keep tmp dir %s' %self.tmp_dir)
+
+
+    def testDefaultWithOutputs(self):
+        #pyhrf.verbose.set_verbosity(1)
+        treatment, xml_file = jde_vol_from_files(self.boldFiles,
+                                                 self.parcelFile,
+                                                 self.dt, self.tr,
+                                                 nbIterations=self.nbIt,
+                                                 pfMethod=self.pfMethod,
+                                                 outputDir=self.tmp_dir)
+        #treatment.clean_output_files()
+
+
+
+    def test_parcellation(self):
+
+        p_size = 300
+        np.random.seed(125437)
+        parcellation,_ = parcellation_for_jde(FmriData.from_vol_ui(), p_size,
+                                              output_dir=self.tmp_dir)
+        ms = np.mean([(parcellation==i).sum() \
+                          for i in np.unique(parcellation) if i != 0])
+        size_tol = 50
+        if np.abs(ms-p_size) > size_tol:
+            raise Exception('Mean size of parcellation seems too ' \
+                                'large: %1.2f >%d+-%d ' %(ms,p_size,size_tol))
+        #print 'parcel ids:', np.unique(parcellation)
+        if 0:
+            print parcellation_report(parcellation)
+
+    def test_surface_treatment(self):
+        #pyhrf.verbose.set_verbosity(2)
+        treatment, xml_file, result = jde_surf_from_files(nbIterations=2,
+                                                          outputDir=self.tmp_dir)
 
 
 
