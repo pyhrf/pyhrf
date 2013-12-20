@@ -11,19 +11,19 @@ except:
 def loadOnsets(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
-    
+
     return get_onsets_from_spm_dict(spm)
 
 def load_paradigm_from_mat(spmMatFile):
     d = loadmat(spmMatFile)
-    spm = d['SPM']    
+    spm = d['SPM']
     return (get_onsets_from_spm_dict(spm), get_tr_from_spm_dict(spm))
 
 def load_contrasts(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
     return get_constrasts(spm)
-    
+
 def load_scalefactor_from_mat(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
@@ -55,7 +55,7 @@ def get_constrasts(spm):
     if isinstance(spm, numpy.void):
         if len(spm['xCon']) > 0:
             cons = spm['xCon'][0]
-            return [ (c['name'], c['c'].squeeze(), c['STAT']) for c in cons ]    
+            return [ (c['name'], c['c'].squeeze(), c['STAT']) for c in cons ]
         else:
             return []
     elif isinstance(spm, numpy.ndarray):
@@ -65,6 +65,23 @@ def get_constrasts(spm):
         raise Exception("Type of input (%s) is unsupported" %str(spm.__class__))
 
 def get_onsets_from_spm_dict(spm):
+    """
+    Read paradigm from SPM structure loaded by loadmat from scipy.
+
+
+    Args:
+        - spm (dict): SPM structure loaded from an SPM.mat
+
+    Return:
+        - the paradigm (dict), such as:
+            { <session> : { 'onsets': { <condition> : array of stim onsets },
+                            'stimulusLength': { <condition> :
+                                                     array of stim durations}
+                          }
+            }
+
+    """
+
     allOnsets = {}
     #if isinstance(spm, numpy.ndarray):
         #spm = spm[0]
@@ -86,7 +103,7 @@ def get_onsets_from_spm_dict(spm):
         #sessions = sessions
     #else:
         #sessions = [sessions]
-        
+
     sessions=get_field(spm, 'Sess').item()[0]
 
     print 'sessions:', sessions
@@ -153,7 +170,7 @@ def get_onsets_from_spm_dict(spm):
             ons[str(name)] = numpy.array(o,dtype=float)*tFactor
             lgth[str(name)] = numpy.array(d,dtype=float)*tFactor
             #print 'ons :', ons[u.name]
-        allOnsets['session'+str(iSess+1)] = {'onsets':ons, 
+        allOnsets['session'+str(iSess+1)] = {'onsets':ons,
                                              'stimulusLength':lgth}
 
         #HACK: take only first session
@@ -161,11 +178,11 @@ def get_onsets_from_spm_dict(spm):
         #break
 
     return allOnsets
-   
-   
+
+
 def get_onsets_from_spm_dict_child(spm):
     allOnsets = {}
-        
+
     sessions=get_field(spm, 'Sess').item()[0]
 
     print 'sessions:', sessions
@@ -176,8 +193,8 @@ def get_onsets_from_spm_dict_child(spm):
         ons = {}
         lgth = {}
         fU = get_field(sess[0],'u')
-        name = get_field(sess[0], 'name') 
-        
+        name = get_field(sess[0], 'name')
+
         uons = get_field(sess[0],'ons')
         print 'uons:', uons
         if len(uons.shape) == 2:
@@ -202,7 +219,7 @@ def get_onsets_from_spm_dict_child(spm):
             ons[str(name)] = numpy.array(o,dtype=float)*tFactor
             lgth[str(name)] = numpy.array(d,dtype=float)*tFactor
             #print 'ons :', ons[u.name]
-        allOnsets['session'+str(iSess+1)] = {'onsets':ons, 
+        allOnsets['session'+str(iSess+1)] = {'onsets':ons,
                                              'stimulusLength':lgth}
 
         #HACK: take only first session
