@@ -80,6 +80,7 @@ def get_onsets_from_spm_dict(spm):
                           }
             }
 
+    TODO: unit test
     """
 
     allOnsets = {}
@@ -106,15 +107,15 @@ def get_onsets_from_spm_dict(spm):
 
     sessions=get_field(spm, 'Sess').item()[0]
 
-    print 'sessions:', sessions
+    #'sessions:', sessions
     for iSess,sess in enumerate(sessions):
-        print 'sess :', dir(sess)
+        #print 'sess :', dir(sess)
         #Bprint 'sess.U:'
         #print sess.U
         ons = {}
         lgth = {}
         fU = get_field(sess,'U')
-        print 'fU:', fU
+        #print 'fU:', fU
         if isinstance(fU, numpy.ndarray) and len(fU.shape) == 2:
             su = fU[0]
         else:
@@ -155,13 +156,13 @@ def get_onsets_from_spm_dict(spm):
             #print 'u.ons:'
             #print u.ons.shape
             uons = get_field(u,'ons')
-            print 'uons:', uons
+            #print 'uons:', uons
             if len(uons.shape) == 2:
                 o = uons[:,0]
             else:
                 o = uons
             udur = get_field(u,'dur')
-            print 'udur:', udur, udur.shape
+            #print 'udur:', udur, udur.shape
             if len(udur.shape) == 2:
                 d = udur[:,0]
             else:
@@ -172,10 +173,6 @@ def get_onsets_from_spm_dict(spm):
             #print 'ons :', ons[u.name]
         allOnsets['session'+str(iSess+1)] = {'onsets':ons,
                                              'stimulusLength':lgth}
-
-        #HACK: take only first session
-        #print 'kept session', iSess+1
-        #break
 
     return allOnsets
 
