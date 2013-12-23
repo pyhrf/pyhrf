@@ -57,12 +57,9 @@ def remote_dir_is_writable(user, hosts, path):
     timeslot = read_timeslot('allday')
 
     tmp_dir = pyhrf.get_tmp_path()
-    brokenfile = op.join(tmp_dir, 'pyhrf-broken_cmd.batch')
-    logfile = op.join(tmp_dir, 'pyhrf-parallel.log')
-    run_grid(mode, hosts, 'rsa', tasks, timeslot, brokenfile,
-             logfile, user=user)
+    logfile = op.join(tmp_dir, 'pyhrf.log')
+    run_grid(mode, hosts, 'rsa', tasks, timeslot, logfile=logfile, user=user)
     kill_threads()
-
     log = open(logfile).readlines()
 
     res = [False] * len(hosts)
@@ -71,7 +68,7 @@ def remote_dir_is_writable(user, hosts, path):
             #print line
             _,ih,r = line.strip('\n').split(':')
             res[int(ih)] = ('OK' in r)
-
+    os.remove(logfile)
     return res
 
 def create_options(argv):
@@ -1108,8 +1105,8 @@ class HierarchicalTasksManager(DispatchedTasksManager):
                     self._log, self._brokenfd)
                 dtm.start()
 
-def run_grid(mode, hosts_list, keytype, tasks, timeslot, brokenfile,
-             logfile, user=None, passwd=None, time_limit=86400):
+def run_grid(mode, hosts_list, keytype, tasks, timeslot, brokenfile=None,
+             logfile=None, user=None, passwd=None, time_limit=86400):
     if 0:
         print 'run_grid ...'
         print 'mode:', mode
@@ -1131,8 +1128,8 @@ def run_grid(mode, hosts_list, keytype, tasks, timeslot, brokenfile,
     if tasks is None : return
         #print 'run_grid ...'
         #print 'tasks:', tasks
-    brokenfd = open(brokenfile, 'w')
-    log = open(logfile, 'w')
+    brokenfd = open(brokenfile or os.devnull, 'w')
+    log = open(logfile or os.devnull, 'w')
     user = User(user, passwd, keytype)
     args = (timeslot, user, tasks, hm, log, brokenfd, time_limit)
     if mode == 'dispatch': tm = DispatchedTasksManager(*args)
