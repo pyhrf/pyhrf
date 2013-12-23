@@ -288,12 +288,16 @@ class FMRITreatment(XMLable2):
             tasks = grid.read_tasks(';'.join(tasks_list), mode)
             timeslot = grid.read_timeslot('allday')
             hosts = grid.read_hosts(cfg_parallel['hosts'])
-            brokenfile = op.join(tmpDir, 'pyhrf-broken_cmd.batch')
 
-            odir = self.output_dir or pyhrf.get_tmp_path()
-            logfile = op.join(odir, 'pyhrf-parallel.log')
-            pyhrf.verbose(1, 'Log file for process dispatching: %s' \
-                          %logfile)
+
+            if self.output_dir is not None:
+                brokenfile = op.join(self.output_dir, 'pyhrf-broken_cmd.batch')
+                logfile = op.join(self.output_dir, 'pyhrf-parallel.log')
+                pyhrf.verbose(1, 'Log file for process dispatching: %s' \
+                              %logfile)
+            else:
+                brokenfile = None
+                logfile = None
 
             #3. launch them
             pyhrf.verbose(1, 'Dispatching processes ...')
@@ -304,7 +308,7 @@ class FMRITreatment(XMLable2):
             except KeyboardInterrupt:
                 grid.quit(None, None)
 
-            if len(open(brokenfile).readlines()) > 0:
+            if brokenfile is not None and len(open(brokenfile).readlines()) > 0:
                 pyhrf.verbose(1, 'There are some broken commands, '\
                                   'trying again ...')
                 try:
@@ -566,7 +570,7 @@ def parse_data_options(options):
             raise Exception('Inconsistent number of data files and sessions: '\
                             '%d sessions in paradigm, %d data files' \
                             %(nb_sessions, len(data_fns)))
-                            
+
         # print 'paradigm:', paradigm.keys()
         # print 'data_fns:', len(data_fns)
         # print data_fns

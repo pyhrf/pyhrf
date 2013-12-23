@@ -8,14 +8,15 @@ from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.configuration import cfg
 from pyhrf import tools
 
+import shutil
+
 class TreatmentTest(unittest.TestCase):
 
     def setUp(self):
         self.tmp_dir = pyhrf.get_tmp_path() #'./'
 
-    # def tearDown(self):
-    #    shutil.rmtree(self.tmp_dir)
-
+    def tearDown(self):
+       shutil.rmtree(self.tmp_dir)
 
     def test_default_treatment(self):
 
