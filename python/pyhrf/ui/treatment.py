@@ -532,10 +532,14 @@ def parse_data_options(options):
     # If SPM.mat is provided, retrieve paradigm from it for all sessions.
     # Leave data file pathes to unknown.
     if options.spmFile is not None:
+
+        paradigm,tr = load_paradigm_from_mat(options.spmFile)
+        nb_sessions = len(paradigm)
+
         if options.inputDataType == 'volume':
             SessDataClass = FMRISessionVolumicData
             if options.func_data_file is None:
-                data_fns = DEFAULT_BOLD_VOL_FILE
+                data_fns = [DEFAULT_BOLD_VOL_FILE] * nb_sessions
             else:
                 data_fns = options.func_data_file
             if options.mask_file is None:
@@ -544,7 +548,7 @@ def parse_data_options(options):
         elif options.inputDataType == 'surface':
             SessDataClass = FMRISessionSurfacicData
             if options.func_data_file is None:
-                data_fns = DEFAULT_BOLD_SURF_FILE
+                data_fns = [DEFAULT_BOLD_SURF_FILE] * nb_sessions
             else:
                 data_fns = options.func_data_file
             if options.mask_file is None:
@@ -556,17 +560,18 @@ def parse_data_options(options):
             data_fns = DEFAULT_SIMULATION_FILE
             fmriDataInit = FmriData.from_simu_ui
 
-
-        if not isinstance(data_fns, list):
-            data_fns = [data_fns]
-
-        paradigm,tr = load_paradigm_from_mat(options.spmFile)
         sessions_data = []
 
+        if len(data_fns) != nb_sessions:
+            raise Exception('Inconsistent number of data files and sessions: '\
+                            '%d sessions in paradigm, %d data files' \
+                            %(nb_sessions, len(data_fns)))
+                            
         # print 'paradigm:', paradigm.keys()
         # print 'data_fns:', len(data_fns)
         # print data_fns
         #TODO: check nb of sessions and nb of data files
+
         for isess, sess in enumerate(sorted(paradigm.keys())):
             #print len(paradigm.keys())
             sessions_data.append(SessDataClass(paradigm[sess]['onsets'],

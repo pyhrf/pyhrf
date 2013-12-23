@@ -73,8 +73,8 @@ class ViewerMainWindow(QtGui.QMainWindow):
         # ask for file names to open:
         
         fns = QtGui.QFileDialog.getOpenFileNames(self, "Open MRI data", './',
-                                                 "MRI volume (*.img *.img.gz"\
-                                                 "*.nii *.nii.gz)")
+                                                 "MRI volume (*.img | *.img.gz"\
+                                                 "| *.nii | *.nii.gz)")
         # convert QStringList to list of str:
         fns = [str(fn) for fn in fns]
 

@@ -11,19 +11,19 @@ except:
 def loadOnsets(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
-    
+
     return get_onsets_from_spm_dict(spm)
 
 def load_paradigm_from_mat(spmMatFile):
     d = loadmat(spmMatFile)
-    spm = d['SPM']    
+    spm = d['SPM']
     return (get_onsets_from_spm_dict(spm), get_tr_from_spm_dict(spm))
 
 def load_contrasts(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
     return get_constrasts(spm)
-    
+
 def load_scalefactor_from_mat(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
@@ -55,7 +55,7 @@ def get_constrasts(spm):
     if isinstance(spm, numpy.void):
         if len(spm['xCon']) > 0:
             cons = spm['xCon'][0]
-            return [ (c['name'], c['c'].squeeze(), c['STAT']) for c in cons ]    
+            return [ (c['name'], c['c'].squeeze(), c['STAT']) for c in cons ]
         else:
             return []
     elif isinstance(spm, numpy.ndarray):
@@ -65,6 +65,24 @@ def get_constrasts(spm):
         raise Exception("Type of input (%s) is unsupported" %str(spm.__class__))
 
 def get_onsets_from_spm_dict(spm):
+    """
+    Read paradigm from SPM structure loaded by loadmat from scipy.
+
+
+    Args:
+        - spm (dict): SPM structure loaded from an SPM.mat
+
+    Return:
+        - the paradigm (dict), such as:
+            { <session> : { 'onsets': { <condition> : array of stim onsets },
+                            'stimulusLength': { <condition> :
+                                                     array of stim durations}
+                          }
+            }
+
+    TODO: unit test
+    """
+
     allOnsets = {}
     #if isinstance(spm, numpy.ndarray):
         #spm = spm[0]
@@ -86,18 +104,18 @@ def get_onsets_from_spm_dict(spm):
         #sessions = sessions
     #else:
         #sessions = [sessions]
-        
+
     sessions=get_field(spm, 'Sess').item()[0]
 
-    print 'sessions:', sessions
+    #'sessions:', sessions
     for iSess,sess in enumerate(sessions):
-        print 'sess :', dir(sess)
+        #print 'sess :', dir(sess)
         #Bprint 'sess.U:'
         #print sess.U
         ons = {}
         lgth = {}
         fU = get_field(sess,'U')
-        print 'fU:', fU
+        #print 'fU:', fU
         if isinstance(fU, numpy.ndarray) and len(fU.shape) == 2:
             su = fU[0]
         else:
@@ -138,13 +156,13 @@ def get_onsets_from_spm_dict(spm):
             #print 'u.ons:'
             #print u.ons.shape
             uons = get_field(u,'ons')
-            print 'uons:', uons
+            #print 'uons:', uons
             if len(uons.shape) == 2:
                 o = uons[:,0]
             else:
                 o = uons
             udur = get_field(u,'dur')
-            print 'udur:', udur, udur.shape
+            #print 'udur:', udur, udur.shape
             if len(udur.shape) == 2:
                 d = udur[:,0]
             else:
@@ -153,19 +171,15 @@ def get_onsets_from_spm_dict(spm):
             ons[str(name)] = numpy.array(o,dtype=float)*tFactor
             lgth[str(name)] = numpy.array(d,dtype=float)*tFactor
             #print 'ons :', ons[u.name]
-        allOnsets['session'+str(iSess+1)] = {'onsets':ons, 
+        allOnsets['session'+str(iSess+1)] = {'onsets':ons,
                                              'stimulusLength':lgth}
 
-        #HACK: take only first session
-        #print 'kept session', iSess+1
-        #break
-
     return allOnsets
-   
-   
+
+
 def get_onsets_from_spm_dict_child(spm):
     allOnsets = {}
-        
+
     sessions=get_field(spm, 'Sess').item()[0]
 
     print 'sessions:', sessions
@@ -176,8 +190,8 @@ def get_onsets_from_spm_dict_child(spm):
         ons = {}
         lgth = {}
         fU = get_field(sess[0],'u')
-        name = get_field(sess[0], 'name') 
-        
+        name = get_field(sess[0], 'name')
+
         uons = get_field(sess[0],'ons')
         print 'uons:', uons
         if len(uons.shape) == 2:
@@ -202,7 +216,7 @@ def get_onsets_from_spm_dict_child(spm):
             ons[str(name)] = numpy.array(o,dtype=float)*tFactor
             lgth[str(name)] = numpy.array(d,dtype=float)*tFactor
             #print 'ons :', ons[u.name]
-        allOnsets['session'+str(iSess+1)] = {'onsets':ons, 
+        allOnsets['session'+str(iSess+1)] = {'onsets':ons,
                                              'stimulusLength':lgth}
 
         #HACK: take only first session
