@@ -12,7 +12,7 @@ from analyser_ui import FMRIAnalyser
 from pyhrf.jde.beta import BetaSampler
 from pyhrf.jde.nrl.bigaussian import NRLSampler #, NRLSamplerWithRelVar
 from pyhrf.jde.models import BOLDGibbsSampler
-from pyhrf.xmlio import XMLable2
+from pyhrf.xmlio import XmlInitable
 from pyhrf.tools.io import read_volume
 #from pyhrf.parcellation import parcellation_for_jde
 
@@ -117,7 +117,7 @@ class JDEMCMCAnalyser(JDEAnalyser):
                  randomSeed=None, pass_error=True):
 
         JDEAnalyser.__init__(self, outputPrefix, pass_error=pass_error)
-        XMLable2.__init__(self)
+        XmlInitable.__init__(self)
 
         self.sampler = copyModule.copy(sampler)
         self.osfMax = osfMax

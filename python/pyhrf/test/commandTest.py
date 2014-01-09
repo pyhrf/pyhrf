@@ -104,7 +104,7 @@ class TreatmentCommandTest(unittest.TestCase):
 
         f = open(xmlFile,'r')
         xml = f.read()
-        t = xmlio.fromXML(xml)
+        t = xmlio.from_xml(xml)
         if t.data.data_type == 'volume':
             dataFn = pyhrf.get_data_file_name('dummySmallBOLD.nii.gz')
             maskFn = pyhrf.get_data_file_name('dummySmallMask.nii.gz')
@@ -137,7 +137,7 @@ class TreatmentCommandTest(unittest.TestCase):
 
         f = open(xmlFile,'r')
         xml = f.read()
-        t = xmlio.fromXML(xml)
+        t = xmlio.from_xml(xml)
         sd = FMRISessionSimulationData(simulation_file=simu_file)
         t.set_init_param('fmri_data', FmriData.from_simu_ui(sessions_data=[sd]))
 
@@ -153,7 +153,7 @@ class TreatmentCommandTest(unittest.TestCase):
 
         #print 'makeQuietOutputs ...'
         #print 'xmlFile:', xmlFile
-        t = xmlio.fromXML(file(xmlFile).read())
+        t = xmlio.from_xml(file(xmlFile).read())
         t.set_init_param('output_dir', None)
         f = open(xmlFile, 'w')
         f.write(xmlio.to_xml(t))

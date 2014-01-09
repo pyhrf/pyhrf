@@ -15,12 +15,12 @@ class BaseTest(unittest.TestCase):
 
         dictObj = {'clef1' : 'val1', 'clef2': 2}
         sXml = xmlio.to_xml(dictObj)
-        dictObj2 = xmlio.fromXML(sXml)
+        dictObj2 = xmlio.from_xml(sXml)
         assert dictObj2 == dictObj
 
         obj = ['ggg',5,(677,56),'ff']
         sXml = xmlio.to_xml(obj)
-        obj2 = xmlio.fromXML(sXml)
+        obj2 = xmlio.from_xml(sXml)
         assert obj2 == obj
         
 
@@ -32,7 +32,7 @@ class BaseTest(unittest.TestCase):
               'array2D' : np.ones((4,4)),
               }
         sXml = xmlio.to_xml(obj, handler=xmlio.xmlnumpy.NumpyXMLHandler())
-        obj2 = xmlio.fromXML(sXml)
+        obj2 = xmlio.from_xml(sXml)
         assert obj2.keys() == obj.keys()
         assert np.allclose(obj2["array1"],obj["array1"])
         
@@ -47,7 +47,7 @@ class BaseTest(unittest.TestCase):
         sXml = xmlio.to_xml(d)
         #print 'sXml:'
         #print sXml
-        d2 = xmlio.fromXML(sXml)
+        d2 = xmlio.from_xml(sXml)
 
         self.assertEqual(d, d2)
         #for i1, i2 in zip(d.items(), d2.items):
@@ -74,88 +74,7 @@ class Dummy(xmlio.XMLParamDrivenClass):
         # Retrieve parameter values:
         self.p1 = self.parameters['param1']
 
-class DummyNumpy(xmlio.XMLParamDrivenClass):
-    """
-    Dummy class to illustrate the xml parametrisation system, with numpy support.
-    """
-
-    defaultParameters = {
-        'param1' : 'paramVal1',
-        'numArray' : np.array([56,56]),}# Beware : value associated to 'numArray'
-                                        # will be shared by all instances
-                                        # Eventually make a copy in __init__
-
-    def __init__(self, parameters=None,
-                 xmlHandler=xmlio.xmlnumpy.NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        # Call parent constructor (will mainly update self.parameters
-        # from parameters):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-
-        # Retrieve parameter values:
-        self.p1 = self.parameters['param1']
-        self.p2 = self.parameters['numArray'].copy() 
-
-
-class DummyNested(xmlio.XMLParamDrivenClass):
-    """
-    Dummy class to illustrate the xml parametrisation system, with nested
-    attributes also inheriting from XMLParamDrivenClass (cascade parametrisation)
-    """
-
-    defaultParameters = { \
-        'objP1' : Dummy(),
-        'objP2' : DummyNumpy(),
-        }
-
-    def __init__(self, parameters=None,
-                 xmlHandler=xmlio.xmlnumpy.NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-
-        # Retrieve parameter values:
-        self.p1 = self.parameters['objP1']
-        self.p2 = self.parameters['objP2']
-
-
     
-class XMLParamDrivenClassTest(unittest.TestCase):
-
-
-    def testSimple(self):
-##        print 'Simple ..'
-        obj = Dummy()
-        sXml = xmlio.to_xml(obj)
-##        print 'xml:'
-##        print sXml
-        xmlio.fromXML(sXml)
-##        print 'parameters:'
-##        print obj.parameters
-
-    def testNumpy(self):
-##        print 'Numpy ..'
-        obj = DummyNumpy()
-        sXml = xmlio.to_xml(obj)
-##        print 'Xml:'
-##        print sXml
-        xmlio.fromXML(sXml)
-##        print 'parameters:'
-##        print obj.parameters
-
-    def testNested(self):
-
-##        print 'Nested objects ..'
-        obj = DummyNested()
-        sXml = xmlio.to_xml(obj)
-##        print 'Xml:'
-##        print sXml
-        xmlio.fromXML(sXml)
-##        print 'parameters:'
-##        print obj.parameters
-        
 
 import inspect
 class TopClass(xmlio.XMLable):
@@ -170,7 +89,7 @@ class ChildClass(xmlio.XMLable):
 
 class D(xmlio.XMLable):
     def __init__(self,p=2):
-        XMLable.__init__(self)
+        xmlio.XMLable.__init__(self)
 
 class T(xmlio.XMLable):
     
@@ -240,10 +159,9 @@ class XMLableTest(unittest.TestCase):
             a.override_init('obj_t', T.from_param_c)
             # print 'after override ...'
             # print a._init_parameters
-            xml = xmlio.to_xml(a,handler=xmlio.xmlnumpy.NumpyXMLHandler(),
-                              pretty=True)
+            xml = xmlio.to_xml(a, pretty=True)
             # print xml
-            new_a = xmlio.fromXML(xml)
+            new_a = xmlio.from_xml(xml)
             # print ''
             # print 'new_a:'
             # print new_a
@@ -301,7 +219,7 @@ class XMLable2Test(unittest.TestCase):
         # print 'xml:'
         # print xml
         
-        b2 = xmlio.fromXML(xml)
+        b2 = xmlio.from_xml(xml)
         # print 'b2.obj:', b2.obj
 
 
@@ -314,7 +232,7 @@ class XMLable2Test(unittest.TestCase):
         # print 'xml:'
         # print xml
         
-        b2 = xmlio.fromXML(xml)
+        b2 = xmlio.from_xml(xml)
         # print 'b2.obj:', b2.obj
         np.testing.assert_equal(b2.obj, [4,3])
 
@@ -330,7 +248,7 @@ class XMLable2Test(unittest.TestCase):
         # print 'axml:'
         # print axml
 
-        a2 = xmlio.fromXML(axml)
+        a2 = xmlio.from_xml(axml)
         # print 'a2 -- nbIterations:', a2.sampler.nbIterations
         self.assertEqual(a2.sampler.nbIterations, 42)
 
@@ -349,7 +267,7 @@ class XMLable2Test(unittest.TestCase):
         # print 'txml:'
         # print txml
 
-        t2 = xmlio.fromXML(txml)
+        t2 = xmlio.from_xml(txml)
         # print 't2 -- nbIterations:', t2.analyser.sampler.nbIterations
         self.assertEqual(t2.analyser.sampler.nbIterations, 42)
 

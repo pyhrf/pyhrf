@@ -1198,7 +1198,7 @@ class BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
             callbackObj = GSDefaultCallbackHandler()
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
                               obsHistPace, nbSweeps,
-                              callbackObj, randomSeed=seed,
+                              callbackObj,
                               globalObsHistoryPace=globalObsHistPace,
                               check_ftval=check_ftval)
 

@@ -864,7 +864,7 @@ class TypedXMLHandler:
         f = open(includeFn, 'r')
         includeContent = string.join(f.readlines())
         f.close()
-        return fromXML(includeContent)
+        return from_xml(includeContent)
 
     includeTagDOMReader = staticmethod(includeTagDOMReader)
 
@@ -1074,7 +1074,7 @@ class TypedXMLHandler:
                                         xmlHandler.TYPE_LABEL_ODICT)
     odictDOMWriter = staticmethod(odictDOMWriter)
 
-def fromXML(s, handler = TypedXMLHandler()):
+def from_xml(s, handler = TypedXMLHandler()):
     return handler.parseXMLString(s)
 
 
@@ -1082,7 +1082,7 @@ def fromXML(s, handler = TypedXMLHandler()):
 #     f = open(fxml, 'r')
 #     sXml = string.join(f.readlines())
 #     f.close()
-#     return fromXML(sXml)
+#     return from_xml(sXml)
 
 def to_xml(o, handler = TypedXMLHandler(), objName="anonymObject", pretty=False):
     if isinstance(o, XMLParamDrivenClass) or hasattr(o, 'xmlHandler'):

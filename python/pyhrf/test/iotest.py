@@ -137,7 +137,7 @@ class xndarrayIOTest(unittest.TestCase):
     #     sxml = pyhrf.xmlio.to_xml(cxml, NumpyXMLHandler(),pretty=True)
     #     #print sxml
     #     #print 'loading from xml ...'
-    #     c = pyhrf.xmlio.fromXML(sxml, NumpyXMLHandler())
+    #     c = pyhrf.xmlio.from_xml(sxml, NumpyXMLHandler())
     #     #print 'loaded cuboid:'
     #     #print c.cuboid.descrip()
     #     #print c.cuboid.data
@@ -155,7 +155,7 @@ class xndarrayIOTest(unittest.TestCase):
     #     sxml = pyhrf.xmlio.to_xml(cxml, NumpyXMLHandler(),pretty=True)
     #     #print sxml
     #     #print 'loading from xml ...'
-    #     c = pyhrf.xmlio.fromXML(sxml, NumpyXMLHandler())
+    #     c = pyhrf.xmlio.from_xml(sxml, NumpyXMLHandler())
     #     #print 'loaded cuboid:'
     #     #print c.cuboid.descrip()
     #     #cPickle.dump(c.cuboid,open('./cubfromxml.pck','w'))

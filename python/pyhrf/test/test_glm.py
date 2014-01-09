@@ -83,7 +83,7 @@ class NipyGLMTest(unittest.TestCase):
 
         from pyhrf import xmlio
         from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
-        t = xmlio.fromXML(file(xmlFile).read())
+        t = xmlio.from_xml(file(xmlFile).read())
         t.set_init_param('output_dir', None)
         f = open(xmlFile, 'w')
         f.write(xmlio.to_xml(t, handler=NumpyXMLHandler()))

@@ -1282,7 +1282,7 @@ class xndarray:
 
         """
 
-        from pyhrf.xmlio import fromXML, to_xml
+        from pyhrf.xmlio import from_xml, to_xml
         from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
         pyhrf.verbose(5, 'xndarray.save(%s)' %file_name)
@@ -1327,7 +1327,7 @@ class xndarray:
                 #print econtent
                 # Check if existing extension can be safely overwritten
                 try:
-                    prev_extra_info = fromXML(econtent)
+                    prev_extra_info = from_xml(econtent)
                     if not isinstance(extra_info, dict) and \
                             prev_extra_info.has_key('axes_names'):
                         raise IOError("Cannot safely overwrite Extension in "\
@@ -1452,7 +1452,7 @@ class xndarray:
                     ic = ecodes.index(ccode)
                     ext_content = h.extensions[ic].get_content()
                     try:
-                        cuboid_info = fromXML(ext_content)
+                        cuboid_info = from_xml(ext_content)
                     except Exception, e:
                         raise IOError('Extension for xndarray meta info can not '
                                       'be read from "comment" extension. '
@@ -1476,7 +1476,7 @@ class xndarray:
             # print 'meta data loaded from gii:'
             # print md
             if md.has_key('pyhrf_cuboid_data'):
-                cuboid_info = fromXML(md['pyhrf_cuboid_data'])
+                cuboid_info = from_xml(md['pyhrf_cuboid_data'])
             else:
                 cuboid_info = {}
             return xndarray(data, **cuboid_info)

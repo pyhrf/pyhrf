@@ -748,7 +748,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
             f = open(options.cfgFile, 'r')
             sXml = string.join(f.readlines())
             f.close()
-            treatment = xmlio.fromXML(sXml)
+            treatment = xmlio.from_xml(sXml)
             if 0:
                 sXml = xmlio.to_xml(treatment,
                                    handler=xmlio.xmlnumpy.NumpyXMLHandler())

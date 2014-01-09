@@ -538,3 +538,10 @@ class UiNode(object):
     def add_child(self, child):
         self._children.append(child)
         child._parent = self
+
+
+def read_xml(fn):
+    return None
+
+def write_xml(obj, fn):
+    return None

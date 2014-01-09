@@ -13,9 +13,7 @@ import numpy as np
 
 import pyhrf
 from pyhrf import xmlio, FmriData, FmriGroupData
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.ndarray import MRI3Daxes
-
 
 from pyhrf.boldsynth.spatialconfig import maskToMapping
 
@@ -25,7 +23,7 @@ from pyhrf.tools.io import read_volume, writexndarrayToTex, \
 
 from pyhrf.ndarray import stack_cuboids
 
-class FMRIAnalyser(xmlio.XMLable2):
+class FMRIAnalyser(xmlio.XmlInitable):
 
     P_OUTPUT_PREFIX = 'outputPrefix'
     P_ROI_AVERAGE = 'averageRoiBold'
@@ -38,7 +36,7 @@ class FMRIAnalyser(xmlio.XMLable2):
         }
 
     def __init__(self, outputPrefix='', roiAverage=False, pass_error=True):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         if len(outputPrefix) == 0: outputPrefix = 'pyhrf_'
         self.outPrefix = outputPrefix
         self.outFile = add_prefix('outputs.xml', self.outPrefix)
@@ -710,7 +708,7 @@ class FMRIAnalyser(xmlio.XMLable2):
         if self.outFile is not None and output_dir is not None:
             out_file = op.join(output_dir, self.outFile)
             if op.exists(self.outFile):
-                allOuts = xmlio.fromXML(open(out_file).read())
+                allOuts = xmlio.from_xml(open(out_file).read())
                 for c in allOuts.itervalues():
                     c.cleanFiles()
                 os.remove(out_file)
