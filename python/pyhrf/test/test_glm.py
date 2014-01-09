@@ -86,7 +86,7 @@ class NipyGLMTest(unittest.TestCase):
         t = xmlio.fromXML(file(xmlFile).read())
         t.set_init_param('output_dir', None)
         f = open(xmlFile, 'w')
-        f.write(xmlio.toXML(t, handler=NumpyXMLHandler()))
+        f.write(xmlio.to_xml(t, handler=NumpyXMLHandler()))
         f.close()
 
 

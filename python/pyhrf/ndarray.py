@@ -15,8 +15,6 @@ import pprint
 from pkg_resources import parse_version
 
 import pyhrf
-from pyhrf.xmlio import fromXML, toXML
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.tools import treeBranches, rescale_values, has_ext
 
 debug = False
@@ -1261,6 +1259,9 @@ class xndarray:
                       self.value_label, self.meta_data)
 
     def get_extra_info(self, fmt='dict'):
+        from pyhrf.xmlio import to_xml
+        from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
+
         info = {
             'axes_names': self.axes_names,
             'axes_domains': self.axes_domains,
@@ -1269,7 +1270,7 @@ class xndarray:
         if fmt=='dict':
             return info
         elif fmt=='xml':
-            return toXML(info, handler=NumpyXMLHandler())
+            return to_xml(info, handler=NumpyXMLHandler())
 
 
     def save(self, file_name, meta_data=None, set_MRI_orientation=False):
@@ -1280,6 +1281,10 @@ class xndarray:
         All extra axis information is stored as an extension.
 
         """
+
+        from pyhrf.xmlio import fromXML, to_xml
+        from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
+
         pyhrf.verbose(5, 'xndarray.save(%s)' %file_name)
         ext = op.splitext(file_name)[1]
         #print 'save:', file_name
@@ -1344,10 +1349,10 @@ class xndarray:
             else:
                 prev_ext = ""
 
-            ext_str = toXML(extra_info, handler=NumpyXMLHandler())
+            ext_str = to_xml(extra_info, handler=NumpyXMLHandler())
             if len(ext_str) < len(prev_ext):
                 extra_info['dummy'] = '#'*(len(prev_ext)-len(ext_str))
-                ext_str = toXML(extra_info, handler=NumpyXMLHandler())
+                ext_str = to_xml(extra_info, handler=NumpyXMLHandler())
 
             pyhrf.verbose(5, 'Length of extension string: %s' %len(ext_str))
             pyhrf.verbose(5, 'Extension: \n %s' %ext_str)

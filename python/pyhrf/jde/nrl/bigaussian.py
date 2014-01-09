@@ -14,7 +14,6 @@ import copy as copyModule
 
 from pyhrf import xmlio
 from pyhrf.tools import resampleToGrid, get_2Dtable_string
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.ndarray import xndarray
 from pyhrf.jde.intensivecalc import calcCorrEnergies, sampleSmmNrl, sampleSmmNrl2,computeYtilde
 from pyhrf.jde.intensivecalc import sampleSmmNrlWithRelVar, sampleSmmNrl2WithRelVar, computeYtildeWithRelVar
@@ -40,8 +39,7 @@ from pyhrf.tools.io import read_volume
         #self.called = False
     #def __call__(self):
 
-
-class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
     Class handling the Gibbs sampling of Neural Response Levels with a prior
     bi-gaussian mixture model. It handles independent and spatial versions.
@@ -49,79 +47,13 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
     #TODO : comment attributes
     """
 
-    # parameters specifications :
-    P_SAMPLE_LABELS = 'sampleLabels'
-    P_LABELS_INI = 'labelsIni'
-    P_LABELS_COLORS = 'labelsColors'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_CONTRASTS = 'contrasts'
-    P_USE_TRUE_NRLS = 'useTrueNrls'
-    P_USE_TRUE_LABELS = 'useTrueLabels'
-    P_TrueNrlFilename = 'TrueNrlFilename'
-    P_TrueLabelsFilename ='TrueLabelsFilename'
-
-    P_OUTPUT_CONTRAST = 'writeContrastsOutput'
-    P_OUTPUT_CONTRAST_VAR = 'writeContrastVariancesOutput'
-    P_OUTPUT_NRL = 'writeResponsesOutput'
-    P_OUTPUT_LABELS = 'writeLabelsOutput'
-    P_WIP_VARIANCE = 'wipVariance'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_SAMPLE_FLAG : True,
-        P_VAL_INI : None,
-        P_USE_TRUE_NRLS : False, #False,
-        P_USE_TRUE_LABELS : False, #False,
-        P_SAMPLE_LABELS : True,
-        P_LABELS_INI : None,
-        P_LABELS_COLORS : np.array([0.0,0.0], dtype=float),
-        P_CONTRASTS : {
-            'dummy_contrast_example' : '0.5 * audio - 0.5 * video'
-            },
-        P_OUTPUT_NRL : True,
-        P_OUTPUT_CONTRAST_VAR : True,
-        P_OUTPUT_CONTRAST : True,
-        P_WIP_VARIANCE : False,
-        'PPM_proba_threshold' : .05,
-        'PPM_value_threshold' : 0,
-        'PPM_value_Multi_threshold' : np.arange(0.,4.1,0.1),
-        'mean_activation_threshold' : 4.,
-        'rescale_results' : True,
-        P_TrueNrlFilename : './nrls.nii',
-        P_TrueLabelsFilename : './labels.nii',
-        }
-
-    if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters[P_OUTPUT_LABELS] = True
-        parametersToShow = [P_SAMPLE_FLAG, P_VAL_INI, P_USE_TRUE_NRLS,
-                            P_TrueNrlFilename,
-                            P_SAMPLE_LABELS,
-                            P_LABELS_INI, P_USE_TRUE_LABELS,
-                            P_TrueLabelsFilename,
-                            P_LABELS_COLORS, P_CONTRASTS, P_OUTPUT_CONTRAST,
-                            P_OUTPUT_CONTRAST_VAR, P_OUTPUT_NRL,
-                            P_WIP_VARIANCE, 'PPM_proba_threshold',
-                            'PPM_value_threshold','PPM_value_Multi_threshold',
-                            'mean_activation_threshold',
-                            'rescale_results']
-
-    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters[P_OUTPUT_LABELS] = False
-        parametersToShow = [P_CONTRASTS]
+    if pyhrf.__usemode__ == pyhrf.ENDUSER:
+        parametersToShow = ['contrasts']
 
     parametersComments = {
-        # P_CONTRASTS : 'Define contrasts as a string with the following format:'\
-        #     '\n condition1-condition2;condition1-condition3\n' \
-        #     'Must be consistent with condition names specified in session data' \
-        #     'above',
-        P_CONTRASTS : 'Define contrasts as arithmetic expressions.\n'\
+        'contrasts' : 'Define contrasts as arithmetic expressions.\n'\
             'Condition names used in expressions must be consistent with ' \
             'those specified in session data above',
-        P_TrueNrlFilename :'Define the filename of simulated NRLs.\n'\
-            'It is taken into account when NRLs is not sampled.',
-        P_TrueLabelsFilename :'Define the filename of simulated Labels.\n'\
-            'It is taken into account when Labels are not sampled.',
         }
 
     # other class attributes
@@ -133,20 +65,23 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
     FALSE_POS = 2
     FALSE_NEG = 3
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, val_ini=None,
+                 contrasts={'dummy_contrast_example' :
+                            '0.5 * audio - 0.5 * video'},
+                 do_label_sampling=True, use_true_nrls=False,
+                 use_true_labels=False, labels_ini=None,
+                 ppm_proba_threshold=0.05, ppm_value_threshold=0,
+                 ppm_value_multi_threshold=np.arange(0.,4.1,0.1),
+                 mean_activation_threshold=4, rescale_results=False,
+                 wip_variance_computation=False):
 
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        self.sampleLabelsFlag = self.parameters[self.P_SAMPLE_LABELS]
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG] or self.sampleLabelsFlag
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_NRLS]
-        self.TrueNrlsFilename = self.parameters[self.P_TrueNrlFilename]
-        self.useTrueLabels = self.parameters[self.P_USE_TRUE_LABELS]
-        self.TrueLabelsFilename = self.parameters[self.P_TrueLabelsFilename]
-        self.trueLabels = None
+        xmlio.XmlInitable.__init__(self)
+        self.sampleLabelsFlag = do_label_sampling
+        sampleFlag = do_sampling
+        valIni = val_ini
+        useTrueVal = use_true_nrls
+        self.useTrueLabels = use_true_labels
         an = ['condition', 'voxel']
         GibbsSamplerVariable.__init__(self,'nrl', valIni=valIni,
                                       sampleFlag=sampleFlag,
@@ -154,13 +89,11 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                                       axes_names=an,
                                       value_label='PM NRL')
 
-        # instance variables affectation from parameters :
-
-        self.labels = self.parameters[self.P_LABELS_INI]
-        self.contrasts_expr = self.parameters[self.P_CONTRASTS]
+        self.labels = labels_ini
+        self.contrasts_expr = contrasts
         self.contrasts_expr.pop('dummy_contrast_example', None)
         self.computeContrastsFlag = ( len(self.contrasts_expr) > 0 )
-        self.activ_thresh = self.parameters['mean_activation_threshold']
+        self.activ_thresh = mean_activation_threshold
         #print 'computeContrastsFlag :', self.computeContrastsFlag
         #self.parseContrasts(contrasts)
 
@@ -168,19 +101,14 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         pyhrf.verbose(6, 'NRLSampler - classes: %s (%d)' \
                           %(str(self.CLASS_NAMES), self.nbClasses))
 
-        self.outputNrls = self.parameters[self.P_OUTPUT_NRL]
-        self.outputConVars = self.parameters[self.P_OUTPUT_CONTRAST_VAR]
-        self.outputCons = self.parameters[self.P_OUTPUT_CONTRAST]
-        self.outputLabels = self.parameters[self.P_OUTPUT_LABELS]
-
         self.labelsMeanHistory = None
         self.labelsSmplHistory = None
 
-        self.wip_variance_computation = self.parameters[self.P_WIP_VARIANCE]
-        self.ppm_proba_thresh = self.parameters['PPM_proba_threshold']
-        self.ppm_value_thresh = self.parameters['PPM_value_threshold']
-        self.ppm_value_multi_thresh = self.parameters['PPM_value_Multi_threshold']
-        self.rescale_results = self.parameters['rescale_results']
+        self.wip_variance_computation = wip_variance_computation
+        self.ppm_proba_thresh = ppm_proba_threshold
+        self.ppm_value_thresh = ppm_value_threshold
+        self.ppm_value_multi_thresh = ppm_value_multi_threshold
+        self.rescale_results = rescale_results
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -2432,24 +2360,6 @@ class NRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
 class NRLSamplerWithRelVar(NRLSampler):
 
-    defaultParameters = copyModule.deepcopy(NRLSampler.defaultParameters)
-
-    parametersToShow = copyModule.deepcopy(NRLSampler.parametersToShow)
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                    xmlLabel=None, xmlComment=None):
-
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
-    def linkToData(self, dataInput):
-
-        NRLSampler.linkToData(self, dataInput)
-
-    def checkAndSetInitValue(self, variables):
-
-        NRLSampler.checkAndSetInitValue(self, variables)
-
     def createWAxh(self,aXh, w):
         np.multiply(w, aXh, self.WaXh)
 
@@ -2839,8 +2749,7 @@ class NRLSamplerWithRelVar(NRLSampler):
         print 'iteration  ',self.iteration
         self.iteration += 1 #TODO : factorize !!
 
-class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
-                                  GibbsSamplerVariable):
+class BiGaussMixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
     #TODO : comment
 
@@ -2852,44 +2761,21 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
     NB_PARAMS = 3
     PARAMS_NAMES = ['Mean_Activ', 'Var_Activ', 'Var_Inactiv']
 
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    #P_ACT_MEAN_TRUE_VALUE = 'ActMeanTrueValue'
-    #P_ACT_VAR_TRUE_VALUE = 'ActVarTrueValue'
-    #P_INACT_VAR_TRUE_VALUE = 'InactVarTrueValue'
-
-    P_MEAN_CA_PR_MEAN = 'meanCAPrMean'
-    P_MEAN_CA_PR_VAR = 'meanCAPrVar'
-
-    P_VAR_CI_PR_ALPHA = 'varCIPrAlpha'
-    P_VAR_CI_PR_BETA = 'varCIPrBeta'
-
-    P_VAR_CA_PR_ALPHA = 'varCAPrAlpha'
-    P_VAR_CA_PR_BETA = 'varCAPrBeta'
-
-    P_HYPER_PRIOR = 'hyperPriorType'
-
-    P_ACTIV_THRESH = 'mean_activation_threshold'
-
-    #"peaked" priors
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        #P_HYPER_PRIOR : 'Jeffrey',
-        P_HYPER_PRIOR : 'proper',
-        P_MEAN_CA_PR_MEAN : 5.,
-        P_MEAN_CA_PR_VAR : 20.0,
-        P_VAR_CI_PR_ALPHA : 2.04,
-        P_VAR_CI_PR_BETA : .5,#2.08,
-        P_VAR_CA_PR_ALPHA : 2.01,
-        P_VAR_CA_PR_BETA : .5,
-        P_ACTIV_THRESH : 4.,
-        #P_ACT_MEAN_TRUE_VALUE : { 'audio': 0.0, 'video': 0.0 },
-        #P_ACT_VAR_TRUE_VALUE : { 'audio': 1.0, 'video': 1.0 },
-        #P_INACT_VAR_TRUE_VALUE : { 'audio': 1.0, 'video': 1.0 },
-        }
+    # #"peaked" priors
+    # defaultParameters = {
+    #     P_VAL_INI : None,
+    #     P_SAMPLE_FLAG : True,
+    #     P_USE_TRUE_VALUE : False,
+    #     #P_HYPER_PRIOR : 'Jeffrey',
+    #     P_HYPER_PRIOR : 'proper',
+    #     P_MEAN_CA_PR_MEAN : 5.,
+    #     P_MEAN_CA_PR_VAR : 20.0,
+    #     P_VAR_CI_PR_ALPHA : 2.04,
+    #     P_VAR_CI_PR_BETA : .5,#2.08,
+    #     P_VAR_CA_PR_ALPHA : 2.01,
+    #     P_VAR_CA_PR_BETA : .5,
+    #     P_ACTIV_THRESH : 4.,
+    #     }
 
 
 
@@ -2898,7 +2784,7 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
         #P_VAL_INI : None,
         #P_SAMPLE_FLAG : True,
         #P_USE_TRUE_VALUE : False,
-        ##P_HYPER_PRIOR : 'Jeffrey',
+        ##P_HYPER_PRIOR : 'Jeffreys',
         #P_HYPER_PRIOR : 'proper',
         #P_SAMPLE_FLAG : 1,
         #P_MEAN_CA_PR_MEAN : 10.,
@@ -2921,63 +2807,41 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
     L_CA = NRLSampler.L_CA
     L_CI = NRLSampler.L_CI
 
-    parametersToShow = [ P_VAL_INI, P_SAMPLE_FLAG, P_ACTIV_THRESH,
-                         P_USE_TRUE_VALUE,
-                         #P_ACT_MEAN_TRUE_VALUE, P_ACT_VAR_TRUE_VALUE, P_INACT_VAR_TRUE_VALUE,
-                         P_HYPER_PRIOR,
-                         P_MEAN_CA_PR_MEAN, P_MEAN_CA_PR_VAR, P_VAR_CI_PR_ALPHA,
-                         P_VAR_CI_PR_BETA, P_VAR_CA_PR_ALPHA, P_VAR_CA_PR_BETA]
-
     parametersComments = {
-        P_HYPER_PRIOR : "Either 'proper' or 'Jeffrey'",
-        P_ACTIV_THRESH : "Threshold for the max activ mean above which the "\
+        'hyper_prior_type' : "Either 'proper' or 'Jeffreys'",
+        'activ_thresh' : "Threshold for the max activ mean above which the "\
             "region is considered activating",
-        #P_ACT_MEAN_TRUE_VALUE : \
-            #"Define the simulated values of activated class means."\
-            #"It is taken into account when mixture parameters are not sampled.",
-        #P_ACT_VAR_TRUE_VALUE : \
-            #"Define the simulated values of activated class variances."\
-            #"It is taken into account when mixture parameters are not sampled.",
-        #P_INACT_VAR_TRUE_VALUE : \
-            #"Define the simulated values of inactivated class variances."\
-            #"It is taken into account when mixture parameters are not sampled.",
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None, hyper_prior_type='Jeffreys', activ_thresh=4.,
+                 var_ci_pr_alpha=2.04, var_ci_pr_beta=.5,
+                 var_ca_pr_alpha=2.01, var_ca_pr_beta=.5,
+                 mean_ca_pr_mean=5., mean_ca_pr_var=20.):
         """
         #TODO : comment
         """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+        xmlio.XmlInitable.__init__(self)
 
         # get values for priors :
-        self.varCIPrAlpha = self.parameters[self.P_VAR_CI_PR_ALPHA]
-        self.varCIPrBeta = self.parameters[self.P_VAR_CI_PR_BETA]
-        self.varCAPrAlpha = self.parameters[self.P_VAR_CA_PR_ALPHA]
-        self.varCAPrBeta = self.parameters[self.P_VAR_CA_PR_BETA]
+        self.varCIPrAlpha = var_ci_pr_alpha
+        self.varCIPrBeta = var_ci_pr_beta
+        self.varCAPrAlpha = var_ca_pr_alpha
+        self.varCAPrBeta = var_ca_pr_beta
 
-        self.meanCAPrMean = self.parameters[self.P_MEAN_CA_PR_MEAN]
-        self.meanCAPrVar = self.parameters[self.P_MEAN_CA_PR_VAR]
-
-        #self.ActMeanTrueValue = self.parameters[self.P_ACT_MEAN_TRUE_VALUE]
-        #self.ActVarTrueValue = self.parameters[self.P_ACT_VAR_TRUE_VALUE]
-        #self.InactVarTrueValue = self.parameters[self.P_INACT_VAR_TRUE_VALUE]
+        self.meanCAPrMean = mean_ca_pr_mean
+        self.meanCAPrVar = mean_ca_pr_var
 
         an = ['component','condition']
         ad = {'component' : self.PARAMS_NAMES}
-        GibbsSamplerVariable.__init__(self, 'mixt_params', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag, axes_names=an,
+        GibbsSamplerVariable.__init__(self, 'mixt_params', valIni=val_ini,
+                                      useTrueValue=use_true_value,
+                                      sampleFlag=do_sampling, axes_names=an,
                                       axes_domains=ad)
 
-        php = self.parameters[self.P_HYPER_PRIOR]
-        self.hyperPriorFlag = False if php=='Jeffrey' else True
+        self.hyperPriorFlag = (hyper_prior_type == 'Jeffreys')
 
-        self.activ_thresh = self.parameters[self.P_ACTIV_THRESH]
+        self.activ_thresh = activ_thresh
 
     def linkToData(self, dataInput):
         self.dataInput =  dataInput
@@ -3469,7 +3333,7 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
 
 
 
-class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
 # parameters specifications :
     P_SAMPLE_FLAG = 'sampleFlag'
     P_VAL_INI = 'initialValue'
@@ -3499,7 +3363,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             'It is taken into account when NRLs is not sampled.',
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+    def __init__(self, parameters=None, xmlHandler=None,
                  xmlLabel=None, xmlComment=None):
 
         #TODO : comment
@@ -3896,7 +3760,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         return outputs
 
 
-class Variance_GaussianNRL_Multi_Sess(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class Variance_GaussianNRL_Multi_Sess(GibbsSamplerVariable):
     '''
     '''
     P_VAL_INI = 'initialValue'
@@ -3913,7 +3777,7 @@ class Variance_GaussianNRL_Multi_Sess(xmlio.XMLParamDrivenClass, GibbsSamplerVar
         parametersToShow = [P_USE_TRUE_VALUE]
 
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+    def __init__(self, parameters=None, xmlHandler=None,
                  xmlLabel=None, xmlComment=None):
         #TODO : comment
         xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
@@ -3967,14 +3831,6 @@ class Variance_GaussianNRL_Multi_Sess(xmlio.XMLParamDrivenClass, GibbsSamplerVar
     #def sampleNextAlt(self, variables):
 
 class BiGaussMixtureParamsSamplerWithRelVar_OLD(BiGaussMixtureParamsSampler):
-
-    defaultParameters = copyModule.deepcopy(BiGaussMixtureParamsSampler.defaultParameters)
-    parametersToShow = copyModule.deepcopy(BiGaussMixtureParamsSampler.parametersToShow)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                    xmlLabel=None, xmlComment=None):
-
-        BiGaussMixtureParamsSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
 
 
     def computeWithProperPriorsWithRelVar(self, nrlsj,  j, cardCIj, cardCAj, wj):
@@ -4059,14 +3915,6 @@ class BiGaussMixtureParamsSamplerWithRelVar_OLD(BiGaussMixtureParamsSampler):
             pyhrf.verbose(5, 'varCA,%d = %f'%(j,self.currentValue[self.I_VAR_CA,j]))
 
 class BiGaussMixtureParamsSamplerWithRelVar(BiGaussMixtureParamsSampler):
-
-    defaultParameters = copyModule.deepcopy(BiGaussMixtureParamsSampler.defaultParameters)
-    parametersToShow = copyModule.deepcopy(BiGaussMixtureParamsSampler.parametersToShow)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                    xmlLabel=None, xmlComment=None):
-
-        BiGaussMixtureParamsSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
 
 
     def computeWithProperPriorsWithRelVar(self, nrlsj,  j, cardCIj, cardCAj, wj):
@@ -4153,34 +4001,20 @@ class BiGaussMixtureParamsSamplerWithRelVar(BiGaussMixtureParamsSampler):
             pyhrf.verbose(5, 'meanCA,%d=%f'%(j,self.currentValue[self.I_MEAN_CA,j]))
             pyhrf.verbose(5, 'varCA,%d = %f'%(j,self.currentValue[self.I_VAR_CA,j]))
 
-class MixtureWeightsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class MixtureWeightsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
 
     #TODO : comment
 
     """
 
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
 
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : False, #By default, beta>0 -> SMM
-        }
-
-    if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = []
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False, val_ini=None):
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        GibbsSamplerVariable.__init__(self, 'mixt_weights', valIni=valIni,
-                                      sampleFlag=sampleFlag)
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'mixt_weights', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value)
 
 
     def linkToData(self, dataInput):

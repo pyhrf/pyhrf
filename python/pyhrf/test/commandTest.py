@@ -15,7 +15,6 @@ from pyhrf.jde.models import availableModels
 
 
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.xmlio import read_xml #, write_xml
 
 from pyhrf.ui.jde import JDEMCMCAnalyser
@@ -130,7 +129,7 @@ class TreatmentCommandTest(unittest.TestCase):
             raise Exception('Unsupported class ... todo')
 
         f = open(xmlFile, 'w')
-        f.write(xmlio.toXML(t, handler=NumpyXMLHandler()))
+        f.write(xmlio.to_xml(t))
         f.close()
 
 
@@ -143,7 +142,7 @@ class TreatmentCommandTest(unittest.TestCase):
         t.set_init_param('fmri_data', FmriData.from_simu_ui(sessions_data=[sd]))
 
         f = open(xmlFile, 'w')
-        sxml = xmlio.toXML(t, handler=NumpyXMLHandler())
+        sxml = xmlio.to_xml(t)
         # print 'sxml:'
         # print sxml
         f.write(sxml)
@@ -157,7 +156,7 @@ class TreatmentCommandTest(unittest.TestCase):
         t = xmlio.fromXML(file(xmlFile).read())
         t.set_init_param('output_dir', None)
         f = open(xmlFile, 'w')
-        f.write(xmlio.toXML(t, handler=NumpyXMLHandler()))
+        f.write(xmlio.to_xml(t))
         f.close()
 
     def testDetectEstimDefault(self):

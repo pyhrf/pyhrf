@@ -5,7 +5,6 @@ import numpy.matlib
 
 import copy as copyModule
 
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.samplerbase import *
 from pyhrf.jde.beta import *
 
@@ -18,13 +17,6 @@ class NRLARSampler(NRLSampler):
     to Salima Makni (ISBI 2006). Inherits the abstract class C{GibbsSamplerVariable}.
     #TODO : comment attributes
     """
-    defaultParameters = copyModule.copy(NRLSampler.defaultParameters)
-    
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(), xmlLabel=None, xmlComment=None):
-        
-
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput

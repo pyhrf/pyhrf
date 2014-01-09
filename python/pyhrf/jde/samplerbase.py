@@ -1175,15 +1175,14 @@ class GibbsSamplerVariable:
 
 
 
-class GSDefaultCallbackHandler(xmlio.XMLParamDrivenClass):
+class GSDefaultCallbackHandler(xmlio.XmlInitable):
     """
     Class handling default action after Gibbs Sampling step (nothing). Should be inherited to define more specialized actions (such as plotting and reporting).
 
     """
 
-    def __init__(self, parameters=None, xmlHandler=xmlio.TypedXMLHandler(), xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-        pass
+    def __init__(self):
+        xmlio.XmlInitable.__init__(self)
 
     def callback(self, it, vars, samplerEngine):
         """

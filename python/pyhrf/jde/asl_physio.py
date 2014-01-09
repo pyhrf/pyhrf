@@ -287,12 +287,12 @@ class ResponseSampler(GibbsSamplerVariable):
 
 
 
-class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XMLable2):
+class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
                  use_true_value=False, use_omega=True, deterministic=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         self.use_omega = use_omega
         ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
@@ -441,7 +441,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XMLable2):
         rl_sampler.computeVarYTildeOpt()
 
 
-class PhysioPerfResponseSampler(ResponseSampler, xmlio.XMLable2):
+class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
@@ -451,7 +451,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XMLable2):
         so that sampling is the same as for BRF.
         It avoids bad tail estimation, because of bad condionning of WtXtXW ?
         """
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         self.diff_res = diff_res
         self.regularize = regularize
         ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', smooth_order,
@@ -607,11 +607,11 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
         raise NotImplementedError()
 
 
-class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XMLable2):
+class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
 
         ResponseVarianceSampler.__init__(self, 'brf_var', 'brf',
                                          val_ini, do_sampling, use_true_value)
@@ -634,11 +634,11 @@ class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XMLable2)
         self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
 
 
-class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XMLable2):
+class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         ResponseVarianceSampler.__init__(self, 'prf_var', 'prf',
                                          val_ini, do_sampling, use_true_value)
 
@@ -675,12 +675,12 @@ class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XMLable2)
 
 
 
-class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XMLable2):
+class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
 
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         GibbsSamplerVariable.__init__(self, 'noise_var', valIni=val_ini,
                                       sampleFlag=do_sampling,
                                       useTrueValue=use_true_value,
@@ -747,11 +747,11 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XMLable2):
 
 
 
-class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XMLable2):
+class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=np.array([1.0]), do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         GibbsSamplerVariable.__init__(self,'drift_var', valIni=val_ini,
                                       useTrueValue=use_true_value,
                                       sampleFlag=do_sampling)
@@ -799,11 +799,11 @@ class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XMLable2):
             pyhrf.verbose(4, 'current sample: %f' %self.currentValue[0])
 
 
-class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XMLable2):
+class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         GibbsSamplerVariable.__init__(self,'drift_coeff', valIni=val_ini,
                                       useTrueValue=use_true_value,
                                       axes_names=['lfd_order','voxel'],
@@ -1047,11 +1047,11 @@ class ResponseLevelSampler(GibbsSamplerVariable):
                 np.multiply(self.currentValue[j,:], self.currentValue[k,:],
                          self.rr[j,k,:])
 
-class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XMLable2):
+class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         ResponseLevelSampler.__init__(self, 'brl', 'brf', 'bold_mixt_params',
                                       val_ini, do_sampling, use_true_value)
 
@@ -1140,11 +1140,11 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XMLable2):
 
 
 
-class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XMLable2):
+class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         ResponseLevelSampler.__init__(self, 'prl', 'prf', 'perf_mixt_params',
                                       val_ini, do_sampling, use_true_value)
 
@@ -1225,7 +1225,7 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XMLable2):
 
 
 
-class LabelSampler(GibbsSamplerVariable, xmlio.XMLable2):
+class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     L_CI = 0
     L_CA = 1
@@ -1236,7 +1236,7 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XMLable2):
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
 
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
 
         an = ['condition', 'voxel']
         GibbsSamplerVariable.__init__(self, 'label', valIni=val_ini,
@@ -1534,11 +1534,11 @@ class MixtureParamsSampler(GibbsSamplerVariable):
             pyhrf.verbose(5, 'varCA,%d = %f' \
                               %(j,self.currentValue[self.I_VAR_CA,j]))
 
-class PerfMixtureSampler(MixtureParamsSampler, xmlio.XMLable2):
+class PerfMixtureSampler(MixtureParamsSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         MixtureParamsSampler.__init__(self, 'perf_mixt_params', 'prl',
                                       val_ini, do_sampling, use_true_value)
 
@@ -1571,11 +1571,11 @@ class PerfMixtureSampler(MixtureParamsSampler, xmlio.XMLable2):
           np.array([c.perf_v_inact for c in cdefs])
 
 
-class BOLDMixtureSampler(MixtureParamsSampler, xmlio.XMLable2):
+class BOLDMixtureSampler(MixtureParamsSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         MixtureParamsSampler.__init__(self, 'bold_mixt_params', 'brl',
                                       val_ini, do_sampling, use_true_value)
 
@@ -1585,12 +1585,12 @@ class BOLDMixtureSampler(MixtureParamsSampler, xmlio.XMLable2):
           np.array([c.bold_v_inact for c in cdefs])
 
 
-class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XMLable2):
+class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
 
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         GibbsSamplerVariable.__init__(self, 'perf_baseline', valIni=val_ini,
                                       sampleFlag=do_sampling,
                                       useTrueValue=use_true_value,
@@ -1686,11 +1686,11 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XMLable2):
             self.currentValue[i] = a
             self.wa[:,i] = self.w * a
 
-class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XMLable2):
+class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-        xmlio.XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
         GibbsSamplerVariable.__init__(self, 'perf_baseline_var', valIni=val_ini,
                                       sampleFlag=do_sampling,
                                       useTrueValue=use_true_value)

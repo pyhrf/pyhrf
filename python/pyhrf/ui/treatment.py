@@ -750,7 +750,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
             f.close()
             treatment = xmlio.fromXML(sXml)
             if 0:
-                sXml = xmlio.toXML(treatment,
+                sXml = xmlio.to_xml(treatment,
                                    handler=xmlio.xmlnumpy.NumpyXMLHandler())
                 f = './treatment_cmd.xml'
                 fOut = open(f,'w')
@@ -953,7 +953,7 @@ def create_treatment(boldFiles, parcelFile, dt, tr, paradigmFile,
 
     tjde = FMRITreatment(fmri_data, analyser, outputDir)
 
-    sxml = xmlio.toXML(tjde, handler=NumpyXMLHandler())
+    sxml = xmlio.to_xml(tjde, handler=NumpyXMLHandler())
     if writeXmlSetup and outputDir is not None:
         outSetupXml = make_outfile(DEFAULT_CFG_FILE_JDE, outputDir,
                                    outputPrefix, outputSuffix)
@@ -1060,7 +1060,7 @@ def create_treatment_surf(boldFiles, parcelFile, meshFile, dt, tr, paradigmFile,
     #print 'make_outputs:', make_outputs
 
 
-    sxml = xmlio.toXML(tjde, handler=NumpyXMLHandler())
+    sxml = xmlio.to_xml(tjde, handler=NumpyXMLHandler())
     if writeXmlSetup is not None and outputDir is not None:
         outSetupXml = make_outfile(DEFAULT_CFG_FILE_JDE, outputDir,
                                    outputPrefix,

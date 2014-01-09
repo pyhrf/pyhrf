@@ -2,7 +2,6 @@
 
 import numpy as np
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.samplerbase import *
 from pyhrf.jde.beta import *
 #import sys
@@ -11,14 +10,14 @@ from pyhrf.jde.beta import *
 ##########################################################
 # Gamma/Gaussian mixture models
 ##########################################################
-class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
     Class handling the Gibbs sampling of Neural Response Levels according to
     Salima Makni's algorithm (IEEE SP 2005). Inherits the abstract class
     C{GibbsSamplerVariable}.
     #TODO : comment attributes
     """
-    
+
     # parameters specifications :
     P_SAMPLE_LABELS = 'sampleLabels'
     P_LABELS_INI = 'labelsIni'
@@ -33,26 +32,28 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
     defaultParameters = {
         P_SAMPLE_FLAG : 1,
         P_VAL_INI : None,
-        P_BETA : 0.4, 
+        P_BETA : 0.4,
         P_SAMPLE_LABELS : 1,
-        P_LABELS_INI : None, 
+        P_LABELS_INI : None,
         P_LABELS_COLORS : np.array([0.0,0.0], dtype=float),
         }
-    
+
     # other class attributes
     L_CI = 0
     L_CA = 1
 
-    
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(), xmlLabel=None, xmlComment=None):
-        
-        #TODO : comment 
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
+
+    def __init__(self, parameters=None, xmlHandler=None, xmlLabel=None,
+                 xmlComment=None):
+
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
         sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
         valIni = self.parameters[self.P_VAL_INI]
-        GibbsSamplerVariable.__init__(self,'nrl', valIni=valIni, sampleFlag=sampleFlag)
+        GibbsSamplerVariable.__init__(self,'nrl', valIni=valIni,
+                                      sampleFlag=sampleFlag)
 
-        
+
         # instance variables affectation from parameters :
         self.sampleLabelsFlag = self.parameters[self.P_SAMPLE_LABELS]
         self.labels = self.parameters[self.P_LABELS_INI]
@@ -76,8 +77,8 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         self.voxIdxCA = range(self.nbConditions)
 
         self.cumulLabels = np.zeros((self.nbConditions,self.nbVox), dtype=int)
-        
-        self.meanClassAApost = range(self.nbConditions)            
+
+        self.meanClassAApost = range(self.nbConditions)
         self.meanClassIApost = range(self.nbConditions)
         self.varXjhtQjeji = range(self.nbConditions)
 
@@ -86,7 +87,7 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             self.meanClassAApost[j] = numpy.empty((self.nbVox))
             self.meanClassIApost[j] = numpy.empty((self.nbVox))
             self.varXjhtQjeji[j] = numpy.empty((self.nbVox))
-        
+
 
     def checkAndSetInitValue(self, variables):
         # Generating default labels if necessary :
@@ -101,9 +102,9 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                     self.labels[j,0:nbVoxInClassI] = self.L_CI
                     self.labels[j,nbVoxInClassI:self.nbVox] = self.L_CA
                     self.labels[j,:] = np.random.permutation(self.labels[j,:])
-        
+
         self.countLabels()
-        
+
         if self.currentValue == None :
             if not self.sampleFlag and self.dataInput.simulData != None :
                 self.currentValue = self.dataInput.simulData.nrls.data
@@ -113,7 +114,7 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                 smplMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
                 # ensure that mixture parameters are correctly set
                 smplMixtP.checkAndSetInitValue(variables)
-                
+
                 var_classI = smplMixtP.currentValue[GamGaussMixtureParamsSampler.I_VAR_CI]
                 shape_classA = smplMixtP.currentValue[GamGaussMixtureParamsSampler.I_SHAPE_CA]
                 scale_classA = smplMixtP.currentValue[GamGaussMixtureParamsSampler.I_SCALE_CA]
@@ -152,7 +153,7 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         self.varClassAApost = empty((self.nbConditions,self.nbVox),dtype=float)
         self.sigClassIApost = empty((self.nbConditions,self.nbVox),dtype=float)
         self.sigClassAApost = empty((self.nbConditions,self.nbVox),dtype=float)
-        
+
     def computeVarYTilde(self, varXh):
         for i in xrange(self.nbVox):
             repNRLi = repmat(self.currentValue[:,i], self.ny, 1)
@@ -167,28 +168,28 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                               varLambda):
 
         self.varXhtQ = dot(varXh.transpose(),self.dataInput.delta)
-        varXhtQXh = diag(dot(self.varXhtQ,varXh))        
+        varXhtQXh = diag(dot(self.varXhtQ,varXh))
         rmatVarXhtQXh = repeat(varXhtQXh,self.nbVox).reshape(varXhtQXh.size,
                                                              self.nbVox)
 
         numpy.divide(rmatVarXhtQXh, repmat(rb,self.nbConditions,1),
                      self.varXhtQXh_allvox)
-        
+
         rmatInvVarCI = repeat(1.0/varCI,self.nbVox).reshape(self.nbConditions,
                                                             self.nbVox)
 
         numpy.power(numpy.add(rmatInvVarCI, self.varXhtQXh_allvox,
                               self.sumRmatXhtQXh),-1,self.varClassIApost)
         numpy.power(self.varXhtQXh_allvox, -1,self.varClassAApost)
-        
+
         numpy.square(self.varClassIApost,self.sigClassIApost)
         numpy.square(self.varClassAApost,self.sigClassAApost)
-        
+
 #        rmatMCAVCA = repeat(meanCA/varCA, self.nbVox).reshape(self.nbConditions,
 #                                                              self.nbVox)
         numpy.multiply( - scaleCA,self.varClassAApost,self.interMeanClassA)
 
-        if self.beta <= 0: 
+        if self.beta <= 0:
             self.ratioLambdaI_A = ( (1-varLambda)* numpy.gamma()(varCA**0.5) ) \
                                  / ( varLambda  *(varCI**0.5) )
         else:
@@ -220,7 +221,7 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         pyhrf.verbose.printNdarray(5,
                                    self.meanClassIApost[j])
 
-            
+
     def sampleNextInternal(self, variables):
         #TODO : comment
 
@@ -230,10 +231,10 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
         varXh = variables[self.samplerEngine.I_HRF].varXh
         varLambda = variables[self.samplerEngine.I_WEIGHTING_PROBA].currentValue
-        
+
         self.computeVarYTilde(varXh)
         self.computeVariablesApost(varCI, varCA, meanCA, rb, varXh, varLambda)
-        
+
         self.labelsSamples = np.random.rand(self.nbConditions, self.nbVox)
         nrlsSamples = np.random.randn(self.nbConditions, self.nbVox)
 
@@ -246,14 +247,14 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                 pyhrf.verbose(3,'Sampling labels done!')
 
             sigApost = np.zeros(self.nbVox, dtype=float)
-            
+
             putmask(sigApost, self.labels[j,:], self.sigClassAApost[j,:])
             putmask(sigApost, 1-self.labels[j,:], self.sigClassIApost[j,:])
-            
+
             meanApost = np.zeros(self.nbVox, dtype=float)
             putmask(meanApost,self.labels[j,:], self.meanClassAApost[j] )
             putmask(meanApost,1-self.labels[j,:], self.meanClassIApost[j] )
-            
+
             self.currentValue[j,:] = multiply(nrlsSamples[j,:], sigApost) + \
                                      meanApost
             pyhrf.verbose(6, 'All nrl cond %d:'%j)
@@ -263,11 +264,11 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                           %(j,self.currentValue[j,:].mean(),
                             self.currentValue[j,:].std()))
 
-            
+
             pyhrf.verbose(6, 'All nrl activ cond %d:'%j)
             pyhrf.verbose.printNdarray(6,
                                        self.currentValue[j,self.voxIdxCA[j]])
-            
+
             pyhrf.verbose(4,
                           'nrl activ cond %d = %1.3f(%1.3f)'
                           %(j,self.currentValue[j,self.voxIdxCA[j]].mean(),
@@ -282,7 +283,7 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                           %(j,self.currentValue[j,self.voxIdxCI[j]].mean(),
                             self.currentValue[j,self.voxIdxCI[j]].std()))
 
-            #TODO : may be improved by not completely updating varYtilde ... 
+            #TODO : may be improved by not completely updating varYtilde ...
             self.computeVarYTilde(varXh)
 
         self.countLabels()
@@ -291,7 +292,7 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
     def sampleLabels(self, cond, varCI, varCA, meanCA):
         #print 'sampling labels ...'
-        
+
         fracLambdaTilde = self.ratioLambdaI_A[cond]*                     \
                           ( self.sigClassIApost[cond,:]                 \
                             /self.sigClassAApost[cond,:] ) *            \
@@ -305,17 +306,17 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             for i in xrange(self.nbVox):
                 fracLambdaTilde[i] *= np.exp( -self.beta*(self.calcEnergy(i, self.L_CI, cond)-
                                                           self.calcEnergy(i, self.L_CA, cond)) )
-            
+
         varLambdaApost = 1/(1+fracLambdaTilde)
 
         self.labels[cond,:] = np.array( self.labelsSamples[cond,:] <= varLambdaApost, dtype=int )
-        
+
 
     def calcEnergy(self, voxIdx, label, cond):
 
         neighboursMask = self.dataInput.voxelMapping.getNeighboursIndexes(voxIdx)
         spCorr = np.sum( 2*(self.labels[cond, neighboursMask]==label)-1.0 )
-        
+
         return -self.constJ*spCorr #-self.labelsColors[label]
 
 
@@ -335,38 +336,38 @@ class InhomogeneousNRLSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         # Correct sign ambiguity :
         if smplHRF.detectSignError():
             self.finalValue *= -1
-            
+
         # Correct hrf*nrl scale ambiguity :
         scaleF = smplHRF.getScaleFactor()
         # Use HRF amplitude :
         self.finalValueScaleCorr = self.finalValue*scaleF
 
         # clean memory of temporary variables :
-        del self.varXhtQXh_allvox 
+        del self.varXhtQXh_allvox
         del self.sumRmatXhtQXh
         del self.varClassIApost
         del self.varClassAApost
         del self.sigClassIApost
         del self.sigClassAApost
         del self.interMeanClassA
-        del self.meanClassAApost 
-        del self.meanClassIApost 
+        del self.meanClassAApost
+        del self.meanClassIApost
         del self.varXjhtQjeji
-        
+
     def computeMean(self):
 ##        print 'computing nrls mean ...'
-        
+
         self.cumul += self.currentValue#*self.normHRF
         self.cumulLabels += self.labels
 
         self.nbItMean += 1
         self.mean = self.cumul/self.nbItMean
-        self.meanLabels = self.cumulLabels/(self.nbItMean+0.0)                    
+        self.meanLabels = self.cumulLabels/(self.nbItMean+0.0)
 
 
 
 
-class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class GamGaussMixtureParamsSampler(GibbsSamplerVariable):
     """
     #TODO : comment
 
@@ -377,7 +378,7 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
     I_VAR_CI = 2
     NB_PARAMS = 3
     PARAMS_NAMES = ['Shape_Activ', 'Scale_Activ', 'Var_Inactiv']
-        
+
     P_VAL_INI = 'initialValue'
     P_SAMPLE_FLAG = 'sampleFlag'
 
@@ -400,7 +401,7 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
         P_VAR_CI_PR_BETA : .5,
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(), 
+    def __init__(self, parameters=None, xmlHandler=None,
                  xmlLabel=None, xmlComment=None):
         """
         #TODO : comment
@@ -412,11 +413,11 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
         # get values for priors :
         self.varCIPrAlpha = self.parameters[self.P_VAR_CI_PR_ALPHA]
         self.varCIPrBeta = self.parameters[self.P_VAR_CI_PR_BETA]
-        self.scaleCAPrAlpha = self.parameters[self.P_SCALE_CA_PR_ALPHA] 
+        self.scaleCAPrAlpha = self.parameters[self.P_SCALE_CA_PR_ALPHA]
         self.scaleCAPrBeta = self.parameters[self.P_SCALE_CA_PR_BETA]
 
         self.shapeCAPrMean = self.parameters[self.P_SHAPE_CA_PR_MEAN]
-        
+
         GibbsSamplerVariable.__init__(self, 'mixtParams', valIni=valIni, sampleFlag=sampleFlag)
 
 
@@ -424,14 +425,14 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
         self.dataInput =  dataInput
         self.nbConditions = self.dataInput.nbConditions
         self.nbVox = self.dataInput.nbVoxels
-        self.ny = self.dataInput.ny 
-        self.nbColX = self.dataInput.nbColX 
+        self.ny = self.dataInput.ny
+        self.nbColX = self.dataInput.nbColX
 
         self.nrlCI = range(self.nbConditions)
         self.nrlCA = range(self.nbConditions)
 
     def checkAndSetInitValue(self, variables):
-        
+
         if self.currentValue == None:
             self.currentValue = np.zeros((self.NB_PARAMS, self.nbConditions), dtype=float)
             if not self.sampleFlag and self.dataInput.simulData != None :
@@ -441,42 +442,42 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
                 shapeCA = np.zeros(self.nbConditions, dtype=float)
                 scaleCA = np.zeros(self.nbConditions, dtype=float)
                 varCI = np.zeros(self.nbConditions, dtype=float)
-                for cn,mixt in mixtures.iteritems(): 
+                for cn,mixt in mixtures.iteritems():
                     genActiv = mixt.generators['activ']
                     genInactiv = mixt.generators.generators['inactiv']
                     indCond = self.dataInput.simulData.nrls.condIds[cn]
                     meanCA= genActiv.mean
                     varCA= genActiv.std**2
                     shapeCA[indCond] = meanCA**2/(varCA+0.)
-                    scaleCA[indCond] = varCA/(meanCA+0.) 
+                    scaleCA[indCond] = varCA/(meanCA+0.)
                     varCI[indCond]= genInactiv.std**2
                 self.currentValue[self.I_SHAPE_CA] = shapeCA
                 self.currentValue[self.I_SCALE_CA] = scaleCA
                 self.currentValue[self.I_VAR_CI] = varCI
         else:
             #TODO : put constants in default init values ...
-            self.currentValue[self.I_SHAPE_CA] = np.zeros(self.nbConditions) + 10.0 
+            self.currentValue[self.I_SHAPE_CA] = np.zeros(self.nbConditions) + 10.0
             self.currentValue[self.I_SCALE_CA] = np.zeros(self.nbConditions) + 5.0
             self.currentValue[self.I_VAR_CI] = np.zeros(self.nbConditions) + 1.
-        
-        
+
+
     def sampleNextInternal(self, variables):
         #TODO : comment
 
 ##        print '- Sampling Mixt params ...'
-      
+
         nrlsSmpl = variables[self.samplerEngine.I_NRLS]
         cardCA = nrlsSmpl.cardCA
         cardCI = nrlsSmpl.cardCI
 
-        
+
         for j in xrange(self.nbConditions):
             self.nrlCI[j] = nrlsSmpl.currentValue[j, nrlsSmpl.voxIdxCI[j]]
             self.nrlCA[j] = nrlsSmpl.currentValue[j, nrlsSmpl.voxIdxCA[j]]
-            
+
         self.currentValue = np.zeros((self.NB_PARAMS, self.nbConditions),
                                   dtype=float)
-        
+
         for j in xrange(self.nbConditions):
             if cardCI[j] > 0:
                 nu0j = .5*dot(self.nrlCI[j], self.nrlCI[j])
@@ -491,7 +492,7 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
             #sampling of shapeCA and scaleCA to be completed
 
 #            invVarLikelihood = cardCA[j]/varCAj
-            
+
             meanCAVarAPost = 1/(invVarLikelihood + 1/self.meanCAPrVar)
 ##            print 'meanCAVarAPost = 1/(invVarLikelihood + 1/self.meanCAPrVar) :'
 ##            print '%f = 1/(%f + 1/%f)' %(meanCAVarAPost,invVarLikelihood,self.meanCAPrVar)
@@ -502,7 +503,7 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
 ##            print '%f = %f *(%f*%f + %f)' %(meanCAMeanAPost,meanCAVarAPost,eta1j,invVarLikelihood,rPrMV)
 ##            print 'meanCAMeanAPost :', meanCAMeanAPost
             shapeCAj = np.random.normal(meanCAMeanAPost, meanCAVarAPost**0.5)
-            
+
             self.currentValue[self.I_SHAPE_CA, j] = shapeCAj #absolute(meanCAj)
             self.currentValue[self.I_SCALE_CA, j] = scaleCAj
 
@@ -512,7 +513,7 @@ class GamGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariab
 
             pyhrf.verbose(4, 'meanCA,%d = %f' \
                           %(j,self.currentValue[self.I_SHAPE_CA,j]))
-            
+
             pyhrf.verbose(4, 'varCA,%d = %f' \
                           %(j,self.currentValue[self.I_SCALE_CA,j]))
-                          
+

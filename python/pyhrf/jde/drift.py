@@ -10,42 +10,30 @@ from numpy.matlib import repmat
 import pyhrf
 import intensivecalc
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from samplerbase import *
 from numpy.matlib import *
 
-class DriftSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class DriftSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
     Gibbs sampler of the parameters modelling the low frequency drift in
     the fMRI time course, in the case of white noise.
     """
-    # parameter labels definitions :
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
 
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None):
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
+
         an = ['order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
+        GibbsSamplerVariable.__init__(self,'drift', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an,
                                       value_label='PM LFD')
 
     def linkToData(self, dataInput):
-        
+
         self.dataInput = dataInput
         self.nbSess = self.dataInput.nbSessions
         self.dimDrift = self.dataInput.colP
@@ -163,39 +151,15 @@ class DriftSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                                          value_label='Delta BOLD')
 
         return outputs
-        
+
 class DriftSamplerWithRelVar(DriftSampler):
     """
     Gibbs sampler of the parameters modelling the low frequency drift in
     the fMRI time course, in the case of white noise.
     """
-    # parameter labels definitions :
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        an = ['order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
-                                      value_label='PM LFD')
 
     def linkToData(self, dataInput):
-        
+
         self.dataInput = dataInput
         self.nbSess = self.dataInput.nbSessions
         self.dimDrift = self.dataInput.colP
@@ -231,7 +195,7 @@ class DriftSamplerWithRelVar(DriftSampler):
             #else:
             self.currentValue = np.sqrt(varDrift) * \
                 np.random.randn(self.dimDrift, self.nbVox)
-        
+
         if self.currentValue is None:
             pyhrf.verbose(1,"Initialisation of Drift from the data")
             n = len(self.dataInput.varMBY)
@@ -239,7 +203,7 @@ class DriftSamplerWithRelVar(DriftSampler):
             invptp = numpy.linalg.inv(ptp)
             invptppt = numpy.dot(invptp, self.P.transpose())
             self.currentValue = numpy.dot(invptppt,self.dataInput.varMBY)
-        
+
         self.updateNorm()
         self.matPl = dot(self.P, self.currentValue)
         self.ones_Q_J = np.ones((self.dimDrift, self.nbVox))
@@ -260,9 +224,9 @@ class DriftSamplerWithRelVar(DriftSampler):
 
 
     def sampleNextInternal(self, variables):
-        
+
         #print 'Step 4 : Drift Sampling *****RelVar*****'
-        
+
         reps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
         snrls = variables[self.samplerEngine.I_NRLS]
         #print '         varYbar begin =',snrls.varYbar.sum()
@@ -332,29 +296,17 @@ class DriftSamplerWithRelVar(DriftSampler):
 
 class Drift_MultiSess_Sampler(DriftSampler):
 
-    #P_VAL_INI = 'initialValue'
-    #P_SAMPLE_FLAG = 'sampleFlag'
-    #P_USE_TRUE_VALUE = 'useTrueValue'
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None):
 
-    ## parameters definitions and default values :
-    #defaultParameters = {
-        #P_VAL_INI : None,
-        #P_SAMPLE_FLAG : True,
-        #P_USE_TRUE_VALUE : False,
-        #}
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                        xmlLabel=None, xmlComment=None):
-
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
         an = ['session','order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
+        GibbsSamplerVariable.__init__(self,'drift', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an,
                                       value_label='PM LFD')
 
     def linkToData(self, dataInput):
@@ -552,30 +504,23 @@ def sampleDrift( varInvSigma_drift, ptLambdaY, dim):
     return drift
 
 
-class DriftARSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class DriftARSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
-    Gibbs sampler of the parameters modelling the low frequency drift in the fMRI time course, in the case of AR noise
+    Gibbs sampler of the parameters modelling the low frequency drift in the
+    fMRI time course, in the case of AR noise
     """
 
-    # parameter labels definitions :
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None):
 
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : 1
-        }
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-	an = ['order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
+        an = ['order','voxel']
+        GibbsSamplerVariable.__init__(self,'drift', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an,
                                       value_label='PM LFD')
 
 #        self.functionBasis = self.parameters[self.P_FUNCTION_BASIS]
@@ -745,35 +690,22 @@ class DriftARSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         del self.varYTilde
 
 
-class ETASampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class ETASampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
-        Gibbs sampler of the variance of the Inverse Gamma prior used to
-        regularise the estimation of the low frequency drift embedded
-        in the fMRI time course
+    Gibbs sampler of the variance of the Inverse Gamma prior used to
+    regularise the estimation of the low frequency drift embedded
+    in the fMRI time course
     """
 
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-
-    defaultParameters = {
-        P_VAL_INI : np.array([1.0]),
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=np.array([1.0])):
 
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self,'driftVar', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag)
+        xmlio.XmlInitable.__init__(self)
+
+        GibbsSamplerVariable.__init__(self,'driftVar', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value)
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -830,27 +762,6 @@ class ETASampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
 class ETASampler_MultiSess(ETASampler):
 
-    #P_SAMPLE_FLAG = 'sampleFlag'
-    #P_VAL_INI = 'initialValue'
-    #P_USE_TRUE_VALUE = 'useTrueValue'
-
-    #defaultParameters = {
-        #P_VAL_INI : np.array([1.0]),
-        #P_SAMPLE_FLAG : True,
-        #P_USE_TRUE_VALUE : False,
-        #}
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-    xmlLabel=None, xmlComment=None):
-
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-        xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self,'driftVar', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag)
 
     def linkToData(self, dataInput):
         ETASampler.linkToData(self, dataInput)

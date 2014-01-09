@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from scipy.linalg import toeplitz
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
 from pyhrf.graph import graph_nb_cliques
 
@@ -80,7 +79,7 @@ def computeYTilde_Pl(sumj_aXh, yBar, dest=None):
         np.subtract(yBar, sumj_aXh, dest)
 
 
-class BOLDSamplerInput :
+class BOLDSamplerInput:
 
     """
     Class holding data needed by the sampler : BOLD time courses for each voxel,
@@ -391,23 +390,9 @@ class BOLDSamplerInput :
                         for a in xrange(matTmp.shape[1]):
                             print matTmp[b,a],
                         print ']'
-##                 print 'self.varOSAvailDataIdx :'
-##                 print self.varOSAvailDataIdx[iSess]
                 d0 = matTmp[self.varOSAvailDataIdx[iSess],:]
-##                 print 'd0 :', d0.shape
-##                 for b in xrange(d0.shape[0]):
-##                     print ' [',
-##                     for a in xrange(d0.shape[1]):
-##                         print d0[b,a],
-##                     print ']'
 
                 d1 = d0[:,self.hrfColIndex]
-##                 print 'd1 :', d1.shape
-##                 for b in xrange(d1.shape[0]):
-##                     print ' [',
-##                     for a in xrange(d1.shape[1]):
-##                         print d1[b,a],
-##                     print ']'
 
                 varX[j,:,:] = d1
 
@@ -417,10 +402,6 @@ class BOLDSamplerInput :
         self.buildOtherMatX()
 
         self.nbColX = shape(self.varX)[2]
-
-#        self.notNullIdxStack = dstack(where(self.stackX != 0)).ravel()
-##        print 'self.notNullIdxStack :', self.notNullIdxStack.shape , ' - ', self.notNullIdxStack.dtype
-##        print array2string(self.notNullIdxStack, 80, 0)
 
 
     def buildOtherMatX(self):
@@ -436,64 +417,8 @@ class BOLDSamplerInput :
 
         self.notNullIdxStack = dstack(where(self.stackX != 0)).ravel()
 
-    #def buildParadigmSingleCondMatrix(self, zc, estimDuration,
-                                      #availableDataIndex, parData) :
-        #osf = self.tr/self.dt
-        #lgt = (self.ny+2)*osf
-        #matH = zeros( (lgt, self.nbConditions), dtype=float)
-
-
-        ##for isess in xrange(self.nbSessions):
-
-        #for j in xrange(self.nbConditions) :
-            #trials = int32(parData[j][:] >0.)
-            #idx_trials = where(trials)
-            #nbtrials = trials.sum()
-            #matH[idx_trials, j] = arange(1,nbtrials+1, dtype=int)
-
-            ##self.hrfLength = int(round(estimDuration/self.dt)) +1
-            ##already computed in the previous function
-                ##if zc :
-            ##hrfColIndex = arange(1, self.hrfLength-1, dtype=int)
-            ##self.colIndex = arange(0,self.hrfLength-2, dtype=int)
-            ##else :
-            ##hrfColIndex = arange(0, self.hrfLength, dtype=int)
-            ##self.colIndex = arange(0,self.hrfLength, dtype=int)
-            ##self.lgCI = len(self.colIndex)
-            ##varOSAvailDataIdx = array(availableDataIndex*osf, dtype=int) #+ len(vDiv)
-            ##self.lenData = len(varOSAvailDataIdx)
-
-            ##self.varSingleCondXtrials = zeros( (self.nbConditions, self.lenData,
-                            ##self.lgCI), dtype=int)
-            #self.varSingleCondXtrials = zeros( (self.nbConditions, self.ny,
-                            #self.lgCI), dtype=int)
-            #self.varSingleCondXtrials = parData
-
-            ###for j in xrange(self.nbConditions):
-            ###    col = concatenate(([matH[0,j]], zeros(self.hrfLength-1, dtype=int)))
-            ###    matTmp = array(toeplitz( matH[:,j], col), dtype=int)
-            ###    d = matTmp[self.varOSAvailDataIdx,:][:,self.hrfColIndex]
-            ###    self.varSingleCondXtrials[j,:,:] = d[0][0]
-
-
-    #def buildParadigmSingleCondMatrix(self, onsets, stiml) :
-
-
-        ##for isess in xrange(self.nbSessions):
-
-        #self.varSingleCondXtrials = zeros( (self.nbConditions, self.ny, self.hrfLength), dtype=int)
-
-
-        #for nc in xrange(self.nbConditions) :
-            #for h in range(self.hrfLength) :
-                #for ons in range(len(onsets[nc])) :
-                    #for l in range(int(round(stiml[nc][ons])+1)) :
-                        #if int(round(onsets[nc][ons])) + l + h < self.ny :
-                        #self.varSingleCondXtrials[nc][int(round(onsets[nc][ons])) + l + h][h] = ons
-        #print shape(self.varSingleCondXtrials)
-        #raw_input()
-
-    def buildParadigmSingleCondMatrix(self, zc, estimDuration, availableDataIndex, parData) :
+    def buildParadigmSingleCondMatrix(self, zc, estimDuration,
+                                      availableDataIndex, parData) :
 
         pyhrf.verbose(2, 'Build Paradigm Matrix (Single, Conditional)')
         osf = self.tr/self.dt
@@ -1178,9 +1103,6 @@ class BOLDSampler_Multi_SessInput :
 
 class CallbackCritDiff(GSDefaultCallbackHandler):
 
-    def __init__(self, parameters=None, xmlHandler=xmlio.TypedXMLHandler(), xmlLabel=None, xmlComment=None):
-        GSDefaultCallbackHandler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
 
     def callback(self, it, variables, samplerEngine):
 
@@ -1188,132 +1110,65 @@ class CallbackCritDiff(GSDefaultCallbackHandler):
         nbIterations = it+1
         for k,v in se.variablesMapping.iteritems():
             se.cumul_for_full_crit_diff[k] += v.currentValue.flatten()
-            se.means_for_full_crit_diff[k] = se.cumul_for_full_crit_diff[k] / nbIterations
+            se.means_for_full_crit_diff[k] = se.cumul_for_full_crit_diff[k] / \
+              nbIterations
         old_vals = se.old_values_for_full_crit_diff
-        se.crit_diff0.update(se.compute_crit_diff(old_vals, se.means_for_full_crit_diff))
+        se.crit_diff0.update(se.compute_crit_diff(old_vals,
+                                                  se.means_for_full_crit_diff))
         #print 'crit_diff0:', se.crit_diff0
         for k,v in se.crit_diff0.iteritems():
             se.full_crit_diff_trajectory[k].append(v)
         se.full_crit_diff_trajectory_timing.append(se.loop_timing)
 
-class BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
+class BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
 
     #TODO : comment
 
-    # Indices and labels of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'responseLevels'
-
-    I_NOISE_VAR = 3
-    P_NOISE_VAR = 'noiseVariance'
-
-    I_RH = 4
-    P_RH = 'HRFVariance'
-
-    I_WEIGHTING_PROBA = 5
-    P_WEIGHTING_PROBA = 'mixtureWeights'
-
-    I_MIXT_PARAM = 2
-    P_MIXT_PARAM = 'mixtureParameters'
-
-    I_SCALE = 6
-    P_SCALE = 'scale'
-
-    I_BETA = 7
-    P_BETA = 'beta'
-
-    I_HRF = 1
-    P_HRF = 'HRF'
-
-    #I_LIK = 8
-    #P_LIK = 'LIKELIHOOD'
-
     inputClass = WN_BiG_BOLDSamplerInput
 
-    #variablesToSample = [P_NRLS, P_HRF, P_MIXT_PARAM, P_NOISE_VAR, P_RH, P_WEIGHTING_PROBA, P_SCALE, P_BETA, P_LIK]
-    variablesToSample = [P_NRLS, P_HRF, P_MIXT_PARAM, P_NOISE_VAR, P_RH, P_WEIGHTING_PROBA, P_SCALE, P_BETA]
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_GLOB_OBS_HIST_PACE = 'globalObservablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-    P_STOP_THRESHOLD = 'stop_criterion_threshold'
-    P_CRIT_DIFF_FROM_START = 'crit_diff_from_start'
-    P_CHECK_FINAL_VALUE = 'check_final_value_with_truth'
-
-    defaultParameters = {
-        P_OBS_HIST_PACE : -1.,
-        P_GLOB_OBS_HIST_PACE : -1,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_RANDOM_SEED : 193843200,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS : NRLSampler(),
-        P_BETA : BetaSampler(),
-        P_NOISE_VAR : NoiseVarianceSampler(),
-        P_HRF : HRFSampler(),
-        P_RH : RHSampler(),
-        P_WEIGHTING_PROBA : MixtureWeightsSampler(),
-        P_MIXT_PARAM : BiGaussMixtureParamsSampler(),
-        P_SCALE : ScaleSampler(),
-        P_STOP_THRESHOLD : -1,
-        P_CRIT_DIFF_FROM_START : False,#False,
-        P_CHECK_FINAL_VALUE : None, # 'print', 'raise'
-        #P_LIK : LikelihoodSampler(),
-        }
-
-
     if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters[P_NB_ITERATIONS] = 3
-        parametersToShow = [P_NB_ITERATIONS, P_SMPL_HIST_PACE, P_OBS_HIST_PACE,
-                            P_GLOB_OBS_HIST_PACE,
-                            P_NB_SWEEPS,
-                            P_RANDOM_SEED,
-                            P_CALLBACK, P_NRLS, P_BETA, P_NOISE_VAR,
-                            P_HRF, P_RH,
-                            P_WEIGHTING_PROBA,  P_MIXT_PARAM, P_SCALE,
-                            P_STOP_THRESHOLD, P_CRIT_DIFF_FROM_START
-                            #,
-                            #P_LIK
-                            ]
-
+        default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters[P_NB_ITERATIONS] = 3000
-        parametersToShow = [P_NB_ITERATIONS, P_NRLS, P_HRF, P_RH, P_RANDOM_SEED]
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
     parametersComments = {
-        P_SMPL_HIST_PACE: 'To save the samples at each iteration\n'\
+        'smpl_hist_pace': 'To save the samples at each iteration\n'\
             'If x<0: no save\n ' \
-            'If 0<x<1: define the fraction of iterations for which samples are saved\n'\
-            'If x>=1: define the step in iterations number between backup copies.\n'\
+            'If 0<x<1: define the fraction of iterations for which samples are '\
+            'saved\n'\
+            'If x>=1: define the step in iterations number between saved '\
+            ' samples.\n'\
             'If x=1: save samples at each iteration.',
-        P_OBS_HIST_PACE: 'See comment for samplesHistoryPaceSave.'
+        'obs_hist_pace' : 'See comment for samplesHistoryPaceSave.'
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 response_levels=NRLSampler(), beta=BetaSampler(),
+                 noise_var=NoiseVarianceSampler(), hrf=HRFSampler(),
+                 hrf_var=RHSampler(), mixt_weights=MixtureWeightsSampler(),
+                 mixt_params=BiGaussMixtureParamsSampler(), scale=ScaleSampler(),
+                 stop_crit_threshold=-1, stop_crit_from_start=False,
+                 check_final_value=None):
         """
-        #TODO : comment
-
+        check_final_value: None, 'print' or 'raise'
         """
         #print 'param:', parameters
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-        #print self.variablesToSample
-        #for vLab in self.variablesToSample:
-             #print vLab
+        xmlio.XmlInitable.__init__(self)
 
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        globalObsHistPace = self.parameters[self.P_GLOB_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
+        variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
+                     beta, scale, noise_var]
 
-        check_ftval = self.parameters[self.P_CHECK_FINAL_VALUE]
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
+
+        check_ftval = check_final_value
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
@@ -1330,9 +1185,8 @@ class BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
         #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
-        self.stop_threshold = self.parameters[self.P_STOP_THRESHOLD]
-        self.crit_diff_from_start = self.parameters[self.P_CRIT_DIFF_FROM_START]
-        seed = self.parameters[self.P_RANDOM_SEED]
+        self.stop_threshold = stop_crit_threshold
+        self.crit_diff_from_start = stop_crit_from_start
         #callbackObj = self.parameters[self.P_CALLBACK]
         self.full_crit_diff_trajectory = defaultdict(list)
         self.full_crit_diff_trajectory_timing = []
@@ -1586,126 +1440,55 @@ class BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
             self.stimIndSignal[:,i] = si-si.mean() +  meanBold[i]
 
 
-class BOLDGibbsSampler_AR(xmlio.XMLParamDrivenClass, GibbsSampler):
-
-    #TODO : comment
-
-    # Indices of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'nrl'
-
-    I_NOISE_VAR = 1
-    P_NOISE_VAR = 'noiseVar'
-
-    I_NOISE_ARP = 2
-    P_NOISE_ARP = 'noiseARParam'
-
-    I_HRF = 3
-    P_HRF = 'hrf'
-
-    I_RH = 4
-    P_RH = 'hrfVar'
-
-    I_DRIFT = 5
-    P_DRIFT = 'drift'
-
-    I_ETA = 6
-    P_ETA = 'driftVar'
-
-    I_WEIGHTING_PROBA = 7
-    P_WEIGHTING_PROBA = 'mixtureWeight'
-
-    I_MIXT_PARAM = 8
-    P_MIXT_PARAM = 'mixtureParams'
-
-    I_SCALE = 9
-    P_SCALE = 'scale'
-
-    I_BETA = 10
-    P_BETA = 'beta'
+class BOLDGibbsSampler_AR(xmlio.XmlInitable, GibbsSampler):
 
     inputClass = ARN_BiG_BOLDSamplerInput
 
-    variablesToSample = [ P_NRLS, P_NOISE_VAR, P_NOISE_ARP,  P_HRF,
-                          P_RH, P_DRIFT, P_ETA, P_WEIGHTING_PROBA,
-                          P_MIXT_PARAM, P_SCALE, P_BETA ]
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_GLOB_OBS_HIST_PACE = 'globalObservablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-    P_STOP_THRESHOLD = 'stop_criterion_threshold'
-    P_CRIT_DIFF_FROM_START = 'crit_diff_from_start'
-
-    defaultParameters = {
-        P_OBS_HIST_PACE : -1.,
-        P_SMPL_HIST_PACE : -1.,
-        P_GLOB_OBS_HIST_PACE : -1,
-        P_NB_SWEEPS : .3,
-        P_NB_ITERATIONS : 3,
-        P_RANDOM_SEED : 193843200,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS : NRLARSampler(),
-        P_NOISE_VAR : NoiseVarianceARSampler(),
-        P_NOISE_ARP : NoiseARParamsSampler(),
-        P_HRF : HRFARSampler(),
-        P_RH : RHSampler(),
-        P_DRIFT : DriftARSampler(),
-        P_ETA : ETASampler(),
-        P_WEIGHTING_PROBA: MixtureWeightsSampler(),
-        P_MIXT_PARAM : BiGaussMixtureParamsSampler(),
-        P_SCALE : ScaleSampler(),
-        P_BETA : BetaSampler(),
-        P_STOP_THRESHOLD : -1,
-        P_CRIT_DIFF_FROM_START : False,
-        }
-
     if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters[P_NB_ITERATIONS] = 3
-        parametersToShow = [P_NB_ITERATIONS, P_SMPL_HIST_PACE, P_OBS_HIST_PACE,
-                            P_GLOB_OBS_HIST_PACE,
-                            P_NB_SWEEPS,
-                            P_RANDOM_SEED,
-                            P_CALLBACK, P_NRLS, P_BETA, P_NOISE_VAR,
-                            P_HRF, P_RH,
-                            P_WEIGHTING_PROBA,  P_MIXT_PARAM, P_SCALE,
-                            P_STOP_THRESHOLD, P_CRIT_DIFF_FROM_START]
-
+        default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters[P_NB_ITERATIONS] = 3000
-        parametersToShow = [P_NB_ITERATIONS, P_NRLS, P_HRF, P_RH, P_RANDOM_SEED]
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
     parametersComments = {
-        P_SMPL_HIST_PACE: 'To save the samples at each iteration\n'\
+        'smpl_hist_pace': 'To save the samples at each iteration\n'\
             'If x<0: no save\n ' \
-            'If 0<x<1: define the fraction of iterations for which samples are saved\n'\
-            'If x>=1: define the step in iterations number between backup copies.\n'\
+            'If 0<x<1: define the fraction of iterations for which samples are '\
+            'saved\n'\
+            'If x>=1: define the step in iterations number between saved '\
+            ' samples.\n'\
             'If x=1: save samples at each iteration.',
-        P_OBS_HIST_PACE: 'See comment for samplesHistoryPaceSave.'
+        'obs_hist_pace' : 'See comment for samplesHistoryPaceSave.'
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 response_levels=NRLARSampler(), beta=BetaSampler(),
+                 noise_var=NoiseVarianceARSampler(),
+                 noise_arp=NoiseARParamsSampler(), hrf=HRFARSampler(),
+                 hrf_var=RHSampler(), mixt_weights=MixtureWeightsSampler(),
+                 mixt_params=BiGaussMixtureParamsSampler(), scale=ScaleSampler(),
+                 drift=DriftARSampler(), drift_var=ETASampler(),
+                 stop_crit_threshold=-1, stop_crit_from_start=False,
+                 check_final_value=None):
         """
-        #TODO : comment
-
+        check_final_value: None, 'print' or 'raise'
         """
-        #print 'param:', parameters
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-        #print self.variablesToSample
-        #for vLab in self.variablesToSample:
-             #print vLab
 
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        globalObsHistPace = self.parameters[self.P_GLOB_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
+        xmlio.XmlInitable.__init__(self)
+
+        variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
+                     beta, scale, noise_var, noise_arp, drift, drift_var]
+
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
+
+        check_ftval = check_final_value
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
@@ -1722,9 +1505,8 @@ class BOLDGibbsSampler_AR(xmlio.XMLParamDrivenClass, GibbsSampler):
         #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
         #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
-        self.stop_threshold = self.parameters[self.P_STOP_THRESHOLD]
-        self.crit_diff_from_start = self.parameters[self.P_CRIT_DIFF_FROM_START]
-        seed = self.parameters[self.P_RANDOM_SEED]
+        self.stop_threshold = stop_crit_threshold
+        self.crit_diff_from_start = stop_crit_from_start
         #callbackObj = self.parameters[self.P_CALLBACK]
         self.full_crit_diff_trajectory = defaultdict(list)
         self.full_crit_diff_trajectory_timing = []
@@ -1737,10 +1519,9 @@ class BOLDGibbsSampler_AR(xmlio.XMLParamDrivenClass, GibbsSampler):
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
                               obsHistPace, nbSweeps,
                               callbackObj, randomSeed=seed,
-                              globalObsHistoryPace=globalObsHistPace)
+                              globalObsHistoryPace=globalObsHistPace,
+                              check_ftval=check_ftval)
 
-
-        ##self.buildSharedDataTree()
 
     def stop_criterion(self, it):
         #return False
@@ -1953,273 +1734,46 @@ class BOLDGibbsSampler_AR(xmlio.XMLParamDrivenClass, GibbsSampler):
 
 
 
-class W_BOLDGibbsSampler(BOLDGibbsSampler):
-
-    defaultParameters = copyModule.deepcopy(BOLDGibbsSampler.defaultParameters)
-
-    # Indices and labels of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'responseLevels'
-
-    I_HRF = 1
-    P_HRF = 'HRF'
-
-    I_NOISE_VAR = 2
-    P_NOISE_VAR = 'noiseVariance'
-
-    I_RH = 3
-    P_RH = 'HRFVariance'
-
-    I_WEIGHTING_PROBA = 4
-    P_WEIGHTING_PROBA = 'mixtureWeights'
-
-    I_MIXT_PARAM = 5
-    P_MIXT_PARAM = 'mixtureParameters'
-
-    I_SCALE = 6
-    P_SCALE = 'scale'
-
-    I_BETA = 7
-    P_BETA = 'beta'
-
-    I_W = 8
-    P_W = 'relevantVariable'
+class W_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
 
     inputClass = WN_BiG_BOLDSamplerInput
 
-    defaultParameters.update({
-        P_NRLS : NRLSamplerWithRelVar(),
-        P_NOISE_VAR : NoiseVarianceSamplerWithRelVar(),
-        P_HRF : HRFSamplerWithRelVar(),
-        P_MIXT_PARAM : BiGaussMixtureParamsSamplerWithRelVar(),
-        P_W : WSampler()
-        })
+    if pyhrf.__usemode__ == pyhrf.DEVEL:
+        default_nb_its = 3
+    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
-    variablesToSample = [P_NRLS,  P_HRF, P_NOISE_VAR,
-                          P_RH, P_WEIGHTING_PROBA,
-                          P_MIXT_PARAM, P_SCALE, P_BETA, P_W]
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 response_levels=NRLSamplerWithRelVar(), beta=BetaSampler(),
+                 noise_var=NoiseVarianceSampler(), hrf=HRFSamplerWithRelVar(),
+                 hrf_var=RHSampler(), mixt_weights=MixtureWeightsSampler(),
+                 mixt_params=BiGaussMixtureParamsSamplerWithRelVar(),
+                 scale=ScaleSampler(), relevantVariable=WSampler(),
+                 stop_crit_threshold=-1, stop_crit_from_start=False,
+                 check_final_value=None):
 
-    parametersToShow = copyModule.deepcopy(BOLDGibbsSampler.parametersToShow)
-    parametersToShow += [P_W]
+        xmlio.XmlInitable.__init__(self)
 
-    #print variablesToSample
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                    xmlLabel=None, xmlComment=None):
+        variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
+                     beta, scale, noise_var, relevantVariable]
 
-        BOLDGibbsSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
 
-    #def buildSharedDataTree(self):
-        #BOLDGibbsSampler.buildSharedDataTree(self)
-        #computeRules.append({'label' : 'varQg', 'dep' : ['delta','matXh'],
-                             #'computeFunc' : computeQXh})
-
-
-class GGG_BOLDGibbsSampler(BOLDGibbsSampler):
-
-
-    defaultParameters = copyModule.deepcopy(BOLDGibbsSampler.defaultParameters)
-    #P_BF_UPDATER = 'BayesFactorUpdater'
-    #I_BF_UPDATER = 7
-    defaultParameters.update({
-        BOLDGibbsSampler.P_NRLS : GGGNRLSampler(),
-        BOLDGibbsSampler.P_MIXT_PARAM : TriGaussMixtureParamsSampler(),
-        })
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                    xmlLabel=None, xmlComment=None):
-
-        BOLDGibbsSampler.__init__(self, parameters, xmlHandler, xmlLabel,
-                                  xmlComment)
-
-class BOLDGamGaussGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
-
-    #TODO : comment
-
-    # Indices and labels of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'nrl'
-
-    I_NOISE_VAR = 1
-    P_NOISE_VAR = 'noiseVar'
-
-    I_HRF = 2
-    P_HRF = 'hrf'
-
-    I_RH = 3
-    P_RH = 'hrfVar'
-
-    I_WEIGHTING_PROBA = 4
-    P_WEIGHTING_PROBA = 'mixtureWeight'
-
-    I_MIXT_PARAM = 5
-    P_MIXT_PARAM = 'mixtureParams'
-
-    I_SCALE = 6
-    P_SCALE = 'scale'
-
-    variablesMapping = {
-        P_NRLS : I_NRLS,
-        P_NOISE_VAR : I_NOISE_VAR,
-        P_HRF : I_HRF,
-        P_RH : I_RH,
-        P_WEIGHTING_PROBA : I_WEIGHTING_PROBA,
-        P_MIXT_PARAM : I_MIXT_PARAM,
-        P_SCALE : I_SCALE,
-        }
-
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_HIST_PACE = 'historyPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-
-    defaultParameters = {
-        P_NB_ITERATIONS : 3,
-        P_HIST_PACE : 2,
-        P_NB_SWEEPS : None,
-        P_RANDOM_SEED : None,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS : InhomogeneousNRLSampler(),
-        P_NOISE_VAR : NoiseVarianceSampler(),
-        P_HRF : HRFSampler(),
-        P_RH : RHSampler(),
-        P_WEIGHTING_PROBA : MixtureWeightsSampler(),
-        P_MIXT_PARAM : GamGaussMixtureParamsSampler(),
-        P_SCALE : ScaleSampler(),
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(), xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
-        variables = range(len(self.variablesMapping))
-        for vLab, vIndex in self.variablesMapping.items() :
-            variables[vIndex] = self.parameters[vLab]
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        histPace = self.parameters[self.P_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
-        seed = self.parameters[self.P_RANDOM_SEED]
-        if nbSweeps == None :
-            nbSweeps = nbIt/3
-        callbackObj = self.parameters[self.P_CALLBACK]
-        GibbsSampler.__init__(self, variables, nbIt, histPace, nbSweeps, callbackObj, randomSeed=seed)
-
-    def computePMStimInducedSignal(self):
-
-        nbCond = self.dataInput.nbConditions
-        nbVox = self.dataInput.nbVoxels
-
-        nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
-        hrf = shrf.finalValue
-        vXh = shrf.varXh # base convolution
-        nrl = self.getVariable('nrl').finalValue
-
-
-        self.stimIndSignal = np.zeros((nbVals, nbVox))
-        meanBold = self.dataInput.varMBY.mean(axis=0)
-
-        for i in xrange(nbVox):
-            # Multiply by corresponding NRLs and sum over conditions :
-            si = (vXh*nrl[:,i]).sum(1)
-            # Adjust mean to original Bold (because drift is not explicit):
-            self.stimIndSignal[:,i] = si-si.mean() +  meanBold[i]
-
-
-class Drift_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
-
-    #TODO : comment Class for Gibbs sampling algorithm using a AR(1) noise model
-
-    # Indices of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'nrl'
-
-    I_NOISE_VAR = 1
-    P_NOISE_VAR = 'noiseVar'
-
-    I_HRF = 2
-    P_HRF = 'hrf'
-
-    I_RH = 3
-    P_RH = 'hrfVar'
-
-    I_DRIFT = 4
-    P_DRIFT = 'drift'
-
-    I_ETA = 5
-    P_ETA = 'driftVar'
-
-    I_WEIGHTING_PROBA = 6
-    P_WEIGHTING_PROBA = 'mixtureWeight'
-
-    I_MIXT_PARAM = 7
-    P_MIXT_PARAM = 'mixtureParams'
-
-    I_SCALE = 8
-    P_SCALE = 'scale'
-
-    I_BETA = 9
-    P_BETA = 'beta'
-
-    inputClass = WN_BiG_Drift_BOLDSamplerInput
-
-    variablesToSample = [ P_NRLS, P_NOISE_VAR,  P_HRF,
-                          P_RH, P_DRIFT, P_ETA, P_WEIGHTING_PROBA,
-                          P_MIXT_PARAM, P_SCALE, P_BETA ]
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-
-    defaultParameters = {
-        P_OBS_HIST_PACE : -1.,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_NB_ITERATIONS : 3,
-        P_RANDOM_SEED : 193843200,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS : NRL_Drift_Sampler(),
-        P_NOISE_VAR : NoiseVariance_Drift_Sampler(),
-        P_HRF : HRF_Drift_Sampler(),
-        P_RH : RHSampler(),
-        P_DRIFT : DriftSampler(),
-        P_ETA : ETASampler(),
-        P_WEIGHTING_PROBA: MixtureWeightsSampler(),
-        P_MIXT_PARAM : BiGaussMixtureParamsSampler(),
-        P_SCALE : ScaleSampler(),
-        P_BETA : BetaSampler(),
-        }
-
-
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
+        check_ftval = check_final_value
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
+
+        if globalObsHistPace > 0. and globalObsHistPace < 1:
+            globalObsHistPace = max(1,int(round(nbIt * globalObsHistPace)))
 
         if smplHistPace > 0. and smplHistPace < 1.:
             smplHistPace = max(1,int(round(nbIt * smplHistPace)))
@@ -2227,13 +1781,201 @@ class Drift_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         if nbSweeps > 0. and nbSweeps < 1.:
             nbSweeps = int(round(nbIt * nbSweeps))
 
+        #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
+        #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
-        seed = self.parameters[self.P_RANDOM_SEED]
-        callbackObj = self.parameters[self.P_CALLBACK]
+        self.stop_threshold = stop_crit_threshold
+        self.crit_diff_from_start = stop_crit_from_start
+        #callbackObj = self.parameters[self.P_CALLBACK]
+        self.full_crit_diff_trajectory = defaultdict(list)
+        self.full_crit_diff_trajectory_timing = []
+        self.crit_diff0 = {}
+        #print 'self.crit_diff_from_start:', self.crit_diff_from_start
+        if self.crit_diff_from_start:
+            callbackObj = CallbackCritDiff()
+        else:
+            callbackObj = GSDefaultCallbackHandler()
+
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
-                              obsHistPace,
-                              nbSweeps,
-                              callbackObj, randomSeed=seed)
+                              obsHistPace, nbSweeps,
+                              callbackObj, randomSeed=seed,
+                              globalObsHistoryPace=globalObsHistPace,
+                              check_ftval=check_ftval)
+
+
+if 0: #not maintained ...
+    class GGG_BOLDGibbsSampler(BOLDGibbsSampler):
+
+
+        defaultParameters = copyModule.deepcopy(BOLDGibbsSampler.defaultParameters)
+        #P_BF_UPDATER = 'BayesFactorUpdater'
+        #I_BF_UPDATER = 7
+        defaultParameters.update({
+            BOLDGibbsSampler.P_NRLS : GGGNRLSampler(),
+            BOLDGibbsSampler.P_MIXT_PARAM : TriGaussMixtureParamsSampler(),
+            })
+
+
+        def __init__(self, parameters=None, xmlHandler=None,
+                        xmlLabel=None, xmlComment=None):
+
+            BOLDGibbsSampler.__init__(self, parameters, xmlHandler, xmlLabel,
+                                      xmlComment)
+
+if 0: # not maintained
+    class BOLDGamGaussGibbsSampler(xmlio.XmlInitable, GibbsSampler):
+
+        #TODO : comment
+
+        # Indices and labels of each variable registered in sampler :
+        I_NRLS = 0
+        P_NRLS = 'nrl'
+
+        I_NOISE_VAR = 1
+        P_NOISE_VAR = 'noiseVar'
+
+        I_HRF = 2
+        P_HRF = 'hrf'
+
+        I_RH = 3
+        P_RH = 'hrfVar'
+
+        I_WEIGHTING_PROBA = 4
+        P_WEIGHTING_PROBA = 'mixtureWeight'
+
+        I_MIXT_PARAM = 5
+        P_MIXT_PARAM = 'mixtureParams'
+
+        I_SCALE = 6
+        P_SCALE = 'scale'
+
+        variablesMapping = {
+            P_NRLS : I_NRLS,
+            P_NOISE_VAR : I_NOISE_VAR,
+            P_HRF : I_HRF,
+            P_RH : I_RH,
+            P_WEIGHTING_PROBA : I_WEIGHTING_PROBA,
+            P_MIXT_PARAM : I_MIXT_PARAM,
+            P_SCALE : I_SCALE,
+            }
+
+
+        P_NB_ITERATIONS = 'nbIterations'
+        P_HIST_PACE = 'historyPaceSave'
+        P_NB_SWEEPS = 'nbSweeps'
+        P_CALLBACK = 'callBackHandler'
+        P_RANDOM_SEED = 'numpyRandomSeed'
+
+        defaultParameters = {
+            P_NB_ITERATIONS : 3,
+            P_HIST_PACE : 2,
+            P_NB_SWEEPS : None,
+            P_RANDOM_SEED : None,
+            P_CALLBACK : GSDefaultCallbackHandler(),
+            P_NRLS : InhomogeneousNRLSampler(),
+            P_NOISE_VAR : NoiseVarianceSampler(),
+            P_HRF : HRFSampler(),
+            P_RH : RHSampler(),
+            P_WEIGHTING_PROBA : MixtureWeightsSampler(),
+            P_MIXT_PARAM : GamGaussMixtureParamsSampler(),
+            P_SCALE : ScaleSampler(),
+            }
+
+
+        def computePMStimInducedSignal(self):
+
+            nbCond = self.dataInput.nbConditions
+            nbVox = self.dataInput.nbVoxels
+
+            nbVals = self.dataInput.ny
+            shrf = self.getVariable('hrf')
+            hrf = shrf.finalValue
+            vXh = shrf.varXh # base convolution
+            nrl = self.getVariable('nrl').finalValue
+
+
+            self.stimIndSignal = np.zeros((nbVals, nbVox))
+            meanBold = self.dataInput.varMBY.mean(axis=0)
+
+            for i in xrange(nbVox):
+                # Multiply by corresponding NRLs and sum over conditions :
+                si = (vXh*nrl[:,i]).sum(1)
+                # Adjust mean to original Bold (because drift is not explicit):
+                self.stimIndSignal[:,i] = si-si.mean() +  meanBold[i]
+
+
+class Drift_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
+
+    inputClass = WN_BiG_Drift_BOLDSamplerInput
+
+    if pyhrf.__usemode__ == pyhrf.DEVEL:
+        default_nb_its = 3
+    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+
+
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1, glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1, burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 response_levels=NRL_Drift_Sampler(), beta=BetaSampler(),
+                 noise_var=NoiseVariance_Drift_Sampler(), hrf=HRF_Drift_Sampler(),
+                 hrf_var=RHSampler(), mixt_weights=MixtureWeightsSampler(),
+                 mixt_params=BiGaussMixtureParamsSampler(), scale=ScaleSampler(),
+                 drift=DriftSampler(), drift_var=ETASampler(),
+                 stop_crit_threshold=-1, stop_crit_from_start=False,
+                 check_final_value=None):
+        """
+        check_final_value: None, 'print' or 'raise'
+        """
+        #print 'param:', parameters
+        xmlio.XmlInitable.__init__(self)
+
+        variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
+                     beta, scale, noise_var, drift, drift_var]
+
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
+        check_ftval = check_final_value
+
+        if obsHistPace > 0. and obsHistPace < 1:
+            obsHistPace = max(1,int(round(nbIt * obsHistPace)))
+
+        if globalObsHistPace > 0. and globalObsHistPace < 1:
+            globalObsHistPace = max(1,int(round(nbIt * globalObsHistPace)))
+
+        if smplHistPace > 0. and smplHistPace < 1.:
+            smplHistPace = max(1,int(round(nbIt * smplHistPace)))
+
+        if nbSweeps > 0. and nbSweeps < 1.:
+            nbSweeps = int(round(nbIt * nbSweeps))
+
+        #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
+        #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
+
+        self.stop_threshold = stop_crit_threshold
+        self.crit_diff_from_start = stop_crit_from_start
+        #callbackObj = self.parameters[self.P_CALLBACK]
+        self.full_crit_diff_trajectory = defaultdict(list)
+        self.full_crit_diff_trajectory_timing = []
+        self.crit_diff0 = {}
+        #print 'self.crit_diff_from_start:', self.crit_diff_from_start
+        if self.crit_diff_from_start:
+            callbackObj = CallbackCritDiff()
+        else:
+            callbackObj = GSDefaultCallbackHandler()
+        GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
+                              obsHistPace, nbSweeps,
+                              callbackObj, randomSeed=seed,
+                              globalObsHistoryPace=globalObsHistPace,
+                              check_ftval=check_ftval)
+
+
+        ##self.buildSharedDataTree()
 
 
 
@@ -2257,176 +1999,50 @@ class Drift_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         return stimIndSignal
 
 
-class W_Drift_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, Drift_BOLDGibbsSampler):
-
-    #TODO : comment Class for Gibbs sampling algorithm using a AR(1) noise model
-
-    # Indices of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'nrl'
-
-    I_HRF = 2
-    P_HRF = 'hrf'
-
-    I_NOISE_VAR = 1
-    P_NOISE_VAR = 'noiseVar'
-
-    I_RH = 3
-    P_RH = 'hrfVar'
-
-    I_DRIFT = 4
-    P_DRIFT = 'drift'
-
-    I_ETA = 5
-    P_ETA = 'driftVar'
-
-    I_WEIGHTING_PROBA = 6
-    P_WEIGHTING_PROBA = 'mixtureWeight'
-
-    I_MIXT_PARAM = 7
-    P_MIXT_PARAM = 'mixtureParams'
-
-    I_SCALE = 8
-    P_SCALE = 'scale'
-
-    I_BETA = 9
-    P_BETA = 'beta'
-
-    I_W = 10
-    P_W = 'relevantVariable'
+class W_Drift_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
 
     inputClass = WN_BiG_Drift_BOLDSamplerInput
 
-    variablesToSample = [ P_NRLS, P_NOISE_VAR, P_HRF,
-                          P_RH, P_DRIFT, P_ETA, P_WEIGHTING_PROBA,
-                          P_MIXT_PARAM, P_SCALE, P_BETA, P_W ]
+    if pyhrf.__usemode__ == pyhrf.DEVEL:
+        default_nb_its = 3
+    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 response_levels=NRL_Drift_SamplerWithRelVar(),
+                 beta=BetaSampler(),
+                 noise_var=NoiseVariance_Drift_Sampler(),
+                 hrf=HRF_Drift_SamplerWithRelVar(),
+                 hrf_var=RHSampler(), mixt_weights=MixtureWeightsSampler(),
+                 mixt_params=BiGaussMixtureParamsSamplerWithRelVar(),
+                 scale=ScaleSampler(), condion_relevance=W_Drift_Sampler(),
+                 drift=DriftSamplerWithRelVar(), drift_var=ETASampler(),
+                 stop_crit_threshold=-1, stop_crit_from_start=False,
+                 check_final_value=None):
 
-    defaultParameters = {
-        P_OBS_HIST_PACE : -1.,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_NB_ITERATIONS : 3,
-        P_RANDOM_SEED : 193843200,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS : NRL_Drift_SamplerWithRelVar(),
-        P_NOISE_VAR : NoiseVariance_Drift_Sampler(),
-        P_HRF : HRF_Drift_SamplerWithRelVar(),
-        P_RH : RHSampler(),
-        P_DRIFT : DriftSamplerWithRelVar(),
-        P_ETA : ETASampler(),
-        P_WEIGHTING_PROBA: MixtureWeightsSampler(),
-        P_MIXT_PARAM : BiGaussMixtureParamsSamplerWithRelVar(),
-        P_SCALE : ScaleSampler(),
-        P_BETA : BetaSampler(),
-        P_W : W_Drift_Sampler(),
-        }
+        xmlio.XmlInitable.__init__(self)
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
+        variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
+                     beta, scale, noise_var, condition_relevance, drift,
+                     drift_var]
 
-        """
-        Drift_BOLDGibbsSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
 
-
-class ARN_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
-
-    #TODO : comment Class for Gibbs sampling algorithm using a AR(1) noise model
-
-    # Indices of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'nrl'
-
-    I_NOISE_VAR = 1
-    P_NOISE_VAR = 'noiseVar'
-
-    I_NOISE_ARP = 2
-    P_NOISE_ARP = 'noiseARParam'
-
-    I_HRF = 3
-    P_HRF = 'hrf'
-
-    I_RH = 4
-    P_RH = 'hrfVar'
-
-    I_DRIFT = 5
-    P_DRIFT = 'drift'
-
-    I_ETA = 6
-    P_ETA = 'driftVar'
-
-    I_WEIGHTING_PROBA = 7
-    P_WEIGHTING_PROBA = 'mixtureWeight'
-
-    I_MIXT_PARAM = 8
-    P_MIXT_PARAM = 'mixtureParams'
-
-    I_SCALE = 9
-    P_SCALE = 'scale'
-
-    I_BETA = 10
-    P_BETA = 'beta'
-
-    inputClass = ARN_BiG_BOLDSamplerInput
-
-    variablesToSample = [ P_NRLS, P_NOISE_VAR, P_NOISE_ARP,  P_HRF,
-                          P_RH, P_DRIFT, P_ETA, P_WEIGHTING_PROBA,
-                          P_MIXT_PARAM, P_SCALE, P_BETA ]
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-
-    defaultParameters = {
-        P_OBS_HIST_PACE : -1.,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_NB_ITERATIONS : 3,
-        P_RANDOM_SEED : 193843200,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS : NRLARSampler(),
-        P_NOISE_VAR : NoiseVarianceARSampler(),
-        P_NOISE_ARP : NoiseARParamsSampler(),
-        P_HRF : HRFARSampler(),
-        P_RH : RHSampler(),
-        P_DRIFT : DriftARSampler(),
-        P_ETA : ETASampler(),
-        P_WEIGHTING_PROBA: MixtureWeightsSampler(),
-        P_MIXT_PARAM : BiGaussMixtureParamsSampler(),
-        P_SCALE : ScaleSampler(),
-        P_BETA : BetaSampler(),
-        }
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-
-        variables = [self.parameters[vLab] \
-                         for vLab in self.variablesToSample]
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
+        check_ftval = check_final_value
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
+
+        if globalObsHistPace > 0. and globalObsHistPace < 1:
+            globalObsHistPace = max(1,int(round(nbIt * globalObsHistPace)))
 
         if smplHistPace > 0. and smplHistPace < 1.:
             smplHistPace = max(1,int(round(nbIt * smplHistPace)))
@@ -2434,81 +2050,200 @@ class ARN_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         if nbSweeps > 0. and nbSweeps < 1.:
             nbSweeps = int(round(nbIt * nbSweeps))
 
+        #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
+        #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
-        seed = self.parameters[self.P_RANDOM_SEED]
-        callbackObj = self.parameters[self.P_CALLBACK]
+        self.stop_threshold = stop_crit_threshold
+        self.crit_diff_from_start = stop_crit_from_start
+        #callbackObj = self.parameters[self.P_CALLBACK]
+        self.full_crit_diff_trajectory = defaultdict(list)
+        self.full_crit_diff_trajectory_timing = []
+        self.crit_diff0 = {}
+        #print 'self.crit_diff_from_start:', self.crit_diff_from_start
+        if self.crit_diff_from_start:
+            callbackObj = CallbackCritDiff()
+        else:
+            callbackObj = GSDefaultCallbackHandler()
+
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
-                              obsHistPace,
-                              nbSweeps,
-                              callbackObj, randomSeed=seed)
+                              obsHistPace, nbSweeps,
+                              callbackObj, randomSeed=seed,
+                              globalObsHistoryPace=globalObsHistPace,
+                              check_ftval=check_ftval)
 
-        ##self.buildSharedDataTree()
-
-    # def buildSharedDataTree(self):
-
-    #     self.sharedData = Pipeline()
-    #     self.regVarsInPipeline()
-
-    #     computeRules = []
-    #     # Some more roots :
-    #     computeRules.append({'label' : 'varX', 'ref' : self.varX})
-    #     computeRules.append({'label' : 'varP', 'ref' : self.varP})
-    #     computeRules.append({'label' : 'varMBY', 'ref' : self.varMBY})
-
-    #     # Add shared quantities to update during sampling :
-    #     computeRules.append({'label' : 'matXh' , 'dep' : ['varX', 'hrf'],
-    #                          'computeFunc' : computeXh})
-    #     computeRules.append({'label' : 'varPl' , 'dep' : ['varP', 'drift'],
-    #                          'computeFunc' : computePl})
-    #     computeRules.append({'label' : 'sumj_aXh', 'dep' : ['matXh','nrl'],
-    #                          'computeFunc' : computeSumjaXh})
-
-    #     computeRules.append({'label' : 'yBar', 'dep' : ['varMBY', 'varPl'],
-    #                          'computeFunc' : computeYBar})
-
-    #     computeRules.append({'label' : 'yTilde', 'dep' : ['sumj_aXh','yBar'],
-    #                          'computeFunc' : computeYTilde_Pl})
-
-    def computePMStimInducedSignal(self):
-
-        nbCond = self.dataInput.nbConditions
-        nbVox = self.dataInput.nbVoxels
-
-        nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
-        hrf = shrf.finalValue
-        vXh = shrf.varXh # base convolution
-        nrl = self.getVariable('nrl').finalValue
-
-        self.stimIndSignal = np.zeros((nbVals, nbVox))
-        meanBold = self.dataInput.varMBY.mean(axis=0)
-
-        for i in xrange(nbVox):
-            # Multiply by corresponding NRLs and sum over conditions :
-            si = (vXh*nrl[:,i]).sum(1)
-            # Adjust mean to original Bold (because drift is not explicit):
-            self.stimIndSignal[:,i] = si-si.mean() +  meanBold[i]
-
-    def computeFittedSignal(self):
-        nbCond = self.dataInput.nbConditions
-        nbVox = self.dataInput.nbVoxels
-
-        nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
-        hrf = shrf.finalValue
-        vXh = shrf.varXh # base convolution
-        nrl = self.getVariable('nrl').finalValue
-        sdrift = self.getVariable('drift')
-        vPl = sdrift.Pl
-
-        self.fittedSignal = np.zeros((nbVals, nbVox))
-
-        for i in xrange(nbVox):
-            # Multiply by corresponding NRLs and sum over conditions :
-            si = (vXh*nrl[:,i]).sum(1)
-            # Adjust mean to original Bold (because drift is not explicit):
-            self.fittedSignal[:,i] = si + vPl[:,i]
-
+if 0: # duplicate of BOLDGibbsSampler_AR ? -> to remove ?
+    class ARN_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
+    
+        #TODO : comment Class for Gibbs sampling algorithm using a AR(1) noise model
+    
+        # Indices of each variable registered in sampler :
+        I_NRLS = 0
+        P_NRLS = 'nrl'
+    
+        I_NOISE_VAR = 1
+        P_NOISE_VAR = 'noiseVar'
+    
+        I_NOISE_ARP = 2
+        P_NOISE_ARP = 'noiseARParam'
+    
+        I_HRF = 3
+        P_HRF = 'hrf'
+    
+        I_RH = 4
+        P_RH = 'hrfVar'
+    
+        I_DRIFT = 5
+        P_DRIFT = 'drift'
+    
+        I_ETA = 6
+        P_ETA = 'driftVar'
+    
+        I_WEIGHTING_PROBA = 7
+        P_WEIGHTING_PROBA = 'mixtureWeight'
+    
+        I_MIXT_PARAM = 8
+        P_MIXT_PARAM = 'mixtureParams'
+    
+        I_SCALE = 9
+        P_SCALE = 'scale'
+    
+        I_BETA = 10
+        P_BETA = 'beta'
+    
+        inputClass = ARN_BiG_BOLDSamplerInput
+    
+        variablesToSample = [ P_NRLS, P_NOISE_VAR, P_NOISE_ARP,  P_HRF,
+                              P_RH, P_DRIFT, P_ETA, P_WEIGHTING_PROBA,
+                              P_MIXT_PARAM, P_SCALE, P_BETA ]
+    
+        P_NB_ITERATIONS = 'nbIterations'
+        P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
+        P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
+        P_NB_SWEEPS = 'nbSweeps'
+        P_CALLBACK = 'callBackHandler'
+        P_RANDOM_SEED = 'numpyRandomSeed'
+    
+        defaultParameters = {
+            P_OBS_HIST_PACE : -1.,
+            P_SMPL_HIST_PACE : -1.,
+            P_NB_SWEEPS : .3,
+            P_NB_ITERATIONS : 3,
+            P_RANDOM_SEED : 193843200,
+            P_CALLBACK : GSDefaultCallbackHandler(),
+            P_NRLS : NRLARSampler(),
+            P_NOISE_VAR : NoiseVarianceARSampler(),
+            P_NOISE_ARP : NoiseARParamsSampler(),
+            P_HRF : HRFARSampler(),
+            P_RH : RHSampler(),
+            P_DRIFT : DriftARSampler(),
+            P_ETA : ETASampler(),
+            P_WEIGHTING_PROBA: MixtureWeightsSampler(),
+            P_MIXT_PARAM : BiGaussMixtureParamsSampler(),
+            P_SCALE : ScaleSampler(),
+            P_BETA : BetaSampler(),
+            }
+    
+    
+        def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+                     xmlLabel=None, xmlComment=None):
+            """
+            #TODO : comment
+    
+            """
+            xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
+                                               xmlLabel, xmlComment)
+    
+            variables = [self.parameters[vLab] \
+                             for vLab in self.variablesToSample]
+            nbIt = self.parameters[self.P_NB_ITERATIONS]
+            obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
+            smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
+            nbSweeps = self.parameters[self.P_NB_SWEEPS]
+    
+            if obsHistPace > 0. and obsHistPace < 1:
+                obsHistPace = max(1,int(round(nbIt * obsHistPace)))
+    
+            if smplHistPace > 0. and smplHistPace < 1.:
+                smplHistPace = max(1,int(round(nbIt * smplHistPace)))
+    
+            if nbSweeps > 0. and nbSweeps < 1.:
+                nbSweeps = int(round(nbIt * nbSweeps))
+    
+    
+            seed = self.parameters[self.P_RANDOM_SEED]
+            callbackObj = self.parameters[self.P_CALLBACK]
+            GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
+                                  obsHistPace,
+                                  nbSweeps,
+                                  callbackObj, randomSeed=seed)
+    
+            ##self.buildSharedDataTree()
+    
+        # def buildSharedDataTree(self):
+    
+        #     self.sharedData = Pipeline()
+        #     self.regVarsInPipeline()
+    
+        #     computeRules = []
+        #     # Some more roots :
+        #     computeRules.append({'label' : 'varX', 'ref' : self.varX})
+        #     computeRules.append({'label' : 'varP', 'ref' : self.varP})
+        #     computeRules.append({'label' : 'varMBY', 'ref' : self.varMBY})
+    
+        #     # Add shared quantities to update during sampling :
+        #     computeRules.append({'label' : 'matXh' , 'dep' : ['varX', 'hrf'],
+        #                          'computeFunc' : computeXh})
+        #     computeRules.append({'label' : 'varPl' , 'dep' : ['varP', 'drift'],
+        #                          'computeFunc' : computePl})
+        #     computeRules.append({'label' : 'sumj_aXh', 'dep' : ['matXh','nrl'],
+        #                          'computeFunc' : computeSumjaXh})
+    
+        #     computeRules.append({'label' : 'yBar', 'dep' : ['varMBY', 'varPl'],
+        #                          'computeFunc' : computeYBar})
+    
+        #     computeRules.append({'label' : 'yTilde', 'dep' : ['sumj_aXh','yBar'],
+        #                          'computeFunc' : computeYTilde_Pl})
+    
+        def computePMStimInducedSignal(self):
+    
+            nbCond = self.dataInput.nbConditions
+            nbVox = self.dataInput.nbVoxels
+    
+            nbVals = self.dataInput.ny
+            shrf = self.getVariable('hrf')
+            hrf = shrf.finalValue
+            vXh = shrf.varXh # base convolution
+            nrl = self.getVariable('nrl').finalValue
+    
+            self.stimIndSignal = np.zeros((nbVals, nbVox))
+            meanBold = self.dataInput.varMBY.mean(axis=0)
+    
+            for i in xrange(nbVox):
+                # Multiply by corresponding NRLs and sum over conditions :
+                si = (vXh*nrl[:,i]).sum(1)
+                # Adjust mean to original Bold (because drift is not explicit):
+                self.stimIndSignal[:,i] = si-si.mean() +  meanBold[i]
+    
+        def computeFittedSignal(self):
+            nbCond = self.dataInput.nbConditions
+            nbVox = self.dataInput.nbVoxels
+    
+            nbVals = self.dataInput.ny
+            shrf = self.getVariable('hrf')
+            hrf = shrf.finalValue
+            vXh = shrf.varXh # base convolution
+            nrl = self.getVariable('nrl').finalValue
+            sdrift = self.getVariable('drift')
+            vPl = sdrift.Pl
+    
+            self.fittedSignal = np.zeros((nbVals, nbVox))
+    
+            for i in xrange(nbVox):
+                # Multiply by corresponding NRLs and sum over conditions :
+                si = (vXh*nrl[:,i]).sum(1)
+                # Adjust mean to original Bold (because drift is not explicit):
+                self.fittedSignal[:,i] = si + vPl[:,i]
+    
 
 ##class Hab_WN_BiG_BOLDSamplerInput(WN_BiG_BOLDSamplerInput):
 
@@ -2522,121 +2257,122 @@ class ARN_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
 ###            self.yTQ[:,i] = dot(self.varMBY[:,i],self.delta)
             ##self.yTQy[i] = dot(self.varMBY[:,i],self.matQy[:,i])
 
-class HAB_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
-
-    #TODO : comment
-
-    # Indices and labels of each variable registered in sampler :
-    I_NRLS = 0
-    P_NRLS = 'nrl'
-
-    I_NOISE_VAR = 1
-    P_NOISE_VAR = 'noiseVar'
-
-    I_HRF = 2
-    P_HRF = 'hrf'
-
-    I_RH = 3
-    P_RH = 'hrfVar'
-
-    I_WEIGHTING_PROBA = 4
-    P_WEIGHTING_PROBA = 'mixtureWeight'
-
-    I_MIXT_PARAM = 5
-    P_MIXT_PARAM = 'mixtureParams'
-
-    I_SCALE = 6
-    P_SCALE = 'scale'
-
-#     I_HAB = 7
-#     P_HAB = 'habituationSpeed'
-
-    I_BETA = 7
-    P_BETA = 'beta'
-
-    inputClass = Hab_WN_BiG_BOLDSamplerInput
-
-    variablesToSample = [ P_NRLS, P_NOISE_VAR, P_HRF, P_RH, P_WEIGHTING_PROBA,
-                          P_MIXT_PARAM, P_SCALE, P_BETA ]
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_HIST_PACE = 'historyPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-
-    defaultParameters = {
-        P_NB_ITERATIONS : 3,
-        P_HIST_PACE : -1,
-        P_NB_SWEEPS : None,
-        P_RANDOM_SEED : None,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS : NRLwithHabSampler(), ## nrl trial-dependent sampling
-        P_BETA : BetaSampler(),
-        P_NOISE_VAR : NoiseVariancewithHabSampler(),
-        P_HRF : HRFwithHabSampler(),
-        P_RH : RHSampler(),
-        P_WEIGHTING_PROBA : MixtureWeightsSampler(),
-        P_MIXT_PARAM : BiGaussMixtureParamsSampler(),
-        P_SCALE : ScaleSampler(),
-        }
-#        P_HRF : HRFSampler(),
-
-    if pyhrf.__usemode__ == pyhrf.DEVEL:
-        parametersToShow = [P_NB_ITERATIONS, P_HIST_PACE , P_NB_SWEEPS,
-                            P_RANDOM_SEED,
-                            P_CALLBACK, P_NRLS, P_BETA, P_NOISE_VAR,
-                            P_HRF, P_RH,
-                            P_WEIGHTING_PROBA,  P_MIXT_PARAM, P_SCALE]
-    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        #defaultParameters[P_NB_ITERATIONS] = 2000
-        parametersToShow = [P_NB_ITERATIONS, P_NRLS, P_HRF, P_RANDOM_SEED]
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
+if 0: #not maintained
+    class HAB_BOLDGibbsSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
+    
         #TODO : comment
-
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        histPace = self.parameters[self.P_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
-        seed = self.parameters[self.P_RANDOM_SEED]
-        if nbSweeps == None :
-            nbSweeps = nbIt/3
-        callbackObj = self.parameters[self.P_CALLBACK]
-        GibbsSampler.__init__(self, variables, nbIt, histPace,
-                              nbSweeps=nbSweeps,
-                              callbackObj=callbackObj, randomSeed=seed)
-
-    def computePMStimInducedSignal(self):
-
-        nbCond = self.dataInput.nbConditions
-        nbVox = self.dataInput.nbVoxels
-
-        nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
-        hrf = shrf.finalValue
-        vXh = shrf.varXh # base convolution
-        snrl = self.getVariable('nrl')
-        nrl = snrl.finalValue
-#        habit = self.getVariable('habituationSpeed').finalValue
-
-
-        self.stimIndSignal = np.zeros((nbVals, nbVox))
-        meanBold = self.dataInput.varMBY.mean(axis=0)
-
-        for i in xrange(nbVox):
-            # MORE TO COME HERE ABOUT COMPUTATION OF STIM INDUCED SIGNAL
-            # Multiply by corresponding NRLs and sum over conditions :
-            si = (vXh*nrl[:,i]).sum(1)
-            # Adjust mean to original Bold (because drift is not explicit):
-            self.stimIndSignal[:,i] = si-si.mean() +  meanBold[i]
-
-
+    
+        # Indices and labels of each variable registered in sampler :
+        I_NRLS = 0
+        P_NRLS = 'nrl'
+    
+        I_NOISE_VAR = 1
+        P_NOISE_VAR = 'noiseVar'
+    
+        I_HRF = 2
+        P_HRF = 'hrf'
+    
+        I_RH = 3
+        P_RH = 'hrfVar'
+    
+        I_WEIGHTING_PROBA = 4
+        P_WEIGHTING_PROBA = 'mixtureWeight'
+    
+        I_MIXT_PARAM = 5
+        P_MIXT_PARAM = 'mixtureParams'
+    
+        I_SCALE = 6
+        P_SCALE = 'scale'
+    
+    #     I_HAB = 7
+    #     P_HAB = 'habituationSpeed'
+    
+        I_BETA = 7
+        P_BETA = 'beta'
+    
+        inputClass = Hab_WN_BiG_BOLDSamplerInput
+    
+        variablesToSample = [ P_NRLS, P_NOISE_VAR, P_HRF, P_RH, P_WEIGHTING_PROBA,
+                              P_MIXT_PARAM, P_SCALE, P_BETA ]
+    
+        P_NB_ITERATIONS = 'nbIterations'
+        P_HIST_PACE = 'historyPaceSave'
+        P_NB_SWEEPS = 'nbSweeps'
+        P_CALLBACK = 'callBackHandler'
+        P_RANDOM_SEED = 'numpyRandomSeed'
+    
+        defaultParameters = {
+            P_NB_ITERATIONS : 3,
+            P_HIST_PACE : -1,
+            P_NB_SWEEPS : None,
+            P_RANDOM_SEED : None,
+            P_CALLBACK : GSDefaultCallbackHandler(),
+            P_NRLS : NRLwithHabSampler(), ## nrl trial-dependent sampling
+            P_BETA : BetaSampler(),
+            P_NOISE_VAR : NoiseVariancewithHabSampler(),
+            P_HRF : HRFwithHabSampler(),
+            P_RH : RHSampler(),
+            P_WEIGHTING_PROBA : MixtureWeightsSampler(),
+            P_MIXT_PARAM : BiGaussMixtureParamsSampler(),
+            P_SCALE : ScaleSampler(),
+            }
+    #        P_HRF : HRFSampler(),
+    
+        if pyhrf.__usemode__ == pyhrf.DEVEL:
+            parametersToShow = [P_NB_ITERATIONS, P_HIST_PACE , P_NB_SWEEPS,
+                                P_RANDOM_SEED,
+                                P_CALLBACK, P_NRLS, P_BETA, P_NOISE_VAR,
+                                P_HRF, P_RH,
+                                P_WEIGHTING_PROBA,  P_MIXT_PARAM, P_SCALE]
+        elif pyhrf.__usemode__ == pyhrf.ENDUSER:
+            #defaultParameters[P_NB_ITERATIONS] = 2000
+            parametersToShow = [P_NB_ITERATIONS, P_NRLS, P_HRF, P_RANDOM_SEED]
+    
+    
+        def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+                     xmlLabel=None, xmlComment=None):
+            """
+            #TODO : comment
+    
+            """
+            xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
+            variables = [self.parameters[vLab] for vLab in self.variablesToSample]
+            nbIt = self.parameters[self.P_NB_ITERATIONS]
+            histPace = self.parameters[self.P_HIST_PACE]
+            nbSweeps = self.parameters[self.P_NB_SWEEPS]
+            seed = self.parameters[self.P_RANDOM_SEED]
+            if nbSweeps == None :
+                nbSweeps = nbIt/3
+            callbackObj = self.parameters[self.P_CALLBACK]
+            GibbsSampler.__init__(self, variables, nbIt, histPace,
+                                  nbSweeps=nbSweeps,
+                                  callbackObj=callbackObj, randomSeed=seed)
+    
+        def computePMStimInducedSignal(self):
+    
+            nbCond = self.dataInput.nbConditions
+            nbVox = self.dataInput.nbVoxels
+    
+            nbVals = self.dataInput.ny
+            shrf = self.getVariable('hrf')
+            hrf = shrf.finalValue
+            vXh = shrf.varXh # base convolution
+            snrl = self.getVariable('nrl')
+            nrl = snrl.finalValue
+    #        habit = self.getVariable('habituationSpeed').finalValue
+    
+    
+            self.stimIndSignal = np.zeros((nbVals, nbVox))
+            meanBold = self.dataInput.varMBY.mean(axis=0)
+    
+            for i in xrange(nbVox):
+                # MORE TO COME HERE ABOUT COMPUTATION OF STIM INDUCED SIGNAL
+                # Multiply by corresponding NRLs and sum over conditions :
+                si = (vXh*nrl[:,i]).sum(1)
+                # Adjust mean to original Bold (because drift is not explicit):
+                self.stimIndSignal[:,i] = si-si.mean() +  meanBold[i]
+    
+    
 
 
 
@@ -2749,18 +2485,18 @@ allModels = {
                   ' stationary temporal model on NRL, explicit drifts'
                   },
 
-    'WNSGGGMS' : { 'class' : GGG_BOLDGibbsSampler,
-                   'doc' : 'iid White Noise, TriGaussian Spatial Mixture NRL, ' \
-                   'stationary temporal model on NRL'
-                   },
-    'WNSGGMH' : { 'class' : HAB_BOLDGibbsSampler,
-                'doc' : 'iid White Noise, BiGaussian Spatial Mixture NRL, ' \
-                  'temporal model of habituation on NRL'
-                  },
-    'ANSGGMS' : { 'class' : ARN_BOLDGibbsSampler,
-                'doc' : 'AR(1) Noise, BiGaussian Spatial Mixture NRL, ' \
-                  'stationnary temporal model on NRL'
-                  },
+    # 'WNSGGGMS' : { 'class' : GGG_BOLDGibbsSampler,
+    #                'doc' : 'iid White Noise, TriGaussian Spatial Mixture NRL, ' \
+    #                'stationary temporal model on NRL'
+    #                },
+    # 'WNSGGMH' : { 'class' : HAB_BOLDGibbsSampler,
+    #             'doc' : 'iid White Noise, BiGaussian Spatial Mixture NRL, ' \
+    #               'temporal model of habituation on NRL'
+    #               },
+    # 'ANSGGMS' : { 'class' : ARN_BOLDGibbsSampler,
+    #             'doc' : 'AR(1) Noise, BiGaussian Spatial Mixture NRL, ' \
+    #               'stationnary temporal model on NRL'
+    #               },
     'WNSGGMSW' : { 'class' : W_BOLDGibbsSampler,
                   'doc' : 'iid White Noise, BiGaussian Spatial Mixture NRL,'\
                   ' stationary temporal model on NRL, marginalized drifts'\

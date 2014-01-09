@@ -9,7 +9,6 @@ import copy as copyModule
 from pyhrf.jde.samplerbase import *
 import pyhrf
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.intensivecalc import sampleSmmNrl2, computeYtilde, sampleSmmNrlBar
 from bigaussian import NRLSampler, BiGaussMixtureParamsSampler, NRLSamplerWithRelVar
 from pyhrf.jde.intensivecalc import sampleSmmNrl2WithRelVar
@@ -21,12 +20,6 @@ class NRL_Drift_Sampler(NRLSampler):
     Class handling the Gibbs sampling of Neural Response Levels in the case of
     joint drift sampling.
     """
-    defaultParameters = copyModule.copy(NRLSampler.defaultParameters)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
 
     def computeVarYTildeOpt(self, varXh):
         NRLSampler.computeVarYTildeOpt(self, varXh)
@@ -120,12 +113,6 @@ class NRL_Drift_SamplerWithRelVar(NRLSamplerWithRelVar):
     Class handling the Gibbs sampling of Neural Response Levels in the case of
     joint drift sampling and relevant variable.
     """
-    defaultParameters = copyModule.copy(NRLSamplerWithRelVar.defaultParameters)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        NRLSamplerWithRelVar.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
 
     def computeVarYTildeOptWithRelVar(self, varXh, w):
         NRLSamplerWithRelVar.computeVarYTildeOptWithRelVar(self, varXh, w)
@@ -256,11 +243,6 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
     Class handling the Gibbs sampling of Neural Response Levels in the case of
     joint drift sampling.
     """
-    defaultParameters = copyModule.copy(NRLSampler.defaultParameters)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -407,8 +389,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
 
 ## Multi-sessions case
 
-class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
-                                  GibbsSamplerVariable):
+class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(GibbsSamplerVariable):
     """
     #TODO : comment
 
@@ -511,7 +492,7 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
             #"It is taken into account when mixture parameters are not sampled.",
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+    def __init__(self, parameters=None, xmlHandler=None,
                  xmlLabel=None, xmlComment=None):
         """
         #TODO : comment

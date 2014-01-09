@@ -20,7 +20,7 @@ from pyhrf.ndarray import MRI3Daxes
 from pyhrf.boldsynth.spatialconfig import maskToMapping
 
 from pyhrf.tools import stack_trees, set_leaf, add_prefix
-from pyhrf.tools.io import read_volume, writexndarrayToTex, xndarrayXml2, \
+from pyhrf.tools.io import read_volume, writexndarrayToTex, \
     read_texture
 
 from pyhrf.ndarray import stack_cuboids
@@ -666,6 +666,8 @@ class FMRIAnalyser(xmlio.XMLable2):
         outputs = newOutputs
 
         if output_dir is not None:
+            from pyhrf.tools.io import xndarrayXml2
+
             pyhrf.verbose(1,'Writing outputs ...')
             pyhrf.verbose(1,'Output directory: ' + output_dir)
             oxml = {}
@@ -676,7 +678,7 @@ class FMRIAnalyser(xmlio.XMLable2):
                                                  meta_data=meta_data)
 
             if len(target_shape) == 3: #volumic data
-                so = xmlio.toXML(oxml, handler=NumpyXMLHandler())
+                so = xmlio.to_xml(oxml, handler=NumpyXMLHandler())
                 out_file = op.join(output_dir,self.outFile)
                 f = open(out_file,'w')
                 f.write(so)

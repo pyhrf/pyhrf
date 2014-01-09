@@ -21,7 +21,7 @@ except ImportError:
 
 from xml.dom.minidom import Document
 from xml.dom.NodeFilter import NodeFilter
-from xml.dom.ext.reader import Sax2
+
 
 from pyhrf.tools import PickleableStaticMethod
 
@@ -73,10 +73,10 @@ class XMLable2(object):
         # args.remove('self')
         # self._init_parameters = dict( (k,v) for k,v in zip(args, defaults) )
 
-        
-        
+
+
     def check_init_func(self, params=None):
-        
+
         args, varargs, varkw, defaults = getargspec(self._init_func)
         if varkw is not None: #we don't want **kwargs arguments
             raise Exception('Keywords dict argument (eg **kwargs) ' \
@@ -93,7 +93,7 @@ class XMLable2(object):
                 raise Exception('Some arguments do not  '\
                                     'have a value: %s' \
                                     %(str(set(args).difference(params.keys()))))
-                
+
         elif len(args)-1 != len(defaults):
             pos_args = args[:len(args)-len(defaults)]
             print 'pos_args:', pos_args
@@ -107,7 +107,7 @@ class XMLable2(object):
     def set_init_param(self, param_name, param_value):
         if not self._init_parameters.has_key(param_name):
             raise Exception('"%s" is not an argument of init function %s' \
-                                %(param_name, self._init_func))        
+                                %(param_name, self._init_func))
         self._init_parameters[param_name] = copy(param_value)
 
 
@@ -124,7 +124,7 @@ class XMLable2(object):
         self.check_init_func(init_params)
         self._init_parameters = dict((k,copy(v)) \
                                          for k,v in init_params.iteritems())
-        
+
         for ip in self._init_parameters:
             if ip not in args:
                 raise Exception('Init parameter "%s" is not an argument of '\
@@ -180,8 +180,8 @@ class XMLable:
             print self._init_parameters
 
     def set_init(self, init_func, init_params=None):
-        
-        if debug: 
+
+        if debug:
             print '~~~~~~~~~~~~~~~~~~~~~'
             print 'set_init ......'
             print 'init_func:', init_params
@@ -233,7 +233,7 @@ class XMLable:
             return self.parametersToShow
         else:
             return []
-        
+
         # class_tree = getmro(self.__class__)
         # if debug3:
         #     print 'classTree:'
@@ -241,7 +241,7 @@ class XMLable:
         # for c in class_tree:
         #     if debug: print 'treating class', c
         #     if c != XMLable:
-        #         if 'parametersToShow' in getsource(c): 
+        #         if 'parametersToShow' in getsource(c):
         #             #a bit dirty ...
         #             if debug: print 'found parametersToShow in source ...'
         #             if debug: print 'source:', getsource(c)
@@ -262,7 +262,7 @@ class XMLable:
         #             #l.update(getargspec(c.__init__)[0])
         # return l
 
-    
+
 
     def _gather_parent_dict_parameters(self, pname):
         if debug2: print '_gather_parent_dict_parameters ...'
@@ -292,13 +292,13 @@ class TypedXMLHandler:
     Class handling the xml format with the following generic document structure :
           <root>
             <tagName 'type'=tagType>
-            tagContent 
+            tagContent
             </tagName>
           </root>
-    The root tag is mandatory, so is the 'type' attribute for every other tag. This class can parse an xml string and build a dictionnary of python objects according to each tag (see parseXMLString()). Conversely, it can build the xml string corresponding to a list or dictionnary of objects (see toXML()).  
+    The root tag is mandatory, so is the 'type' attribute for every other tag. This class can parse an xml string and build a dictionnary of python objects according to each tag (see parseXMLString()). Conversely, it can build the xml string corresponding to a list or dictionnary of objects (see to_xml()).
     This class is based on the xml.dom python module and relies on the DOM structure to parse XML.
     XML input/output is handled via a mapping between a type attribute of a tag and a static handling function. This class handles the following basic python types : string, int, float, array.array, list, dict. One can add other type-specific read or write handlers with the functions addDOMTagReader() and addDOMWriter().
-    
+
     Reading XML:
         - specific handlers are added with method addDOMTagReader(stype, myReadHandler) which maps the function myReadHandler to the string stype.
         - a tag reading handler must have the following prototype :
@@ -312,7 +312,7 @@ class TypedXMLHandler:
             * node.childNodes[0].data -> the tag content data (string type), to be parse and build the python object from
             * node.tagName -> the name of the tag
             * node.parentNode -> the parent tag node
-            
+
     Writing XML :
         - handlers are added with method addDOMTagWriter(pythonType, myWriteHandler), where pythonType is of python type 'type' and myWriteHandler a function.
         - a tag writing handler must have the following prototype :
@@ -322,10 +322,10 @@ class TypedXMLHandler:
                     - node (Node instance) is the current tag node to append data to
                     - pyObj is the python object to convert into a 'human-readable' string.
         - usefull things to write handlers :
-            
-            
-            
-    
+
+
+
+
     """
     TYPE_LABEL_NONE = 'none'
     TYPE_LABEL_BOOL = 'bool'
@@ -349,14 +349,14 @@ class TypedXMLHandler:
 
     def __init__(self, write_callback=None):
         (self.tagDOMReaders, self.objectDOMWriters) = self.packHandlers()
-        
+
         self.write_callback = write_callback
 
 
     def __setstate__(self, dic):
         (dic['tagDOMReaders'], dic['objectDOMWriters']) = self.packHandlers()
         self.__dict__ = dic
-        
+
     def __getstate__(self): # use for compatibilty with pickles (which doesn't support instance variable methods ...)
         #print self.__class__,'- getstate ... removing static readers/writers ...'
         # copy the __dict__ so that further changes
@@ -385,16 +385,19 @@ class TypedXMLHandler:
         xml = xml.replace('\n', '')
 
         # create Reader object
+        from xml.dom.ext.reader import Sax2
         reader = Sax2.Reader()
 
         # parse the document and load it in a DOM tree
         domTree = reader.fromString(xml)
-        
-        walker = domTree.createTreeWalker(domTree.documentElement, NodeFilter.SHOW_ELEMENT, None, 0)
+
+        walker = domTree.createTreeWalker(domTree.documentElement,
+                                          NodeFilter.SHOW_ELEMENT, None, 0)
 
         #print 'walker.currentNode.tagName :', walker.currentNode.tagName
         rootNode = walker.currentNode
-        if rootNode.hasAttribute('pythonXMLHandlerModule') and rootNode.hasAttribute('pythonXMLHandlerClass'):
+        if rootNode.hasAttribute('pythonXMLHandlerModule') \
+          and rootNode.hasAttribute('pythonXMLHandlerClass'):
             modulesName = rootNode.getAttribute('pythonXMLHandlerModule')
 ##            print 'modulesName :', modulesName
             module = eval('__import__("'+modulesName+'", fromlist=[""])')
@@ -412,7 +415,7 @@ class TypedXMLHandler:
                 label = obj.xml_label
             else:
                 label = 'anonymObject'
-            
+
         self.writeDOMData(doc, root, obj, label)
         if not pretty:
             return doc.toxml()
@@ -463,7 +466,7 @@ class TypedXMLHandler:
                     hasattr(child,'data') and str(child.data).strip()=='' and \
                     not preserveSpace:
                 childsToRemove.append(child)
-                
+
         for child in childsToRemove:
             cn.removeChild(child)
         if cn.hasAttribute(self.ATTRIBUTE_LABEL_PYTHON_CLASS) or \
@@ -482,7 +485,7 @@ class TypedXMLHandler:
             if debug:
                 print '*** param dict :'
                 print paramDict
-                
+
             #HACK
             if 'BoldEstimationModel' in paramDict:
                 paramDict['sampler'] = paramDict.pop('BoldEstimationModel')
@@ -497,11 +500,11 @@ class TypedXMLHandler:
 
             creationMode = cn.getAttribute(self.ATTRIBUTE_LABEL_PYTHON_CLASS_INIT_MODE)
             func_name = cn.getAttribute(self.ATTRIBUTE_LABEL_PYTHON_FUNCTION)
-            if debug: 
+            if debug:
                 print 'className:', className
                 print 'creationMode:', creationMode
                 print 'func_name:', func_name
-            
+
             if creationMode == 'XMLParamDrivenClass':
                 if debug:
                     print 'Building XMLParamDrivenClass ...'
@@ -512,14 +515,14 @@ class TypedXMLHandler:
                                    '(parameters=paramDict,' + \
                                    ' xmlHandler=self, xmlLabel=cn.tagName)')
                 except TypeError, e:
-                    if debug: 
+                    if debug:
                         print 'TypeError while eval ->'
                         print e
                     match_init_args(eval('module.'+className+'()'), paramDict)
                     obj = eval('module.'+className+'(**paramDict)')
             else :
                 # Build parameters coma-separated list :
-                if debug2: 
+                if debug2:
                     print 'Build parameters coma-separated list :'
                 python_ver = sys.version_info
                 if python_ver[0] == 2 and python_ver[1] <= 6 \
@@ -545,7 +548,7 @@ class TypedXMLHandler:
                     obj = eval('module.'+className+'(**paramDict)')
 ##        elif cnType == self.TYPE_LABEL_DICT :
 ##            return self.dictTagDOMReader(walker)
-        
+
 ##        elif cnType == self.TYPE_LABEL_LIST :
 ##            return self.listTagDOMReader(walker)
         elif self.tagDOMReaders.has_key(cnType):
@@ -566,12 +569,12 @@ class TypedXMLHandler:
         return obj
 
     def writeDOMData(self, doc, node, obj, label, comment=None, meta=None):
-        if debug: 
+        if debug:
             print ''
             print '---------------------------'
             print 'writeDOMData ...'
             print '---------------------------'
-            
+
         # if override is not None and override.has_key(str(label)):
         #     if debug: print 'overriding %s with %s (original was %s)' \
         #         %(label,str(override[label]),str(obj))
@@ -581,7 +584,7 @@ class TypedXMLHandler:
             obj = self.write_callback(obj,label)
 
         if debug: print ' creating tag with name : ', label
-        if debug: print ' type of obj : ', type(obj) 
+        if debug: print ' type of obj : ', type(obj)
         if debug: print ' meta:', meta
         if hasattr(obj, '__class__'):
             if debug: print ' -> class:', obj.__class__
@@ -595,8 +598,8 @@ class TypedXMLHandler:
 ##        if type(obj) == type({}):
 ##            self.dictDOMWriter(doc, newNode, obj)
 ##        elif type(obj) == type([]):
-##            self.listDOMWriter(doc, newNode, obj)  
-        
+##            self.listDOMWriter(doc, newNode, obj)
+
         if self.inspectable(obj):
             if debug: print 'inspectable ...'
             self.inspect_and_append_to_DOM_tree(doc, newNode, obj)
@@ -612,7 +615,7 @@ class TypedXMLHandler:
             error += ' type of obj was : %s\n' %str(type(obj))
             raise Exception(error)
 
-            
+
         #TODO else: Exception ...
         node.appendChild(newNode)
 
@@ -655,22 +658,22 @@ class TypedXMLHandler:
             if a[3] is not None:
                 print 'len(a.defaults)', len(a[3])
             print 'a:', a
-        
+
         if a[3] is None:
             raise Exception("No default parameters for function %s"\
                                 %(obj_init.__name__))
-        
+
         # no keywords, no varargs,  all parameters have default values
         return a[2] is None and a[1] is None and \
             (len(a[0])-1 == len(a[3]))
-            
-        
+
+
     def inspect_and_append_to_DOM_tree(self, doc, node, obj):
         override_for_func = None
         if debug:
             print 'inspect_and_append_to_DOM_tree ...'
             print 'Test if obj is a function :'
-        
+
         if isinstance(obj, FuncWrapper):
             if debug: print '-> FuncWrapper instance  detected'
             node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_MODULE,
@@ -679,40 +682,40 @@ class TypedXMLHandler:
                               obj.func.__name__)
             if hasattr(obj.func, 'im_self'):
                 if debug: print '-> class method  detected'
-                node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS, 
+                node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS,
                                   obj.func.im_self.__name__)
 
             obj_init = obj.func
             override_for_func = obj.params
         elif isfunction(obj) or hasattr(obj, 'im_func'):
-            
+
             node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_MODULE,
                               obj.__module__)
             node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_FUNCTION,
                               obj.__name__)
-            
+
             if hasattr(obj, 'im_self'):
                 if debug: print '-> class method  detected'
-                node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS, 
+                node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS,
                                   obj.im_self.__name__)
                 obj_init = obj.im_func
             else:
-                if debug: print '-> function  detected'    
+                if debug: print '-> function  detected'
                 obj_init = obj
-        elif isinstance(obj, XMLable): 
+        elif isinstance(obj, XMLable):
             if debug: print 'XMLable -> instance  detected'
             obj_init = obj.__init__
-            node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS, 
+            node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS,
                               obj.__class__.__name__)
             node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_MODULE,
                               obj.__class__.__module__)
 
-        elif isinstance(obj, XMLable2): 
+        elif isinstance(obj, XMLable2):
             if debug: print '-> XMLable2 instance  detected'
             obj_init = obj._init_func
             if isinstance(obj_init, PickleableStaticMethod):
                 obj_init = obj_init.fn
-            node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS, 
+            node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS,
                               obj.__class__.__name__)
             node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_MODULE,
                               obj.__class__.__module__)
@@ -725,7 +728,7 @@ class TypedXMLHandler:
         else:
             raise Exception("Unsupported obj: %s", str(obj))
 
-        node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_TYPE, 
+        node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_TYPE,
                           TypedXMLHandler.TYPE_LABEL_DICT)
 
         p_comments = {}
@@ -778,7 +781,7 @@ class TypedXMLHandler:
                 #print 'default:', default
             comment = p_comments.get(arg,None)
             meta = p_meta.get(arg,None)
-            
+
             if override_for_func is not None:
                 if debug: print '-> override arg values provided'
                 default = override_for_func.get(arg,default)
@@ -791,7 +794,7 @@ class TypedXMLHandler:
             elif hasattr(obj, '_init_parameters') and \
                     obj._init_parameters is not None and \
                     obj._init_parameters.has_key(arg):
-                if debug:  
+                if debug:
                     print '-> init func for arg provided in ' \
                         'obj._init_parameters'
                 default = obj._init_parameters.get(arg)
@@ -804,10 +807,10 @@ class TypedXMLHandler:
     def packHandlers(self):
         tagDOMReaders = {}
         objectDOMWriters = {}
-        
+
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_DICT] = TypedXMLHandler.dictTagDOMReader
         objectDOMWriters[dict] = TypedXMLHandler.dictDOMWriter
-    
+
 
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_ODICT] = TypedXMLHandler.odictTagDOMReader
         objectDOMWriters[OrderedDict] = TypedXMLHandler.odictDOMWriter
@@ -818,20 +821,20 @@ class TypedXMLHandler:
 
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_TUPLE] = TypedXMLHandler.tupleTagDOMReader
         objectDOMWriters[tuple] = TypedXMLHandler.tupleDOMWriter
-    
+
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_STRING] = TypedXMLHandler.stringTagDOMReader
         objectDOMWriters[str] = TypedXMLHandler.stringDOMWriter
         objectDOMWriters[unicode] = TypedXMLHandler.stringDOMWriter
-    
+
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_FLOAT] = TypedXMLHandler.floatTagDOMReader
         objectDOMWriters[float] = TypedXMLHandler.floatDOMWriter
-        
+
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_INT] = TypedXMLHandler.intTagDOMReader
         objectDOMWriters[int] = TypedXMLHandler.intDOMWriter
 
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_BOOL] = TypedXMLHandler.boolTagDOMReader
         objectDOMWriters[bool] = TypedXMLHandler.boolDOMWriter
-        
+
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_ARRAY] = TypedXMLHandler.arrayTagDOMReader
         objectDOMWriters[type(array.array('i'))] = TypedXMLHandler.arrayDOMWriter
 
@@ -839,12 +842,12 @@ class TypedXMLHandler:
         objectDOMWriters[type(None)] = TypedXMLHandler.noneDOMWriter
 
         tagDOMReaders[TypedXMLHandler.TYPE_LABEL_XML_INCLUDE] = TypedXMLHandler.includeTagDOMReader
-        
+
         return (tagDOMReaders, objectDOMWriters)
 
     def mountDefaultHandlers(self):
         (self.tagDOMReaders, self.objectDOMWriters) = self.packHandlers()
-        
+
     # xml I/O for 'char' type (python string basic type):
     def noneTagDOMReader(walker, xmlHandler):
         return None
@@ -862,7 +865,7 @@ class TypedXMLHandler:
         includeContent = string.join(f.readlines())
         f.close()
         return fromXML(includeContent)
-    
+
     includeTagDOMReader = staticmethod(includeTagDOMReader)
 
 
@@ -876,7 +879,7 @@ class TypedXMLHandler:
 
 
     def stringDOMWriter(doc, node, stringObj, xmlHandler):
-        node.setAttribute(xmlHandler.ATTRIBUTE_LABEL_TYPE, 
+        node.setAttribute(xmlHandler.ATTRIBUTE_LABEL_TYPE,
                           xmlHandler.TYPE_LABEL_STRING)
         size = str(len(stringObj))
         node.setAttribute('size', size)
@@ -894,7 +897,7 @@ class TypedXMLHandler:
     boolTagDOMReader = staticmethod(boolTagDOMReader)
 
     def boolDOMWriter(doc, node, boolObj, xmlHandler):
-        node.setAttribute(xmlHandler.ATTRIBUTE_LABEL_TYPE, 
+        node.setAttribute(xmlHandler.ATTRIBUTE_LABEL_TYPE,
                           xmlHandler.TYPE_LABEL_BOOL)
         node.setAttribute('size', '1')
         textData = doc.createTextNode(str(int(boolObj)))
@@ -951,7 +954,7 @@ class TypedXMLHandler:
             if nn==None:
                 xmlHandler.parseTerminated = True
                 break
-            
+
             if not nn.parentNode.isSameNode(currentListNode) :
                 walker.previousNode()
                 break
@@ -979,7 +982,7 @@ class TypedXMLHandler:
             if nn==None:
                 xmlHandler.parseTerminated = True
                 break
-            
+
             if not nn.parentNode.isSameNode(currentListNode) :
                 walker.previousNode()
                 break
@@ -1000,16 +1003,16 @@ class TypedXMLHandler:
 
     # xml I/O for 'dict' type:
     def dictTagDOMReader(walker, xmlHandler, init_class=None):
-        if debug: 
+        if debug:
             print 'dictTagDOMReader ...'
         currentDictNode = walker.currentNode
-        if debug: 
+        if debug:
             print ' currentNode : ',currentDictNode.tagName
         if init_class is None:
             result = {}
         else:
             result = init_class()
-        
+
         if debug:
             print 'dict init:', result.__class__
 
@@ -1030,7 +1033,7 @@ class TypedXMLHandler:
             else :
                 if debug: print 'nn.tagName:', nn.tagName
                 result[nn.tagName] = xmlHandler.readDOMData(walker)
-        
+
         if debug:
             print ' returning ...:', result
         return result
@@ -1048,7 +1051,7 @@ class TypedXMLHandler:
             # association : string label <-> string data
             # if key starts with a digit -> tag name will not be well-formed
             if (type(key)==type('') or type(key)==unicode)\
-                   and not key[0].isdigit(): 
+                   and not key[0].isdigit():
                 xmlHandler.writeDOMData(doc, node, val, key)
             else : # if the key type is not a string,
                    # build a key<->value pair xml structure
@@ -1058,7 +1061,7 @@ class TypedXMLHandler:
                 keyValElem.setAttribute(atypel, atype)
                 xmlHandler.writeDOMData(doc, keyValElem, key, "key")
                 xmlHandler.writeDOMData(doc, keyValElem, val, "value")
-                node.appendChild(keyValElem)           
+                node.appendChild(keyValElem)
     dictDOMWriter = staticmethod(dictDOMWriter)
 
     def odictTagDOMReader(walker, xmlHandler):
@@ -1081,8 +1084,8 @@ def fromXML(s, handler = TypedXMLHandler()):
 #     f.close()
 #     return fromXML(sXml)
 
-def toXML(o, handler = TypedXMLHandler(), objName="anonymObject", pretty=False):
-    if isinstance(o, XMLParamDrivenClass) or hasattr(o, 'xmlHandler'): 
+def to_xml(o, handler = TypedXMLHandler(), objName="anonymObject", pretty=False):
+    if isinstance(o, XMLParamDrivenClass) or hasattr(o, 'xmlHandler'):
         handler = o.xmlHandler
     return handler.buildXMLString(o, objName, pretty=pretty)
 
@@ -1096,10 +1099,10 @@ def read_xml(fn):
     handler = NumpyXMLHandler()
     return handler.parseXMLString(content)
 
-def write_xml(obj, fn):    
+def write_xml(obj, fn):
     fOut = open(fn, 'w')
     from xmlnumpy import NumpyXMLHandler
-    fOut.write(toXML(obj, handler=NumpyXMLHandler()))
+    fOut.write(to_xml(obj, handler=NumpyXMLHandler()))
     fOut.close()
 
 class XMLParamDrivenClassInitException :
@@ -1133,15 +1136,15 @@ class XMLParamDrivenClass:
         """
         Create a new XMLParamDrivenClass
 
-        """ 
+        """
         self.updateParameters(parameters)
         self.xmlHandler = xmlHandler
-        
+
         if xmlLabel is None :
             # Default tag label used in xml
-            self.xmlLabel = self.__class__.__name__+"_parameters" 
+            self.xmlLabel = self.__class__.__name__+"_parameters"
         else :
-            self.xmlLabel = xmlLabel 
+            self.xmlLabel = xmlLabel
 
         if xmlComment is None:
             #self.xmlComment = 'Set of parameters defining the python class : ' \
@@ -1152,7 +1155,7 @@ class XMLParamDrivenClass:
 
     def fetchDefaultParameters(self):
         self.parameters = copyModule.deepcopy(self.defaultParameters)
-            
+
     def updateParameters(self, newp):
         self.fetchDefaultParameters()
 
@@ -1171,14 +1174,14 @@ class XMLParamDrivenClass:
 #         else :
 #             tag = tagName
 #         elem = doc.createElement(tag)
-        node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS, 
+        node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_CLASS,
                           self.__class__.__name__)
         node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_PYTHON_MODULE,
                           self.__class__.__module__)
-        node.setAttribute(self.xmlHandler.ATTRIBUTE_LABEL_PYTHON_CLASS_INIT_MODE, 
+        node.setAttribute(self.xmlHandler.ATTRIBUTE_LABEL_PYTHON_CLASS_INIT_MODE,
                           "XMLParamDrivenClass")
-        
-        node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_TYPE, 
+
+        node.setAttribute(TypedXMLHandler.ATTRIBUTE_LABEL_TYPE,
                           TypedXMLHandler.TYPE_LABEL_DICT)
 
         if self.xmlComment is not None:
@@ -1200,7 +1203,7 @@ class XMLParamDrivenClass:
             self.xmlHandler.writeDOMData(doc, node, paramVal, paramLabel,
                                          comment=comment, meta=meta)
         #node.appendChild(elem)
-        
+
     def parametersToXml(self, tagName=None, pretty=False):
         (doc,root) = self.xmlHandler.createDocument()
         if tagName==None:

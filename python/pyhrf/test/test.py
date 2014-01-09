@@ -24,9 +24,7 @@ if 1:
     
 from test_ndarray import *
 
-
-
-#from test_sandbox import *
+from test_sandbox import *
 #from test_sandbox_parcellation import *
 #from test_sandbox_physio import *
 

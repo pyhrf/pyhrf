@@ -15,7 +15,6 @@ from pyhrf.stats.random import truncRandn, erf
 from pyhrf.tools import resampleToGrid, get_2Dtable_string
 
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.ndarray import xndarray
 from samplerbase import *
 
@@ -3675,60 +3674,35 @@ def beta_estim_obs_field(graph, labels, gridLnz, method='MAP',weights=None):
 # Beta Sampling #
 #################
 
-class BetaSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class BetaSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-
-    P_PR_BETA_CUT = 'priorBetaCut'
-    P_SIGMA = 'MH_sigma'
-
-    P_PARTITION_FUNCTION = 'partitionFunction'
-    P_PARTITION_FUNCTION_METH = 'partitionFunctionMethod'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_VAL_INI : np.array([0.7]),
-        P_SIGMA : 0.05,
-        P_PR_BETA_CUT : 1.2,
-        P_PARTITION_FUNCTION_METH : 'es',
-        P_PARTITION_FUNCTION : None,
-        }
-
-    if pyhrf.__usemode__ == pyhrf.DEVEL:
-        parametersToSghow = [P_SAMPLE_FLAG, P_VAL_INI, P_SIGMA, P_PR_BETA_CUT,
-                             P_USE_TRUE_VALUE,
-                             P_PARTITION_FUNCTION, P_PARTITION_FUNCTION_METH,]
-    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_SAMPLE_FLAG, P_VAL_INI]
+    if pyhrf.__usemode__ == pyhrf.ENDUSER:
+        parametersToShow = ['do_sampling', 'val_ini']
 
     parametersComments = {
-        P_PARTITION_FUNCTION_METH :  \
+        'pf_method' :  \
             'either "es" (extrapolation scheme) or "ps" (path sampling)',
         }
     #P_BETA : 'Amount of spatial correlation.\n Recommanded between 0.0 and'\
     #    ' 0.7',
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=np.array([0.7]), sigma=0.05, pr_beta_cut=1.2,
+                 pf_method='es', pf=None):
 
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueValue = self.parameters[self.P_USE_TRUE_VALUE]
+        xmlio.XmlInitable.__init__(self)
+        sampleFlag = do_sampling
+        valIni = val_ini
+        useTrueValue = use_true_value
         an = ['condition']
         GibbsSamplerVariable.__init__(self,'beta', valIni=valIni,
                                       sampleFlag=sampleFlag,
                                       useTrueValue=useTrueValue,
                                       axes_names=an,
                                       value_label='PM Beta')
-        self.priorBetaCut = self.parameters[self.P_PR_BETA_CUT]
-        self.gridLnZ = self.parameters[self.P_PARTITION_FUNCTION]
-        self.pfMethod = self.parameters[self.P_PARTITION_FUNCTION_METH]
+        self.priorBetaCut = pr_beta_cut
+        self.gridLnZ = pf
+        self.pfMethod = pf_method
 
         self.currentDB = None
         self.currentAcceptRatio = None

@@ -14,12 +14,12 @@ class BaseTest(unittest.TestCase):
     def testSimple(self):
 
         dictObj = {'clef1' : 'val1', 'clef2': 2}
-        sXml = xmlio.toXML(dictObj)
+        sXml = xmlio.to_xml(dictObj)
         dictObj2 = xmlio.fromXML(sXml)
         assert dictObj2 == dictObj
 
         obj = ['ggg',5,(677,56),'ff']
-        sXml = xmlio.toXML(obj)
+        sXml = xmlio.to_xml(obj)
         obj2 = xmlio.fromXML(sXml)
         assert obj2 == obj
         
@@ -31,7 +31,7 @@ class BaseTest(unittest.TestCase):
               'val1' : np.int(5),
               'array2D' : np.ones((4,4)),
               }
-        sXml = xmlio.toXML(obj, handler=xmlio.xmlnumpy.NumpyXMLHandler())
+        sXml = xmlio.to_xml(obj, handler=xmlio.xmlnumpy.NumpyXMLHandler())
         obj2 = xmlio.fromXML(sXml)
         assert obj2.keys() == obj.keys()
         assert np.allclose(obj2["array1"],obj["array1"])
@@ -44,7 +44,7 @@ class BaseTest(unittest.TestCase):
             from pyhrf.tools.backports import OrderedDict
 
         d = OrderedDict([ ('a',1), ('b',2) ])
-        sXml = xmlio.toXML(d)
+        sXml = xmlio.to_xml(d)
         #print 'sXml:'
         #print sXml
         d2 = xmlio.fromXML(sXml)
@@ -128,7 +128,7 @@ class XMLParamDrivenClassTest(unittest.TestCase):
     def testSimple(self):
 ##        print 'Simple ..'
         obj = Dummy()
-        sXml = xmlio.toXML(obj)
+        sXml = xmlio.to_xml(obj)
 ##        print 'xml:'
 ##        print sXml
         xmlio.fromXML(sXml)
@@ -138,7 +138,7 @@ class XMLParamDrivenClassTest(unittest.TestCase):
     def testNumpy(self):
 ##        print 'Numpy ..'
         obj = DummyNumpy()
-        sXml = xmlio.toXML(obj)
+        sXml = xmlio.to_xml(obj)
 ##        print 'Xml:'
 ##        print sXml
         xmlio.fromXML(sXml)
@@ -149,7 +149,7 @@ class XMLParamDrivenClassTest(unittest.TestCase):
 
 ##        print 'Nested objects ..'
         obj = DummyNested()
-        sXml = xmlio.toXML(obj)
+        sXml = xmlio.to_xml(obj)
 ##        print 'Xml:'
 ##        print sXml
         xmlio.fromXML(sXml)
@@ -240,7 +240,7 @@ class XMLableTest(unittest.TestCase):
             a.override_init('obj_t', T.from_param_c)
             # print 'after override ...'
             # print a._init_parameters
-            xml = xmlio.toXML(a,handler=xmlio.xmlnumpy.NumpyXMLHandler(),
+            xml = xmlio.to_xml(a,handler=xmlio.xmlnumpy.NumpyXMLHandler(),
                               pretty=True)
             # print xml
             new_a = xmlio.fromXML(xml)
@@ -253,7 +253,7 @@ class XMLableTest(unittest.TestCase):
         
         a = A()
         handler = xmlio.xmlnumpy.NumpyXMLHandler(write_callback=hack_a)
-        xml = xmlio.toXML(a,handler=handler,pretty=True)
+        xml = xmlio.to_xml(a,handler=handler,pretty=True)
         # print xml
 
 
@@ -263,7 +263,7 @@ class XMLableTest(unittest.TestCase):
     #     t = FMRITreatment()
     #     t.override_init('fmri_data', FmriData.from_vol_ui)
     #     handler = xmlio.xmlnumpy.NumpyXMLHandler(write_callback=hack_treatment_data_path)
-    #     xml = xmlio.toXML(t,handler=handler,pretty=True)
+    #     xml = xmlio.to_xml(t,handler=handler,pretty=True)
     #     print xml
 
 
@@ -296,7 +296,7 @@ class XMLable2Test(unittest.TestCase):
     def test_xml_from_init(self):
         b = B()
         #print 'b.obj:', b.obj
-        xml = xmlio.toXML(b,handler=xmlio.xmlnumpy.NumpyXMLHandler(),
+        xml = xmlio.to_xml(b,handler=xmlio.xmlnumpy.NumpyXMLHandler(),
                           pretty=True)
         # print 'xml:'
         # print xml
@@ -309,7 +309,7 @@ class XMLable2Test(unittest.TestCase):
         b = B.from_stuff(a=4,b=3)
         # print 'b.obj:', b.obj
         np.testing.assert_equal(b.obj, [4,3])
-        xml = xmlio.toXML(b,handler=xmlio.xmlnumpy.NumpyXMLHandler(),
+        xml = xmlio.to_xml(b,handler=xmlio.xmlnumpy.NumpyXMLHandler(),
                           pretty=True)
         # print 'xml:'
         # print xml
@@ -325,7 +325,7 @@ class XMLable2Test(unittest.TestCase):
         from pyhrf.jde.models import BOLDGibbsSampler
         a = JDEMCMCAnalyser(sampler=BOLDGibbsSampler({'nbIterations':42}))
         # print 'a -- nbIterations:', a.sampler.nbIterations
-        axml = xmlio.toXML(a, handler=xmlio.xmlnumpy.NumpyXMLHandler(), 
+        axml = xmlio.to_xml(a, handler=xmlio.xmlnumpy.NumpyXMLHandler(), 
                            pretty=True)
         # print 'axml:'
         # print axml
@@ -344,7 +344,7 @@ class XMLable2Test(unittest.TestCase):
         a = JDEMCMCAnalyser(sampler=BOLDGibbsSampler({'nbIterations':42}))
         t = FMRITreatment(analyser=a)
         # print 't -- nbIterations:', t.analyser.sampler.nbIterations
-        txml = xmlio.toXML(t, handler=xmlio.xmlnumpy.NumpyXMLHandler(), 
+        txml = xmlio.to_xml(t, handler=xmlio.xmlnumpy.NumpyXMLHandler(), 
                            pretty=True)
         # print 'txml:'
         # print txml

@@ -9,7 +9,6 @@ from pyhrf.ndarray import xndarray
 
 import pyhrf
 #from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.samplerbase import *
 from bigaussian import NRLSampler
 from pyhrf.jde.intensivecalc import sampleSmmNrl
@@ -28,26 +27,20 @@ class NRLwithHabSampler(NRLSampler):
     P_OUTPUT_RATIO = 'outputRatio'
     
     
-    defaultParameters = copyModule.copy(NRLSampler.defaultParameters)
-    defaultParameters.update( {
-                    #parameters for habituation sampling
-                    P_HABITS_INI : None,
-                    P_SAMPLE_HABITS : 1,
-                    P_HAB_ALGO_PARAM : 5.,
-                    P_OUTPUT_RATIO : 0,
-                })
+    # defaultParameters.update( {
+    #                 #parameters for habituation sampling
+    #                 P_HABITS_INI : None,
+    #                 P_SAMPLE_HABITS : 1,
+    #                 P_HAB_ALGO_PARAM : 5.,
+    #                 P_OUTPUT_RATIO : 0,
+    #             })
     
-    parametersToShow = NRLSampler.parametersToShow + [P_SAMPLE_HABITS , P_HABITS_INI , P_HAB_ALGO_PARAM , P_OUTPUT_RATIO]
-    parametersComments = NRLSampler.parametersComments
+    parametersComments = NRLSampler.parametersComments.copy()
     parametersComments[P_HAB_ALGO_PARAM] = 'lambda-like parameter of the Laplacian distribution in habit sampling\n recommended between 1. and 10.'
-    # other class attributes
-#    nbClasses = 2
-
     
-    
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(), xmlLabel=None, xmlComment=None):
+    def __init__(self):
         
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
+        NRLSampler.__init__(self)
      
 # Comment setting of beta parameter since it is properly handled in the base class
 #        self.beta = self.parameters[self.P_BETA]
