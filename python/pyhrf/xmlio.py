@@ -1,5 +1,7 @@
 import pickle
-from inspect import currentframe, getargvalues, getouterframes
+import re
+import numpy as np
+from inspect import currentframe, getargvalues, getouterframes, getargspec
 from inspect import ismethod, isfunction, isclass
 from copy import copy
 
@@ -11,60 +13,94 @@ except ImportError:
 import pyhrf
 from pyhrf.tools import PickleableStaticMethod
 
-class XmlInitable(object):
+NEWLINE_TAG = '##'
+
+def protect_xml_attr(sa):
+    if NEWLINE_TAG in sa:
+        raise Exception('Cannot safely protect new line chars')
+    return sa.replace('\n', NEWLINE_TAG)
+
+def unprotect_xml_attr(sa):
+    return sa.replace(NEWLINE_TAG, '\n')
+
+def numpy_array_from_string(s, sdtype, sshape=None):
+    if sdtype[:3] == 'str':
+        sdtype = 'str'
+    if 'unicode' in sdtype:
+        sdtype = 'unicode'
+
+    data = str(s).split()
+    if sdtype != 'str' and sdtype != 'unicode':
+        data = [float(e) for e in data]
+
+    a = np.array(data, dtype=np.typeDict[sdtype])
+    if sshape is not None:
+        a.shape = tuple( int(e) for e in sshape.strip('(),').split(',') )
+    return a
+
+
+class Initable(object):
     """
     Abstract class to keep track of how an object is initialised.
     To do so, it stores the init function and its parameters.
     The aim is to use it in a user interface or to serialize objects.
     It also allows to add comments and meta info on init parameters.
-
-    Should replace pyhrf.xmlio.XMLable2
     """
+    _init_obj = None
+    _init_parameters = None
+
     def __init__(self):
+        if self._init_obj is None:
+            # gathers all names and values for init parameters:
+            self._init_parameters = OrderedDict()
 
-        # gathers all names and values for init parameters:
-        self._init_parameters = OrderedDict()
+            # function used to instanciate the current object:
+            self._init_obj = self.__class__
 
-        # function used to instanciate the current object:
-        self._init_obj = self.__class__
+            # inspect the previous frame to get the values of the
+            # the init parameters:
+            frame,_,_,_,_,_ = getouterframes(currentframe())[1]
+            args, _, _, values = getargvalues(frame)
+            pyhrf.verbose(6, 'self.__class__: %s' %str(self.__class__))
+            pyhrf.verbose(6, 'args: %s' %str(args))
+            pyhrf.verbose(6, 'values: %s' %str(values))
 
-        # inspect the previous frame to get the values of the
-        # the init parameters:
-        frame,_,_,_,_,_ = getouterframes(currentframe())[1]
-        args, _, _, values = getargvalues(frame)
-        pyhrf.verbose(6, 'self.__class__: %s' %str(self.__class__))
-        pyhrf.verbose(6, 'args: %s' %str(args))
-        pyhrf.verbose(6, 'values: %s' %str(values))
+            values.pop('self', None)
+            if 'self' in args:
+                args.remove('self')
+            for k in args:
+                self._init_parameters[k] = copy(values[k])
 
-        values.pop('self', None)
-        if 'self' in args:
-            args.remove('self')
-        for k in args:
-            self._init_parameters[k] = copy(values[k])
+            pyhrf.verbose(6, 'self._init_parameters:\n%s' \
+                          %str(self._init_parameters))
 
-        pyhrf.verbose(6, 'self._init_parameters:\n%s'%str(self._init_parameters))
+            if hasattr(self, 'parametersComments'):
+                for pname in self.parametersComments.keys():
+                    ip = self._init_parameters.keys()
+                    if pname not in ip:
+                        raise Exception('Entry "%s" in parametersComments is '\
+                                        'not in init parameters (%s) of %s' \
+                                        %(pname,','.join(ip),
+                                          self.get_init_func()))
 
-        if hasattr(self, 'parametersComments'):
-            for pname in self.parametersComments.keys():
+            if hasattr(self, 'parametersToShow'):
                 ip = self._init_parameters.keys()
-                if pname not in ip:
-                    raise Exception('Entry "%s" in parametersComments is not in '\
-                                    'init parameters (%s)' \
-                                    %(pname,','.join(ip)))
+                for pname in self.parametersToShow:
+                    if pname not in ip:
+                        raise Exception('Entry "%s" in parametersToShow is not'\
+                                        ' in init parameters (%s)' \
+                                        %(pname,','.join(ip)))
 
-        if hasattr(self, 'parametersToShow'):
-            for pname in self.parametersToShow.keys():
-                ip = self._init_parameters.keys()
-                if pname not in ip:
-                    raise Exception('Entry "%s" in parametersToShow is not in '\
-                                    'init parameters (%s)' \
-                                    %(pname,','.join(ip)))
+            # translations of method arguments for user interface:
+            self.arg_translation = {}
+            self.arg_itranslation = {}
 
-        # translations of method arguments for user interface:
-        self.arg_translation = {}
-        self.arg_itranslation = {}
-
-
+    def get_init_func(self):
+        if isinstance(self._init_obj, PickleableStaticMethod):
+            iobj = self._init_obj.fn
+        else:
+            iobj = self._init_obj
+        return iobj
 
     def check_init_obj(self, params=None):
         """ check if the function used for init can be used in this API
@@ -72,15 +108,16 @@ class XmlInitable(object):
         All arguments must have a value: either a default one or specified in
         the input dict *params*
         """
-        args, varargs, varkw, defaults = getargspec(self._init_obj)
+        ifunc = self.get_init_func()
+        args, varargs, varkw, defaults = getargspec(ifunc)
         if varkw is not None: #we don't want **kwargs arguments
             raise Exception('Keywords dict argument (eg **kwargs) ' \
                                 'not supported (init function:%s).' \
-                                %str(self._init_obj))
+                                %str(ifunc))
         if varargs is not None: #we don't want *args arguments
             raise Exception('Positional list argument (eg *args) ' \
                                 ' not supported (init function:%s)' \
-                                %str(self._init_obj))
+                                %str(ifunc))
         if args[0] == 'self' :
             args = args[1:]
         if params is not None:
@@ -95,14 +132,14 @@ class XmlInitable(object):
             raise Exception('In init function "%s.%s", some arguments are '\
                                 'not keywords arguments: %s' \
                                 %(str(self.__class__),
-                                  str(self._init_obj.__name__),
+                                  str(ifunc.__name__),
                                   ','.join(pos_args)))
 
 
     def set_init_param(self, param_name, param_value):
         if not self._init_parameters.has_key(param_name):
             raise Exception('"%s" is not an argument of init function %s' \
-                                %(param_name, self._init_obj))
+                                %(param_name, self.get_init_func()))
         self._init_parameters[param_name] = copy(param_value)
 
 
@@ -113,17 +150,18 @@ class XmlInitable(object):
         instanciated via its __init__ function but eg a static method.
         """
         self._init_obj = init_obj
-        args, varargs, varkw, defaults = getargspec(self._init_obj)
+        ifunc = self.get_init_func()
+        args, varargs, varkw, defaults = getargspec(ifunc)
 
         self.check_init_obj(init_params)
         self._init_parameters = dict((k,copy(v)) \
-                                         for k,v in init_params.iteritems())
+                                     for k,v in init_params.iteritems())
 
         for ip in self._init_parameters:
             if ip not in args:
                 raise Exception('Init parameter "%s" is not an argument of '\
                                     'init function "%s". Args are: %s' \
-                                    %(ip,str(self._init_obj), ','.join(args)))
+                                    %(ip,str(ifunc), ','.join(args)))
 
     def get_parameters_comments(self):
         pyhrf.verbose(6, 'get_parameters_comments ...')
@@ -148,8 +186,15 @@ class XmlInitable(object):
 
         return self._init_obj(**self._init_parameters)
 
+    def assert_is_initialized(self):
+        if self._init_obj is None or self._init_parameters is None:
+            cname = self.__class__.__name__
+            raise Exception('%s instance is not properly initialized for the ' \
+                            'Initable API. Did you call Initable.__init__ in ' \
+                            '%s.__init__ ?' %(cname, cname))
 
     def to_ui_node(self, label, parent=None):
+        self.assert_is_initialized()
         pyhrf.verbose(6, 'Initable.to_ui_node(label=%s) ...' %label)
         n = UiNode(label, parent, {'init_obj':self._init_obj,'type':'Initable'})
 
@@ -167,7 +212,7 @@ class XmlInitable(object):
             params = dict((c.label(),self.from_ui_node(c)) \
                           for c in node.get_children())
             pyhrf.verbose(6, '-> init with params: %s' %str(params))
-            if init_obj.__name__ == '__init__':
+            if hasattr(init_obj, '__name__') and init_obj.__name__ == '__init__':
                 return init_obj.im_self.__class__(**params)
             else:
                 return init_obj(**params)
@@ -188,6 +233,9 @@ class XmlInitable(object):
                     return numpy_array_from_string(array_data, sdtype, sh)
                 elif node_type == 'list':
                     return list(self.from_ui_node(c) \
+                                for c in node.get_children())
+                elif node_type == 'tuple':
+                    return tuple(self.from_ui_node(c) \
                                 for c in node.get_children())
                 elif node_type in ['odict','dict']:
                     dclass = [OrderedDict, dict][node_type == 'dict']
@@ -212,6 +260,8 @@ class XmlInitable(object):
 
     def get_arg_from_ui(self, a):
         return self.arg_itranslation.get(a,a)
+
+XmlInitable = Initable # just an alias
 
 class UiNode(object):
 
@@ -243,8 +293,6 @@ class UiNode(object):
 
       #TODO: set and tuple
       #TODO: test unicode
-
-    - Support XML I/O through QtXml. See method *to_xml* and *from_xml*
 
     """
 
@@ -297,10 +345,11 @@ class UiNode(object):
         """
         pyhrf.verbose(6, 'serialize init func %s' %(str(f)))
 
-        if not isclass(f) and f.im_func.__name__ == '__init__':
+        if not isclass(f) and hasattr(f, 'im_func') and \
+          f.im_func.__name__ == '__init__':
             f = f.im_class
 
-        return {'pickled_init_obj':pickle.dumps(f)}
+        return {'pickled_init_obj':protect_xml_attr(pickle.dumps(f))}
 
         # if isinstance(f, PickleableStaticMethod):
         #     f = f.fn
@@ -316,14 +365,14 @@ class UiNode(object):
         else:
             pf = d.get('pickled_init_obj')
         if pf is not None:
-            return pickle.loads(pf)
+            return pickle.loads(unprotect_xml_attr(pf))
         else:
             return None
 
     def _serialize_type(self, t):
         """ Return a dict of strings describing type t.
         """
-        return {'pickled_type':pickle.dumps(t)}
+        return {'pickled_type':protect_xml_attr(pickle.dumps(t))}
 
     @PickleableStaticMethod
     def _unserialize_type(self, d, pop=False):
@@ -332,7 +381,7 @@ class UiNode(object):
         else:
             pt = d.get('pickled_type')
         if pt is not None:
-            return pickle.loads(pt)
+            return pickle.loads(unprotect_xml_attr(pt))
         else:
             return None
 
@@ -374,7 +423,7 @@ class UiNode(object):
         if it can be serialized in a simple human-readable string.
         """
         return isinstance(o, (int, float, str, np.ndarray)) or \
-          (isinstance(o, list) and \
+          ((isinstance(o, list) or isinstance(o, list)) and \
            all([isinstance(e, (int, float, str)) for e in o])) or \
             np.isscalar(o) or o is None
     # or \
@@ -384,7 +433,19 @@ class UiNode(object):
 
     @PickleableStaticMethod
     def from_py_object(self, label, obj, parent=None):
-
+        """
+        Convert a python object into a UiNode object.
+        Types that are supported for *obj*:
+            - NoneType
+            - int
+            - float
+            - str
+            - list of supported types
+            - dict of supported types
+            - OrderedDict
+            - numpy.ndarray
+            - Initable
+        """
         pyhrf.verbose(6, 'UiNode.from_py_object(label=%s,obj=%s) ...' \
                       %(label, str(obj)))
 
@@ -398,6 +459,7 @@ class UiNode(object):
                     n = UiNode(label, attributes={'type':'ndarray',
                                                   'dtype':dt,
                                                   'shape':sh})
+                    #string representation of the flat array:
                     s = ' '.join( str(e) for e in obj.ravel() )
                     n.add_child(UiNode(s))
                 elif obj is None:
@@ -410,6 +472,10 @@ class UiNode(object):
                 n = UiNode(label, attributes={'type':'list'})
                 for i,sub_val in enumerate(obj):
                     n.add_child(UiNode.from_py_object('item%d'%i, sub_val))
+            elif isinstance(obj, tuple):
+                n = UiNode(label, attributes={'type':'tuple'})
+                for i,sub_val in enumerate(obj):
+                    n.add_child(UiNode.from_py_object('item%d'%i, sub_val))
             elif isinstance(obj, (dict, OrderedDict)):
                 t = ['odict','dict'][obj.__class__ == dict]
                 n = UiNode(label, attributes={'type':t})
@@ -420,40 +486,40 @@ class UiNode(object):
                                 '%s (type: %s)' %(str(obj), str(type(obj))))
         return n
 
-
     def label(self):
         return self._label
 
     def type_info(self):
         return self._attributes.get('type')
 
-    def to_xml(self):
+    def to_xml(self, pretty=False):
         """
         Return an XML representation (str) of the Node and its children.
-        #TODO use std lib
         """
-        doc = QtXml.QDomDocument()
-
+        from xml.dom.minidom import Document
+        doc = Document()
         node = doc.createElement(self.label())
-
         doc.appendChild(node)
-
         for k, v in self.serialize_attributes().iteritems():
             node.setAttribute(k, v)
 
         for c in self.get_children():
             c._recurse_to_xml(doc, node)
 
-        return doc.toString(indent=4)
+        if pretty:
+            return doc.toprettyxml(indent='    ') #TODO: manage encoding stuff?
+        else:
+            return doc.toxml()
 
+    def is_leaf_node(self):
+        return len(self.get_children()) == 0 and len(self._attributes) == 0
 
     def _recurse_to_xml(self, doc, parent):
         pyhrf.verbose(6, '_recurse_to_xml ...')
 
-        children = self.get_children()
-        if len(children) > 0:
+        if not self.is_leaf_node():
             node = doc.createElement(self.label())
-        else: #leaf node -> use QTextNode
+        else: #leaf node -> use TextNode
             pyhrf.verbose(6, 'text node: %s' %self.label())
             node = doc.createTextNode(self.label())
 
@@ -467,16 +533,17 @@ class UiNode(object):
 
     @PickleableStaticMethod
     def from_xml(self, sxml):
-        from xml.dom.minidom import Document, parseString
-        doc = parseString(str(sxml).replace('\n','')) #TODO: ingore tab, \n
+        from xml.dom.minidom import parseString
+        doc = parseString(str(sxml)) #TODO: ingore tab, \n
         return self._recurse_from_xml(doc.documentElement)
-
-
 
     @PickleableStaticMethod
     def _recurse_from_xml(self, node):
+        pyhrf.verbose(6, '_recurse_from_xml node -> tag=%s, val=%s, type=%s ' \
+                      %(str(getattr(node, 'tagName', 'N/A')), str(node.nodeValue),
+                        str(node.nodeType)))
         if node.nodeType == node.TEXT_NODE and \
-            re.match('^ *$', node.wholeText): #empty node
+            re.match('^[ \n]*$', node.wholeText): #empty node
             return None
         a = node.attributes
         if a is not None:
@@ -493,11 +560,11 @@ class UiNode(object):
             n = UiNode(node.nodeValue, attributes=attributes)
 
         child_nodes = node.childNodes
-        pyhrf.verbose(6, 'create new node %s from QDom (-> %d children)' \
+        pyhrf.verbose(6, 'create new node %s (-> %d children)' \
                       %(node_name, len(child_nodes)))
         pyhrf.verbose(6, 'node value: %s' %str(node.nodeValue))
         for c in child_nodes:
-            rc = self._recurse_from_xml_std(c)
+            rc = self._recurse_from_xml(c)
             if rc is not None:
                 n.add_child(rc)
 
@@ -539,9 +606,25 @@ class UiNode(object):
         self._children.append(child)
         child._parent = self
 
+    def childCount(self):
+        return len(self._children)
+
+    def child(self, row):
+        return self._children[row]
+
 
 def read_xml(fn):
     return None
 
 def write_xml(obj, fn):
     return None
+
+def to_xml(obj, label='anonym', pretty=False):
+    """
+    Return an XML representation of the init state of the given object *obj*.
+
+    """
+    return UiNode.from_py_object(label, obj).to_xml(pretty)
+
+def from_xml(sxml):
+    return Initable.from_ui_node(UiNode.from_xml(sxml))

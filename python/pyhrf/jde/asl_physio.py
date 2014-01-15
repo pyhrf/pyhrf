@@ -5,7 +5,6 @@ from samplerbase import GibbsSampler, GibbsSamplerVariable
 
 from pyhrf import xmlio
 from pyhrf.ndarray import xndarray, stack_cuboids
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
 from pyhrf.jde.models import WN_BiG_Drift_BOLDSamplerInput, GSDefaultCallbackHandler
 
@@ -60,7 +59,7 @@ def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mx_perf, mxtx_perf,
         varDeltaY_bold +=  np.dot(mx[j,:,:].T, yaj.sum(1))
         ycj = prls[j,:]*yj
         varDeltaY_perf += np.dot(mx_perf[j,:,:].T, ycj.sum(1))
-        
+
         for k in xrange(nb_conditions):
             np.divide(rlrl_bold[j,k,:], v_b, ajak_vb)
             pyhrf.verbose(6, 'ajak/rb :')
@@ -72,11 +71,11 @@ def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mx_perf, mxtx_perf,
 
             np.divide(brlprl[j,k,:], v_b, ajck_vb)
             varDeltaS_bp += ajck_vb.sum() * mxtwx[j,k,:,:]
-         
+
     varDeltaS_perf = np.dot(omega.transpose(),np.dot(varDeltaS_perf, omega))
     varDeltaS_bp = np.dot(varDeltaS_bp, omega)
 
-    varDeltaS = varDeltaS_bold + varDeltaS_perf + 2*varDeltaS_bp 
+    varDeltaS = varDeltaS_bold + varDeltaS_perf + 2*varDeltaS_bp
 
     varDeltaY = varDeltaY_bold + np.dot(varDeltaY_perf, omega)
 
@@ -87,7 +86,7 @@ def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mx_perf, mxtx_perf,
     #     ycj = prls[j,:]*yj
     #     varDeltaY_perf = np.dot(mx_perf[j,:,:].T, ycj.sum(1))
     #     varDeltaY = varDeltaY_bold + np.dot(varDeltaY_perf, omega)
-        
+
     #     for k in xrange(nb_conditions):
     #         np.divide(rlrl_bold[j,k,:], v_b, ajak_vb)
     #         pyhrf.verbose(6, 'ajak/rb :')
@@ -99,13 +98,13 @@ def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mx_perf, mxtx_perf,
 
     #         np.divide(brlprl[j,k,:], v_b, ajck_vb)
     #         varDeltaS_bp += ajck_vb.sum() * mxtwx[j,k,:,:]
-    # #raise Exception()     
+    # #raise Exception()
     #     varDeltaS_perf = np.dot(omega.transpose(),np.dot(varDeltaS_perf, omega))
     #     varDeltaS_bp = np.dot(varDeltaS_bp, omega)
 
-    # varDeltaS = varDeltaS_bold + varDeltaS_perf + 2*varDeltaS_bp 
+    # varDeltaS = varDeltaS_bold + varDeltaS_perf + 2*varDeltaS_bp
 
-    
+
     return (varDeltaS, varDeltaY)
 
 def compute_bRpR(brl, prl, nbConditions, nbVoxels):
@@ -393,7 +392,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
             prfsamplr = self.samplerEngine.getVariable('prf')
             prlsamplr = self.samplerEngine.getVariable('prl')
             mx_perf = prfsamplr.get_mat_X()
-            mxtx_perf = prfsamplr.get_mat_XtX() 
+            mxtx_perf = prfsamplr.get_mat_XtX()
             mxtwx = self.get_mat_XtWX()
             BjBk_vb_perf = prfsamplr.BjBk_vb
             rlrl_perf = prlsamplr.rr
@@ -401,9 +400,9 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
             brlprl = compute_bRpR(rl, prl, self.nbConditions, self.nbVoxels)
                #todo: add bRpR, W, initialization of RRs to sampling warm up
             W = build_ctrl_tag_matrix(prfsamplr.currentValue.shape)
-            
+
             StS, StY = compute_StS_StY_deterministic(rl, prl, noise_var, mx, mxtx, mx_perf, mxtx_perf, mxtwx, self.ytilde, rlrl, rlrl_perf, brlprl, self.yBj, self.BjBk_vb, BjBk_vb_perf, self.omega_operator, W)
-            
+
         else:
             StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, rlrl,
                                    self.yBj, self.BjBk_vb)
@@ -538,7 +537,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         smpl_brf = self.samplerEngine.getVariable('brf')
         omega = smpl_brf.omega_operator
         brf = smpl_brf.currentValue
-        
+
         if smpl_brf.use_omega and self.deterministic:
             resp = np.dot(omega,brf)
         else:
@@ -1761,78 +1760,47 @@ class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
         #del self.XtWX
 
 
-class ASLPhysioSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
+class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
     inputClass = WN_BiG_ASLSamplerInput
 
 
-    variablesToSample = ['noise_var', 'drift_var', 'drift_coeff',
-                         'brl', 'brf',
-                         'prl', 'prf', 'prf_var',  'brf_var',
-                         'bold_mixt_params', 'perf_mixt_params',
-                         'label', 'perf_baseline', 'perf_baseline_var']
+    if pyhrf.__usemode__ == pyhrf.DEVEL:
+        default_nb_its = 3
+    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 bold_response_levels=BOLDResponseLevelSampler(),
+                 perf_response_levels=PerfResponseLevelSampler(),
+                 labels=LabelSampler(), noise_var=NoiseVarianceSampler(),
+                 brf=PhysioBOLDResponseSampler(),
+                 brf_var=PhysioBOLDResponseSampler(),
+                 prf=PhysioPerfResponseSampler(),
+                 prf_var=PhysioPerfResponseSampler(),
+                 bold_mixt_params=BOLDMixtureSampler(),
+                 perf_mixt_params=PerfMixtureSampler(),
+                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
+                 perf_baseline=PerfBaselineSampler(),
+                 perf_baseline_var=PerfBaselineVarianceSampler(),
+                 check_final_value=None):
 
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_GLOB_OBS_HIST_PACE = 'globalObservablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_RANDOM_SEED = 'numpyRandomSeed'
+        variables = [noise_var, brf, brf_var, prf, prf_var,
+                     drift_var, drift, perf_response_levels,
+                     bold_response_levels, perf_baseline, perf_baseline_var,
+                     bold_mixt_params, perf_mixt_params, labels]
 
-    defaultParameters = {
-        P_NB_ITERATIONS : 3,
-        P_OBS_HIST_PACE : -1.,
-        P_GLOB_OBS_HIST_PACE : -1,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_RANDOM_SEED : 193843200,
-        'brf' : PhysioBOLDResponseSampler(),
-        'prf' : PhysioPerfResponseSampler(),
-        'brf_var' : PhysioBOLDResponseVarianceSampler(),
-        'prf_var' : PhysioPerfResponseVarianceSampler(),
-        'noise_var' : NoiseVarianceSampler(),
-        'drift_var' : DriftVarianceSampler(),
-        'drift_coeff' : DriftCoeffSampler(),
-        'brl' : BOLDResponseLevelSampler(),
-        'prl' : PerfResponseLevelSampler(),
-        'bold_mixt_params' : BOLDMixtureSampler(),
-        'perf_mixt_params' : PerfMixtureSampler(),
-        'label' : LabelSampler(),
-        'perf_baseline' : PerfBaselineSampler(),
-        'perf_baseline_var' : PerfBaselineVarianceSampler(),
-        'assert_final_value_close_to_true' : False,
-        }
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
 
-    parametersComments = {
-        P_SMPL_HIST_PACE: 'To save the samples at each iteration\n'\
-            'If x<0: no save\n ' \
-            'If 0<x<1: define the fraction of iterations for which samples are '\
-            'saved\n'  \
-            'If x>=1: define the number of iterations between backup '\
-            'copies.\n'  \
-            'If x=1: save samples at each iteration.',
-        P_OBS_HIST_PACE: 'See comment for samplesHistoryPaceSave.'
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        """
-        #print 'param:', parameters
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-        #print self.variablesToSample
-        #for vLab in self.variablesToSample:
-             #print vLab
-
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        globalObsHistPace = self.parameters[self.P_GLOB_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
-        self.cmp_ftval = self.parameters['assert_final_value_close_to_true']
+        check_ftval = check_final_value
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
@@ -1849,13 +1817,12 @@ class ASLPhysioSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
         #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
-        seed = self.parameters[self.P_RANDOM_SEED]
-        #callbackObj = self.parameters[self.P_CALLBACK]
         callbackObj = GSDefaultCallbackHandler()
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
                               obsHistPace, nbSweeps,
-                              callbackObj, randomSeed=seed,
-                              globalObsHistoryPace=globalObsHistPace)
+                              callbackObj,
+                              globalObsHistoryPace=globalObsHistPace,
+                              check_ftval=check_ftval)
 
     def finalizeSampling(self):
         if self.cmp_ftval:

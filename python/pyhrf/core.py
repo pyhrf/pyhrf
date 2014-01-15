@@ -36,12 +36,24 @@ except ImportError:
 #            'durations_loc_av', 'durations_loc']
 
 def _pickle_method(method):
+    """
+    Allow to safely pickle classmethods. To be fed to copy_reg.pickle
+    """
     func_name = method.im_func.__name__
     obj = method.im_self
     cls = method.im_class
+    if func_name.startswith('__') and not func_name.endswith('__'):
+        #deal with mangled names
+        cls_name = cls.__name__.lstrip('_')
+        func_name = '_%s%s' % (cls_name, func_name)
     return _unpickle_method, (func_name, obj, cls)
 
 def _unpickle_method(func_name, obj, cls):
+    """
+    Allow to safely unpickle classmethods. To be fed to copy_reg.pickle
+    """
+    if obj and func_name in obj.__dict__:
+        cls, obj = obj, None # if func_name is classmethod
     for cls in cls.mro():
         try:
             func = cls.__dict__[func_name]
@@ -86,7 +98,6 @@ class AttrClass:
         for k,w in kwargs.iteritems():
             setattr(self,k,w)
 
-
     def __repr__(self):
         r = self.__class__.__name__ + '('
         a = [k+'='+repr(getattr(self,k)) for k in dir(self) \
@@ -96,7 +107,7 @@ class AttrClass:
         return r
 
 class Condition(AttrClass): pass
-    
+
 from pyhrf.tools import PickleableStaticMethod
 
 ## PARADIGM STUFFS ##
@@ -588,7 +599,7 @@ class FmriData(XmlInitable):
         }
 
     parametersToShow = ['tr', 'sessions_data', 'mask_file']
-    
+
     if pyhrf.__usemode__ == 'devel':
         parametersToShow += ['background_label']
 

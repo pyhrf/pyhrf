@@ -5,7 +5,6 @@ from samplerbase import GibbsSampler, GibbsSamplerVariable
 
 from pyhrf import xmlio
 from pyhrf.ndarray import xndarray
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
 from pyhrf.jde.models import WN_BiG_Drift_BOLDSamplerInput, GSDefaultCallbackHandler
 
@@ -1476,76 +1475,45 @@ class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
         del self.WXtWX
 
 
-class ASLSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
+class ASLSampler(xmlio.XmlInitable, GibbsSampler):
 
     inputClass = WN_BiG_ASLSamplerInput
 
+    if pyhrf.__usemode__ == pyhrf.DEVEL:
+        default_nb_its = 3
+    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'bold_response_levels',
+                            'brf', 'brf_var', 'prf', 'prf_var']
 
-    variablesToSample = ['noise_var', 'drift_var', 'drift_coeff',
-                         'brl', 'brf',
-                         'prl', 'prf', 'prf_var',  'brf_var',
-                         'bold_mixt_params', 'perf_mixt_params',
-                         'label', 'perf_baseline', 'perf_baseline_var']
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 bold_response_levels=BOLDResponseLevelSampler(),
+                 perf_response_levels=PerfResponseLevelSampler(),
+                 labels=LabelSampler(), noise_var=NoiseVarianceSampler(),
+                 brf=BOLDResponseSampler(), brf_var=BOLDResponseVarianceSampler(),
+                 prf=PerfResponseSampler(), prf_var=PerfResponseVarianceSampler(),
+                 bold_mixt_params=BOLDMixtureSampler(),
+                 perf_mixt_params=PerfMixtureSampler(),
+                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
+                 perf_baseline=PerfBaselineSampler(),
+                 perf_baseline_var=PerfBaselineVarianceSampler(),
+                 check_final_value=None):
 
+        variables = [noise_var, brf, brf_var, prf, prf_var,
+                     drift_var, drift, perf_response_levels,
+                     bold_response_levels, perf_baseline, perf_baseline_var,
+                     bold_mixt_params, perf_mixt_params, labels]
 
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_GLOB_OBS_HIST_PACE = 'globalObservablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_RANDOM_SEED = 'numpyRandomSeed'
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
 
-    defaultParameters = {
-        P_NB_ITERATIONS : 3,
-        P_OBS_HIST_PACE : -1.,
-        P_GLOB_OBS_HIST_PACE : -1,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_RANDOM_SEED : 193843200,
-        'noise_var' : NoiseVarianceSampler(),
-        'drift_var' : DriftVarianceSampler(),
-        'drift_coeff' : DriftCoeffSampler(),
-        'brl' : BOLDResponseLevelSampler(),
-        'brf' : BOLDResponseSampler(),
-        'prl' : PerfResponseLevelSampler(),
-        'prf' : PerfResponseSampler(),
-        'brf_var' : BOLDResponseVarianceSampler(),
-        'prf_var' : PerfResponseVarianceSampler(),
-        'bold_mixt_params' : BOLDMixtureSampler(),
-        'perf_mixt_params' : PerfMixtureSampler(),
-        'label' : LabelSampler(),
-        'perf_baseline' : PerfBaselineSampler(),
-        'perf_baseline_var' : PerfBaselineVarianceSampler(),
-        'assert_final_value_close_to_true' : False,
-        }
-
-    parametersComments = {
-        P_SMPL_HIST_PACE: 'To save the samples at each iteration\n'\
-            'If x<0: no save\n ' \
-            'If 0<x<1: define the fraction of iterations for which samples are saved\n'\
-            'If x>=1: define the step in iterations number between backup copies.\n'\
-            'If x=1: save samples at each iteration.',
-        P_OBS_HIST_PACE: 'See comment for samplesHistoryPaceSave.'
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        """
-        #print 'param:', parameters
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-        #print self.variablesToSample
-        #for vLab in self.variablesToSample:
-             #print vLab
-
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        globalObsHistPace = self.parameters[self.P_GLOB_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
-        self.cmp_ftval = self.parameters['assert_final_value_close_to_true']
+        check_ftval = check_final_value
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
@@ -1562,13 +1530,14 @@ class ASLSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
         #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
-        seed = self.parameters[self.P_RANDOM_SEED]
-        #callbackObj = self.parameters[self.P_CALLBACK]
         callbackObj = GSDefaultCallbackHandler()
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
                               obsHistPace, nbSweeps,
-                              callbackObj, randomSeed=seed,
-                              globalObsHistoryPace=globalObsHistPace)
+                              callbackObj,
+                              globalObsHistoryPace=globalObsHistPace,
+                              check_ftval=check_ftval)
+
+
 
     def finalizeSampling(self):
         if self.cmp_ftval:

@@ -1028,12 +1028,13 @@ class HRF_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable) :
 # NRL by session Sampler and variance of session-specific nrls sampler#
 ###########################################################################
 
-class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
 
     def __init__(self, do_sampling=True, val_ini=None, use_true_value=False):
 
         an = ['session', 'condition', 'voxel']
+        xmlio.XmlInitable.__init__(self)
         GibbsSamplerVariable.__init__(self,'nrl_by_session', valIni=val_ini,
                                       sampleFlag=do_sampling,
                                       useTrueValue=use_true_value,

@@ -361,7 +361,7 @@ class PickleableStaticMethod(object):
         self.cls = cls
         self.fn = fn
         self.__name__ = fn.__name__
-        #self.im_func = fn.im_func
+        
     def __call__(self, *args, **kwargs):
         if self.cls is None:
             return self.fn(*args, **kwargs)

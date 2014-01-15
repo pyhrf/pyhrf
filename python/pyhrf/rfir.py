@@ -10,8 +10,6 @@ from time import time
 from pyhrf.tools import array_summary
 
 import pyhrf
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
-
 from pyhrf import xmlio
 from pyhrf.tools import format_duration
 
@@ -27,7 +25,7 @@ def init_dict():
 #from pyhrf.rfir_c import compute_XSigmaX #, compute_h_MAP
 
 
-class RFIREstim(xmlio.XMLParamDrivenClass):
+class RFIREstim(xmlio.XmlInitable):
     """
     Class handling the estimation of HRFs from fMRI data.
     Analysis is voxel-wise and can
@@ -79,7 +77,7 @@ class RFIREstim(xmlio.XMLParamDrivenClass):
                             P_HRF_LENGTH, P_DT, P_DRIFT_TYPE, P_NB_ITERATIONS]
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+    def __init__(self, parameters=None, xmlHandler=None,
                  xmlLabel=None, xmlComment=None):
         #Call constructor of class handling XML stuffs and parametrisation
         xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,

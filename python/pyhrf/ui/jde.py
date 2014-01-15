@@ -116,8 +116,9 @@ class JDEMCMCAnalyser(JDEAnalyser):
                  outputFile=DEFAULT_OUTPUT_FILE,outputPrefix='jde_mcmc_',
                  randomSeed=None, pass_error=True):
 
-        JDEAnalyser.__init__(self, outputPrefix, pass_error=pass_error)
         XmlInitable.__init__(self)
+        JDEAnalyser.__init__(self, outputPrefix, pass_error=pass_error)
+        
 
         self.sampler = copyModule.copy(sampler)
         self.osfMax = osfMax

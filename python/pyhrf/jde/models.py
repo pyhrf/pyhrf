@@ -1130,7 +1130,7 @@ class BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_iterations', 'response_levels', 'hrf', 'hrf_var']
 
     parametersComments = {
         'smpl_hist_pace': 'To save the samples at each iteration\n'\
@@ -1143,7 +1143,7 @@ class BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         'obs_hist_pace' : 'See comment for samplesHistoryPaceSave.'
         }
 
-    def __init__(self, nb_its=default_nb_its,
+    def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1., glob_obs_hist_pace=-1,
                  smpl_hist_pace=-1., burnin=.3,
                  callback=GSDefaultCallbackHandler(),
@@ -1162,7 +1162,7 @@ class BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
                      beta, scale, noise_var]
 
-        nbIt = nb_its
+        nbIt = nb_iterations
         obsHistPace = obs_hist_pace
         globalObsHistPace = glob_obs_hist_pace
         smplHistPace = smpl_hist_pace
@@ -1448,7 +1448,7 @@ class BOLDGibbsSampler_AR(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_iterations', 'response_levels', 'hrf', 'hrf_var']
 
     parametersComments = {
         'smpl_hist_pace': 'To save the samples at each iteration\n'\
@@ -1461,7 +1461,7 @@ class BOLDGibbsSampler_AR(xmlio.XmlInitable, GibbsSampler):
         'obs_hist_pace' : 'See comment for samplesHistoryPaceSave.'
         }
 
-    def __init__(self, nb_its=default_nb_its,
+    def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1., glob_obs_hist_pace=-1,
                  smpl_hist_pace=-1., burnin=.3,
                  callback=GSDefaultCallbackHandler(),
@@ -1482,7 +1482,7 @@ class BOLDGibbsSampler_AR(xmlio.XmlInitable, GibbsSampler):
         variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
                      beta, scale, noise_var, noise_arp, drift, drift_var]
 
-        nbIt = nb_its
+        nbIt = nb_iterations
         obsHistPace = obs_hist_pace
         globalObsHistPace = glob_obs_hist_pace
         smplHistPace = smpl_hist_pace
@@ -1742,9 +1742,9 @@ class W_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_iterations', 'response_levels', 'hrf', 'hrf_var']
 
-    def __init__(self, nb_its=default_nb_its,
+    def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1., glob_obs_hist_pace=-1,
                  smpl_hist_pace=-1., burnin=.3,
                  callback=GSDefaultCallbackHandler(),
@@ -1761,7 +1761,7 @@ class W_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
                      beta, scale, noise_var, relevantVariable]
 
-        nbIt = nb_its
+        nbIt = nb_iterations
         obsHistPace = obs_hist_pace
         globalObsHistPace = glob_obs_hist_pace
         smplHistPace = smpl_hist_pace
@@ -1912,10 +1912,10 @@ class Drift_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_iterations', 'response_levels', 'hrf', 'hrf_var']
 
 
-    def __init__(self, nb_its=default_nb_its,
+    def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1, glob_obs_hist_pace=-1,
                  smpl_hist_pace=-1, burnin=.3,
                  callback=GSDefaultCallbackHandler(),
@@ -1935,7 +1935,7 @@ class Drift_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         variables = [response_levels, hrf, hrf_var, mixt_weights, mixt_params,
                      beta, scale, noise_var, drift, drift_var]
 
-        nbIt = nb_its
+        nbIt = nb_iterations
         obsHistPace = obs_hist_pace
         globalObsHistPace = glob_obs_hist_pace
         smplHistPace = smpl_hist_pace
@@ -2007,9 +2007,9 @@ class W_Drift_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_iterations', 'response_levels', 'hrf', 'hrf_var']
 
-    def __init__(self, nb_its=default_nb_its,
+    def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1., glob_obs_hist_pace=-1,
                  smpl_hist_pace=-1., burnin=.3,
                  callback=GSDefaultCallbackHandler(),
@@ -2030,7 +2030,7 @@ class W_Drift_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
                      beta, scale, noise_var, condition_relevance, drift,
                      drift_var]
 
-        nbIt = nb_its
+        nbIt = nb_iterations
         obsHistPace = obs_hist_pace
         globalObsHistPace = glob_obs_hist_pace
         smplHistPace = smpl_hist_pace

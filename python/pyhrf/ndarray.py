@@ -23,7 +23,6 @@ MRI3Daxes = ['sagittal','coronal','axial']
 MRI4Daxes = MRI3Daxes + ['time']
 TIME_AXIS = 3
 
-
 class xndarray:
     """ Handles a multidimensional numpy array with axes that are labeled
     and mapped to domain values.

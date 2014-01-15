@@ -35,12 +35,10 @@ from pyhrf import xmlio, DEFAULT_ONSETS, DEFAULT_STIM_DURATIONS, \
     REALISTIC_REAL_DATA_BOLD_VOL_FILE, REALISTIC_REAL_DATA_MASK_VOL_FILE, \
     DEFAULT_PARADIGM_CSV
 
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
-from pyhrf.xmlio import XMLable2
 from pyhrf.verbose import dictToString
 from pyhrf.tools import unstack_trees #stack_trees
-from pyhrf.tools.io import *
-from pyhrf.tools.io._zip import *
+#from pyhrf.tools.io import *
+#from pyhrf.tools.io._zip import *
 from pyhrf.ui.jde import JDEMCMCAnalyser
 
 # Setup default parameters for a treatment:
@@ -54,9 +52,7 @@ MIN_NB_VOX_IN_ROI = 10
 def exec_t(t):
     return t.execute()
 
-
-
-class FMRITreatment(XMLable2):
+class FMRITreatment(xmlio.XmlInitable):
 
 
     parametersComments = {
@@ -83,7 +79,7 @@ class FMRITreatment(XMLable2):
                  analyser=JDEMCMCAnalyser(), output_dir='./',
                  make_outputs=True, result_dump_file=DEFAULT_DUMP_FILE):
 
-        XMLable2.__init__(self)
+        xmlio.XmlInitable.__init__(self)
 
         self.analyser = analyser
         self.output_dir = output_dir
@@ -815,7 +811,7 @@ from pyhrf.ui.jde import DEFAULT_CFG_FILE as DEFAULT_CFG_FILE_JDE
 from pyhrf.ui.jde import DEFAULT_OUTPUT_FILE as DEFAULT_OUTPUT_FILE_JDE
 
 from pyhrf.jde.models import BOLDGibbsSampler as BG
-from pyhrf.jde.models import GGG_BOLDGibbsSampler as BG3
+
 
 from pyhrf.jde.beta import BetaSampler as BS
 from pyhrf.jde.nrl.bigaussian import NRLSampler as NS
@@ -914,31 +910,32 @@ def create_treatment(boldFiles, parcelFile, dt, tr, paradigmFile,
             #     VT.P_ANALYSER : JDE(sampler=sampler, outputFile=outFile, dt=dt),
             #     }
 
-
-
         elif nbClasses == 3:
-            sampler = BG3({
-                            BG.P_NB_ITERATIONS : nbIterations,
-                            # level of spatial correlation = beta
-                            BG.P_BETA : BS({
-                                    BS.P_VAL_INI : np.array([beta]),
-                                    BS.P_SAMPLE_FLAG : estimBeta,
-                                    BS.P_PARTITION_FUNCTION_METH : pfMethod,
-                                    }),
-                            # HRF
-                            BG.P_HRF : HS({
-                                    HS.P_SAMPLE_FLAG : estimHrf,
-                                    }),
-                            # HRF variance
-                            BG.P_RH : HVS({
-                                    HVS.P_SAMPLE_FLAG : False,
-                                    HVS.P_VAL_INI : np.array([hrfVar]),
-                                    }),
-                            # neural response levels (stimulus-induced effects)
-                            BG.P_NRLS : NS3({
-                                    NS.P_CONTRASTS : cons,
-                                    }),
-                            })
+
+            raise NotImplementedError('Model with 3 classes not maintained')
+            # from pyhrf.jde.models import GGG_BOLDGibbsSampler as BG3
+            # sampler = BG3({
+            #                 BG.P_NB_ITERATIONS : nbIterations,
+            #                 # level of spatial correlation = beta
+            #                 BG.P_BETA : BS({
+            #                         BS.P_VAL_INI : np.array([beta]),
+            #                         BS.P_SAMPLE_FLAG : estimBeta,
+            #                         BS.P_PARTITION_FUNCTION_METH : pfMethod,
+            #                         }),
+            #                 # HRF
+            #                 BG.P_HRF : HS({
+            #                         HS.P_SAMPLE_FLAG : estimHrf,
+            #                         }),
+            #                 # HRF variance
+            #                 BG.P_RH : HVS({
+            #                         HVS.P_SAMPLE_FLAG : False,
+            #                         HVS.P_VAL_INI : np.array([hrfVar]),
+            #                         }),
+            #                 # neural response levels (stimulus-induced effects)
+            #                 BG.P_NRLS : NS3({
+            #                         NS.P_CONTRASTS : cons,
+            #                         }),
+            #                 })
 
             # paramt = {
             #     VT.P_SESSIONS : psess,

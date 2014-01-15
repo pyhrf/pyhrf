@@ -12,7 +12,6 @@ from numpy.testing import assert_almost_equal #assert_array_equal,
 
 from pyhrf import Condition
 #from pyhrf.jde.beta import BetaSampler
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.samplerbase import GSDefaultCallbackHandler
 from pyhrf import xmlio
 from pyhrf.graph import graph_nb_cliques
@@ -1774,7 +1773,7 @@ class Variance_GaussianNRL_Multi_Subj(GibbsSamplerVariable):
 ####################################################
 ## NRLs sampler #
 ####################################################
-class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class NRLs_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
 
     def __init__(self, val_ini=None, do_sampling=True, use_true_value=False):
@@ -2556,7 +2555,7 @@ class BOLDSampler_MultiSujInput :
         #self.cleanPrecalculations()
 
 
-class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
+class BOLDGibbs_Multi_SubjSampler(xmlio.XmlInitable, GibbsSampler):
 
     #TODO : comment
 
@@ -2650,7 +2649,7 @@ class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         P_OBS_HIST_PACE: 'See comment for samplesHistoryPaceSave.'
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+    def __init__(self, parameters=None, xmlHandler=None,
                  xmlLabel=None, xmlComment=None):
         """
         #TODO : comment

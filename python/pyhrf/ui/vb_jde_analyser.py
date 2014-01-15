@@ -22,7 +22,7 @@ from pyhrf.tools.io import read_volume
 #######################
 from pylab import *
 import pyhrf
-from pyhrf.xmlio import XMLable2
+from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 import os.path as op
 def change_dim(labels):
@@ -138,8 +138,9 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateLabels=True, LabelsFilename='labels.nii', MFapprox=False,
                  estimateMixtParam=True,InitVar=0.5,InitMean=2.0,MiniVemFlag=False,NbItMiniVem=5):
 
+        XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_')
-        XMLable2.__init__(self)
+
 
         # Important thing : all parameters must have default values
         self.dt = dt
