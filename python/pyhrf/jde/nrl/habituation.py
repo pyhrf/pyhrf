@@ -218,7 +218,7 @@ class NRLwithHabSampler(NRLSampler):
         # issu de NRLSampler
         #---------------------------------------------------------------
         
-        smplHRF = variables[self.samplerEngine.I_HRF]
+        smplHRF = self.get_variable('hrf')
         varHRF = smplHRF.currentValue
         self.nh = len(varHRF)            # taille de la HRF
     
@@ -480,7 +480,7 @@ class NRLwithHabSampler(NRLSampler):
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        #varXh = variables[self.samplerEngine.I_HRF].varXh
+        #varXh = self.get_variable('hrf').varXh
         nrls = self.currentValue
         #gTQgjrb = gTQg[j]/rb[i]
         neighbours = self.dataInput.neighboursIndexes
@@ -497,7 +497,7 @@ class NRLwithHabSampler(NRLSampler):
 ##                 print 'mCI =', mean[self.L_CI],'vCI =', var[self.L_CI]
 ##                 print 'beta = ', 
             #print 'labelsSamples, cond %d -> mean=%f' %(j,self.labelsSamples[j,:].mean())
-            betaj = self.samplerEngine.getVariable('beta').currentValue[j]
+            betaj = self.samplerEngine.get_variable('beta').currentValue[j]
             #print 'self.varYtilde:', self.varYtilde.shape
             sampleSmmNrl(voxOrder, rb, neighbours, self.varYtilde,
                          self.labels[j,:], varXh[:,:,j],
@@ -568,10 +568,10 @@ class NRLwithHabSampler(NRLSampler):
         # load noise
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
         # load hrf
-        sHrf = variables[self.samplerEngine.I_HRF]
+        sHrf = self.get_variable('hrf')
         #varXh = sHrf.varXh
         h = sHrf.currentValue
-        #varHRF = variables[self.samplerEngine.I_HRF].currentValue
+        #varHRF = self.get_variable('hrf').currentValue
         pyhrf.verbose(2, 'iteration %i' %self.iteration)
             
         self.updateXh(h)#-> update self.varXh
@@ -588,7 +588,7 @@ class NRLwithHabSampler(NRLSampler):
         #Calcul des variables a post regroupe dans self.computeComponentsApost
         #self.computeLambdaAPost(varCI, varCA, varLambda)
         
-        if self.samplerEngine.getVariable('beta').currentValue[0] <= 0:
+        if self.samplerEngine.get_variable('beta').currentValue[0] <= 0:
             self.sampleNrlsParallel(rb, h, varLambda, varCI,
                                     varCA, meanCA, varXhtQXh, variables)
             self.computeVarYTildeHab(self.varXh)
@@ -711,7 +711,7 @@ class NRLwithHabSampler(NRLSampler):
     def sampleNextAlt(self, variables): ## if we don't want to sample Nrls
         
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        varHRF = variables[self.samplerEngine.I_HRF].currentValue
+        varHRF = self.get_variable('hrf').currentValue
             
         pyhrf.verbose(2, 'iteration %i' %self.iteration)
 
@@ -782,7 +782,7 @@ class NRLwithHabSampler(NRLSampler):
         # pour voir les coor.: s[numeroROI]['sampler'].dataInput.voxelMapping.getCoord(voxelobs)
         #     
         
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
     
             
         
@@ -822,7 +822,7 @@ class NRLwithHabSampler(NRLSampler):
                                         axes_domains=axes_domains,
                                         value_label="TimeNRLs")
         
-        dt = self.samplerEngine.getVariable('hrf').dt
+        dt = self.samplerEngine.get_variable('hrf').dt
         rpar = self.dataInput.paradigm.get_joined_and_rastered(dt)
         parmask = [where(rpar[c]==1) for c in self.dataInput.cNames]
         tnrl = zeros((self.nbVox, self.nbConditions, len(rpar[rpar.keys()[0]])), 

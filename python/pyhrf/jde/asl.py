@@ -64,10 +64,10 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
     def compute_y_tilde(self):
         pyhrf.verbose(4, 'NoiseVarianceSampler.compute_y_tilde ...')
 
-        sumaXh = self.samplerEngine.getVariable('brl').sumBXResp
-        sumcXg = self.samplerEngine.getVariable('prl').sumBXResp
-        Pl = self.samplerEngine.getVariable('drift_coeff').Pl
-        wa = self.samplerEngine.getVariable('perf_baseline').wa
+        sumaXh = self.samplerEngine.get_variable('brl').sumBXResp
+        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
+        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
+        wa = self.samplerEngine.get_variable('perf_baseline').wa
 
         y = self.dataInput.varMBY
 
@@ -118,7 +118,7 @@ class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, variables):
 
-        smpldrift = self.samplerEngine.getVariable('drift_coeff')
+        smpldrift = self.samplerEngine.get_variable('drift_coeff')
 #        print 'shape dimDrift...', smpldrift.dimDrift
 #        print 'norm Drift', smpldrift.norm
         alpha = .5 * (smpldrift.dimDrift * self.nbVoxels - 1)
@@ -185,9 +185,9 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def compute_y_tilde(self):
 
-        sumaXh = self.samplerEngine.getVariable('brl').sumBXResp
-        sumcXg = self.samplerEngine.getVariable('prl').sumBXResp
-        wa = self.samplerEngine.getVariable('perf_baseline').wa
+        sumaXh = self.samplerEngine.get_variable('brl').sumBXResp
+        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
+        wa = self.samplerEngine.get_variable('perf_baseline').wa
 
         y = self.dataInput.varMBY
 
@@ -198,8 +198,8 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         ytilde = self.compute_y_tilde()
 
-        v_l = self.samplerEngine.getVariable('drift_var').currentValue
-        v_b = self.samplerEngine.getVariable('noise_var').currentValue
+        v_l = self.samplerEngine.get_variable('drift_var').currentValue
+        v_b = self.samplerEngine.get_variable('noise_var').currentValue
 
         pyhrf.verbose(5, 'Noise vars :' )
         pyhrf.verbose.printNdarray(5, v_b)
@@ -418,11 +418,11 @@ class ResponseSampler(GibbsSamplerVariable):
         raise NotImplementedError()
 
     def sampleNextInternal(self, variables):
-        rl_sampler = self.samplerEngine.getVariable(self.response_level_name)
+        rl_sampler = self.samplerEngine.get_variable(self.response_level_name)
         rl = rl_sampler.currentValue
         rlrl = rl_sampler.rr
 
-        noise_var = self.samplerEngine.getVariable('noise_var').currentValue
+        noise_var = self.samplerEngine.get_variable('noise_var').currentValue
 
         mx = self.get_mat_X()
         mxtx = self.get_mat_XtX()
@@ -432,7 +432,7 @@ class ResponseSampler(GibbsSamplerVariable):
         StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, rlrl,
                                    self.yBj, self.BjBk_vb)
 
-        v_resp = self.samplerEngine.getVariable(self.var_name).currentValue
+        v_resp = self.samplerEngine.get_variable(self.var_name).currentValue
 
         varInvSigma = StS + self.nbVoxels * self.varR / v_resp
         mean_h = np.linalg.solve(varInvSigma, StY)
@@ -500,9 +500,9 @@ class BOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
     def computeYTilde(self):
         """ y - \sum cWXg - Pl - wa """
 
-        sumcXg = self.samplerEngine.getVariable('prl').sumBXResp
-        Pl = self.samplerEngine.getVariable('drift_coeff').Pl
-        wa = self.samplerEngine.getVariable('perf_baseline').wa
+        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
+        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
+        wa = self.samplerEngine.get_variable('perf_baseline').wa
         y = self.dataInput.varMBY
 
         return y - sumcXg - Pl - wa
@@ -542,13 +542,13 @@ class PerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
     def computeYTilde(self):
         """ y - \sum aXh - Pl - wa """
 
-        brf_sampler = self.getVariable('brf')
-        brl_sampler = self.getVariable('brl')
+        brf_sampler = self.get_variable('brf')
+        brl_sampler = self.get_variable('brl')
         sumaXh = brl_sampler.sumBXResp
 
-        drift_sampler = self.samplerEngine.getVariable('drift_coeff')
+        drift_sampler = self.samplerEngine.get_variable('drift_coeff')
         Pl = drift_sampler.Pl
-        perf_baseline_sampler = self.samplerEngine.getVariable('perf_baseline')
+        perf_baseline_sampler = self.samplerEngine.get_variable('perf_baseline')
         wa = perf_baseline_sampler.wa
         y = self.dataInput.varMBY
 
@@ -641,8 +641,8 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         """
         """
 
-        self.response_sampler = self.samplerEngine.getVariable(self.response_name)
-        self.mixture_sampler = self.samplerEngine.getVariable(self.mixture_name)
+        self.response_sampler = self.samplerEngine.get_variable(self.response_name)
+        self.mixture_sampler = self.samplerEngine.get_variable(self.mixture_name)
 
 
         self.meanApost = np.zeros((self.nbConditions, self.nbVoxels), dtype=float)
@@ -659,8 +659,8 @@ class ResponseLevelSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        labels = self.samplerEngine.getVariable('label').currentValue
-        v_b = self.samplerEngine.getVariable('noise_var').currentValue
+        labels = self.samplerEngine.get_variable('label').currentValue
+        v_b = self.samplerEngine.get_variable('noise_var').currentValue
 
         Xresp = self.response_sampler.varXResp
 
@@ -734,14 +734,14 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         pyhrf.verbose(4, ' BOLDResp.computeVarYTildeOpt(update_perf=%s) ...' \
                       %str(update_perf))
 
-        brf_sampler = self.getVariable('brf')
+        brf_sampler = self.get_variable('brf')
         Xh = brf_sampler.varXResp
         sumaXh = self.sumBXResp
 
-        prl_sampler = self.samplerEngine.getVariable('prl')
+        prl_sampler = self.samplerEngine.get_variable('prl')
         prls = prl_sampler.currentValue
         sumcXg = prl_sampler.sumBXResp
-        prf_sampler = self.samplerEngine.getVariable('prf')
+        prf_sampler = self.samplerEngine.get_variable('prf')
         WXg = prf_sampler.varXResp
 
 
@@ -781,8 +781,8 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde.shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde)
 
-        Pl = self.samplerEngine.getVariable('drift_coeff').Pl
-        wa = self.samplerEngine.getVariable('perf_baseline').wa
+        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
+        wa = self.samplerEngine.get_variable('perf_baseline').wa
 
         return self.varYtilde - Pl - wa
 
@@ -838,13 +838,13 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
         pyhrf.verbose(4, ' PerfRespLevel.computeVarYTildeOpt() ...')
 
-        brf_sampler = self.samplerEngine.getVariable('brf')
+        brf_sampler = self.samplerEngine.get_variable('brf')
         Xh = brf_sampler.varXResp
-        brl_sampler = self.samplerEngine.getVariable('brl')
+        brl_sampler = self.samplerEngine.get_variable('brl')
         sumaXh = brl_sampler.sumBXResp
         brls = brl_sampler.currentValue
 
-        prf_sampler = self.samplerEngine.getVariable('prf')
+        prf_sampler = self.samplerEngine.get_variable('prf')
         WXg = prf_sampler.varXResp
         sumcXg = self.sumBXResp
 
@@ -874,8 +874,8 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde.shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde)
 
-        Pl = self.samplerEngine.getVariable('drift_coeff').Pl
-        wa = self.samplerEngine.getVariable('perf_baseline').wa
+        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
+        wa = self.samplerEngine.get_variable('perf_baseline').wa
 
         return self.varYtilde - Pl - wa
 
@@ -912,7 +912,7 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
 
 
     def sampleNextInternal(self, v):
-        resp_sampler = self.samplerEngine.getVariable(self.response_name)
+        resp_sampler = self.samplerEngine.get_variable(self.response_name)
         R = resp_sampler.varR
         resp = resp_sampler.currentValue
 
@@ -1020,8 +1020,8 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
                                            self.nbVoxels), dtype=np.float64)
 
     def compute_ext_field(self):
-        bold_mixtp_sampler = self.samplerEngine.getVariable('bold_mixt_params')
-        asl_mixtp_sampler = self.samplerEngine.getVariable('perf_mixt_params')
+        bold_mixtp_sampler = self.samplerEngine.get_variable('bold_mixt_params')
+        asl_mixtp_sampler = self.samplerEngine.get_variable('perf_mixt_params')
 
         v = bold_mixtp_sampler.get_current_vars()
         rho = asl_mixtp_sampler.get_current_vars()
@@ -1029,8 +1029,8 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         mu = bold_mixtp_sampler.get_current_means()
         eta = asl_mixtp_sampler.get_current_means()
 
-        a = self.samplerEngine.getVariable('brl').currentValue
-        c = self.samplerEngine.getVariable('prl').currentValue
+        a = self.samplerEngine.get_variable('brl').currentValue
+        c = self.samplerEngine.get_variable('prl').currentValue
 
         for k in xrange(self.nbClasses):
             for j in xrange(self.nbConditions):
@@ -1215,8 +1215,8 @@ class MixtureParamsSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        rl_sampler = self.samplerEngine.getVariable(self.response_level_name)
-        label_sampler = self.samplerEngine.getVariable('label')
+        rl_sampler = self.samplerEngine.get_variable(self.response_level_name)
+        label_sampler = self.samplerEngine.get_variable('label')
 
         cardCA = label_sampler.cardClass[self.L_CA,:]
         cardCI = label_sampler.cardClass[self.L_CI,:]
@@ -1350,13 +1350,13 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def compute_residuals(self):
 
-        brf_sampler = self.samplerEngine.getVariable('brf')
-        prf_sampler = self.samplerEngine.getVariable('prf')
+        brf_sampler = self.samplerEngine.get_variable('brf')
+        prf_sampler = self.samplerEngine.get_variable('prf')
 
-        prl_sampler = self.samplerEngine.getVariable('prl')
-        brl_sampler = self.samplerEngine.getVariable('brl')
+        prl_sampler = self.samplerEngine.get_variable('prl')
+        brl_sampler = self.samplerEngine.get_variable('brl')
 
-        drift_sampler = self.samplerEngine.getVariable('drift_coeff')
+        drift_sampler = self.samplerEngine.get_variable('drift_coeff')
 
         sumcXg = prl_sampler.sumBXResp
         sumaXh = brl_sampler.sumBXResp
@@ -1386,11 +1386,11 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, v):
 
-        v_alpha = self.getVariable('perf_baseline_var').currentValue
+        v_alpha = self.get_variable('perf_baseline_var').currentValue
         w = np.diag(self.dataInput.W)
 
         residuals = self.compute_residuals()
-        v_b = self.samplerEngine.getVariable('noise_var').currentValue
+        v_b = self.samplerEngine.get_variable('noise_var').currentValue
 
         for i in xrange(self.nbVoxels):
             m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
@@ -1437,7 +1437,7 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, v):
 
-        alpha = self.samplerEngine.getVariable('perf_baseline').currentValue
+        alpha = self.samplerEngine.get_variable('perf_baseline').currentValue
 
         a = (self.nbVoxels - 1) / 2.
         b = (alpha**2).sum() / 2
@@ -1595,14 +1595,14 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
                     print "\n".join(msg)
 
     def computeFit(self):
-        brf_sampler = self.getVariable('brf')
-        prf_sampler = self.getVariable('prf')
+        brf_sampler = self.get_variable('brf')
+        prf_sampler = self.get_variable('prf')
 
-        brl_sampler = self.getVariable('brl')
-        prl_sampler = self.getVariable('prl')
+        brl_sampler = self.get_variable('brl')
+        prl_sampler = self.get_variable('prl')
 
-        drift_sampler = self.getVariable('drift_coeff')
-        perf_baseline_sampler = self.getVariable('perf_baseline')
+        drift_sampler = self.get_variable('drift_coeff')
+        perf_baseline_sampler = self.get_variable('perf_baseline')
 
 
         brf = brf_sampler.finalValue
@@ -1653,14 +1653,14 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
             fit = cdict['fit']
 
             # Grab fitted components
-            brf_sampler = self.getVariable('brf')
-            prf_sampler = self.getVariable('prf')
+            brf_sampler = self.get_variable('brf')
+            prf_sampler = self.get_variable('prf')
 
-            brl_sampler = self.getVariable('brl')
-            prl_sampler = self.getVariable('prl')
+            brl_sampler = self.get_variable('brl')
+            prl_sampler = self.get_variable('prl')
 
-            drift_sampler = self.getVariable('drift_coeff')
-            perf_baseline_sampler = self.getVariable('perf_baseline')
+            drift_sampler = self.get_variable('drift_coeff')
+            perf_baseline_sampler = self.get_variable('perf_baseline')
 
 
             brf = brf_sampler.finalValue

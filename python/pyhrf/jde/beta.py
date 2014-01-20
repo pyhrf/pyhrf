@@ -3692,14 +3692,14 @@ class BetaSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         xmlio.XmlInitable.__init__(self)
         sampleFlag = do_sampling
-        valIni = val_ini
         useTrueValue = use_true_value
         an = ['condition']
-        GibbsSamplerVariable.__init__(self,'beta', valIni=valIni,
+        GibbsSamplerVariable.__init__(self,'beta', valIni=val_ini,
                                       sampleFlag=sampleFlag,
                                       useTrueValue=useTrueValue,
                                       axes_names=an,
                                       value_label='PM Beta')
+        self.sigma = sigma
         self.priorBetaCut = pr_beta_cut
         self.gridLnZ = pf
         self.pfMethod = pf_method
@@ -3711,24 +3711,21 @@ class BetaSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     def linkToData(self, dataInput):
         self.dataInput = dataInput
         nbc = self.nbConditions = self.dataInput.nbConditions
-        self.sigma = np.zeros(nbc, dtype=float) + self.parameters[self.P_SIGMA]
-        self.nbClasses = self.samplerEngine.getVariable('nrl').nbClasses
+        self.sigma = np.zeros(nbc, dtype=float) + self.sigma
+        self.nbClasses = self.samplerEngine.get_variable('nrl').nbClasses
         self.nbVox = dataInput.nbVoxels
 
         self.pBeta = [ [] for c in xrange(self.nbConditions) ]
         self.betaWalk = [ [] for c in xrange(self.nbConditions) ]
         self.acceptBeta = [ [] for c in xrange(self.nbConditions) ]
-        self.valIni = self.parameters[self.P_VAL_INI]
 
     def checkAndSetInitValue(self, variables):
 
         if self.useTrueValue :
             if self.trueValue is not None:
                 self.currentValue = self.trueValue
-            elif self.valIni is not None:
-                self.currentValue = self.valIni
             else:
-                raise Exception('Needed a true value for drift init but '\
+                raise Exception('Needed a true value for beta init but '\
                                     'None defined')
         if self.currentValue is not None:
             self.currentValue = np.zeros(self.nbConditions, dtype=float) \
@@ -3767,12 +3764,12 @@ class BetaSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
 
     def sampleNextInternal(self, variables):
-        snrls = self.samplerEngine.getVariable('nrl')
+        snrls = self.samplerEngine.get_variable('nrl')
 
         for cond in xrange(self.nbConditions):
             vlnz, vb = self.gridLnZ
             g = self.dataInput.neighboursIndexes
-            labs = self.samplerEngine.getVariable('nrl').labels[cond,:]
+            labs = self.samplerEngine.get_variable('nrl').labels[cond,:]
             t = self.priorBetaCut
             b, db, a = Cpt_AcceptNewBeta_Graph(g, labs, vlnz, vb,
                                                self.currentValue[cond],
@@ -3793,7 +3790,7 @@ class BetaSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             for cond in xrange(self.nbConditions):
                 vlnz, vb = self.gridLnZ
                 g = self.dataInput.neighboursIndexes
-                labs = self.samplerEngine.getVariable('nrl').labels[cond,:]
+                labs = self.samplerEngine.get_variable('nrl').labels[cond,:]
                 t = self.priorBetaCut
 
                 self.betaWalk[cond].append(self.currentDB)

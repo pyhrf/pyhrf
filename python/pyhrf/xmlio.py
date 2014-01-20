@@ -74,14 +74,19 @@ class Initable(object):
             pyhrf.verbose(6, 'self._init_parameters:\n%s' \
                           %str(self._init_parameters))
 
+            #
             if hasattr(self, 'parametersComments'):
-                for pname in self.parametersComments.keys():
-                    ip = self._init_parameters.keys()
-                    if pname not in ip:
-                        raise Exception('Entry "%s" in parametersComments is '\
-                                        'not in init parameters (%s) of %s' \
-                                        %(pname,','.join(ip),
-                                          self.get_init_func()))
+                ip = self._init_parameters.keys()
+                pc = self.parametersComments
+                pc = dict( (k,v) for k,v in pc.items() if k in ip)
+                self.parametersComments = pc
+            #     for pname in self.parametersComments.keys():
+            #         ip = self._init_parameters.keys()
+            #         if pname not in ip:
+            #             raise Exception('Entry "%s" in parametersComments is '\
+            #                             'not in init parameters (%s) of %s' \
+            #                             %(pname,','.join(ip),
+            #                               self.get_init_func()))
 
             if hasattr(self, 'parametersToShow'):
                 ip = self._init_parameters.keys()
@@ -241,9 +246,16 @@ class Initable(object):
                     dclass = [OrderedDict, dict][node_type == 'dict']
                     return dclass((c.label(),self.from_ui_node(c)) \
                                   for c in node.get_children())
+            elif node_type == bool:
+                return node.child(0)._label == 'True'
+            elif node_type == str and node.childCount() == 0: #emtpy string
+                return ''
             else:
-                pyhrf.verbose(6, 'casting to node_type ...')
-                return node_type(node.child(0)._label)
+                pyhrf.verbose(6, 'casting "%s" to node_type %s ...' \
+                              %(node.child(0)._label, str(node_type)))
+                r = node_type(node.child(0)._label)
+                pyhrf.verbose(6, '-> %s' %str(r))
+                return r
         else:
             l = node.label()
             pyhrf.verbose(6, '-> direct value: %s' %str(l))
@@ -423,9 +435,9 @@ class UiNode(object):
         if it can be serialized in a simple human-readable string.
         """
         return isinstance(o, (int, float, str, np.ndarray)) or \
-          ((isinstance(o, list) or isinstance(o, list)) and \
-           all([isinstance(e, (int, float, str)) for e in o])) or \
-            np.isscalar(o) or o is None
+          np.isscalar(o) or o is None
+          # ((isinstance(o, list) or isinstance(o, list)) and \
+          #  all([isinstance(e, (int, float, str)) for e in o])) or \
     # or \
     #        (isinstance(o, (dict, OrderedDict)) and \
     #         all([isinstance(e, (int, float, str)) for e in o.values()]))
@@ -614,15 +626,19 @@ class UiNode(object):
 
 
 def read_xml(fn):
-    return None
+    f = open(fn)
+    xml = f.read()
+    f.close()
+    return from_xml(xml)
 
 def write_xml(obj, fn):
-    return None
+    f = open(fn, 'w')
+    f.write(to_xml(obj))
+    f.close()
 
 def to_xml(obj, label='anonym', pretty=False):
     """
     Return an XML representation of the init state of the given object *obj*.
-
     """
     return UiNode.from_py_object(label, obj).to_xml(pretty)
 

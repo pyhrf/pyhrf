@@ -142,7 +142,7 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         ##print 'NRLs warming up ...'
 
         # Compute precalculations :
-        smplHRF = variables[self.samplerEngine.I_HRF]
+        smplHRF = self.get_variable('hrf')
         smplHRF.checkAndSetInitValue(variables)
         self.normHRF = smplHRF.norm
         self.varYtilde = np.zeros((self.ny, self.nbVox), dtype=float)
@@ -161,7 +161,7 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.varYtilde[:,i] = self.dataInput.varMBY[:,i] - aijXjh.sum(axis=1)
 
     def sampleNextAlt(self, variables):
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        varXh = self.get_variable('hrf').varXh
         self.computeVarYTilde(varXh)
 
     def computeVariablesApost(self, varCI, shapeCA, scaleCA, rb, varXh,
@@ -229,7 +229,7 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         varCA = variables[self.samplerEngine.I_MIXT_PARAM].currentValue[BiGaussMixtureParamsSampler.I_VAR_CA]
         meanCA = variables[self.samplerEngine.I_MIXT_PARAM].currentValue[BiGaussMixtureParamsSampler.I_MEAN_CA]
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        varXh = self.get_variable('hrf').varXh
         varLambda = variables[self.samplerEngine.I_WEIGHTING_PROBA].currentValue
 
         self.computeVarYTilde(varXh)
@@ -287,7 +287,7 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.computeVarYTilde(varXh)
 
         self.countLabels()
-        self.normHRF = variables[self.samplerEngine.I_HRF].norm
+        self.normHRF = self.get_variable('hrf').norm
 
 
     def sampleLabels(self, cond, varCI, varCA, meanCA):
@@ -331,7 +331,7 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 self.finalLabels[j,where(deltaLab==-1)] = -1 # false negative
                 self.finalLabels[j,where(deltaLab==1)] = 2 # false positive
 
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
 
         # Correct sign ambiguity :
         if smplHRF.detectSignError():

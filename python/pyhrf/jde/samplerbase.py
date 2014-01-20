@@ -140,7 +140,7 @@ class GibbsSampler:
 
         self.sharedData.addDependencies(rules)
 
-    def getVariable(self, label):
+    def get_variable(self, label):
         return self.variablesMapping[label]
 
 
@@ -204,9 +204,9 @@ class GibbsSampler:
         tLoopShown = False
         pyhrf.verbose(1, 'Starting sampling (%d it)...' %self.nbIterations)
         try:
-            lhrf = self.getVariable('hrf').hrfLength
+            lhrf = self.get_variable('hrf').hrfLength
         except KeyError:
-            lhrf = self.getVariable('brf').hrfLength
+            lhrf = self.get_variable('brf').hrfLength
 
         pyhrf.verbose(1, 'Data dims : nbvox=%d, ny=%d, nbCond=%d, nb coeffs hrf=%d'
                       %(self.dataInput.nbVoxels, self.dataInput.ny,
@@ -615,11 +615,11 @@ class GibbsSamplerVariable:
         else:
             return self.sampleNextAlt
 
-    def getVariable(self, label):
+    def get_variable(self, label):
         """
         Return a sibling GibbsSamplerVariable
         """
-        return self.samplerEngine.getVariable(label)
+        return self.samplerEngine.get_variable(label)
 
 
     def __setstate__(self, d):
@@ -1225,9 +1225,9 @@ class GSDefaultCallbackHandler(xmlio.XmlInitable):
         #M = samplerEngine.dataInput.nbConditions
         #Q = samplerEngine.dataInput.colP       # Q is the number of columns of P
         #delta = samplerEngine.dataInput.delta
-        #shrf = samplerEngine.getVariable('hrf')
-        #snrl = samplerEngine.getVariable('nrl')
-        #snoise = samplerEngine.getVariable('noise')
+        #shrf = samplerEngine.get_variable('hrf')
+        #snrl = samplerEngine.get_variable('nrl')
+        #snoise = samplerEngine.get_variable('noise')
         #h = shrf.currentValue # shape = (nbCoeffHrf)
         #a = snrl.currentValue # shape = (nbConditions, nbVoxels)
         #y = samplerEngine.dataInput.varMBY # shape = (nbScans, nbVoxels)
@@ -1237,7 +1237,7 @@ class GSDefaultCallbackHandler(xmlio.XmlInitable):
 
         #print 'Iteration :', it
         #if  it >= samplerEngine.nbSweeps:
-          #shrf = samplerEngine.getVariable('hrf')
+          #shrf = samplerEngine.get_variable('hrf')
 
           #LVcurrent_value = LVformer*(0.5*(N-Q-M)-2)!*(0.5
           #samplerEngine.invLike = samplerEngine.invLike*(it-1)/it + LVcurrent_value/it

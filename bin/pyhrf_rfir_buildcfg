@@ -14,7 +14,6 @@ from pyhrf.paradigm import *
 from pyhrf.tools.io.spmio import load_paradigm_from_mat
 
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
 from pyhrf.core import FmriData
 
@@ -47,7 +46,7 @@ pyhrf.verbose.set_verbosity(options.verbose)
 analyser = RFIRAnalyser()
 if options.nbIterations is not None:
     from pyhrf.ui.rfir_ui import RFIREstim
-    he = RFIREstim({'nbIterations':options.nbIterations})
+    he = RFIREstim(nb_iterations=options.nbIterations)
     analyser = RFIRAnalyser(HrfEstimator=he)
 
 fdata = parse_data_options(options)
@@ -60,7 +59,7 @@ else:
 #print ''
 #print 'treatment created !'
 
-sXml = xmlio.toXML(treatment, handler=NumpyXMLHandler())
+sXml = xmlio.to_xml(treatment, label='rfir_treatment')
 fOut = open(options.cfgFile,'w')
 fOut.write(sXml)
 fOut.close()

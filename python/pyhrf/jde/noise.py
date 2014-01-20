@@ -44,10 +44,10 @@ class NoiseVariance_Drift_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
     def sampleNextInternal(self, variables):
 
         #print 'Step 3 : Noise variance Sampling *****RelVar*****'
-        #print '         varYbar begin =',variables[self.samplerEngine.I_NRLS].varYbar.sum()
-        #print '         varYtilde begin =',variables[self.samplerEngine.I_NRLS].varYtilde.sum()
+        #print '         varYbar begin =',self.get_variable('nrl').varYbar.sum()
+        #print '         varYtilde begin =',self.get_variable('nrl').varYtilde.sum()
 
-        var_y_bar = variables[self.samplerEngine.I_NRLS].varYbar
+        var_y_bar = self.get_variable('nrl').varYbar
 
         beta = (var_y_bar * var_y_bar).sum(0)/2.
 
@@ -145,7 +145,7 @@ class NoiseVarianceSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     def sampleNextInternal_bak(self, variables):
 
-        y_tilde = self.samplerEngine.getVariable('nrl').varYtilde
+        y_tilde = self.samplerEngine.get_variable('nrl').varYtilde
         beta = (y_tilde * y_tilde).sum(0)/2
         gammaSamples = np.random.gamma((self.ny - 1.)/2, 1, self.nbVox)
 
@@ -156,9 +156,9 @@ class NoiseVarianceSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        h = variables[self.samplerEngine.I_HRF].currentValue
+        h = self.get_variable('hrf').currentValue
         varXQX = self.dataInput.matXQX
-        snrl = variables[self.samplerEngine.I_NRLS]
+        snrl = self.get_variable('nrl')
 
         saXh = snrl.sumaXh
         ## Example to retrieve variable from sharedData :
@@ -204,7 +204,7 @@ class NoiseVarianceSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     ##        pyhrf.verbose(6,np.array2string(betaOpt,precision=3))
 
         else:
-            y_tilde = self.samplerEngine.getVariable('nrl').varYtilde
+            y_tilde = self.samplerEngine.get_variable('nrl').varYtilde
             for i in xrange(self.nbVox):
                 varYtildeTdelta = np.dot(y_tilde[:,i],self.dataInput.delta)
                 self.beta[i] = 0.5*np.dot(varYtildeTdelta,y_tilde[:,i])
@@ -276,10 +276,10 @@ class NoiseVarianceSamplerWithRelVar(NoiseVarianceSampler):
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        h = variables[self.samplerEngine.I_HRF].currentValue
+        h = self.get_variable('hrf').currentValue
         varXQX = self.dataInput.matXQX
-        snrl = variables[self.samplerEngine.I_NRLS]
-        w = variables[self.samplerEngine.I_W].currentValue
+        snrl = self.get_variable('nrl')
+        w = self.get_variable('W').currentValue
 
         swaXh = snrl.sumWaXh
 
@@ -360,8 +360,8 @@ class NoiseVariancewithHabSampler(NoiseVarianceSampler):
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        h = variables[self.samplerEngine.I_HRF].currentValue
-        smplNRL = variables[self.samplerEngine.I_NRLS]
+        h = self.get_variable('hrf').currentValue
+        smplNRL = self.get_variable('nrl')
         aXh = smplNRL.aXh
         saXh = smplNRL.sumaXh
         #aaXhtQXh = smplNRL.sumaXhtQaXh
@@ -428,14 +428,14 @@ class NoiseVarianceARSampler(NoiseVarianceSampler):
 
         smplARp = variables[self.samplerEngine.I_NOISE_ARP]
         InvAutoCorrNoise = smplARp.InvAutoCorrNoise
-        smplHRF = variables[self.samplerEngine.I_HRF]
+        smplHRF = self.get_variable('hrf')
         varXh = smplHRF.varXh
-        smplDrift =  variables[self.samplerEngine.I_DRIFT]
+        smplDrift =  self.get_variable('drift')
         varMBYPl = smplDrift.varMBYPl
-        smplNRL = variables[self.samplerEngine.I_NRLS]
+        smplNRL = self.get_variable('nrl')
         varNRLs = smplNRL.currentValue
         self.computeVarYTilde(varNRLs, varXh, varMBYPl)
-#        self.varYtilde = variables[self.samplerEngine.I_NRLS].varYtilde
+#        self.varYtilde = self.get_variable('nrl').varYtilde
 
         for i in xrange(self.nbVox):
             varYtildeTdelta = np.dot(self.varYTilde[:,i],InvAutoCorrNoise[:,:,i])
@@ -522,10 +522,10 @@ class NoiseARParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
 
     def sampleNextInternal(self, variables):
-        reps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
+        reps = self.get_variable('noise_var').currentValue
 
         #TODO : precomputations for parallel AR sampling
-        self.varYtilde = variables[self.samplerEngine.I_NRLS].varYtilde
+        self.varYtilde = self.get_variable('nrl').varYtilde
         Ytilde_truncated = self.varYtilde[1:self.ny-1,:]    #
         # compute the sequence of A_i = sum_{n=2}^{nscans -1} y_{n,i}^2, i is indexing voxels
         A = np.diag(np.dot( Ytilde_truncated.transpose(), Ytilde_truncated ) )

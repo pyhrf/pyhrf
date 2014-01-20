@@ -345,9 +345,9 @@ class FMRITreatment(xmlio.XmlInitable):
                 shutil.rmtree(tmpDir)
                 pyhrf.verbose(1, 'Cleaning up remote dir (%s) through ssh ...' \
                                 %remoteDir)
-                cmd = 'ssh %s@%s rm -f "%s" "%s" "%s"' \
+                cmd = 'ssh %s@%s rm -f "%s" "%s" ' \
                     %(remoteUser, host, ' '.join(remote_result_files),
-                      ' '.join(remote_input_files), remote_fcfg)
+                      ' '.join(remote_input_files))
                 pyhrf.verbose(2, cmd)
                 os.system(cmd)
             else:
@@ -746,8 +746,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
             f.close()
             treatment = xmlio.from_xml(sXml)
             if 0:
-                sXml = xmlio.to_xml(treatment,
-                                   handler=xmlio.xmlnumpy.NumpyXMLHandler())
+                sXml = xmlio.to_xml(treatment)
                 f = './treatment_cmd.xml'
                 fOut = open(f,'w')
                 fOut.write(sXml)
@@ -808,7 +807,6 @@ from pyhrf.ui.jde import JDEAnalyser as JDE
 from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser as VBJDE
 
 from pyhrf.ui.jde import DEFAULT_CFG_FILE as DEFAULT_CFG_FILE_JDE
-from pyhrf.ui.jde import DEFAULT_OUTPUT_FILE as DEFAULT_OUTPUT_FILE_JDE
 
 from pyhrf.jde.models import BOLDGibbsSampler as BG
 
@@ -843,17 +841,6 @@ def create_treatment(boldFiles, parcelFile, dt, tr, paradigmFile,
     if roiIds is None:
         roiIds = np.array([],dtype=int)
 
-
-    if make_outputs:
-        outFile = make_outfile(DEFAULT_OUTPUT_FILE_JDE, outputDir,
-                               outputPrefix,
-                               outputSuffix)
-    else:
-        outFile = None
-
-    outMask = make_outfile(DEFAULT_JDE_OUT_MASK_VOL, outputDir, outputPrefix,
-                           outputSuffix)
-
     outDump = make_outfile(DEFAULT_DUMP_FILE, outputDir, outputPrefix,
                            outputSuffix)
     if gzip_rdump:
@@ -874,44 +861,32 @@ def create_treatment(boldFiles, parcelFile, dt, tr, paradigmFile,
         cons = {}
 
     if(vbjde):
-        analyser = JDEVEMAnalyser(dt=dt)
+        analyser = VBJDE(dt=dt)
     else:
         if nbClasses == 2:
-            sampler = BG({
-                            BG.P_NB_ITERATIONS : nbIterations,
-                            # level of spatial correlation = beta
-                            BG.P_BETA : BS({
-                                    BS.P_VAL_INI : np.array([beta]),
-                                    BS.P_SAMPLE_FLAG : estimBeta,
-                                    BS.P_PARTITION_FUNCTION_METH : pfMethod,
-                                    }),
-                            # HRF
-                            BG.P_HRF : HS({
-                                    HS.P_SAMPLE_FLAG : estimHrf,
-                                    }),
-                            # HRF variance
-                            BG.P_RH : HVS({
-                                    HVS.P_SAMPLE_FLAG : False,
-                                    HVS.P_VAL_INI : np.array([hrfVar]),
-                                    }),
-                            # neural response levels (stimulus-induced effects)
-                            BG.P_NRLS : NS({
-                                    NS.P_CONTRASTS : cons,
-                                    }),
-                            })
-
-            # paramt = {
-            #     VT.P_SESSIONS : psess,
-            #     VT.P_TR : tr,
-            #     VT.P_ROI_MASK : parcelFile,
-            #     VT.P_ROI_OUT_MASK : outMask,
-            #     VT.P_ROI_IDS : roiIds,
-            #     VT.P_RESULT_DUMP_FILE : outDump,
-            #     VT.P_ANALYSER : JDE(sampler=sampler, outputFile=outFile, dt=dt),
-            #     }
-
+            sampler = BG(**{
+                'nb_iterations' : nbIterations,
+                # level of spatial correlation = beta
+                'beta' : BS(**{
+                        'val_ini' : np.array([beta]),
+                        'do_sampling' : estimBeta,
+                        'pf_method' : pfMethod,
+                        }),
+                # HRF
+                'hrf' : HS(**{
+                        'do_sampling' : estimHrf,
+                        }),
+                # HRF variance
+                'hrf_var' : HVS(**{
+                        'do_sampling' : False,
+                        'val_ini' : np.array([hrfVar]),
+                        }),
+                # neural response levels (stimulus-induced effects)
+                'response_levels' : NS(**{
+                        'contrasts' : cons,
+                        }),
+                })
         elif nbClasses == 3:
-
             raise NotImplementedError('Model with 3 classes not maintained')
             # from pyhrf.jde.models import GGG_BOLDGibbsSampler as BG3
             # sampler = BG3({
@@ -937,20 +912,11 @@ def create_treatment(boldFiles, parcelFile, dt, tr, paradigmFile,
             #                         }),
             #                 })
 
-            # paramt = {
-            #     VT.P_SESSIONS : psess,
-            #     VT.P_TR : tr,
-            #     VT.P_ROI_MASK : parcelFile,
-            #     VT.P_ROI_OUT_MASK : outMask,
-            #     VT.P_ROI_IDS : roiIds,
-            #     VT.P_RESULT_DUMP_FILE : outDump,
-            #     VT.P_ANALYSER : JDE(sampler=sampler, outputFile=outFile, dt=dt),
-            #     }
         analyser = JDEMCMCAnalyser(sampler, dt=dt)
 
     tjde = FMRITreatment(fmri_data, analyser, outputDir)
 
-    sxml = xmlio.to_xml(tjde, handler=NumpyXMLHandler())
+    sxml = xmlio.to_xml(tjde)
     if writeXmlSetup and outputDir is not None:
         outSetupXml = make_outfile(DEFAULT_CFG_FILE_JDE, outputDir,
                                    outputPrefix, outputSuffix)
@@ -978,69 +944,44 @@ def create_treatment_surf(boldFiles, parcelFile, meshFile, dt, tr, paradigmFile,
     if roiIds is None:
         roiIds = np.array([],dtype=int)
 
-    outFile = make_outfile(DEFAULT_OUTPUT_FILE_JDE, outputDir, outputPrefix,
-                           outputSuffix)
-
     outDump = make_outfile(DEFAULT_DUMP_FILE, outputDir, outputPrefix,
                            outputSuffix)
     if gzip_rdump:
         outDump += '.gz'
 
-
     if contrasts is not None:
             cons = dict( ("con_%d"%i, ce) \
-                             for i,ce in enumerate(";".split(contrasts)) )
+                         for i,ce in enumerate(";".split(contrasts)) )
     else:
         cons = {}
 
     if nbClasses == 2:
-        sampler = BG({
-                        BG.P_NB_ITERATIONS : nbIterations,
-                        # level of spatial correlation = beta
-                        BG.P_BETA : BS({
-                                BS.P_VAL_INI : np.array([beta]),
-                                BS.P_SAMPLE_FLAG : estimBeta,
-                                BS.P_PARTITION_FUNCTION_METH : pfMethod,
-                                }),
-                        # HRF
-                        BG.P_HRF : HS({
-                                HS.P_SAMPLE_FLAG : estimHrf,
-                                }),
-                        # HRF variance
-                        BG.P_RH : HVS({
-                                HVS.P_SAMPLE_FLAG : False,
-                                HVS.P_VAL_INI : np.array([hrfVar]),
-                                }),
-                        # neural response levels (stimulus-induced effects)
-                        BG.P_NRLS : NS({
-                                NS.P_CONTRASTS : cons,
-                                }),
-                        })
+        sampler = BG(**{
+            'nb_iterations' : nbIterations,
+            # level of spatial correlation = beta
+            'beta' : BS(**{
+                'val_ini' : np.array([beta]),
+                'do_sampling' : estimBeta,
+                'pf_method' : pfMethod,
+                }),
+            # HRF
+            'hrf' : HS(**{
+                'do_sampling' : estimHrf,
+                }),
+            # HRF variance
+            'hrf_var' : HVS(**{
+                'do_sampling' : False,
+                'val_ini' : np.array([hrfVar]),
+                }),
+            # neural response levels (stimulus-induced effects)
+            'response_levels' : NS(**{
+                'contrasts' : cons,
+                }),
+            })
 
     elif nbClasses == 3:
-        sampler = BG3({
-                        BG.P_NB_ITERATIONS : nbIterations,
-                        # level of spatial correlation = beta
-                        BG.P_BETA : BS({
-                                BS.P_VAL_INI : np.array([beta]),
-                                BS.P_SAMPLE_FLAG : estimBeta,
-                                BS.P_PARTITION_FUNCTION_METH : pfMethod,
-                                }),
-                        # HRF
-                        BG.P_HRF : HS({
-                                HS.P_SAMPLE_FLAG : estimHrf,
-                                }),
-                        # HRF variance
-                        BG.P_RH : HVS({
-                                HVS.P_SAMPLE_FLAG : False,
-                                HVS.P_VAL_INI : np.array([hrfVar]),
-                                }),
-                        # neural response levels (stimulus-induced effects)
-                        BG.P_NRLS : NS3({
-                                NS.P_CONTRASTS : cons,
-                                }),
-                        })
-
+        raise NotImplementedError('3 class model not maintained')
+    
     analyser = JDEMCMCAnalyser(sampler, dt=dt)
 
     fmri_data = FmriData.from_surf_files(paradigmFile, boldFiles, tr, meshFile,
@@ -1057,7 +998,7 @@ def create_treatment_surf(boldFiles, parcelFile, meshFile, dt, tr, paradigmFile,
     #print 'make_outputs:', make_outputs
 
 
-    sxml = xmlio.to_xml(tjde, handler=NumpyXMLHandler())
+    sxml = xmlio.to_xml(tjde)
     if writeXmlSetup is not None and outputDir is not None:
         outSetupXml = make_outfile(DEFAULT_CFG_FILE_JDE, outputDir,
                                    outputPrefix,
@@ -1165,12 +1106,3 @@ def jde_surf_from_files(boldFiles=[DEFAULT_BOLD_SURF_FILE],
     else:
         result = None
     return tjde, xml_file, result
-
-
-def jde_vol_is_done(directory, outputPrefix=None, outputSuffix=None):
-    if directory is None:
-        return False
-    outFile = make_outfile(DEFAULT_OUTPUT_FILE_JDE, directory, outputPrefix,
-                           outputSuffix)
-    return op.exists(outFile)
-

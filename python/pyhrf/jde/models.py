@@ -1299,16 +1299,16 @@ class BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         nbVox = self.dataInput.nbVoxels
 
         nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if hrf is None:
             hrf = shrf.currentValue
         elif shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl').finalValue
+        nrl = self.get_variable('nrl').finalValue
         if nrl is None:
-            nrl = self.getVariable('nrl').currentValue
+            nrl = self.get_variable('nrl').currentValue
 
         stimIndSignal = np.zeros((nbVals, nbVox), dtype=np.float32)
 
@@ -1423,12 +1423,12 @@ class BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
         nbVox = self.dataInput.nbVoxels
 
         nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl').finalValue
+        nrl = self.get_variable('nrl').finalValue
 
         self.stimIndSignal = np.zeros((nbVals, nbVox))
         meanBold = self.dataInput.varMBY.mean(axis=0)
@@ -1617,16 +1617,16 @@ class BOLDGibbsSampler_AR(xmlio.XmlInitable, GibbsSampler):
         nbVox = self.dataInput.nbVoxels
 
         nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if hrf is None:
             hrf = shrf.currentValue
         elif shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl').finalValue
+        nrl = self.get_variable('nrl').finalValue
         if nrl is None:
-            nrl = self.getVariable('nrl').currentValue
+            nrl = self.get_variable('nrl').currentValue
 
         stimIndSignal = np.zeros((nbVals, nbVox), dtype=np.float32)
 
@@ -1716,12 +1716,12 @@ class BOLDGibbsSampler_AR(xmlio.XmlInitable, GibbsSampler):
         nbVox = self.dataInput.nbVoxels
 
         nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl').finalValue
+        nrl = self.get_variable('nrl').finalValue
 
         self.stimIndSignal = np.zeros((nbVals, nbVox))
         meanBold = self.dataInput.varMBY.mean(axis=0)
@@ -1888,10 +1888,10 @@ if 0: # not maintained
             nbVox = self.dataInput.nbVoxels
 
             nbVals = self.dataInput.ny
-            shrf = self.getVariable('hrf')
+            shrf = self.get_variable('hrf')
             hrf = shrf.finalValue
             vXh = shrf.varXh # base convolution
-            nrl = self.getVariable('nrl').finalValue
+            nrl = self.get_variable('nrl').finalValue
 
 
             self.stimIndSignal = np.zeros((nbVals, nbVox))
@@ -1980,20 +1980,20 @@ class Drift_BOLDGibbsSampler(xmlio.XmlInitable, GibbsSampler):
 
 
     def computeFit(self):
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if hrf is None:
             hrf = shrf.currentValue
         elif shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl').finalValue
+        nrl = self.get_variable('nrl').finalValue
         if nrl is None:
-            nrl = self.getVariable('nrl').currentValue
+            nrl = self.get_variable('nrl').currentValue
 
         stimIndSignal = np.dot(vXh, nrl)
 
-        sdrift = self.getVariable('drift')
+        sdrift = self.get_variable('drift')
         stimIndSignal += np.dot(sdrift.P, sdrift.finalValue)
 
         return stimIndSignal
@@ -2210,10 +2210,10 @@ if 0: # duplicate of BOLDGibbsSampler_AR ? -> to remove ?
             nbVox = self.dataInput.nbVoxels
     
             nbVals = self.dataInput.ny
-            shrf = self.getVariable('hrf')
+            shrf = self.get_variable('hrf')
             hrf = shrf.finalValue
             vXh = shrf.varXh # base convolution
-            nrl = self.getVariable('nrl').finalValue
+            nrl = self.get_variable('nrl').finalValue
     
             self.stimIndSignal = np.zeros((nbVals, nbVox))
             meanBold = self.dataInput.varMBY.mean(axis=0)
@@ -2229,11 +2229,11 @@ if 0: # duplicate of BOLDGibbsSampler_AR ? -> to remove ?
             nbVox = self.dataInput.nbVoxels
     
             nbVals = self.dataInput.ny
-            shrf = self.getVariable('hrf')
+            shrf = self.get_variable('hrf')
             hrf = shrf.finalValue
             vXh = shrf.varXh # base convolution
-            nrl = self.getVariable('nrl').finalValue
-            sdrift = self.getVariable('drift')
+            nrl = self.get_variable('nrl').finalValue
+            sdrift = self.get_variable('drift')
             vPl = sdrift.Pl
     
             self.fittedSignal = np.zeros((nbVals, nbVox))
@@ -2354,12 +2354,12 @@ if 0: #not maintained
             nbVox = self.dataInput.nbVoxels
     
             nbVals = self.dataInput.ny
-            shrf = self.getVariable('hrf')
+            shrf = self.get_variable('hrf')
             hrf = shrf.finalValue
             vXh = shrf.varXh # base convolution
-            snrl = self.getVariable('nrl')
+            snrl = self.get_variable('nrl')
             nrl = snrl.finalValue
-    #        habit = self.getVariable('habituationSpeed').finalValue
+    #        habit = self.get_variable('habituationSpeed').finalValue
     
     
             self.stimIndSignal = np.zeros((nbVals, nbVox))

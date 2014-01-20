@@ -153,9 +153,9 @@ class JDEMCMCAnalyser(JDEAnalyser):
     def packSamplerInput(self, roiData):
 
         try:
-            shrf = self.sampler.getVariable('hrf')
+            shrf = self.sampler.get_variable('hrf')
         except KeyError:
-            shrf = self.sampler.getVariable('brf')
+            shrf = self.sampler.get_variable('brf')
             
         hrfDuration = shrf.duration
         zc = shrf.zc

@@ -23,7 +23,7 @@ class NRL_Drift_Sampler(NRLSampler):
 
     def computeVarYTildeOpt(self, varXh):
         NRLSampler.computeVarYTildeOpt(self, varXh)
-        matPl = self.samplerEngine.getVariable('drift').matPl
+        matPl = self.samplerEngine.get_variable('drift').matPl
         self.varYbar = self.varYtilde - matPl
 
 
@@ -34,11 +34,10 @@ class NRL_Drift_Sampler(NRLSampler):
         varCA = sIMixtP.currentValue[sIMixtP.I_VAR_CA]
         meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA]
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        sHrf = variables[self.samplerEngine.I_HRF]
+        sHrf = self.get_variable('hrf')
         h = sHrf.currentValue
-        sDrift = variables[self.samplerEngine.I_DRIFT]
         varXh = sHrf.varXh
-        varLambda = variables[self.samplerEngine.I_WEIGHTING_PROBA].currentValue
+
 
         pyhrf.verbose(5,'varXh %s :' %str(varXh.shape))
         pyhrf.verbose.printNdarray(5, varXh)
@@ -51,6 +50,7 @@ class NRL_Drift_Sampler(NRLSampler):
         gTg = np.diag(np.dot(varXh.transpose(),varXh))
 
         if self.imm:
+            # varLambda = self.get_variable('mixt_weights').currentValue
             #self.sampleNrlsParallel(varXh, rb, h, varLambda, varCI,
             #                        varCA, meanCA, gTQg, variables)
             raise NotImplementedError("IMM with drift sampling is not available")
@@ -83,13 +83,13 @@ class NRL_Drift_Sampler(NRLSampler):
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
 
         # Add one dimension to be consistent with habituation model
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        varXh = self.get_variable('hrf').varXh
         varXht = varXh.transpose()
         nrls = self.currentValue
 
         neighbours = self.dataInput.neighboursIndexes
 
-        beta = self.samplerEngine.getVariable('beta').currentValue
+        beta = self.samplerEngine.get_variable('beta').currentValue
         voxOrder = permutation(self.nbVox)
 
         sampleSmmNrl2(voxOrder.astype(np.int32), rb.astype(np.float64),
@@ -116,30 +116,30 @@ class NRL_Drift_SamplerWithRelVar(NRLSamplerWithRelVar):
 
     def computeVarYTildeOptWithRelVar(self, varXh, w):
         NRLSamplerWithRelVar.computeVarYTildeOptWithRelVar(self, varXh, w)
-        matPl = self.samplerEngine.getVariable('drift').matPl
+        matPl = self.samplerEngine.get_variable('drift').matPl
         self.varYbar = self.varYtilde - matPl
 
 
     def sampleNextInternal(self, variables):
-        
+
         #print 'Step 1 : NRLs and Labels Sampling *****RelVar*****'
-        
+
         #TODO : comment
         sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
         varCI = sIMixtP.currentValue[sIMixtP.I_VAR_CI]
         varCA = sIMixtP.currentValue[sIMixtP.I_VAR_CA]
         meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA]
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        sHrf = variables[self.samplerEngine.I_HRF]
+        sHrf = self.get_variable('hrf')
         h = sHrf.currentValue
-        sDrift = variables[self.samplerEngine.I_DRIFT]
+        sDrift = self.get_variable('drift')
         varXh = sHrf.varXh
         varLambda = variables[self.samplerEngine.I_WEIGHTING_PROBA].currentValue
-        w = variables[self.samplerEngine.I_W].currentValue
+        w = self.get_variable('W').currentValue
 
-        t1 = variables[self.samplerEngine.I_W].t1
-        t2 = variables[self.samplerEngine.I_W].t2
-        
+        t1 = self.get_variable('W').t1
+        t2 = self.get_variable('W').t2
+
         pyhrf.verbose(5,'varXh %s :' %str(varXh.shape))
         pyhrf.verbose.printNdarray(5, varXh)
 
@@ -149,7 +149,7 @@ class NRL_Drift_SamplerWithRelVar(NRLSamplerWithRelVar):
         self.nrlsSamples   = randn(self.nbConditions, self.nbVox)
 
         gTg = np.diag(np.dot(varXh.transpose(),varXh))
-        
+
         if self.imm:
             #self.sampleNrlsParallel(varXh, rb, h, varLambda, varCI,
             #                        varCA, meanCA, gTQg, variables)
@@ -185,24 +185,24 @@ class NRL_Drift_SamplerWithRelVar(NRLSamplerWithRelVar):
         mean = sIMixtP.getCurrentMeans()
         rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
         y = self.dataInput.varMBY
-        matPl = self.samplerEngine.getVariable('drift').matPl
-        sampleWFlag = variables[self.samplerEngine.I_W].sampleFlag
+        matPl = self.samplerEngine.get_variable('drift').matPl
+        sampleWFlag = self.get_variable('W').sampleFlag
 
         # Add one dimension to be consistent with habituation model
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        varXh = self.get_variable('hrf').varXh
         varXht = varXh.transpose()
         nrls = self.currentValue
 
         neighbours = self.dataInput.neighboursIndexes
 
-        beta = self.samplerEngine.getVariable('beta').currentValue
+        beta = self.samplerEngine.get_variable('beta').currentValue
         voxOrder = permutation(self.nbVox)
 
 
         cardClassCA = np.zeros(self.nbConditions, dtype=int)
         for i in range(self.nbConditions):
             cardClassCA[i] = self.cardClass[self.L_CA,i]
-        
+
         #sampleSmmNrl2WithRelVar(voxOrder.astype(np.int32), rb.astype(np.float64),
                       #neighbours.astype(np.int32), self.varYbar,
                       #self.labels, np.array([varXh], dtype=np.float64),
@@ -218,7 +218,7 @@ class NRL_Drift_SamplerWithRelVar(NRLSamplerWithRelVar):
                       #self.nbClasses,
                       #self.sampleLabelsFlag+0, self.iteration,
                       #self.nbConditions)
-        
+
         sampleSmmNrl2WithRelVar_NEW(voxOrder.astype(np.int32), rb.astype(np.float64),
                       neighbours.astype(np.int32), self.varYbar , y.astype(np.float64), matPl.astype(np.float64),
                       self.labels, np.array([varXh], dtype=np.float64),
@@ -279,11 +279,11 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
         else:
             self.trueLabels = None
 
-            
+
     def checkAndSetInitValue(self, variables):
         NRLSampler.checkAndSetInitLabels(self,variables)
         NRLSampler.checkAndSetInitNRL(self,variables)
-        mixt_par = variables[self.samplerEngine.I_MIXT_PARAM_NRLS_BAR]
+        mixt_par = self.get_variable('mixt_params')
         mixt_par.checkAndSetInitValue(variables)
         weights_par = variables[self.samplerEngine.I_WEIGHTING_PROBA_NRLS_BAR]
         weights_par.checkAndSetInitValue(variables)
@@ -299,7 +299,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
         # Precalculations and allocations :
 
 
-        self.imm = self.samplerEngine.getVariable('beta').currentValue[0] < 0
+        self.imm = self.samplerEngine.get_variable('beta').currentValue[0] < 0
 
         self.varClassApost = np.zeros((self.nbClasses,self.nbConditions,self.nbVox),
                                 dtype=np.float64)
@@ -317,7 +317,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM_NRLS_BAR]
+        sIMixtP = self.get_variable('mixt_params')
         varCI = sIMixtP.currentValue[sIMixtP.I_VAR_CI]
         varCA = sIMixtP.currentValue[sIMixtP.I_VAR_CA]
         meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA]
@@ -332,7 +332,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
         else: #smm
             self.sampleNrlsSerial(varCI, varCA, meanCA, variables)
             #self.computeVarYTildeOpt(varXh)
-            #matPl = self.samplerEngine.getVariable('drift').matPl
+            #matPl = self.samplerEngine.get_variable('drift').matPl
             #self.varYbar = self.varYtilde - matPl
 
         if (self.currentValue >= 1000).any() and \
@@ -353,15 +353,15 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
 
         pyhrf.verbose(3, 'Sampling Nrls (serial, spatial prior) ...')
         sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM_NRLS_BAR ]
-        nrl_var_sess = self.samplerEngine.getVariable('variance_nrls_by_session').currentValue
-        sum_nrl_sess = self.samplerEngine.getVariable('nrl_by_session').currentValue.sum(0)
+        nrl_var_sess = self.samplerEngine.get_variable('variance_nrls_by_session').currentValue
+        sum_nrl_sess = self.samplerEngine.get_variable('nrl_by_session').currentValue.sum(0)
 
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
 
         neighbours = self.dataInput.neighboursIndexes
 
-        beta = self.samplerEngine.getVariable('beta').currentValue
+        beta = self.samplerEngine.get_variable('beta').currentValue
         voxOrder = permutation(self.nbVox)
         #print 'voxorder:', voxOrder
         #print 'badam!!'
@@ -836,7 +836,7 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(GibbsSamplerVariable):
 
 ##        print '- Sampling Mixt params ...'
 
-        nrlsSmpl = self.samplerEngine.getVariable('nrl')
+        nrlsSmpl = self.samplerEngine.get_variable('nrl')
 
         cardCA = nrlsSmpl.cardClass[self.L_CA,:]
         cardCI = nrlsSmpl.cardClass[self.L_CI,:]
@@ -872,8 +872,8 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(GibbsSamplerVariable):
 
     def updateObsersables(self):
         GibbsSamplerVariable.updateObsersables(self)
-        sHrf = self.samplerEngine.getVariable('hrf')
-        sScale = self.samplerEngine.getVariable('scale')
+        sHrf = self.samplerEngine.get_variable('hrf')
+        sScale = self.samplerEngine.get_variable('scale')
 
         if sHrf.sampleFlag and np.allclose(sHrf.normalise,0.) and \
                 not sScale.sampleFlag and self.sampleFlag:

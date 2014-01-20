@@ -116,7 +116,7 @@ class W_Drift_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             result1 += (valeur1 - valeur2)
 
         y = self.dataInput.varMBY
-        matPl = self.samplerEngine.getVariable('drift').matPl
+        matPl = self.samplerEngine.get_variable('drift').matPl
         StimIndSign = np.zeros((y.shape),dtype=float)
         for i in xrange(self.nbConditions):
             if i != j:
@@ -146,19 +146,19 @@ class W_Drift_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        snrls = variables[self.samplerEngine.I_NRLS]
+        snrls = self.get_variable('nrl')
         self.cardClass = snrls.cardClass
         #print 'CardClass WSampler =',self.cardClass
         self.voxIdx = snrls.voxIdx
         self.nrls = snrls.currentValue
 
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.get_variable('mixt_params')
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
-        sHrf = variables[self.samplerEngine.I_HRF]
+        sHrf = self.get_variable('hrf')
         self.varXh = sHrf.varXh
         h = sHrf.currentValue
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
+        rb = self.get_variable('noise_var').currentValue
 
         varXh = sHrf.varXh
         ProbW1 = np.zeros(self.nbConditions, dtype=float)
@@ -350,7 +350,7 @@ class WSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        nrl = variables[self.samplerEngine.I_NRLS]
+        nrl = self.get_variable('nrl')
         self.cardClass = nrl.cardClass
         #print 'CardClass WSampler =',self.cardClass
         self.voxIdx = nrl.voxIdx
@@ -358,13 +358,13 @@ class WSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         self.varYtilde = nrl.varYtilde
 
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.get_variable('mixt_params')
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
-        sHrf = variables[self.samplerEngine.I_HRF]
+        sHrf = self.get_variable('hrf')
         self.varXh = sHrf.varXh
         h = sHrf.currentValue
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
+        rb = self.get_variable('noise_var').currentValue
 
         self.varXhtQ = np.zeros((self.nbConditions, self.ny), dtype=float)
         ProbW1 = np.zeros(self.nbConditions, dtype=float)

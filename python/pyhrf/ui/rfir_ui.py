@@ -7,7 +7,6 @@ import traceback
 
 import pyhrf
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
 from pyhrf.rfir import RFIREstim
 from pyhrf.ui.analyser_ui import FMRIAnalyser
@@ -19,8 +18,9 @@ class RFIRAnalyser(FMRIAnalyser):
     parametersToShow = ['HrfEstimator']
 
     def __init__(self, HrfEstimator=RFIREstim(), outputPrefix='hrf_'):
+        xmlio.XmlInitable.__init__(self)
         FMRIAnalyser.__init__(self, outputPrefix='rfir_')
-        xmlio.XMLable2.__init__(self)
+
         self.hEstimator = HrfEstimator
 
 

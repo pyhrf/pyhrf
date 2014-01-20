@@ -216,7 +216,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         pyhrf.verbose(1, 'NRLSampler.checkAndSetInitLabels ...')
         # Generate default labels if necessary :
         #print 'blab', self.useTrueLabels
-        if 0 and self.useTrueLabels:
+        if self.useTrueLabels:
             if self.trueLabels is not None:
                 pyhrf.verbose(3, 'Use true label values ...')
                 #TODO : take only common conditions
@@ -235,23 +235,6 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             else:
                 raise Exception('True labels have to be used but none defined.')
 
-        if 1 and self.useTrueLabels:
-            if self.TrueLabelsFilename is not None:
-                pyhrf.verbose(3, 'Use true labels values ...')
-                self.labels = np.zeros((self.nbConditions, self.nbVox),
-                                    dtype=np.int32)
-                TrueLabels = read_volume(self.TrueLabelsFilename)
-
-                for cond in np.arange(TrueLabels[0].shape[3]):
-                    count=0
-                    for i in np.arange(TrueLabels[0].shape[0]):
-                        for j in np.arange(TrueLabels[0].shape[1]):
-                            for k in np.arange(TrueLabels[0].shape[2]):
-                                self.labels[cond,count] = TrueLabels[0][i,j,k,cond]
-                                count += 1
-                self.trueLabels = self.labels.copy()
-            else:
-                raise Exception('True labels have to be used but none defined.')
 
         if self.labels is None : # if no initial labels specified
             pyhrf.verbose(1, 'Labels are not initialized -> random init')
@@ -341,7 +324,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 #Initialise nrls using initial labels
                 if 1:
                     self.currentValue = np.zeros((self.nbConditions, self.nbVox),dtype=np.float64)
-                    #Mixt_par = self.samplerEngine.getVariable('mixt_params')
+                    #Mixt_par = self.samplerEngine.get_variable('mixt_params')
                     #Mean_CA = Mixt_par.currentValue[Mixt_par.I_MEAN_CA,:]
                     #Var_CA = Mixt_par.currentValue[Mixt_par.I_VAR_CA,:]
                     #Var_CI = Mixt_par.currentValue[Mixt_par.I_VAR_CI,:]
@@ -475,8 +458,8 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     def updateObsersables(self):
         pyhrf.verbose(4, 'NRLSampler.updateObsersables ...')
         GibbsSamplerVariable.updateObsersables(self)
-        sHrf = self.samplerEngine.getVariable('hrf')
-        sScale = self.samplerEngine.getVariable('scale')
+        sHrf = self.samplerEngine.get_variable('hrf')
+        sScale = self.samplerEngine.get_variable('scale')
 
         if sHrf.sampleFlag and np.allclose(sHrf.normalise,0.) and \
                 not sScale.sampleFlag and self.sampleFlag:
@@ -820,8 +803,8 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         """
 
         # Precalculations and allocations :
-        smplHRF = variables[self.samplerEngine.I_HRF]
-        self.imm = self.samplerEngine.getVariable('beta').currentValue[0] < 0
+        smplHRF = self.get_variable('hrf')
+        self.imm = self.get_variable('beta').currentValue[0] < 0
         self.varYtilde = np.zeros((self.ny, self.nbVox), dtype=np.float64)
         self.aXh = np.empty((self.nbVox, self.ny, self.nbConditions), dtype=float)
         self.vycArray = np.zeros((self.nbVox, self.ny, self.nbConditions))
@@ -872,15 +855,15 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         pyhrf.verbose.printNdarray(5, self.varYtilde)
 
     def sampleNextAlt(self, variables):
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        varXh = self.samplerEngine.get_variable('hrf').varXh
         self.computeVarYTildeOpt(varXh)
 
     def computeComponentsApost(self, variables, j, gTQg):
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.samplerEngine.get_variable('mixt_params')
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        rb = self.samplerEngine.get_variable('noise_var').currentValue
+        varXh = self.samplerEngine.get_variable('hrf').varXh
         nrls = self.currentValue
 
         gTQgjrb = gTQg[j]/rb
@@ -963,18 +946,18 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         pyhrf.verbose(3, 'Sampling Nrls (serial, spatial prior) ...')
         pyhrf.verbose(3, 'Label sampling: ' + str(self.sampleLabelsFlag))
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.samplerEngine.get_variable('mixt_params')
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
+        rb = self.samplerEngine.get_variable('noise_var').currentValue
 
         # Add one dimension to be consistent with habituation model
-        varXh = np.array([variables[self.samplerEngine.I_HRF].varXh], dtype=np.float64)
-        nrls = self.currentValue
+        varXh = np.array([self.samplerEngine.get_variable('hrf').varXh],
+                         dtype=np.float64)
 
         neighbours = self.dataInput.neighboursIndexes
 
-        beta = self.samplerEngine.getVariable('beta').currentValue
+        beta = self.samplerEngine.get_variable('beta').currentValue
         voxOrder = np.random.permutation(self.nbVox)
 
         sampleSmmNrl2(voxOrder.astype(np.int32), rb.astype(np.float64),
@@ -1049,16 +1032,16 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.get_variable('mixt_params')
         varCI = sIMixtP.currentValue[sIMixtP.I_VAR_CI]
         varCA = sIMixtP.currentValue[sIMixtP.I_VAR_CA]
         meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA]
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        sHrf = variables[self.samplerEngine.I_HRF]
+        rb = self.get_variable('noise_var').currentValue
+        sHrf = self.get_variable('hrf')
         varXh = sHrf.varXh
         h = sHrf.currentValue
         self.nh = np.size(h)
-        varLambda = variables[self.samplerEngine.I_WEIGHTING_PROBA].currentValue
+        varLambda = self.get_variable('mixt_weights').currentValue
 
         #Ytilde(:,i) = Ytilde(:,i) + ( CptStruct.nrl_old(j,i) - ...
         #                              CptStruct.nrl(j,i)) * Xh(:,j);
@@ -1132,12 +1115,12 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
 
     def calcFracLambdaTilde(self, cond, c1, c2, variables):
-        sMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
-        sWeightP = variables[self.samplerEngine.I_WEIGHTING_PROBA]
+        sMixtP = self.get_variable('mixt_params')
+        sWeightP = self.get_variable('mixt_weights')
         varLambda = sWeightP.currentValue
         var = sMixtP.getCurrentVars()
         means = sMixtP.getCurrentMeans()
-        if self.samplerEngine.getVariable('beta').currentValue[cond] <= 0:
+        if self.samplerEngine.get_variable('beta').currentValue[cond] <= 0:
             ratio = ( varLambda[c1] * var[c2]**0.5 ) \
                 /(varLambda[c2] * var[c1]**0.5 )
         else:
@@ -1573,7 +1556,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         #self.markWrongLabels(self.finalLabels)
         #print 'finalLabels.shape', self.finalLabels.shape
 
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
 
         # Correct sign ambiguity :
         if hasattr(smplHRF, 'detectSignError'):
@@ -1898,7 +1881,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                                         value_label='ROI')
 
         if self.rescale_results:
-            shrf = self.samplerEngine.getVariable('hrf')
+            shrf = self.samplerEngine.get_variable('hrf')
             xh = shrf.calcXh(shrf.finalValue[1:-1])
             nrl_rescaled = np.zeros_like(self.finalValue)
             for c in xrange(xh.shape[1]):
@@ -2404,11 +2387,11 @@ class NRLSamplerWithRelVar(NRLSampler):
 
     def computeComponentsApostWithRelVar(self, variables, j, gTQg, w):
 
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.get_variable('mixt_params')
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        rb = self.get_variable('noise_var')
+        varXh = self.get_variable('hrf').varXh
         nrls = self.currentValue
 
         if(w):
@@ -2519,10 +2502,10 @@ class NRLSamplerWithRelVar(NRLSampler):
 
     def calcFracLambdaTildeWithIRRelCond(self, cond, c1, c2, variables, nbVox, moyqvoxj, t1, t2):
 
-        sWeightP = variables[self.samplerEngine.I_WEIGHTING_PROBA]
+        sWeightP = self.get_variable('mixt_weights')
         varLambda = sWeightP.currentValue
 
-        if self.samplerEngine.getVariable('beta').currentValue[cond] <= 0:
+        if self.samplerEngine.get_variable('beta').currentValue[cond] <= 0:
             ratio = varLambda[c1]/varLambda[c2]
         else:
             ratio = 1
@@ -2555,7 +2538,7 @@ class NRLSamplerWithRelVar(NRLSampler):
         moyqvox =  self.computemoyqvox(CardClass, nbVox)
         moyqvoxj = moyqvox[cond,:] # Vecteur of length nbVox
 
-        w = self.samplerEngine.getVariable('W').currentValue[cond]
+        w = self.samplerEngine.get_variable('W').currentValue[cond]
 
         if w:
             fracLambdaTilde = self.calcFracLambdaTilde(cond, self.L_CI, self.L_CA,
@@ -2567,8 +2550,8 @@ class NRLSamplerWithRelVar(NRLSampler):
             fracLambdaTildeWithRelVar = self.calcFracLambdaTildeWithIRRelCond(cond, self.L_CI, self.L_CA,
                                                    variables, nbVox, moyqvoxj, t1, t2)
 
-        beta = self.samplerEngine.getVariable('beta').currentValue[cond]
-        if self.samplerEngine.getVariable('beta').currentValue[cond] > 0:
+        beta = self.samplerEngine.get_variable('beta').currentValue[cond]
+        if self.samplerEngine.get_variable('beta').currentValue[cond] > 0:
 
             #corrEnergiesC = np.zeros_like(self.corrEnergies)
             if 1:
@@ -2641,13 +2624,12 @@ class NRLSamplerWithRelVar(NRLSampler):
                          gTQg, variables, w, t1, t2):
 
         pyhrf.verbose(3, 'Sampling Nrls (serial, spatial prior) ...')
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.get_variable('mixt_params')
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
-        varXh = np.array([variables[self.samplerEngine.I_HRF].varXh])
-        nrls = self.currentValue
+        varXh = np.array([self.get_variable('hrf').varXh])
         neighbours = self.dataInput.neighboursIndexes
-        beta = self.samplerEngine.getVariable('beta').currentValue
+        beta = self.samplerEngine.get_variable('beta').currentValue
         voxOrder = np.random.permutation(self.nbVox)
 
         if 0:
@@ -2693,20 +2675,21 @@ class NRLSamplerWithRelVar(NRLSampler):
     def sampleNextInternal(self, variables):
         #TODO : comment
         #print 'iteration :', self.iteration
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sIMixtP = self.get_variable('mixt_params')
         varCI = sIMixtP.currentValue[sIMixtP.I_VAR_CI] # Varaince of in-activated class for all conditions
         varCA = sIMixtP.currentValue[sIMixtP.I_VAR_CA] # Varaince of activated class for all conditions
         meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA] # Mean of activated class for all conditions
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        sHrf = variables[self.samplerEngine.I_HRF]
+        rb = self.get_variable('noise_var').currentValue
+        sHrf = self.get_variable('hrf')
         varXh = sHrf.varXh
         h = sHrf.currentValue
-        w = variables[self.samplerEngine.I_W].currentValue
-        t1 = variables[self.samplerEngine.I_W].t1
-        t2 = variables[self.samplerEngine.I_W].t2
+        sw = self.get_variable('w')
+        w = sw.currentValue
+        t1 = sw.t1
+        t2 = sw.t2
 
         self.nh = np.size(h)
-        varLambda = variables[self.samplerEngine.I_WEIGHTING_PROBA].currentValue
+        varLambda = self.get_variable('mixt_weights').currentValue
 
         pyhrf.verbose(5,'varXh %s :' %str(varXh.shape))
         pyhrf.verbose.printNdarray(5, varXh)
@@ -2723,7 +2706,7 @@ class NRLSamplerWithRelVar(NRLSampler):
 
         gTQg = np.diag(np.dot(self.varXhtQ,varXh))
 
-        if self.samplerEngine.getVariable('beta').currentValue[0] < 0:
+        if self.samplerEngine.get_variable('beta').currentValue[0] < 0:
             self.sampleNrlsParallelWithRelVar(varXh, rb, h, varLambda, varCI,
                                     varCA, meanCA, gTQg, variables, w)
         else:
@@ -3073,7 +3056,7 @@ class BiGaussMixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
 ##        print '- Sampling Mixt params ...'
 
-        nrlsSmpl = self.samplerEngine.getVariable('nrl')
+        nrlsSmpl = self.samplerEngine.get_variable('nrl')
 
         cardCA = nrlsSmpl.cardClass[self.L_CA,:]
         cardCI = nrlsSmpl.cardClass[self.L_CI,:]
@@ -3109,8 +3092,8 @@ class BiGaussMixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     def updateObsersables(self):
         GibbsSamplerVariable.updateObsersables(self)
-        sHrf = self.samplerEngine.getVariable('hrf')
-        sScale = self.samplerEngine.getVariable('scale')
+        sHrf = self.samplerEngine.get_variable('hrf')
+        sScale = self.samplerEngine.get_variable('scale')
 
         if sHrf.sampleFlag and np.allclose(sHrf.normalise,0.) and \
                 not sScale.sampleFlag and self.sampleFlag:
@@ -3253,7 +3236,7 @@ class BiGaussMixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         ##var_nrlSess = #TODO
         #mean = sIMixtP.getCurrentMeans()
         #rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        #varXh = variables[self.samplerEngine.I_HRF].varXh
+        #varXh = self.get_variable('hrf').varXh
         #nrls = self.currentValue
 
         #gTQgjrb = gTQg[j]/rb
@@ -3414,10 +3397,10 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
 
     def checkAndSetInitValue(self, variables):
         pyhrf.verbose(3, 'NRL_Multi_Sess_Sampler.checkAndSetInitNRLs ...')
-        smplNrlBar = variables[self.samplerEngine.I_NRLS_BAR]
+        smplNrlBar = self.get_variable('nrl_bar')
         smplNrlBar.checkAndSetInitValue(variables)
 
-        smplDrift = variables[self.samplerEngine.I_DRIFT]
+        smplDrift = self.get_variable('drift')
         smplDrift.checkAndSetInitValue(variables)
 
         self.varYtilde = np.zeros((self.nbSessions, self.ny, self.nbVox), dtype=np.float64)
@@ -3451,9 +3434,9 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
             if 0:
                 self.currentValue = np.zeros((self.nbSessions, self.nbConditions, self.nbVox),
                                             dtype=np.float64)
-                nrl_bar = self.samplerEngine.getVariable('nrl').currentValue
-                var_sess = self.samplerEngine.getVariable('variance_nrls_by_session').currentValue
-                labels = self.samplerEngine.getVariable('nrl').labels
+                nrl_bar = self.samplerEngine.get_variable('nrl').currentValue
+                var_sess = self.samplerEngine.get_variable('variance_nrls_by_session').currentValue
+                labels = self.samplerEngine.get_variable('nrl').labels
                 for m in xrange(self.nbConditions):
                     Ac_pos = np.where(labels[m])
                     for s in xrange(self.nbSessions):
@@ -3474,7 +3457,7 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
         """
 
         # Precalculations and allocations :
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
         imm=[]
         aXh=[]
         sumaXh=[]
@@ -3488,7 +3471,7 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
         self.sigApost = np.zeros((self.nbSessions,self.nbConditions, self.nbVox), dtype=float)
 
         for s in xrange(self.nbSessions):
-            self.imm = self.samplerEngine.getVariable('beta').currentValue[0] < 0
+            self.imm = self.samplerEngine.get_variable('beta').currentValue[0] < 0
             imm.append(self.imm)
 
             self.computeVarYTildeSessionOpt(smplHRF.varXh[s], s)
@@ -3517,22 +3500,22 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
 
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde[s].shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde[s])
-        matPl = self.samplerEngine.getVariable('drift').matPl
+        matPl = self.samplerEngine.get_variable('drift').matPl
         self.varYbar[s] = self.varYtilde[s] - matPl[s]
 
 
     def sampleNextAlt(self, variables):
         #used in case of trueValue choice !
-        varXh = variables[self.samplerEngine.I_HRF].varXh
+        varXh = self.get_variable('hrf').varXh
         for s in xrange(self.nbSessions):
             self.computeVarYTildeSessionOpt(varXh[s], s)
 
 
     def computeComponentsApost(self, variables, m, varXh, s):
-        self.var_a = self.samplerEngine.getVariable('variance_nrls_by_session').currentValue
-        rb    = self.samplerEngine.getVariable('noise_var').currentValue
+        self.var_a = self.samplerEngine.get_variable('variance_nrls_by_session').currentValue
+        rb    = self.samplerEngine.get_variable('noise_var').currentValue
         nrls = self.currentValue
-        nrl_bar = self.samplerEngine.getVariable('nrl').currentValue
+        nrl_bar = self.samplerEngine.get_variable('nrl').currentValue
         pyhrf.verbose(6, 'rb %s :'%str(rb.shape))
         pyhrf.verbose.printNdarray(6, rb)
         pyhrf.verbose(6, 'var_a %f :'%self.var_a[0])
@@ -3586,7 +3569,7 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
         pyhrf.verbose(3, 'NRL_Multi_Sess_Sampler.sampleNextInternal ...')
-        varXh = self.samplerEngine.getVariable('hrf').varXh
+        varXh = self.samplerEngine.get_variable('hrf').varXh
 
         for s in xrange(self.nbSessions):
             self.computeVarYTildeSessionOpt(varXh[s], s)
@@ -3636,7 +3619,7 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
 
         GibbsSamplerVariable.finalizeSampling(self)
 
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
 
         # Correct sign ambiguity :
         sign_error = smplHRF.detectSignError()
@@ -3813,8 +3796,8 @@ class Variance_GaussianNRL_Multi_Sess(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        nrls = variables[self.samplerEngine.I_NRLS_SESS].currentValue
-        nrlsBAR = variables[self.samplerEngine.I_NRLS_BAR].currentValue
+        nrls = self.get_variable('nrl_by_session').currentValue
+        nrlsBAR = self.get_variable('nrl_bar').currentValue
 
         sum_s_j_m=0
         for s in xrange(self.nbSessions):
@@ -3883,12 +3866,12 @@ class BiGaussMixtureParamsSamplerWithRelVar_OLD(BiGaussMixtureParamsSampler):
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        nrlsSmpl = variables[self.samplerEngine.I_NRLS]
+        nrlsSmpl = self.get_variable('nrls')
 
         cardCA = nrlsSmpl.cardClass[self.L_CA,:]
         cardCI = nrlsSmpl.cardClass[self.L_CI,:]
 
-        w = variables[self.samplerEngine.I_W].currentValue
+        w = self.get_variable('W').currentValue
 
         for j in xrange(self.nbConditions):
             vICI = nrlsSmpl.voxIdx[nrlsSmpl.L_CI][j]
@@ -3970,12 +3953,12 @@ class BiGaussMixtureParamsSamplerWithRelVar(BiGaussMixtureParamsSampler):
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        nrlsSmpl = variables[self.samplerEngine.I_NRLS]
+        nrlsSmpl = self.get_variable('nrl')
 
         cardCA = nrlsSmpl.cardClass[self.L_CA,:]
         cardCI = nrlsSmpl.cardClass[self.L_CI,:]
 
-        w = variables[self.samplerEngine.I_W].currentValue
+        w = self.get_variable('W').currentValue
 
         for j in xrange(self.nbConditions):
             vICI = nrlsSmpl.voxIdx[nrlsSmpl.L_CI][j]
@@ -4023,7 +4006,7 @@ class MixtureWeightsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         self.nbVoxels = self.dataInput.nbVoxels
 
     def checkAndSetInitValue(self, variables):
-        self.nbClasses = self.samplerEngine.getVariable('nrl').nbClasses
+        self.nbClasses = self.get_variable('nrl').nbClasses
         if self.currentValue == None :
             self.currentValue = np.zeros( (self.nbClasses, self.nbConditions),
                                        dtype = float)+0.5
@@ -4041,7 +4024,7 @@ class MixtureWeightsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         ##print '- Sampling MixtWeights ...'
         #self.currentValue = np.zeros(self.nbConditions, dtype=float)
 
-        nrlsSmpl = self.samplerEngine.getVariable('nrl')
+        nrlsSmpl = self.get_variable('nrl')
 
         lca = nrlsSmpl.L_CA
         lci = nrlsSmpl.L_CI

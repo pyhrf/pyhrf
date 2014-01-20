@@ -55,6 +55,29 @@ class BaseTest(unittest.TestCase):
         obj2 = xmlio.from_xml(sXml)
         assert obj2 == obj
 
+    def _test_xml_bijection(self, o):
+        xml = to_xml(o)
+        pyhrf.verbose(6, 'xml from %s:' % str(o))
+        pyhrf.verbose(6, xml)
+        o2 = from_xml(xml)
+        self.assertEqual(o, o2)
+
+    def test_list_of_str(self):
+        self._test_xml_bijection(['a','bb','ccc', ''])
+
+    def test_bool(self):
+        pyhrf.verbose.set_verbosity(0)
+        self._test_xml_bijection(False)
+        #self._test_xml_bijection(True)
+        
+    def test_list_of_int(self):
+        self._test_xml_bijection([-1, 134, 1])
+
+    def test_list_of_misc(self):
+        self._test_xml_bijection([-1, None, 'aa', True, False])
+
+    def test_tuple_of_misc(self):
+        self._test_xml_bijection((-1, None, 'aa', True, False))
 
     def testNumpy(self):
 
@@ -238,7 +261,7 @@ class InitableTest(unittest.TestCase):
 
 
     def test_JDEMCMCAnalyzer_Uinode_bijection(self):
-        pyhrf.verbose.set_verbosity(6)
+        pyhrf.verbose.set_verbosity(0)
         from pyhrf.ui.jde import JDEMCMCAnalyser
         from pyhrf.jde.models import BOLDGibbsSampler
         a = JDEMCMCAnalyser(sampler=BOLDGibbsSampler(nb_iterations=42))
@@ -250,7 +273,7 @@ class InitableTest(unittest.TestCase):
         self.assertEqual(a2.sampler.nbIterations, 42)
 
     def test_JDEMCMCAnalyzerXML(self):
-        pyhrf.verbose.set_verbosity(6)
+        pyhrf.verbose.set_verbosity(0)
         from pyhrf.ui.jde import JDEMCMCAnalyser
         from pyhrf.jde.models import BOLDGibbsSampler
         a = JDEMCMCAnalyser(sampler=BOLDGibbsSampler(nb_iterations=42))
@@ -266,7 +289,7 @@ class InitableTest(unittest.TestCase):
 
     def test_TreatmentXML(self):
 
-        #pyhrf.verbose.set_verbosity(6)
+        pyhrf.verbose.set_verbosity(0)
         from pyhrf.ui.jde import JDEMCMCAnalyser
         from pyhrf.jde.models import BOLDGibbsSampler
         from pyhrf.ui.treatment import FMRITreatment

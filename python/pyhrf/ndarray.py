@@ -411,10 +411,14 @@ class xndarray:
         table_line_end = '\\\\\n'
 
         c_to_print = self.reorient(row_axes + col_axes + inner_axes)
-        sh = c_to_print.get_shape()
-        data = c_to_print.data.reshape(np.prod([sh[a] for a in row_axes]),
-                                       np.prod([sh[a] for a in col_axes]),
-                                       np.prod([sh[a] for a in inner_axes]))
+        dsh = c_to_print.get_dshape()
+        print 'row_axes:', row_axes
+        print 'col_axes:', col_axes
+        print 'inner_axes:', inner_axes
+        print 'sh:', dsh
+        data = c_to_print.data.reshape(np.prod([dsh[a] for a in row_axes]),
+                                       np.prod([dsh[a] for a in col_axes]),
+                                       np.prod([dsh[a] for a in inner_axes]))
 
 
         nb_rows, nb_cols = data.shape[:2]
@@ -975,11 +979,12 @@ class xndarray:
             raise Exception('xndarray does not have any meta data to get' \
                                 'voxel size')
 
-    def get_shape(self, axis=None):
-        if axis is None:
-            return dict(zip(self.axes_names, self.data.shape))
-        else:
-            return self.data.shape[self.get_axis_id(axis)]
+    def get_dshape(self):
+        """
+        Return the shape of the array as dict mapping an axis name to the
+        corresponding size
+        """
+        return dict(zip(self.axes_names, self.data.shape))
 
     def _prepare_for_operation(self, op_name, c):
         """ Make some checks before performing an operation between self and c.
@@ -1259,7 +1264,6 @@ class xndarray:
 
     def get_extra_info(self, fmt='dict'):
         from pyhrf.xmlio import to_xml
-        from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
         info = {
             'axes_names': self.axes_names,
@@ -1269,7 +1273,7 @@ class xndarray:
         if fmt=='dict':
             return info
         elif fmt=='xml':
-            return to_xml(info, handler=NumpyXMLHandler())
+            return to_xml(info)
 
 
     def save(self, file_name, meta_data=None, set_MRI_orientation=False):
@@ -1282,7 +1286,6 @@ class xndarray:
         """
 
         from pyhrf.xmlio import from_xml, to_xml
-        from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
         pyhrf.verbose(5, 'xndarray.save(%s)' %file_name)
         ext = op.splitext(file_name)[1]
@@ -1348,10 +1351,10 @@ class xndarray:
             else:
                 prev_ext = ""
 
-            ext_str = to_xml(extra_info, handler=NumpyXMLHandler())
+            ext_str = to_xml(extra_info)
             if len(ext_str) < len(prev_ext):
                 extra_info['dummy'] = '#'*(len(prev_ext)-len(ext_str))
-                ext_str = to_xml(extra_info, handler=NumpyXMLHandler())
+                ext_str = to_xml(extra_info)
 
             pyhrf.verbose(5, 'Length of extension string: %s' %len(ext_str))
             pyhrf.verbose(5, 'Extension: \n %s' %ext_str)
@@ -1425,6 +1428,7 @@ class xndarray:
 
         TODO: gifti.
         """
+        from pyhrf.xmlio import from_xml
 
         pyhrf.verbose(3, 'xndarray.load(%s)' %file_name)
         ext = op.splitext(file_name)[1]
