@@ -27,6 +27,8 @@ PICKLE_DUMPED_FILE_EXTENSION = 'pck'
 VOL_NII_EXTENSION = 'nii'
 TEXTURE_EXTENSION = 'gii'
 
+from _zip import *
+
 
 def read_volume(fileName, remove_nans=True):
     """

@@ -530,7 +530,8 @@ def append_common_treatment_options(parser):
 
 
 def parse_data_options(options):
-
+    """ Return an FmriData object corresponding to input options """
+    
     from pyhrf.core import DEFAULT_BOLD_SURF_FILE, DEFAULT_BOLD_VOL_FILE, \
         DEFAULT_SIMULATION_FILE
     # If SPM.mat is provided, retrieve paradigm from it for all sessions.
