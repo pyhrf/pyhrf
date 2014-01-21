@@ -79,7 +79,7 @@ setup(
     version='0.3',
     setup_requires=['numpy>=1.0'],
     install_requires=['numpy>=1.0','matplotlib>=0.90.1','scipy>=0.7',
-                      'nibabel', 'nipy'], #, 'PyXML>=0.8.4'],
+                      'nibabel', 'nipy'],
     dependency_links = [],
     package_dir = {'' : 'python'},
     packages=find_packages('python'),
