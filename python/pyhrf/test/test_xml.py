@@ -132,7 +132,7 @@ class T(xmlio.XmlInitable):
 
 
 def create_t():
-    print '#### create_t ..'
+    #print '#### create_t ..'
     return T(param_a=49)
 
 class XMLableTest(unittest.TestCase):
@@ -253,8 +253,8 @@ class InitableTest(unittest.TestCase):
         b = B.from_stuff(a=4,b=3)
         # print 'b.obj:', b.obj
         xml = b.to_ui_node('bobj').to_xml(pretty=True)
-        print 'xml:'
-        print xml
+        #print 'xml:'
+        #print xml
         b2 = xmlio.from_xml(xml)
         # print 'b2.obj:', b2.obj
         self.assertEqual(b, b2)
@@ -279,8 +279,8 @@ class InitableTest(unittest.TestCase):
         a = JDEMCMCAnalyser(sampler=BOLDGibbsSampler(nb_iterations=42))
         # print 'a -- nbIterations:', a.sampler.nbIterations
         axml = xmlio.to_xml(a, pretty=True)
-        print 'axml:'
-        print axml
+        # print 'axml:'
+        # print axml
 
         a2 = xmlio.from_xml(axml)
         # print 'a2 -- nbIterations:', a2.sampler.nbIterations

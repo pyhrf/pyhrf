@@ -201,7 +201,7 @@ class TreatmentCommandTest(unittest.TestCase):
     #         self._testJDEModelCmd('ANSGGMS', datatype='surface')
 
     def test_WNSGGMS_surf_cmd(self):
-        pyhrf.verbose.set_verbosity(6)
+        pyhrf.verbose.set_verbosity(0)
         self._testJDEModelCmd('WNSGGMS', datatype='surface')
 
     def test_WNSGGMS(self):

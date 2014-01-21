@@ -1,5 +1,5 @@
 import unittest
-
+import numpy as np
 
 if 1:
     from core_test import *
@@ -14,6 +14,7 @@ if 1:
     from iotest import *
     from test_parcellation import *
 
+if 1:
     from test_plot import *
     from test_treatment import *
     from test_glm import *
@@ -25,7 +26,7 @@ if 1:
 
 from test_ndarray import *
 
-from test_sandbox import *
+#from test_sandbox import *
 #from test_sandbox_parcellation import *
 #from test_sandbox_physio import *
 

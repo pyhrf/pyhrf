@@ -412,13 +412,9 @@ class xndarray:
 
         c_to_print = self.reorient(row_axes + col_axes + inner_axes)
         dsh = c_to_print.get_dshape()
-        print 'row_axes:', row_axes
-        print 'col_axes:', col_axes
-        print 'inner_axes:', inner_axes
-        print 'sh:', dsh
-        data = c_to_print.data.reshape(np.prod([dsh[a] for a in row_axes]),
-                                       np.prod([dsh[a] for a in col_axes]),
-                                       np.prod([dsh[a] for a in inner_axes]))
+        data = c_to_print.data.reshape(int(np.prod([dsh[a] for a in row_axes])),
+                                       int(np.prod([dsh[a] for a in col_axes])),
+                                       int(np.prod([dsh[a] for a in inner_axes])))
 
 
         nb_rows, nb_cols = data.shape[:2]
