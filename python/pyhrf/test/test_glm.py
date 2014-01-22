@@ -10,7 +10,8 @@ class NipyGLMTest(unittest.TestCase):
         self.tmp_dir = pyhrf.get_tmp_path()
 
     def tearDown(self):
-        shutil.rmtree(self.tmp_dir)
+        if 0: #HACK
+            shutil.rmtree(self.tmp_dir)
 
 
     # def _simulate_bold(self):
@@ -82,22 +83,24 @@ class NipyGLMTest(unittest.TestCase):
     def makeQuietOutputs(self, xmlFile):
 
         from pyhrf import xmlio
-        from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
-        t = xmlio.fromXML(file(xmlFile).read())
+        t = xmlio.from_xml(file(xmlFile).read())
         t.set_init_param('output_dir', None)
         f = open(xmlFile, 'w')
-        f.write(xmlio.toXML(t, handler=NumpyXMLHandler()))
+        f.write(xmlio.to_xml(t))
         f.close()
 
 
     def test_command_line(self):
+        pyhrf.verbose.set_verbosity(0)
         cfg_file = op.join(self.tmp_dir, 'glm.xml')
-        cmd = 'pyhrf_glm_buildcfg -o %s' %(cfg_file)
+        cmd = 'pyhrf_glm_buildcfg -o %s -v %d' %(cfg_file,
+                                                 pyhrf.verbose.verbosity)
+        pyhrf.verbose(6, 'cfg file: %s' %cfg_file)
         import os
         if os.system(cmd) != 0 :
             raise Exception('"' + cmd + '" did not execute correctly')
         self.makeQuietOutputs(cfg_file)
-        
+
         cmd = 'pyhrf_glm_estim -c %s' %cfg_file
         if os.system(cmd) != 0 :
             raise Exception('"' + cmd + '" did not execute correctly')

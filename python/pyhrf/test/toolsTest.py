@@ -529,7 +529,7 @@ class PipelineTest(unittest.TestCase):
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.cache_dir = tmpDir
 
-        #pyhrf.verbose.set_verbosity(6)
+        #pyhrf.verbose.set_verbosity(0)
 
         # Be sure to put scalars in arrays so that they can be referenced
         self.a = np.array([3])

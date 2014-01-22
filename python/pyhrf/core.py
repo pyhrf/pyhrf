@@ -36,12 +36,24 @@ except ImportError:
 #            'durations_loc_av', 'durations_loc']
 
 def _pickle_method(method):
+    """
+    Allow to safely pickle classmethods. To be fed to copy_reg.pickle
+    """
     func_name = method.im_func.__name__
     obj = method.im_self
     cls = method.im_class
+    if func_name.startswith('__') and not func_name.endswith('__'):
+        #deal with mangled names
+        cls_name = cls.__name__.lstrip('_')
+        func_name = '_%s%s' % (cls_name, func_name)
     return _unpickle_method, (func_name, obj, cls)
 
 def _unpickle_method(func_name, obj, cls):
+    """
+    Allow to safely unpickle classmethods. To be fed to copy_reg.pickle
+    """
+    if obj and func_name in obj.__dict__:
+        cls, obj = obj, None # if func_name is classmethod
     for cls in cls.mro():
         try:
             func = cls.__dict__[func_name]
@@ -85,7 +97,6 @@ class AttrClass:
     def __init__(self, **kwargs):
         for k,w in kwargs.iteritems():
             setattr(self,k,w)
-
 
     def __repr__(self):
         r = self.__class__.__name__ + '('
@@ -158,10 +169,10 @@ DEFAULT_MASK_SURF_FILE = get_data_file_name(maskFn)
 DEFAULT_MESH_FILE = get_data_file_name(meshFn)
 DEFAULT_OUT_MASK_SURF_FILE = './roiMask.nii'
 
-from pyhrf.xmlio import XMLable2
+from pyhrf.xmlio import XmlInitable
 
 
-class FMRISessionVolumicData(XMLable2):
+class FMRISessionVolumicData(XmlInitable):
 
     parametersComments = {
         'onsets' : 'Onsets of experimental simtuli in seconds. \n'\
@@ -176,7 +187,7 @@ class FMRISessionVolumicData(XMLable2):
                  durations=DEFAULT_STIM_DURATIONS,
                  bold_file=DEFAULT_BOLD_VOL_FILE):
 
-        XMLable2.__init__(self)
+        XmlInitable.__init__(self)
         assert isinstance(onsets, (dict, OrderedDict))
         assert durations is None or isinstance(durations, (dict, OrderedDict))
         #assert bold_file.endswith('nii') or bold_file.endswith('nii.gz')
@@ -193,12 +204,12 @@ class FMRISessionVolumicData(XMLable2):
                 'bold_file' : self.bold_file}
 
 
-class FMRISessionSurfacicData(XMLable2):
+class FMRISessionSurfacicData(XmlInitable):
     def __init__(self, onsets=DEFAULT_ONSETS,
                  durations=DEFAULT_STIM_DURATIONS,
                  bold_file=DEFAULT_BOLD_SURF_FILE):
 
-        XMLable2.__init__(self)
+        XmlInitable.__init__(self)
         assert isinstance(onsets, dict)
         assert durations is None or isinstance(durations, dict)
         #assert bold_file.endswith('gii') or bold_file.endswith('gii.gz')
@@ -213,12 +224,12 @@ class FMRISessionSurfacicData(XMLable2):
                 'bold_file' : self.bold_file}
 
 
-class FMRISessionSimulationData(XMLable2):
+class FMRISessionSimulationData(XmlInitable):
     def __init__(self, onsets=DEFAULT_ONSETS,
                  durations=DEFAULT_STIM_DURATIONS,
                  simulation_file=DEFAULT_SIMULATION_FILE):
 
-        XMLable2.__init__(self)
+        XmlInitable.__init__(self)
         assert isinstance(onsets, dict)
         assert durations is None or isinstance(durations, dict)
 
@@ -453,7 +464,7 @@ def merge_fmri_subjects(fmri_data_sets, roiMask, backgroundLabel=0):
 
 
 
-class FmriGroupData(XMLable2):
+class FmriGroupData(XmlInitable):
     '''
     Used for group level hemodynamic analysis
     Encapsulates FmriData objects for all subjects
@@ -558,7 +569,7 @@ def get_roi_simulation(simu_sessions, mask, roi_id):
         simus.append(roi_simu)
     return simus
 
-class FmriData(XMLable2):
+class FmriData(XmlInitable):
     """
     Attributes:
     onsets -- a dictionary mapping a stimulus name to a list of session onsets.
@@ -588,7 +599,7 @@ class FmriData(XMLable2):
         }
 
     parametersToShow = ['tr', 'sessions_data', 'mask_file']
-    
+
     if pyhrf.__usemode__ == 'devel':
         parametersToShow += ['background_label']
 

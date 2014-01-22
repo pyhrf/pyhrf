@@ -626,7 +626,7 @@ class FeatureExtractionTest(unittest.TestCase):
         #res = pm.represent_features(feats, labels.T, bvars[:,0])
         self.assertTrue(op.exists(fn1), msg='%s does not exist'%fn1)
 
-        self.clean_tmp = False #HACK
+        self.clean_tmp = True
     """
     # Test feature extraction previous to parcellation
     def test_feature_extraction(self):
@@ -1126,7 +1126,7 @@ class ParcellationTest(unittest.TestCase):
             pyhrf.verbose(1, 'fig parcellation tree: %s' %fn)
             lab_colors = [('black','red')[l] for l in act_labels]
             pm.render_ward_tree(ww, fn, leave_colors=lab_colors)
-            self.clean_tmp = False #HACK
+            self.clean_tmp = True
 
 
         # tolerate 2 differing positions, correspond to 2 non-active
@@ -1163,7 +1163,7 @@ class ParcellationTest(unittest.TestCase):
             pyhrf.verbose(1, 'fig parcellation tree: %s' %fn)
             lab_colors = [('black','red')[l] for l in act_labels]
             pm.render_ward_tree(ww, fn, leave_colors=lab_colors)
-            self.clean_tmp = False #HACK
+            self.clean_tmp = True
 
 
         # tolerate 2 differing positions, correspond to 2 non-active

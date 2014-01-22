@@ -49,83 +49,83 @@ class JDETest(unittest.TestCase):
 
         #print 'Create sampler_params_for_single_test ...'
         self.sampler_params_for_single_test = {
-            BG.P_NB_ITERATIONS : 100,
-            BG.P_SMPL_HIST_PACE : 1,
-            BG.P_OBS_HIST_PACE : 1,
+            'nb_iterations' : 100,
+            'smpl_hist_pace' : 1,
+            'obs_hist_pace' : 1,
             # level of spatial correlation = beta
-            BG.P_BETA : BS({
-                    BS.P_SAMPLE_FLAG : False,
-                    BS.P_USE_TRUE_VALUE : False,
-                    BS.P_VAL_INI : np.array([0.6]),
+            'beta' : BS({
+                    'do_sampling' : False,
+                    'use_true_value' : False,
+                    'val_ini' : np.array([0.6]),
                     }),
             # HRF
-            BG.P_HRF : HS({
-                    HS.P_SAMPLE_FLAG : False,
-                    HS.P_USE_TRUE_VALUE : True,
-                    HS.P_PRIOR_TYPE : 'singleHRF',
+            'hrf' : HS({
+                    'do_sampling' : False,
+                    'use_true_value' : True,
+                    'prior_type' : 'singleHRF',
                     }),
             # HRF variance
-            BG.P_RH : HVS({
-                    HVS.P_USE_TRUE_VALUE : True,
-                    HVS.P_SAMPLE_FLAG : False,
+            'hrf_var' : HVS({
+                    'use_true_value' : True,
+                    'do_sampling' : False,
                     }),
             # neural response levels (stimulus-induced effects)
-            BG.P_NRLS : NS({
-                    NS.P_USE_TRUE_NRLS : True,
-                    NS.P_USE_TRUE_LABELS : True,
-                    NS.P_SAMPLE_FLAG : False,
-                    NS.P_SAMPLE_LABELS : False,
+            'nrl' : NS({
+                    'use_true_nrls' : True,
+                    'use_true_labels' : True,
+                    'do_sampling' : False,
+                    'do_label_sampling' : False,
                     }),
-            BG.P_MIXT_PARAM : BGMS({
-                    BGMS.P_SAMPLE_FLAG : False,
-                    BGMS.P_USE_TRUE_VALUE : True,
+            'mixt_params' : BGMS({
+                    'do_sampling' : False,
+                    'use_true_value' : True,
                     }),
-            BG.P_NOISE_VAR : NoiseVarianceSampler({
-                    NoiseVarianceSampler.P_SAMPLE_FLAG : False,
-                    NoiseVarianceSampler.P_USE_TRUE_VALUE : True,
+            'noise_var' : NoiseVarianceSampler({
+                    'do_sampling' : False,
+                    'use_true_value' : True,
                     }),
-            BG.P_CHECK_FINAL_VALUE : 'raise', #print or raise
+            'check_final_value_close_to_true' : 'raise', #print or raise
             }
 
 
         #print 'Create sampler_params_for_full_test ...'
         self.sampler_params_for_full_test = {
-            BG.P_NB_ITERATIONS : 500,
-            BG.P_SMPL_HIST_PACE : 1,
-            BG.P_OBS_HIST_PACE : 1,
+            'nb_iterations' : 500,
+            'smpl_hist_pace' : 1,
+            'obs_hist_pace' : 1,
             # level of spatial correlation = beta
-            BG.P_BETA : BS({
-                    BS.P_SAMPLE_FLAG : True,
-                    BS.P_USE_TRUE_VALUE : False,
-                    BS.P_VAL_INI : np.array([0.6]),
+            'beta' : BS({
+                    'do_sampling' : True,
+                    'use_true_value' : False,
+                    'val_ini' : np.array([0.6]),
                     }),
             # HRF
-            BG.P_HRF : HS({
-                    HS.P_SAMPLE_FLAG : True,
-                    HS.P_USE_TRUE_VALUE : False,
-                    HS.P_NORMALISE : 1.,
+            'hrf' : HS({
+                    'do_sampling' : True,
+                    'use_true_value' : False,
+                    'normalise' : 1.,
                     }),
             # HRF variance
-            BG.P_RH : HVS({
-                    HVS.P_USE_TRUE_VALUE : False,
-                    HVS.P_SAMPLE_FLAG : True,
+            'hrf_var' : HVS({
+                    'use_true_value' : False,
+                    'do_sampling' : True,
                     }),
             # neural response levels (stimulus-induced effects)
-            BG.P_NRLS : NS({
-                    NS.P_USE_TRUE_NRLS : False,
-                    NS.P_USE_TRUE_LABELS : False,
-                    NS.P_SAMPLE_FLAG : True,
-                    NS.P_SAMPLE_LABELS : True,
+            'nrl' : NS({
+                    'use_true_nrls' : False,
+                    'use_true_labels' : False,
+                    'do_sampling' : True,
+                    'do_label_sampling' : True,
                     }),
-            BG.P_MIXT_PARAM : BGMS({
-                    BGMS.P_SAMPLE_FLAG : True,
-                    BGMS.P_USE_TRUE_VALUE : False,
+            'mixt_params' : BGMS({
+                    'do_sampling' : True,
+                    'use_true_value' : False,
                     }),
-            BG.P_NOISE_VAR : NoiseVarianceSampler({
-                    NoiseVarianceSampler.P_SAMPLE_FLAG : True,
-                    NoiseVarianceSampler.P_USE_TRUE_VALUE : False,
+            'noise_var' : NoiseVarianceSampler({
+                    'do_sampling' : True,
+                    'use_true_value' : False,
                     }),
-            BG.P_CHECK_FINAL_VALUE : 'print', #print or raise
+            'check_final_value_close_to_true' : 'print', #print or raise
             }
 
     def tearDown(self):
@@ -393,9 +393,9 @@ class ASLPhysioTest(unittest.TestCase):
         pyhrf.verbose.set_verbosity(0)
 
         sampler_params = {
-            jde_asl_physio.ASLPhysioSampler.P_NB_ITERATIONS : 100,
-            jde_asl_physio.ASLPhysioSampler.P_SMPL_HIST_PACE : 1,
-            jde_asl_physio.ASLPhysioSampler.P_OBS_HIST_PACE : 1,
+            'nb_iterations' : 100,
+            'smpl_hist_pace' : 1,
+            'obs_hist_pace' : 1,
             'brf' : jde_asl_physio.PhysioBOLDResponseSampler(zero_constraint=False),
             'brf_var' : jde_asl_physio.PhysioBOLDResponseVarianceSampler(val_ini=\
                                                                          np.array([1e-3])),
@@ -404,19 +404,19 @@ class ASLPhysioTest(unittest.TestCase):
                                                                          np.array([1e-3])),
             'noise_var' : jde_asl_physio.NoiseVarianceSampler(),
             'drift_var' : jde_asl_physio.DriftVarianceSampler(),
-            'drift_coeff' : jde_asl_physio.DriftCoeffSampler(),
-            'brl' : jde_asl_physio.BOLDResponseLevelSampler(),
-            'prl' : jde_asl_physio.PerfResponseLevelSampler(),
+            'drift' : jde_asl_physio.DriftCoeffSampler(),
+            'bold_response_levels' : jde_asl_physio.BOLDResponseLevelSampler(),
+            'perf_response_levels' : jde_asl_physio.PerfResponseLevelSampler(),
             'bold_mixt_params' : jde_asl_physio.BOLDMixtureSampler(),
             'perf_mixt_params' : jde_asl_physio.PerfMixtureSampler(),
-            'label' : jde_asl_physio.LabelSampler(),
+            'labels' : jde_asl_physio.LabelSampler(),
             'perf_baseline' : jde_asl_physio.PerfBaselineSampler(),
             'perf_baseline_var' : jde_asl_physio.PerfBaselineVarianceSampler(),
-            'assert_final_value_close_to_true' : False,
+            'check_final_value' : None,
         }
 
 
-        sampler = jde_asl_physio.ASLPhysioSampler(sampler_params)
+        sampler = jde_asl_physio.ASLPhysioSampler(**sampler_params)
 
         simu_items = phym.simulate_asl_physio_rfs(spatial_size='random_small')
         simu_fdata = FmriData.from_simulation_dict(simu_items)

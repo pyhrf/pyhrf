@@ -10,7 +10,6 @@ import copy as copyModule
 import pyhrf
 from pyhrf import xmlio
 from pyhrf.tools import resampleToGrid
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.ndarray import xndarray
 from pyhrf.jde.intensivecalc import calcCorrEnergies, sampleSmmNrl
 from pyhrf.jde.samplerbase import *
@@ -21,15 +20,6 @@ from bigaussian import NRLSampler, BiGaussMixtureParamsSampler
 
 class GGGNRLSampler(NRLSampler):
 
-    ## parameters definitions and default values :
-    # inherit parameters of parent class: 
-    defaultParameters = copyModule.copy(NRLSampler.defaultParameters)
-    # update them with specific parameters:
-    defaultParameters.update( {
-        NRLSampler.P_LABELS_COLORS : array([0.0,0.0,0.0], dtype=float),
-        })
-    
-    ## other class attributes
     L_CI = 0
     L_CA = 1
     L_CD = 2
@@ -38,10 +28,6 @@ class GGGNRLSampler(NRLSampler):
     FALSE_POS = 3
     FALSE_NEG = 4
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-        
     def sampleLabels(self, cond, variables): #varCI, varCA, meanCA):
         print 'GGGNRLSampler ... sampleLabels'
         sMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
@@ -84,7 +70,7 @@ class GGGNRLSampler(NRLSampler):
                                  dColA_D, self.nbClasses, self.L_CA, self.L_CD)
                 fracLambdaTildeA_D *= exp(beta*self.corrEnergies[cond,:])
 
-                
+
                 calcCorrEnergies(cond, self.labels, self.corrEnergies,
                                  self.dataInput.neighboursIndexes,
                                  dColI_D, self.nbClasses, self.L_CI, self.L_CD)
@@ -123,31 +109,35 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
     P_VAR_CD_PR_ALPHA = 'varCDPrAlpha'
     P_VAR_CD_PR_BETA = 'varCDPrBeta'
 
-    defaultParameters = BiGaussMixtureParamsSampler.defaultParameters.copy()
-    defaultParameters.update({
-        P_MEAN_CD_PR_MEAN : -20.,
-        P_MEAN_CD_PR_VAR : 10.0,
-        #P_VAR_CD_PR_ALPHA : 2.5,
-        #P_VAR_CD_PR_BETA : 1.5,
-        P_VAR_CD_PR_ALPHA : 2.0001,
-        P_VAR_CD_PR_BETA : 1.00001,
-        })
+    # defaultParameters.update({
+    #     P_MEAN_CD_PR_MEAN : -20.,
+    #     P_MEAN_CD_PR_VAR : 10.0,
+    #     #P_VAR_CD_PR_ALPHA : 2.5,
+    #     #P_VAR_CD_PR_BETA : 1.5,
+    #     P_VAR_CD_PR_ALPHA : 2.0001,
+    #     P_VAR_CD_PR_BETA : 1.00001,
+    #     })
 
-    parametersToShow = BiGaussMixtureParamsSampler.parametersToShow + \
-                      [P_MEAN_CD_PR_MEAN, P_MEAN_CD_PR_VAR, P_VAR_CD_PR_ALPHA,
-                       P_VAR_CD_PR_BETA]
-    
     L_CD = GGGNRLSampler.L_CD
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        BiGaussMixtureParamsSampler.__init__(self, parameters, xmlHandler,
-                                             xmlLabel, xmlComment)
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None, hyper_prior_type='Jeffreys', activ_thresh=4.,
+                 var_ci_pr_alpha=2.04, var_ci_pr_beta=.5,
+                 var_ca_pr_alpha=2.01, var_ca_pr_beta=.5,
+                 var_cd_pr_alpha=2.01, var_cd_pr_beta=.5,
+                 mean_ca_pr_mean=5., mean_ca_pr_var=20.,
+                 mean_cd_pr_mean=-20., mean_cd_pr_var=20.):
         
-        self.varCDPrAlpha = self.parameters[self.P_VAR_CD_PR_ALPHA] 
-        self.varCDPrBeta = self.parameters[self.P_VAR_CD_PR_BETA]
-        self.meanCDPrMean = self.parameters[self.P_MEAN_CD_PR_MEAN]
-        self.meanCDPrVar = self.parameters[self.P_MEAN_CD_PR_VAR]
+        BiGaussMixtureParamsSampler.__init__(self, do_sampling, use_true_value,
+                                             val_ini, hyper_prior_type,
+                                             activ_thresh, var_ci_pr_alpha,
+                                             var_ci_pr_beta, var_ca_pr_alpha,
+                                             var_ca_pr_beta, mean_ca_pr_mean,
+                                             mean_ca_pr_var)
+        self.varCDPrAlpha = var_cd_pr_alpha
+        self.varCDPrBeta = var_cd_pr_beta
+        self.meanCDPrMean = mean_cd_pr_mean
+        self.meanCDPrVar = mean_cd_pr_var
 
     def linkToData(self, dataInput):
         BiGaussMixtureParamsSampler.linkToData(self, dataInput)
@@ -157,19 +147,19 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
             itemsCond = mixtures.items()
             meanCD = zeros(self.nbConditions, dtype=float)
             varCD = zeros(self.nbConditions, dtype=float)
-            for cn,mixt in mixtures.iteritems(): 
+            for cn,mixt in mixtures.iteritems():
                 genDeactiv = mixt.generators['deactiv']
                 indCond = self.dataInput.simulData.nrls.condIds[cn]
                 meanCD[indCond] = genDeactiv.mean
                 varCD[indCond] = genDeactiv.std**2
             self.trueValue[self.I_MEAN_CD] = meanCD
-            self.trueValue[self.I_VAR_CD] = varCD            
-        
-        
+            self.trueValue[self.I_VAR_CD] = varCD
+
+
 
     #TODO: generalize inside parent class
     def checkAndSetInitValue(self, variables):
-        
+
         if self.currentValue is None:
             curValWasNone = True
         else:
@@ -187,9 +177,9 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
         return array([self.currentValue[self.I_VAR_CI],
                       self.currentValue[self.I_VAR_CA],
                       self.currentValue[self.I_VAR_CD]])
-    
-        
-    
+
+
+
     def getCurrentMeans(self):
         return array([zeros(self.nbConditions),self.currentValue[self.I_MEAN_CA],
                       self.currentValue[self.I_MEAN_CD]])
@@ -199,9 +189,9 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
             print 'cond %d - card CD = %d' %(j,cardCDj)
             print 'cond %d - cur mean CD = %f' %(j,self.currentValue[self.I_MEAN_CD,j])
             if cardCDj > 0:
-                print 'cond %d - nrl CD: %f(v%f)[%f,%f]' %(j,self.nrlCD[j].mean(), 
+                print 'cond %d - nrl CD: %f(v%f)[%f,%f]' %(j,self.nrlCD[j].mean(),
                                                            self.nrlCD[j].var(),
-                                                           self.nrlCD[j].min(), 
+                                                           self.nrlCD[j].min(),
                                                            self.nrlCD[j].max())
 
         if cardCDj > 1:
@@ -213,7 +203,7 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
             meanCDj = random.normal(eta2j, (varCDj / cardCDj)**0.5)
 
             if pyhrf.verbose.verbosity >= 3:
-                print 'varCD ~ InvGamma(%f, nu2j/2=%f)' %(0.5*(cardCDj+1)-1, 
+                print 'varCD ~ InvGamma(%f, nu2j/2=%f)' %(0.5*(cardCDj+1)-1,
                                                           nu2j/2.)
                 print ' -> mean =', (nu2j/2.)/(0.5*(cardCDj+1)-1)
         else :
@@ -239,8 +229,8 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
             for j in xrange(self.nbConditions):
                 vICD = nrlsSmpl.voxIdx[nrlsSmpl.L_CD][j]
                 self.nrlCD[j] = nrlsSmpl.currentValue[j, vICD]
-    
-                
+
+
                 if cardCD[j] > 0:
                     etaj = mean(self.nrlCD[j])
                     nrlCDCentered = self.nrlCD[j] - etaj
@@ -252,19 +242,19 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
                 else :
                     etaj = 0.0
                     varCDj = 1.0/random.gamma(self.varCDPrAlpha, 1/self.varCDPrBeta)
-    
+
                 invVarLikelihood = cardCD[j]/varCDj
                 meanCDVarAPost = 1/(invVarLikelihood + 1/self.meanCDPrVar)
                 rPrMV = self.meanCDPrMean/self.meanCDPrVar
                 meanCDMeanAPost = meanCDVarAPost * (etaj*invVarLikelihood + rPrMV)
                 meanCDj = random.normal(meanCDMeanAPost, meanCDVarAPost**0.5)
-                
+
                 self.currentValue[self.I_MEAN_CD, j] = meanCDj
                 self.currentValue[self.I_VAR_CD, j] = varCDj
 
         else:
             nrlsSmpl = variables[self.samplerEngine.I_NRLS]
-            
+
             #for j in xrange(self.nbConditions):
 
             for j in random.permutation(self.nbConditions):
@@ -282,8 +272,8 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
                                                                          ci,ca)
                 varCIj, meanCAj, varCAj = r
                 meanCD, varCD = self.computeWithJeffreyPriors(j,cd)
-                
-                
+
+
                 self.currentValue[self.I_VAR_CI, j] = varCIj
                 self.currentValue[self.I_MEAN_CA, j] = meanCAj #absolute(meanCAj)
                 self.currentValue[self.I_VAR_CA, j] = varCAj
@@ -292,7 +282,7 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
 
                 pyhrf.verbose(4, 'meanCD,%d = %f' \
                                   %(j,self.currentValue[self.I_MEAN_CD,j]))
-                
+
                 pyhrf.verbose(4, 'varCD,%d = %f' \
                                   %(j,self.currentValue[self.I_VAR_CD,j]))
 
@@ -312,9 +302,9 @@ class TriGaussMixtureParamsSampler(BiGaussMixtureParamsSampler):
         #for j in xrange(self.nbConditions):
         #    print 'condition', j
         #    print " var CI = ", self.finalValue[self.I_VAR_CI,j]
-        #    print ' mean CA = %1.2e - var CA = %1.2e' %(self.finalValue[self.I_MEAN_CA,j], 
+        #    print ' mean CA = %1.2e - var CA = %1.2e' %(self.finalValue[self.I_MEAN_CA,j],
         #                                                self.finalValue[self.I_VAR_CA,j])
-        #    print ' mean CD = %1.2e - var CD = %1.2e' %(self.finalValue[self.I_MEAN_CD,j], 
+        #    print ' mean CD = %1.2e - var CD = %1.2e' %(self.finalValue[self.I_MEAN_CD,j],
         #                                                self.finalValue[self.I_VAR_CD,j])
         an = ['class','condition','component']
         ad = {'class':['inactiv','activ','deactiv'],

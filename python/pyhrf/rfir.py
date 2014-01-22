@@ -10,8 +10,6 @@ from time import time
 from pyhrf.tools import array_summary
 
 import pyhrf
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
-
 from pyhrf import xmlio
 from pyhrf.tools import format_duration
 
@@ -27,7 +25,7 @@ def init_dict():
 #from pyhrf.rfir_c import compute_XSigmaX #, compute_h_MAP
 
 
-class RFIREstim(xmlio.XMLParamDrivenClass):
+class RFIREstim(xmlio.XmlInitable):
     """
     Class handling the estimation of HRFs from fMRI data.
     Analysis is voxel-wise and can
@@ -36,75 +34,58 @@ class RFIREstim(xmlio.XMLParamDrivenClass):
     One HRF is considered at each voxel.
     """
 
-    # Define parameters labels (only for convenience, not really necessary)
-    P_HRF_LENGTH = 'nbHrfCoeff' #K
-    P_DRIFT_TYPE = 'driftType' #OrthoBtype
-    P_DT = 'HRFdt'
-    P_STOP_CRIT1 = 'emStop1'
-    P_STOP_CRIT2 = 'emStop2'
-    P_NB_ITERATIONS = 'nbIterations'
-    P_NB_ITERATIONS_MIN = 'nbIterationsMin'
-    P_NB_ITERATIONS_MAX = 'nbIterationsMax'
-
-    # Define default parameter values
-    defaultParameters = {
-        P_HRF_LENGTH : 42,
-        P_DT : 0.6,
-        P_DRIFT_TYPE : 'cosine',
-        P_STOP_CRIT1 : 0.005,
-        P_STOP_CRIT2 : 0.0005,
-        P_NB_ITERATIONS_MAX : 5,
-        P_NB_ITERATIONS : None,
-        P_NB_ITERATIONS_MIN : 1,
-        'average_bold' : False,
-        'taum' : 0.01,
-        'lambda_reg' : 100.,
-        'fixed_taum' : False,
-        'subsampling_done' : np.array(([0])), #0 if no subsampling done, else give position that were removed after temporal subsampling
-        }
-
     parametersComments = {
-        P_HRF_LENGTH : 'Number of values in the discrete HRF. ' \
+        'hrf_nb_coeffs' : 'Number of values in the discrete HRF. ' \
             'Discretization is homogeneous HRF time length is then: ' \
-            ' nbHrfCoeff*HRFdt ',
-        P_DT : 'Required HRF temporal resolution',
-        P_DRIFT_TYPE : 'Basis type in the drift model. Either "cosine" or "poly"',
+            ' nb_hrf_coeffs * hrf_dt ',
+        'hrf_dt' : 'Required HRF temporal resolution',
+        'drift_type' : 'Basis type in the drift model. Either "cosine" or "poly"',
         }
 
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters[P_STOP_CRIT1] = 0.0001
-        defaultParameters[P_STOP_CRIT2] = 0.00001
-        defaultParameters[P_NB_ITERATIONS] = 500
-        parametersToShow = ['average_bold',
-                            P_HRF_LENGTH, P_DT, P_DRIFT_TYPE, P_NB_ITERATIONS]
+        default_stop_crit1 = 0.0001
+        default_stop_crit2 = 0.00001
+        default_nb_its = 500
+        parametersToShow = ['hrf_nb_coeffs', 'hrf_dt', 'drift_type',
+                            'nb_iterations']
+    else:
+        default_stop_crit1 = 0.005
+        default_stop_crit2 = 0.0005
+        default_nb_its = None
 
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        #Call constructor of class handling XML stuffs and parametrisation
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        #Retrieve actual parameters:
-        self.K = self.parameters[self.P_HRF_LENGTH]
-        self.OrthoBtype = self.parameters[self.P_DRIFT_TYPE]
-        self.DeltaT = self.parameters[self.P_DT]
-        self.nbItMax = self.parameters[self.P_NB_ITERATIONS_MAX]
-        self.nbItMin = self.parameters[self.P_NB_ITERATIONS_MIN]
-        self.nbIt =  self.parameters[self.P_NB_ITERATIONS]
-        self.emStop1 = self.parameters[self.P_STOP_CRIT1]
-        self.emStop2 = self.parameters[self.P_STOP_CRIT2]
+    def __init__(self, hrf_nb_coeffs=42, hrf_dt=0.6, drift_type='cosine',
+                 stop_crit1=default_stop_crit1, stop_crit2=default_stop_crit2,
+                 nb_its_max=5, nb_iterations=default_nb_its, nb_its_min=1,
+                 average_bold=False, taum=0.01, lambda_reg=100., fixed_taum=False,
+                 discarded_scan_indexes=None):
+
+        """
+           'discarded_scan_indexes' : None if no subsampling done, else give position that were removed after temporal subsampling as a 2d numpy array
+
+        """
+
+        xmlio.XmlInitable.__init__(self)
+
+        self.K = hrf_nb_coeffs
+        self.OrthoBtype = drift_type
+        self.DeltaT = hrf_dt
+        self.nbItMax = nb_its_max
+        self.nbItMin = nb_its_min
+        self.nbIt =  nb_iterations
+        self.emStop1 = stop_crit1
+        self.emStop2 = stop_crit2
 
         self.save_history = False
 
         self.compute_pct_change = False
 
-        self.avg_bold = self.parameters['average_bold']
+        self.avg_bold = False
 
-        self.fixed_taum = self.parameters['fixed_taum']
-        self.taum_init = self.parameters['taum']
-        self.lambda_reg = self.parameters['lambda_reg']
+        self.fixed_taum = fixed_taum
+        self.taum_init = taum
+        self.lambda_reg = lambda_reg
 
-        self.pos_removed = self.parameters['subsampling_done']
+        self.pos_removed = discarded_scan_indexes or np.array(([0]))
 
     def linkToData(self, data):
 
@@ -1115,25 +1096,13 @@ def rfir(func_data, fir_duration=42, fir_dt=.6, nb_its_max=100,
 
 
     """
-    params = {
-        RFIREstim.P_HRF_LENGTH : fir_duration,
-        RFIREstim.P_DT : fir_dt,
-        RFIREstim.P_NB_ITERATIONS_MIN : nb_its_min,
-        RFIREstim.P_NB_ITERATIONS_MAX : nb_its_max,
-        'fixed_taum' : fixed_taum,
-        'lambda_reg' : lambda_reg
-    }
-
-    rfir_estimator = RFIREstim(params)
+    rfir_estimator = RFIREstim(hrf_nb_coeffs=int(np.round(fir_duration/fir_dt)),
+                               hrf_dt=fir_dt, nb_its_max=nb_its_max,
+                               nb_its_min=nb_its_min, fixed_taum=fixed_taum,
+                               lambda_reg=lambda_reg)
     rfir_estimator.linkToData(func_data)
     rfir_estimator.run()
     outputs = rfir_estimator.getOutputs()
-
-    def sub_dict(d, keys):
-        new_d = d.__class__()
-        for k in keys:
-            new_d[k] = d[k]
-        return new_d
 
     return {'fir':outputs["ehrf"], 'fir_error':outputs["ehrf_error"],
             'fit':outputs["fit"], 'drift':outputs["drift"]}

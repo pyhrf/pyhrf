@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
 import os
+import os.path as op
 import pyhrf
 import numpy as np
 from numpy.random import randn, rand, permutation
 import time
 
-from numpy.testing import assert_array_equal, assert_almost_equal
-
+from numpy.testing import assert_almost_equal
+import scipy
+import scipy.linalg
 from pyhrf.jde.noise import NoiseVariance_Drift_Sampler
-from pyhrf.jde.drift import DriftSampler, ETASampler
-from pyhrf.jde.hrf import HRF_Drift_Sampler, HRFSampler, RHSampler, ScaleSampler
+from pyhrf.jde.drift import ETASampler
+from pyhrf.jde.hrf import RHSampler, ScaleSampler
 from pyhrf.jde.nrl.bigaussian import NRLSampler, MixtureWeightsSampler, BiGaussMixtureParamsSampler
 from pyhrf.jde.beta import BetaSampler
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.samplerbase import GSDefaultCallbackHandler
 from pyhrf import xmlio
 from pyhrf.graph import graph_nb_cliques
 
 from pyhrf.jde.intensivecalc import computeYtilde, sampleSmmNrlBar
+from pyhrf.ndarray import xndarray, stack_cuboids, expand_array_in_mask
 
+from pyhrf.tools import get_2Dtable_string
+from pyhrf.tools.io import write_volume
 from collections import defaultdict
-
-import copy as copyModule # avoids conflict with copy function from numpy
 
 from samplerbase import GibbsSampler, GibbsSamplerVariable
 
@@ -33,21 +35,17 @@ def b():
 ##################################################
 # Noise Sampler #
 ##################################################
-class NoiseVariance_Drift_Multi_Sess_Sampler(NoiseVariance_Drift_Sampler):
+class NoiseVariance_Drift_Multi_Sess_Sampler(xmlio.XmlInitable,
+                                             GibbsSamplerVariable):
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-    xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-        xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self, 'noise_var', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag, axes_names=['session','voxel'],
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None):
+
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'noise_var', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=['session', 'voxel'],
                                       value_label='PM Noise Var')
 
     def linkToData(self, dataInput):
@@ -76,7 +74,7 @@ class NoiseVariance_Drift_Multi_Sess_Sampler(NoiseVariance_Drift_Sampler):
 
     def sampleNextInternal(self, variables):
 
-        self.varYbar = self.samplerEngine.getVariable('nrl_by_session').varYbar
+        self.varYbar = self.samplerEngine.get_variable('nrl_by_session').varYbar
 
         for s in xrange(self.nbSess):
             for j in xrange(self.nbVox):
@@ -95,38 +93,27 @@ class NoiseVariance_Drift_Multi_Sess_Sampler(NoiseVariance_Drift_Sampler):
         #print 'test:', (self.varYbar[0,:,185]*self.varYbar[0,:,185]).sum()
         #print 'beta_g_185:', np.dot(self.varYbar[0,:,1].transpose(), self.varYbar[0,:,1])/2
         #print 'self.currentValue:', self.currentValue
-        #print 'nrl:',self.samplerEngine.getVariable('nrl_by_session').currentValue[0,0,1]
+        #print 'nrl:',self.samplerEngine.get_variable('nrl_by_session').currentValue[0,0,1]
 
 
 
 ##################################################
 # Drift Sampler and var drift sampler#
 ##################################################
-class Drift_MultiSess_Sampler(DriftSampler):
+class Drift_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
-    #P_VAL_INI = 'initialValue'
-    #P_SAMPLE_FLAG = 'sampleFlag'
-    #P_USE_TRUE_VALUE = 'useTrueValue'
 
-    ## parameters definitions and default values :
-    #defaultParameters = {
-        #P_VAL_INI : None,
-        #P_SAMPLE_FLAG : True,
-        #P_USE_TRUE_VALUE : False,
-        #}
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None):
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                        xmlLabel=None, xmlComment=None):
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
 
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        an = ['session','order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
+        an = ['session', 'order','voxel']
+        GibbsSamplerVariable.__init__(self,'drift', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an,
                                       value_label='PM LFD')
 
         self.final_signal = None
@@ -142,9 +129,6 @@ class Drift_MultiSess_Sampler(DriftSampler):
         self.nbSess = self.dataInput.nbSessions
 
         if dataInput.simulData is not None and \
-           isinstance(dataInput.simulData[0], BOLDModel):
-            self.trueValue = np.array([sd.rdrift.lfd for sd in dataInput.simulData])
-        elif dataInput.simulData is not None and \
           isinstance(dataInput.simulData, list):
             if 0: #theoretical value
                 self.trueValue = np.array([sd['drift_coeffs'] \
@@ -156,9 +140,8 @@ class Drift_MultiSess_Sampler(DriftSampler):
                                            for s in xrange(len(sd))])
 
     def checkAndSetInitValue(self, variables):
-        smplVarDrift = variables[self.samplerEngine.I_ETA]
+        smplVarDrift = self.get_variable('drift_var')
         smplVarDrift.checkAndSetInitValue(variables)
-        varDrift = smplVarDrift.currentValue
 
         if self.useTrueValue :
             if self.trueValue is not None:
@@ -186,7 +169,7 @@ class Drift_MultiSess_Sampler(DriftSampler):
         self.matPl = np.zeros((self.nbSess, self.ny, self.nbVox))
 
         for s in xrange(self.nbSess):
-            self.matPl[s] = dot(self.P[s], self.currentValue[s])
+            self.matPl[s] = np.dot(self.P[s], self.currentValue[s])
 
         self.ones_Q   = np.ones((self.dimDrift))
 
@@ -205,9 +188,9 @@ class Drift_MultiSess_Sampler(DriftSampler):
             #print 'true drift norm:', (self.trueValue * self.trueValue).sum()
 
     def sampleNextInternal(self, variables):
-        eta =  variables[self.samplerEngine.I_ETA].currentValue
-        snrls = self.samplerEngine.getVariable('nrl_by_session')
-        noise_vars = self.samplerEngine.getVariable('noise_var').currentValue
+        eta =  self.get_variable('drift_var').currentValue
+        snrls = self.samplerEngine.get_variable('nrl_by_session')
+        noise_vars = self.samplerEngine.get_variable('noise_var').currentValue
 
         for j in xrange(self.nbVox):
             for s in xrange(self.nbSess):
@@ -242,11 +225,8 @@ class Drift_MultiSess_Sampler(DriftSampler):
 
         self.updateNorm()
 
-        #sHrf = variables[self.samplrEngine.I_HRF]
-        #self.varXh = sHrf.varXh
-
         for s in xrange(self.nbSess):
-            self.matPl[s] = dot(self.P[s], self.currentValue[s])
+            self.matPl[s] = np.dot(self.P[s], self.currentValue[s])
             #snrls.computeVarYTildeSessionOpt(self.varXh[s], s)
 
         pyhrf.verbose(5, 'drift params :')
@@ -301,27 +281,6 @@ class Drift_MultiSess_Sampler(DriftSampler):
 
 class ETASampler_MultiSess(ETASampler):
 
-    #P_SAMPLE_FLAG = 'sampleFlag'
-    #P_VAL_INI = 'initialValue'
-    #P_USE_TRUE_VALUE = 'useTrueValue'
-
-    #defaultParameters = {
-        #P_VAL_INI : np.array([1.0]),
-        #P_SAMPLE_FLAG : True,
-        #P_USE_TRUE_VALUE : False,
-        #}
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-    xmlLabel=None, xmlComment=None):
-
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-        xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self,'driftVar', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag)
 
     def linkToData(self, dataInput):
         ETASampler.linkToData(self, dataInput)
@@ -337,17 +296,17 @@ class ETASampler_MultiSess(ETASampler):
 
     def sampleNextInternal(self, variables):
 
-        smpldrift = variables[self.samplerEngine.I_DRIFT]
+        smpldrift = self.get_variable('drift')
         alpha = .5 * (self.nbSessions * smpldrift.dimDrift * self.nbVox -1)
         beta_d = 0.5*smpldrift.norm
         pyhrf.verbose(4, 'eta ~ Ga(%1.3f,%1.3f)'%(alpha,beta_d))
-        self.currentValue[0] = 1.0/random.gamma(alpha,1/beta_d)
+        self.currentValue[0] = 1.0/np.random.gamma(alpha,1/beta_d)
 
         if pyhrf.verbose.verbosity > 3:
             print 'true var drift :', self.trueValue
             print 'm_theo=%f, v_theo=%f' %(beta_d/(alpha-1),
                                            beta_d**2/((alpha-1)**2 * (alpha-2)))
-            samples = 1.0/random.gamma(alpha,1/beta_d,1000)
+            samples = 1.0/np.random.gamma(alpha,1/beta_d,1000)
             print 'm_empir=%f, v_empir=%f' %(samples.mean(), samples.var())
 
 
@@ -457,101 +416,62 @@ def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
 
 
-class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
+class HRF_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable) :
     """
     HRF sampler for multisession model
     """
 
-    # parameter labels definitions :
-    P_ZERO_CONSTR = 'zeroConstraint'
-    P_DURATION = 'duration'
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    P_NORMALISE = 'normalise'
-    P_DERIV_ORDER = 'derivOrder'
-    P_OUTPUT_PMHRF = 'writeHrfOutput'
-    P_COVAR_HACK = 'hackCovarApost'
-    P_PRIOR_TYPE = 'priorType'
-    P_VOXELWISE_OUTPUTS = 'voxelwiseOutputs'
-    P_COMPUTE_AH_ONLINE = 'compute_ah_online'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_DURATION : 25,
-        P_ZERO_CONSTR : True,
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_NORMALISE : 1., # By default, scale is not sampled
-                          #-> do not normalise h but normalise hPM
-        P_DERIV_ORDER : 2,
-        P_OUTPUT_PMHRF : True,
-        P_COVAR_HACK : False,
-        P_PRIOR_TYPE : 'voxelwiseIID',
-        P_VOXELWISE_OUTPUTS : False,
-        P_COMPUTE_AH_ONLINE : False,
-        }
-
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_DURATION, P_ZERO_CONSTR, P_SAMPLE_FLAG,
-                            P_OUTPUT_PMHRF,] #P_USE_TRUE_VALUE,
-
-
+        parametersToShow = ['do_sampling', 'duration', 'zero_constraint']
 
     parametersComments = {
-        P_DURATION : 'HRF length in seconds',
-        P_ZERO_CONSTR : 'If True: impose first and last value = 0.\n'\
+        'duration' : 'HRF length in seconds',
+        'zero_constraint' : 'If True: impose first and last value = 0.\n'\
                         'If False: no constraint.',
-        P_SAMPLE_FLAG : 'Flag for the HRF estimation (True or False).\n'\
+        'do_sampling' : 'Flag for the HRF estimation (True or False).\n'\
                         'If set to False then the HRF is fixed to a canonical '\
                         'form.',
-        P_PRIOR_TYPE : 'Type of prior:\n - "singleHRF": one HRF modelled '\
+        'prior_type' : 'Type of prior:\n - "singleHRF": one HRF modelled '\
             'for the whole parcel ~N(0,v_h*R).\n' \
             ' - "voxelwiseIID": one HRF per voxel, '\
             'all HRFs are iid ~N(0,v_h*R).',
-        P_COVAR_HACK : 'Divide the term coming from the likelihood by the nb '\
+        'covar_hack' : 'Divide the term coming from the likelihood by the nb '\
             'of voxels\n when computing the posterior covariance. The aim is '\
             ' to balance\n the contribution coming from the prior with that '\
             ' coming from the likelihood.\n Note: this hack is only taken into '\
-            ' account when "singleHRf" is used for "%s"' %P_PRIOR_TYPE,
-        P_NORMALISE : 'If 1. : Normalise samples of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
-                      'If 0. : Normalise posterior means of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
+            ' account when "singleHRf" is used for "prior_type"',
+        'normalise' : 'If 1. : Normalise samples of Hrf and NRLs when they are sampled.\n'\
+                      'If 0. : Normalise posterior means of Hrf and NRLs when they are sampled.\n'\
                       'else : Do not normalise.'
 
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None, duration=25., zero_constraint=True,
+                 normalise=1., deriv_order=2, covar_hack=False,
+                 prior_type='voxelwiseIID', do_voxelwise_outputs=False,
+                 compute_ah_online=False):
         """
         #TODO : comment
         """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
+        xmlio.XmlInitable.__init__(self)
 
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        self.compute_ah_online = self.parameters[self.P_COMPUTE_AH_ONLINE]
-
-        GibbsSamplerVariable.__init__(self, 'hrf', valIni=valIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=useTrueVal,
+        self.compute_ah_online = compute_ah_online
+        GibbsSamplerVariable.__init__(self, 'hrf', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
                                       axes_names=['time'],
                                       value_label='delta BOLD')
 
-        self.duration = self.parameters[self.P_DURATION]
-        self.zc = self.parameters[self.P_ZERO_CONSTR]
-        self.normalise = self.parameters[self.P_NORMALISE]
-
-        self.derivOrder = self.parameters[self.P_DERIV_ORDER]
+        self.duration = duration
+        self.zc = zero_constraint
+        self.normalise = normalise
+        #print 'normalise', self.normalise
+        self.derivOrder = deriv_order
         self.varR = None
-        self.outputHrf = self.parameters[self.P_OUTPUT_PMHRF]
-        self.covarHack = self.parameters[self.P_COVAR_HACK]
-        self.priorType = self.parameters[self.P_PRIOR_TYPE]
-        self.signErrorDetected = None
-        self.voxelwise_outputs = self.parameters[self.P_VOXELWISE_OUTPUTS]
+        self.covarHack = covar_hack
+        self.priorType = prior_type
+        self.voxelwise_outputs = do_voxelwise_outputs
 
     def linkToData(self, dataInput):
 
@@ -566,9 +486,6 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.nbSess = self.dataInput.nbSessions
 
         if dataInput.simulData is not None and \
-                isinstance(dataInput.simulData, BOLDModel):
-            self.trueValue = dataInput.simulData.hrf.get_hrf(0,0)
-        elif dataInput.simulData is not None and \
             isinstance(dataInput.simulData, dict):
             simu_hrf = dataInput.simulData['hrf']
             if isinstance(simu_hrf, xndarray):
@@ -603,7 +520,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def checkAndSetInitValue(self, variables):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         smplRH.checkAndSetInitValue(variables)
         rh = smplRH.currentValue
         pyhrf.verbose(4, 'Hrf variance is :%1.3f' %rh)
@@ -630,7 +547,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             pyhrf.verbose(5,'genCanoHRF -> dur=%f, dt=%f' \
                               %(self.duration, self.eventdt))
             dt = self.eventdt
-            hIni = getCanoHRF(self.hrfLength * dt, dt)[1][:self.hrfLength]
+            hIni = msimu.getCanoHRF(self.hrfLength * dt, dt)[1][:self.hrfLength]
 
             #if len(hIni) > self.hrfLength:
             #    hIni = getCanoHRF((self.hrfLength-1)*dt,self.eventdt)[1]
@@ -684,30 +601,31 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def getCurrentVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         rh = smplRH.currentValue
-        (useless, varR) = genGaussianSmoothHRF(self.zc,
-                                               self.hrfLength,
-                                               self.eventdt, rh)
+        (useless, varR) = msimu.genGaussianSmoothHRF(self.zc,
+                                                     self.hrfLength,
+                                                     self.eventdt, rh)
         return varR/rh
 
     def getFinalVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         rh = smplRH.finalValue
-        (useless, varR) = genGaussianSmoothHRF(self.zc,
-                                               self.hrfLength,
-                                               self.eventdt, rh)
+        (useless, varR) = msimu.genGaussianSmoothHRF(self.zc,
+                                                     self.hrfLength,
+                                                     self.eventdt, rh)
         return varR/rh
 
 
 
     def samplingWarmUp(self, variables):
         if self.varR == None :
-            smplRH = variables[self.samplerEngine.I_RH]
+            smplRH = self.get_variable('hrf_var')
             rh = smplRH.currentValue
-            (useless, self.varR) = genGaussianSmoothHRF(self.zc,
-                                                        self.hrfLength,
-                                                        self.eventdt, rh, order=self.derivOrder)
+            (useless, self.varR) = msimu.genGaussianSmoothHRF(self.zc,
+                                                              self.hrfLength,
+                                                              self.eventdt, rh,
+                                                              order=self.derivOrder)
             #self.varR = buildDiagGaussianMat(self.hrfLength-self.zc*2,4)
             # HACK
             #self.varR = ones_like(self.varR)
@@ -718,7 +636,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         varX = self.dataInput.varX[sess][:,:,:]
         matXtX = self.dataInput.matXtX[sess]
-        drift_sampler = self.getVariable('drift')
+        drift_sampler = self.get_variable('drift')
         matPl = drift_sampler.matPl[sess]
         y = self.dataInput.varMBY[sess] - matPl
 
@@ -728,7 +646,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
                 assert_almost_equal(self.dataInput.varMBY[sess], sd['bold'])
                 assert_almost_equal(matPl, sd['drift'])
-                assert_almost_equal(y, sd['stim_induced_signal'][::osf] + sd['noise'])
+                assert_almost_equal(y, sd['stim_induced'][::osf] + sd['noise'])
 
         varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
         varDeltaY = np.zeros((self.nbColX), dtype=float )
@@ -790,9 +708,9 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        snrl = self.samplerEngine.getVariable('nrl_by_session')
+        snrl = self.samplerEngine.get_variable('nrl_by_session')
         nrls = snrl.currentValue
-        rb   = self.samplerEngine.getVariable('noise_var').currentValue
+        rb   = self.samplerEngine.get_variable('noise_var').currentValue
 
         pyhrf.verbose(6, 'Computing StQS StQY optim fashion')
         tSQSOptimIni = time.time()
@@ -801,7 +719,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         pyhrf.verbose(6, 'Computing StQS StQY optim fashion'+\
                       ' done in %1.3f sec' %(time.time()-tSQSOptimIni))
 
-        rh = variables[self.samplerEngine.I_RH].currentValue
+        rh = self.get_variable('hrf_var').currentValue
 
 
         if self.priorType == 'voxelwiseIID':
@@ -828,11 +746,11 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             #HACK
             #f = self.currentValue.max()
             self.currentValue = self.currentValue / f #/(self.normalise+0.)
-            if 0 and self.getVariable('nrl_by_session').sampleFlag:
-                self.getVariable('nrl_by_session').currentValue *= f
+            if 0 and self.get_variable('nrl_by_session').sampleFlag:
+                self.get_variable('nrl_by_session').currentValue *= f
 
                 # Normalizing Mixture components
-                smixt_params = self.samplerEngine.getVariable('mixt_params')
+                smixt_params = self.samplerEngine.get_variable('mixt_params')
                 if 0 and smixt_params.sampleFlag:
                     # Normalizing Mean's activation class
                     smixt_params.currentValue[smixt_params.I_MEAN_CA] *= f
@@ -855,7 +773,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
         # update ytilde for nrls
-        nrlsmpl = variables[self.samplerEngine.I_NRLS_SESS]
+        nrlsmpl = self.get_variable('nrl_by_session')
         for s in xrange(self.nbSess):
             nrlsmpl.computeVarYTildeSessionOpt(self.varXh[s], s)
 
@@ -934,7 +852,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def updateObsersables(self):
         GibbsSamplerVariable.updateObsersables(self)
-        sScale = self.samplerEngine.getVariable('scale')
+        sScale = self.samplerEngine.get_variable('scale')
         if self.sampleFlag and np.allclose(self.normalise,0.) and \
                 not sScale.sampleFlag:
             pyhrf.verbose(6, 'Normalizing posterior mean of HRF '\
@@ -954,7 +872,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             for j in xrange(self.nbConditions):
                 hrep = np.repeat(self.currentValue,self.nbVox)
                 ncoeffs = self.currentValue.shape[0]
-                nrls = self.samplerEngine.getVariable('nrl').currentValue
+                nrls = self.samplerEngine.get_variable('nrl').currentValue
                 self.current_ah[:,:,j] = hrep.reshape(ncoeffs,self.nbVox) * \
                     nrls[j,:]
 
@@ -978,10 +896,10 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.error = np.zeros(self.hrfLength, dtype=float)
         if self.sampleFlag: #TODO chech for NaNs ...  and not _np.isnan(rh):
             # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
+            rh = self.samplerEngine.get_variable('hrf_var').finalValue
 
-            rb = self.samplerEngine.getVariable('noise_var').finalValue
-            snrls = self.samplerEngine.getVariable('nrl_by_session')
+            rb = self.samplerEngine.get_variable('noise_var').finalValue
+            snrls = self.samplerEngine.get_variable('nrl_by_session')
             nrls = snrls.finalValue
             aa = np.zeros_like(snrls.aa)
             snrls.computeAA(nrls, aa)
@@ -1009,7 +927,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         outputs = GibbsSamplerVariable.getOutputs(self)
 
         h = self.finalValue
-        nrls = self.samplerEngine.getVariable('nrl').finalValue
+        nrls = self.samplerEngine.get_variable('nrl').finalValue
         ah = np.zeros((h.shape[0],self.nbVox, self.nbConditions))
         for j in xrange(self.nbConditions):
             ah[:,:,j] = np.repeat(h,self.nbVox).reshape(h.shape[0],self.nbVox) * \
@@ -1057,7 +975,7 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #print 'hrf - finalValue:'
         #print self.finalValue
         if pyhrf.__usemode__ == pyhrf.DEVEL:
-            nrls = self.samplerEngine.getVariable('nrl').finalValue
+            nrls = self.samplerEngine.get_variable('nrl').finalValue
             #print np.argmax(abs(nrls))
             #print nrls.shape
             nrlmax = nrls[np.unravel_index(np.argmax(abs(nrls)),nrls.shape)]
@@ -1091,365 +1009,12 @@ class HRF_MultiSess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
                            np.where(nh[ttp/r]/2-nh[0:ttp/r]>=0)[0][0]) * r * self.dt
 
                 outputs['whM'] = xndarray(np.zeros(self.nbVox) + whM,
-                                        axes_names=['voxel'], value_label='whM')
+                                          axes_names=['voxel'], value_label='whM')
             except Exception, e:
                 pyhrf.verbose(3, "could not compute whm, exception:")
                 pyhrf.verbose(3, str(e))
                 outputs['whM'] = xndarray(np.zeros(self.nbVox) - 1,
-                                        axes_names=['voxel'], value_label='whM')
-
-        for k,v in outputs.iteritems():
-            yield k,v
-
-
-
-class HRF_MultiSess_Sampler_OLD(HRF_Drift_Sampler):
-
-    defaultParameters = copyModule.copy(HRFSampler.defaultParameters)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-    xmlLabel=None, xmlComment=None):
-        HRFSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
-
-    def checkAndSetInitValue(self, variables):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
-        smplRH.checkAndSetInitValue(variables)
-        rh = smplRH.currentValue
-        pyhrf.verbose(1, 'Hrf variance is :%1.3f' %rh)
-        pyhrf.verbose(4,'hrfValIni is None -> setting it ...')
-
-        nrlsmpl = variables[self.samplerEngine.I_NRLS_SESS]
-        nrlsmpl.checkAndSetInitValue(variables)
-
-        #HACK
-        #if not self.sampleFlag and self.dataInput.simulData != None :
-        #if 0:
-        #HACK
-        hrfValIni = None
-        if self.useTrueValue :
-            if self.trueValue is not None:
-                hrfValIni = self.trueValue
-            else:
-                raise Exception('Needed a true value for hrf init but '\
-                                    'None defined')
-
-        if hrfValIni is None:
-            pyhrf.verbose(6, 'self.duration=%d, self.eventdt=%1.2f' \
-                              %(self.duration,self.eventdt))
-
-            #hIni = genCanoBezierHRF(self.duration, self.eventdt)[1]
-            pyhrf.verbose(5,'genCanoHRF -> dur=%f, dt=%f' \
-                              %(self.duration, self.eventdt))
-            dt = self.eventdt
-            hIni = getCanoHRF(self.hrfLength * dt, dt)[1][:self.hrfLength]
-
-            #if len(hIni) > self.hrfLength:
-            #    hIni = getCanoHRF((self.hrfLength-1)*dt,self.eventdt)[1]
-            #elif len(hIni) < self.hrfLength:
-            #    hIni = getCanoHRF((self.hrfLength+1)*dt, self.eventdt)[1]
-
-            hrfValIni = np.array(hIni)
-            pyhrf.verbose(5,'genCanoHRF -> shape h: %s' \
-                          %str(hrfValIni.shape))
-
-        if self.zc :
-            pyhrf.verbose(4,'hrf zero constraint On' )
-            hrfValIni = hrfValIni[1:(self.hrfLength-1)]
-
-        pyhrf.verbose(4,'hrfValIni:' +\
-                          str(hrfValIni.shape))
-        pyhrf.verbose.printNdarray(6, hrfValIni)
-        pyhrf.verbose(4, 'self.hrfLength:' \
-                          +str(self.hrfLength))
-
-        normHRF = (sum(hrfValIni**2))**(0.5)
-        hrfValIni /= normHRF
-
-        self.currentValue = hrfValIni[:]
-
-        if self.zc :
-            self.axes_domains['time'] = np.arange(len(self.currentValue)+2) \
-                                       *self.eventdt
-        else:
-            self.axes_domains['time'] = np.arange(len(self.currentValue)) \
-                                       *self.eventdt
-
-
-        pyhrf.verbose(4,'hrfValIni after ZC:' +\
-                      str(self.currentValue.shape))
-        pyhrf.verbose.printNdarray(6, self.currentValue )
-
-        self.updateNorm()
-        self.updateXh()
-        #else -> #TODO : check consistency between given init value
-        # and self.hrfLength ...
-
-        #Update varYtilde
-
-        for s in xrange(self.nbSess):
-            nrlsmpl.computeVarYTildeSessionOpt(self.varXh[s], s)
-
-    def sampleNextInternal(self, variables):
-        HRFSampler.sampleNextInternal(self, variables)
-
-    def linkToData(self, dataInput):
-
-        self.dataInput = dataInput
-        self.nbConditions = self.dataInput.nbConditions
-        self.nbVox = self.dataInput.nbVoxels
-        self.ny = self.dataInput.ny
-        self.nbColX = self.dataInput.nbColX
-        self.hrfLength = self.dataInput.hrfLength
-        self.dt = self.dataInput.dt
-        self.eventdt = self.dataInput.dt
-        self.nbSess = self.dataInput.nbSessions
-
-
-        if dataInput.simulData is not None and \
-                isinstance(dataInput.simulData, BOLDModel):
-            self.trueValue = dataInput.simulData.hrf.get_hrf(0,0)
-        elif dataInput.simulData is not None and \
-            isinstance(dataInput.simulData, dict):
-            simu_hrf = dataInput.simulData['hrf']
-            if isinstance(simu_hrf, xndarray):
-                self.trueValue = simu_hrf.data
-            else:
-                self.trueValue = simu_hrf
-
-        elif dataInput.simulData is not None and \
-            isinstance(dataInput.simulData, list):
-            #mutlisession
-            # take only HRF of 1st session
-            simu_hrf = dataInput.simulData[0]['hrf']
-            if isinstance(simu_hrf, xndarray):
-                self.trueValue = simu_hrf.data
-            else:
-                self.trueValue = simu_hrf[:,0] #HACK retrieve only one hrf
-
-
-        # Allocations :
-        self.ajak_rb =  np.zeros((self.nbVox), dtype=float)
-
-        if 0:
-            self.varStLambdaS = np.zeros((self.nbColX, self.nbColX, self.nbVox),
-                                      dtype=float)
-            self.varStLambdaY = np.zeros((self.nbColX, self.nbVox), dtype=float)
-        self.varYaj = np.zeros((self.ny,self.nbVox), dtype=float)
-
-    def calcXh(self, hrf):
-        pyhrf.verbose(4,'CalcXh got stackX ' + \
-        str(self.dataInput.stackX.shape))
-        stackXH=[]
-        for s in xrange(self.nbSess):
-            #print 'matrices:'
-            #print self.dataInput.stackX[s].shape
-            #print hrf.shape
-            stackXh = np.dot(self.dataInput.stackX[s], hrf)
-            stackXH.append(np.reshape(stackXh,
-                            (self.nbConditions, self.ny)).transpose())
-        stackXh=stackXH
-
-        return stackXh
-
-    def computeStDS_StDY_one_session(self, rb, nrls, aa, sess):
-        #case drift sampling
-
-        varX = self.dataInput.varX[sess][:,:,:]
-        matXtX = self.dataInput.matXtX[sess]
-        drift_sampler = self.getVariable('drift')
-        matPl = drift_sampler.matPl[sess]
-        y = self.dataInput.varMBY[sess] - matPl
-
-        if self.dataInput.simulData is not None:
-            sd = self.dataInput.simulData[sess]
-            osf = int(sd['tr'] / sd['dt'])
-            if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
-                assert_almost_equal(self.dataInput.varMBY[sess], sd['bold'])
-                assert_almost_equal(matPl, sd['drift'])
-                assert_almost_equal(y, sd['stim_induced_signal'][::osf] + sd['noise'])
-
-        varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
-        varDeltaY = np.zeros((self.nbColX), dtype=float )
-
-        for j in xrange(self.nbConditions):
-            np.divide(y, rb, self.varYaj)
-            self.varYaj *= nrls[j,:]
-            varDeltaY +=  np.dot(varX[j,:,:].transpose(),self.varYaj.sum(1))
-
-            for k in xrange(self.nbConditions):
-                    np.divide(aa[j,k,:], rb, self.ajak_rb)
-##                    pyhrf.verbose(6, 'ajak/rb :')
-##                    pyhrf.verbose.printNdarray(6,self.ajak_rb)
-                    varDeltaS += self.ajak_rb.sum()*matXtX[j,k,:,:]
-
-        return (varDeltaS, varDeltaY)
-
-
-
-    def computeStDS_StDY(self, rb_allSess, nrls_allSess, aa_allSess):
-
-        varDeltaS_Sess = np.zeros((self.nbColX,self.nbColX), dtype=float )
-        varDeltaY_Sess = np.zeros((self.nbColX), dtype=float )
-
-        for s in xrange(self.nbSess):
-            ds, dy = self.computeStDS_StDY_one_session(rb_allSess[s,:],
-                            nrls_allSess[s,:,:], aa_allSess[s,:,:,:], s)
-            varDeltaS_Sess += ds
-            varDeltaY_Sess += dy
-
-        return (varDeltaS_Sess, varDeltaY_Sess)
-
-
-    def finalizeSampling(self):
-
-        GibbsSamplerVariable.finalizeSampling(self)
-
-        if 0 and self.trueValue is not None:
-            #scale_factor = self.trueValue.ptp() / self.finalValue.ptp()
-            scale_factor = self.trueValue.max() / self.finalValue.max()
-            self.finalValue *= scale_factor
-            nrl_session_smpl = self.samplerEngine.getVariable('nrl_by_session')
-            nrl_smpl = self.samplerEngine.getVariable('nrl')
-
-            nrl_session_smpl.finalValue /= scale_factor
-            nrl_smpl.finalValue /= scale_factor
-
-        ## Correct hrf*nrl scale ambiguity :
-
-        self.finalValueScaleCorr = self.finalValue/self.getScaleFactor()
-        self.error = np.zeros(self.hrfLength, dtype=float)
-        if self.sampleFlag: #TODO chech for NaNs ...  and not _np.isnan(rh):
-            # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
-            rb = self.samplerEngine.getVariable('noise_var').finalValue
-            snrls = self.samplerEngine.getVariable('nrl_by_session')
-            nrls = snrls.finalValue
-            aa = np.zeros((self.nbSess, self.nbConditions, self.nbConditions, self.nbVox),
-                        dtype=float)
-            snrls.computeAA(nrls, aa)
-            stDS, useless = self.computeStDS_StDY(rb, nrls, aa)
-            varSigma_h = np.asmatrix(stDS + self.varR/rh).I
-            if self.zc:
-                self.error[1:-1] = np.diag(varSigma_h)**.5
-            else:
-                self.error = np.diag(varSigma_h)**.5
-
-        if hasattr(self, 'varDeltaY'):
-            del self.varDeltaY
-            del self.varDeltaS
-
-        # Temporary variables :
-        del self.varYaj
-        del self.ajak_rb
-
-
-
-    def getOutputs(self):
-        outputs = GibbsSamplerVariable.getOutputs(self)
-
-        #if self.voxelwise_outputs or pyhrf.__usemode__ == pyhrf.ENDUSER:
-        #to obtain hrf.nii ie hrf on each voxel
-        if 0:
-            #TODO: fix to work with generator ?
-            # -> ah output might be enough to browse results voxelwise ...
-            for on,o in outputs.iteritems():
-                pyhrf.verbose(4, "Treating hrf output %s :\n%s" %(on,o.descrip()))
-                newOutput = o.repeat(self.nbVox, 'voxel')
-                pyhrf.verbose(4, "New hrf output :\n%s" %(newOutput.descrip()))
-                outputs[on] = newOutput
-
-        h = self.finalValue
-        nrls = self.samplerEngine.getVariable('nrl_by_session').finalValue
-        ah = np.zeros((self.nbSess, h.shape[0],self.nbVox, self.nbConditions))
-        for s in xrange(self.nbSess):
-            for j in xrange(self.nbConditions):
-                ah[s,:,:,j] = np.repeat(h,self.nbVox).reshape(h.shape[0],self.nbVox) * \
-                                nrls[s,j,:]
-        ad = self.axes_domains.copy()
-        ad['session']   = self.dataInput.sNames
-        ad['condition'] = self.dataInput.cNames
-        outputs['ah'] = xndarray(ah, axes_names=['session', 'time','voxel','condition'],
-                               axes_domains=ad,
-                               value_label='Delta BOLD')
-
-        if self.zc:
-            dm = np.array(self.calcXh(self.finalValue[1:-1]))
-        else:
-            dm = np.array(self.calcXh(self.finalValue))
-        xh_ad = {
-            'session': self.dataInput.sNames,
-            'time' : np.arange(self.dataInput.ny)*self.dataInput.tr,
-            'condition':self.dataInput.cNames
-            }
-
-        outputs['Xh'] = xndarray(dm, axes_names=['session', 'time','condition'],
-                               axes_domains=xh_ad)
-
-        if getattr(self, 'compute_ah_online', False):
-            z = np.zeros((1,)+self.mean_ah.shape[1:], dtype=np.float32)
-
-            outputs['ah_online'] = xndarray(np.concatenate((z,self.mean_ah,z)),
-                                          axes_names=['time','voxel',
-                                                      'condition'],
-                                          axes_domains=ad,
-                                          value_label='Delta BOLD')
-
-            outputs['ah_online_var'] = xndarray(np.concatenate((z,self.var_ah,z)),
-                                              axes_names=['time','voxel',
-                                                          'condition'],
-                                              axes_domains=ad,
-                                              value_label='var')
-
-        if hasattr(self, 'finalValue_sign_corr'):
-            outputs['hrf_sign_corr'] = xndarray(self.finalValue_sign_corr,
-                                              axes_names=self.axes_names,
-                                              axes_domains=self.axes_domains,
-                                              value_label='Delta BOLD')
-
-        #print 'hrf - finalValue:'
-        #print self.finalValue
-        if pyhrf.__usemode__ == pyhrf.DEVEL:
-            nrls = self.samplerEngine.getVariable('nrl').finalValue
-            #print np.argmax(abs(nrls))
-            #print nrls.shape
-            nrlmax = nrls[np.unravel_index(np.argmax(abs(nrls)),nrls.shape)]
-            # ttp:
-            h = self.finalValue * nrlmax
-            ttp = np.where(np.diff(h)<0)[0][0]
-            if ttp == 0:
-                ttp = np.where(np.diff(np.diff(h))>0)[0][0]
-                if ttp == 0:
-                    ttp = h.argmax()
-                #ttp = -1
-            #print '->ttp:', ttp
-            outputs['ttp'] = xndarray(np.zeros(self.nbVox) + ttp * self.dt,
-                                    axes_names=['voxel'], value_label='TTP')
-
-            #ttu = self.finalValue[self.finalValue.argmax():].argmin() * self.dt
-            #outputs['ttu'] = xndarray(zeros(self.nbVox) + ttp,
-            #                        axes_names=['voxel'], value_label='TTU')
-            try:
-                hInterp = scipy.interpolate.interp1d(np.arange(0,len(self.finalValue)),
-                                                     self.finalValue)
-                r = 0.01
-                nh = hInterp(np.arange(0,len(self.finalValue)-1, r))
-                #print 'nh.shape', nh.shape
-                #print 'ttp*r=', ttp/r
-                #print 'nh[ttp/r]/2:', nh[ttp/r]/2
-                #print 'nh[ttp/r:0]:', nh[ttp/r:0]
-                #print 'np.where(nh[ttp/r]/2-nh[ttp/r:0]>=0):'
-                #print np.where(nh[ttp/r]/2-nh[ttp/r:-1]>=0)
-                whM = (np.where(nh[ttp/r]/2-nh[ttp/r:-1]>=0)[0][0] - \
-                           np.where(nh[ttp/r]/2-nh[0:ttp/r]>=0)[0][0]) * r * self.dt
-
-                outputs['whM'] = xndarray(np.zeros(self.nbVox) + whM,
-                                        axes_names=['voxel'], value_label='whM')
-            except Exception, e:
-                pyhrf.verbose(3, "could not compute whm, exception:")
-                pyhrf.verbose(3, str(e))
-                outputs['whM'] = xndarray(np.zeros(self.nbVox) - 1,
-                                        axes_names=['voxel'], value_label='whM')
+                                          axes_names=['voxel'], value_label='whM')
 
         for k,v in outputs.iteritems():
             yield k,v
@@ -1460,49 +1025,19 @@ class HRF_MultiSess_Sampler_OLD(HRF_Drift_Sampler):
 # NRL by session Sampler and variance of session-specific nrls sampler#
 ###########################################################################
 
-class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
-    # parameters specifications :
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_USE_TRUE_VALUE = 'useTrueNrls'
-    P_OUTPUT_NRL = 'writeResponsesOutput'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_SAMPLE_FLAG : True,
-        P_VAL_INI : None,
-        P_USE_TRUE_VALUE : False, #False,
-        P_OUTPUT_NRL : True,
-        }
-
-    if pyhrf.__usemode__ == pyhrf.DEVEL:
-        parametersToShow = [P_SAMPLE_FLAG, P_VAL_INI, P_USE_TRUE_VALUE,
-                            P_OUTPUT_NRL
-                            ]
-
-    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_OUTPUT_NRL]
+class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-
-        #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+    def __init__(self, do_sampling=True, val_ini=None, use_true_value=False):
 
         an = ['session', 'condition', 'voxel']
-        GibbsSamplerVariable.__init__(self,'nrl_by_session', valIni=valIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=useTrueVal,
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self,'nrl_by_session', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
                                       axes_names=an,
                                       value_label='PM NRL')
 
-
-        self.outputNrls = self.parameters[self.P_OUTPUT_NRL]
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -1532,12 +1067,12 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
     def checkAndSetInitValue(self, variables):
         pyhrf.verbose(3, 'NRL_Multi_Sess_Sampler.checkAndSetInitNRLs ...')
-        smplNrlBar = variables[self.samplerEngine.I_NRLS_BAR]
+        smplNrlBar = self.get_variable('nrl_bar')
         smplNrlBar.checkAndSetInitValue(variables)
 
-        self.smplHRF = variables[self.samplerEngine.I_HRF]
+        self.smplHRF = self.get_variable('hrf')
 
-        self.smplDrift = variables[self.samplerEngine.I_DRIFT]
+        self.smplDrift = self.get_variable('drift')
         self.smplDrift.checkAndSetInitValue(variables)
 
         self.varYtilde = np.zeros((self.nbSessions, self.ny, self.nbVox), dtype=np.float64)
@@ -1571,9 +1106,9 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             if 0:
                 self.currentValue = np.zeros((self.nbSessions, self.nbConditions, self.nbVox),
                                             dtype=np.float64)
-                nrl_bar = self.samplerEngine.getVariable('nrl').currentValue
-                var_sess = self.samplerEngine.getVariable('variance_nrls_by_session').currentValue
-                labels = self.samplerEngine.getVariable('nrl').labels
+                nrl_bar = self.samplerEngine.get_variable('nrl').currentValue
+                var_sess = self.samplerEngine.get_variable('variance_nrls_by_session').currentValue
+                labels = self.samplerEngine.get_variable('nrl').labels
                 for m in xrange(self.nbConditions):
                     Ac_pos = np.where(labels[m])
                     for s in xrange(self.nbSessions):
@@ -1594,7 +1129,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         """
 
         # Precalculations and allocations :
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
 
         #self.egsurrb = np.empty(( self.nbConditions, self.nbVox), dtype=float)
         #self.varYtilde = np.zeros((self.nbSessions, self.ny, self.nbVox), dtype=np.float64)
@@ -1613,7 +1148,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         self.track_sampled_quantity(self.varApost, 'nrl_sess_var_apost',
                                     ['session','condition','voxel'])
 
-        self.imm = self.samplerEngine.getVariable('beta').currentValue[0] < 0
+        self.imm = self.samplerEngine.get_variable('beta').currentValue[0] < 0
 
         for s in xrange(self.nbSessions):
             self.computeVarYTildeSessionOpt(smplHRF.varXh[s], s)
@@ -1634,7 +1169,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
     def get_accuracy(self, abs_error, rel_error, fv, tv, atol, rtol):
 
-        snrl_bar = self.getVariable('nrl')
+        snrl_bar = self.get_variable('nrl')
         labs = snrl_bar.finalLabels
         # same criterion as np.allclose:
         acc = abs_error <= (atol + rtol * np.maximum(np.abs(tv),
@@ -1665,7 +1200,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde[s].shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde[s])
-        matPl = self.getVariable('drift').matPl
+        matPl = self.get_variable('drift').matPl
         self.varYbar[s] = self.varYtilde[s] - matPl[s]
 
         if self.dataInput.simulData is not None:
@@ -1685,17 +1220,17 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
     def sampleNextAlt(self, variables):
         pass
         #used when sampling if OFF !
-        # if self.getVariable('hrf').sampleFlag:
-        #     varXh = variables[self.samplerEngine.I_HRF].varXh
+        # if self.get_variable('hrf').sampleFlag:
+        #     varXh = self.get_variable('hrf').varXh
         #     for s in xrange(self.nbSessions):
         #         self.computeVarYTildeSessionOpt(varXh[s], s)
         # -> already done at the end of HRF sampling
 
     def computeComponentsApost(self, s, m, varXh):
-        var_a = self.getVariable('variance_nrls_by_session').currentValue
-        rb = self.getVariable('noise_var').currentValue
+        var_a = self.get_variable('variance_nrls_by_session').currentValue
+        rb = self.get_variable('noise_var').currentValue
         nrls = self.currentValue
-        nrl_bar = self.getVariable('nrl').currentValue
+        nrl_bar = self.get_variable('nrl').currentValue
         pyhrf.verbose(6, 'rb %s :'%str(rb.shape))
         pyhrf.verbose.printNdarray(6, rb)
 
@@ -1740,7 +1275,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
         pyhrf.verbose(3, 'NRL_Multi_Sess_Sampler.sampleNextInternal ...')
-        varXh = self.getVariable('hrf').varXh
+        varXh = self.get_variable('hrf').varXh
 
         for s in xrange(self.nbSessions):
             self.computeVarYTildeSessionOpt(varXh[s], s)
@@ -1838,7 +1373,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         #print 'finalVal:', self.finalValue[2,2,15]
         GibbsSamplerVariable.finalizeSampling(self)
 
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
 
 
         # Correct sign ambiguity :
@@ -1948,7 +1483,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                                                   axes_names=axes_names,
                                                   axes_domains=ad)
 
-        drift = self.getVariable('drift').get_final_value()
+        drift = self.get_variable('drift').get_final_value()
 
         axes_names = ['type','session', 'time', 'voxel']
         outputs['ysignals'] = xndarray(np.array([self.dataInput.varMBY,
@@ -1975,35 +1510,18 @@ class NRL_Multi_Sess_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         return outputs
 
 
-class Variance_GaussianNRL_Multi_Sess(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
-    '''
-    '''
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
+class Variance_GaussianNRL_Multi_Sess(xmlio.XmlInitable, GibbsSamplerVariable):
 
-    defaultParameters = {
-        P_USE_TRUE_VALUE : False,
-        P_VAL_INI : np.array([1.]),
-        P_SAMPLE_FLAG : False, #By default, beta>0 -> SMM
-        }
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=np.array([1.])):
 
-    if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_USE_TRUE_VALUE]
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self, 'variance_nrls_by_session', valIni=valIni,
-                                            useTrueValue=useTrueVal,
-                                            sampleFlag=sampleFlag)
+        xmlio.XmlInitable.__init__(self)
 
+        GibbsSamplerVariable.__init__(self,'variance_nrls_by_session',
+                                      valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value)
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -2035,8 +1553,8 @@ class Variance_GaussianNRL_Multi_Sess(xmlio.XMLParamDrivenClass, GibbsSamplerVar
 
     def sampleNextInternal(self, variables):
 
-        nrls = variables[self.samplerEngine.I_NRLS_SESS].currentValue
-        nrlsBAR = variables[self.samplerEngine.I_NRLS_BAR].currentValue
+        nrls = self.get_variable('nrl_by_session').currentValue
+        nrlsBAR = self.get_variable('nrl_bar').currentValue
 
         #sum_s_j_m=0
         #for s in xrange(self.nbSessions):
@@ -2061,11 +1579,6 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
     Class handling the Gibbs sampling of Neural Response Levels in the case of
     joint drift sampling.
     """
-    defaultParameters = copyModule.copy(NRLSampler.defaultParameters)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -2112,9 +1625,9 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
     def checkAndSetInitValue(self, variables):
         NRLSampler.checkAndSetInitLabels(self,variables)
         NRLSampler.checkAndSetInitNRL(self,variables)
-        mixt_par = variables[self.samplerEngine.I_MIXT_PARAM_NRLS_BAR]
+        mixt_par = self.get_variable('mixt_params')
         mixt_par.checkAndSetInitValue(variables)
-        weights_par = variables[self.samplerEngine.I_WEIGHTING_PROBA_NRLS_BAR]
+        weights_par = self.get_variable('mixt_weights')
         weights_par.checkAndSetInitValue(variables)
 
     def sampleNextAlt(self, variables):
@@ -2128,7 +1641,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
         # Precalculations and allocations :
 
 
-        self.imm = self.samplerEngine.getVariable('beta').currentValue[0] < 0
+        self.imm = self.samplerEngine.get_variable('beta').currentValue[0] < 0
 
         self.varClassApost = np.zeros((self.nbClasses,self.nbConditions,self.nbVox),
                                 dtype=np.float64)
@@ -2162,7 +1675,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM_NRLS_BAR]
+        sIMixtP = self.get_variable('mixt_params')
         varCI = sIMixtP.currentValue[sIMixtP.I_VAR_CI]
         varCA = sIMixtP.currentValue[sIMixtP.I_VAR_CA]
         meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA]
@@ -2177,7 +1690,7 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
         else: #smm
             self.sampleNrlsSerial(varCI, varCA, meanCA, variables)
             #self.computeVarYTildeOpt(varXh)
-            #matPl = self.samplerEngine.getVariable('drift').matPl
+            #matPl = self.samplerEngine.get_variable('drift').matPl
             #self.varYbar = self.varYtilde - matPl
 
         if (self.currentValue >= 1000).any() and \
@@ -2201,15 +1714,15 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
 
         pyhrf.verbose(3, 'Sampling Nrls (serial, spatial prior) ...')
         sIMixtP = variables[self.samplerEngine.I_MIXT_PARAM_NRLS_BAR ]
-        nrl_var_sess = self.samplerEngine.getVariable('variance_nrls_by_session').currentValue
-        sum_nrl_sess = self.samplerEngine.getVariable('nrl_by_session').currentValue.sum(0)
+        nrl_var_sess = self.samplerEngine.get_variable('variance_nrls_by_session').currentValue
+        sum_nrl_sess = self.samplerEngine.get_variable('nrl_by_session').currentValue.sum(0)
 
         var = sIMixtP.getCurrentVars()
         mean = sIMixtP.getCurrentMeans()
 
         neighbours = self.dataInput.neighboursIndexes
 
-        beta = self.samplerEngine.getVariable('beta').currentValue
+        beta = self.samplerEngine.get_variable('beta').currentValue
         voxOrder = permutation(self.nbVox)
         #print 'voxorder:', voxOrder
         #print 'badam!!'
@@ -2241,14 +1754,10 @@ class NRLsBar_Drift_Multi_Sess_Sampler(NRLSampler):
         return (((fv - tv)**2).sum() / (tv**2).sum())**.5 < 0.02
 
 ##################################################
-# Bigaussian parameteres Sampler #
+# Bigaussian parameters Sampler #
 ##################################################
-class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
-                                  GibbsSamplerVariable):
-    """
-    #TODO : comment
-
-    """
+class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XmlInitable,
+                                                      GibbsSamplerVariable):
 
     I_MEAN_CA = 0
     I_VAR_CA = 1
@@ -2256,44 +1765,27 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
     NB_PARAMS = 3
     PARAMS_NAMES = ['Mean_Activ', 'Var_Activ', 'Var_Inactiv']
 
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    #P_ACT_MEAN_TRUE_VALUE = 'ActMeanTrueValue'
-    #P_ACT_VAR_TRUE_VALUE = 'ActVarTrueValue'
-    #P_INACT_VAR_TRUE_VALUE = 'InactVarTrueValue'
+    I_MEAN_CA = 0
+    I_VAR_CA = 1
+    I_VAR_CI = 2
+    NB_PARAMS = 3
+    PARAMS_NAMES = ['Mean_Activ', 'Var_Activ', 'Var_Inactiv']
 
-    P_MEAN_CA_PR_MEAN = 'meanCAPrMean'
-    P_MEAN_CA_PR_VAR = 'meanCAPrVar'
-
-    P_VAR_CI_PR_ALPHA = 'varCIPrAlpha'
-    P_VAR_CI_PR_BETA = 'varCIPrBeta'
-
-    P_VAR_CA_PR_ALPHA = 'varCAPrAlpha'
-    P_VAR_CA_PR_BETA = 'varCAPrBeta'
-
-    P_HYPER_PRIOR = 'hyperPriorType'
-
-    P_ACTIV_THRESH = 'mean_activation_threshold'
-
-    #"peaked" priors
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_HYPER_PRIOR : 'Jeffrey',
-        #P_HYPER_PRIOR : 'proper',
-        P_MEAN_CA_PR_MEAN : 5.,
-        P_MEAN_CA_PR_VAR : 20.0,
-        P_VAR_CI_PR_ALPHA : 2.04,
-        P_VAR_CI_PR_BETA : 2.08,
-        P_VAR_CA_PR_ALPHA : 2.01,
-        P_VAR_CA_PR_BETA : .5,
-        P_ACTIV_THRESH : 4.,
-        #P_ACT_MEAN_TRUE_VALUE : { 'audio': 0.0, 'video': 0.0 },
-        #P_ACT_VAR_TRUE_VALUE : { 'audio': 1.0, 'video': 1.0 },
-        #P_INACT_VAR_TRUE_VALUE : { 'audio': 1.0, 'video': 1.0 },
-        }
+    # #"peaked" priors
+    # defaultParameters = {
+    #     P_VAL_INI : None,
+    #     P_SAMPLE_FLAG : True,
+    #     P_USE_TRUE_VALUE : False,
+    #     #P_HYPER_PRIOR : 'Jeffrey',
+    #     P_HYPER_PRIOR : 'proper',
+    #     P_MEAN_CA_PR_MEAN : 5.,
+    #     P_MEAN_CA_PR_VAR : 20.0,
+    #     P_VAR_CI_PR_ALPHA : 2.04,
+    #     P_VAR_CI_PR_BETA : .5,#2.08,
+    #     P_VAR_CA_PR_ALPHA : 2.01,
+    #     P_VAR_CA_PR_BETA : .5,
+    #     P_ACTIV_THRESH : 4.,
+    #     }
 
 
 
@@ -2302,7 +1794,7 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
         #P_VAL_INI : None,
         #P_SAMPLE_FLAG : True,
         #P_USE_TRUE_VALUE : False,
-        ##P_HYPER_PRIOR : 'Jeffrey',
+        ##P_HYPER_PRIOR : 'Jeffreys',
         #P_HYPER_PRIOR : 'proper',
         #P_SAMPLE_FLAG : 1,
         #P_MEAN_CA_PR_MEAN : 10.,
@@ -2325,63 +1817,41 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
     L_CA = NRLSampler.L_CA
     L_CI = NRLSampler.L_CI
 
-    parametersToShow = [ P_VAL_INI, P_SAMPLE_FLAG, P_ACTIV_THRESH,
-                         P_USE_TRUE_VALUE,
-                         #P_ACT_MEAN_TRUE_VALUE, P_ACT_VAR_TRUE_VALUE, P_INACT_VAR_TRUE_VALUE,
-                         P_HYPER_PRIOR,
-                         P_MEAN_CA_PR_MEAN, P_MEAN_CA_PR_VAR, P_VAR_CI_PR_ALPHA,
-                         P_VAR_CI_PR_BETA, P_VAR_CA_PR_ALPHA, P_VAR_CA_PR_BETA]
-
     parametersComments = {
-        P_HYPER_PRIOR : "Either 'proper' or 'Jeffrey'",
-        P_ACTIV_THRESH : "Threshold for the max activ mean above which the "\
+        'hyper_prior_type' : "Either 'proper' or 'Jeffreys'",
+        'activ_thresh' : "Threshold for the max activ mean above which the "\
             "region is considered activating",
-        #P_ACT_MEAN_TRUE_VALUE : \
-            #"Define the simulated values of activated class means."\
-            #"It is taken into account when mixture parameters are not sampled.",
-        #P_ACT_VAR_TRUE_VALUE : \
-            #"Define the simulated values of activated class variances."\
-            #"It is taken into account when mixture parameters are not sampled.",
-        #P_INACT_VAR_TRUE_VALUE : \
-            #"Define the simulated values of inactivated class variances."\
-            #"It is taken into account when mixture parameters are not sampled.",
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None, hyper_prior_type='Jeffreys', activ_thresh=4.,
+                 var_ci_pr_alpha=2.04, var_ci_pr_beta=.5,
+                 var_ca_pr_alpha=2.01, var_ca_pr_beta=.5,
+                 mean_ca_pr_mean=5., mean_ca_pr_var=20.):
         """
         #TODO : comment
         """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+        xmlio.XmlInitable.__init__(self)
 
         # get values for priors :
-        self.varCIPrAlpha = self.parameters[self.P_VAR_CI_PR_ALPHA]
-        self.varCIPrBeta = self.parameters[self.P_VAR_CI_PR_BETA]
-        self.varCAPrAlpha = self.parameters[self.P_VAR_CA_PR_ALPHA]
-        self.varCAPrBeta = self.parameters[self.P_VAR_CA_PR_BETA]
+        self.varCIPrAlpha = var_ci_pr_alpha
+        self.varCIPrBeta = var_ci_pr_beta
+        self.varCAPrAlpha = var_ca_pr_alpha
+        self.varCAPrBeta = var_ca_pr_beta
 
-        self.meanCAPrMean = self.parameters[self.P_MEAN_CA_PR_MEAN]
-        self.meanCAPrVar = self.parameters[self.P_MEAN_CA_PR_VAR]
-
-        #self.ActMeanTrueValue = self.parameters[self.P_ACT_MEAN_TRUE_VALUE]
-        #self.ActVarTrueValue = self.parameters[self.P_ACT_VAR_TRUE_VALUE]
-        #self.InactVarTrueValue = self.parameters[self.P_INACT_VAR_TRUE_VALUE]
+        self.meanCAPrMean = mean_ca_pr_mean
+        self.meanCAPrVar = mean_ca_pr_var
 
         an = ['component','condition']
         ad = {'component' : self.PARAMS_NAMES}
-        GibbsSamplerVariable.__init__(self, 'mixt_params', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag, axes_names=an,
+        GibbsSamplerVariable.__init__(self, 'mixt_params', valIni=val_ini,
+                                      useTrueValue=use_true_value,
+                                      sampleFlag=do_sampling, axes_names=an,
                                       axes_domains=ad)
 
-        php = self.parameters[self.P_HYPER_PRIOR]
-        self.hyperPriorFlag = False if php=='Jeffrey' else True
+        self.hyperPriorFlag = (hyper_prior_type == 'Jeffreys')
 
-        self.activ_thresh = self.parameters[self.P_ACTIV_THRESH]
+        self.activ_thresh = activ_thresh
 
     def linkToData(self, dataInput):
         self.dataInput =  dataInput
@@ -2428,107 +1898,8 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
                 self.trueValue[self.I_VAR_CA] = var_act
                 self.trueValue[self.I_VAR_CI] = var_inact
 
-        if self.dataInput.simulData is not None :
-            if (isinstance(self.dataInput.simulData, BOLDModel) or \
-                      isinstance(self.dataInput.simulData, BOLDModel2)):
-                mixtures = self.dataInput.simulData.nrls.getMixture()
-                itemsCond = mixtures.items()
-                nbCondInSimu = len(itemsCond)
-                self.trueValue = np.zeros((self.NB_PARAMS, nbCondInSimu ),
-                                        dtype=float)
 
-                #assert len(itemsCond) == self.nbConditions
-                meanCA = np.zeros(nbCondInSimu, dtype=float)
-                varCA = np.zeros(nbCondInSimu, dtype=float)
-                varCI = np.zeros(nbCondInSimu, dtype=float)
-                for cn,mixt in mixtures.iteritems():
-                    genActiv = mixt.generators['activ']
-                    genInactiv = mixt.generators['inactiv']
-                    indCond = self.dataInput.simulData.nrls.condIds[cn]
-                    varCI[indCond]= genInactiv.std**2
-                    pyhrf.verbose(4, 'genActiv type = %s'
-                                    %(genActiv.type))
-                    pyhrf.verbose(4,  'genInactiv type = %s'
-                                    %(genInactiv.type))
-                    if genActiv.type=='gaussian' or genActiv.type=='log-normal':
-                        meanCA[indCond]= genActiv.mean
-                        varCA[indCond]= genActiv.std**2
-                    elif genActiv.type =='gamma':
-                        meanCA[indCond]= genActiv.a *genActiv.b
-                        varCA[indCond]= genActiv.a *genActiv.b**2
-                    if 0:
-                        #TODO: debug -> why rewritting on meanCA and varCA ?
-                        if genInactiv.type=='gaussian' or genInactiv.type=='log-normal':
-                            meanCA[indCond]= genInactiv.mean
-                            varCA[indCond]= genInactiv.std**2
-                        elif genInactiv.type == 'uniform':
-                            meanCA[indCond]= (genInactiv.minV+genInactiv.maxV)/2.
-                            varCA[indCond]= (genInactiv.maxV-genInactiv.minV)/12.
-                        elif genInactiv.type == 'beta':
-                            meanCA[indCond]= genInactiv.a/                   \
-                                                (genInactiv.a+genInactiv.b)
-                            varCA[indCond]= genInactiv.a *                   \
-                                            genInactiv.b/((genInactiv.a+     \
-                                                            genInactiv.b)**2 *\
-                                                            (genInactiv.a+     \
-                                                            genInactiv.b+1.))
-                self.trueValue[self.I_MEAN_CA] = meanCA
-                self.trueValue[self.I_VAR_CA] = varCA
-                self.trueValue[self.I_VAR_CI] = varCI
-
-            ## To handle multi-sessions case
-            #self.dataInput.simulData[0] or [1] has same nrls bar values
-            if hasattr(self.dataInput, 'nbSessions') and \
-                            ((isinstance(self.dataInput.simulData[0], BOLDModel) or \
-                            isinstance(self.dataInput.simulData[0], BOLDModel2))):
-                mixtures = self.dataInput.simulData[0].nrls.getMixture()
-                itemsCond = mixtures.items()
-                nbCondInSimu = len(itemsCond)
-                self.trueValue = np.zeros((self.NB_PARAMS, nbCondInSimu ),
-                                        dtype=float)
-
-                #assert len(itemsCond) == self.nbConditions
-                meanCA = np.zeros(nbCondInSimu, dtype=float)
-                varCA = np.zeros(nbCondInSimu, dtype=float)
-                varCI = np.zeros(nbCondInSimu, dtype=float)
-                for cn,mixt in mixtures.iteritems():
-                    genActiv = mixt.generators['activ']
-                    genInactiv = mixt.generators['inactiv']
-                    indCond = self.dataInput.simulData[0].nrls.condIds[cn]
-                    varCI[indCond]= genInactiv.std**2
-                    pyhrf.verbose(4, 'genActiv type = %s'
-                                    %(genActiv.type))
-                    pyhrf.verbose(4,  'genInactiv type = %s'
-                                    %(genInactiv.type))
-                    if genActiv.type=='gaussian' or genActiv.type=='log-normal':
-                        meanCA[indCond]= genActiv.mean
-                        varCA[indCond]= genActiv.std**2
-                    elif genActiv.type =='gamma':
-                        meanCA[indCond]= genActiv.a *genActiv.b
-                        varCA[indCond]= genActiv.a *genActiv.b**2
-                    if 0:
-                        #TODO: debug -> why rewritting on meanCA and varCA ?
-                        if genInactiv.type=='gaussian' or genInactiv.type=='log-normal':
-                            meanCA[indCond]= genInactiv.mean
-                            varCA[indCond]= genInactiv.std**2
-                        elif genInactiv.type == 'uniform':
-                            meanCA[indCond]= (genInactiv.minV+genInactiv.maxV)/2.
-                            varCA[indCond]= (genInactiv.maxV-genInactiv.minV)/12.
-                        elif genInactiv.type == 'beta':
-                            meanCA[indCond]= genInactiv.a/                   \
-                                                (genInactiv.a+genInactiv.b)
-                            varCA[indCond]= genInactiv.a *                   \
-                                            genInactiv.b/((genInactiv.a+     \
-                                                            genInactiv.b)**2 *\
-                                                            (genInactiv.a+     \
-                                                            genInactiv.b+1.))
-                self.trueValue[self.I_MEAN_CA] = meanCA
-                self.trueValue[self.I_VAR_CA] = varCA
-                self.trueValue[self.I_VAR_CI] = varCI
-
-
-
-        elif self.dataInput.simulData is not None and \
+        if self.dataInput.simulData is not None and \
                 isinstance(self.dataInput.simulData, dict):
 
             self.trueValue = np.zeros((self.NB_PARAMS, self.nbConditions),
@@ -2707,7 +2078,7 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
 
 ##        print '- Sampling Mixt params ...'
 
-        nrlsSmpl = self.samplerEngine.getVariable('nrl')
+        nrlsSmpl = self.samplerEngine.get_variable('nrl')
 
         cardCA = nrlsSmpl.cardClass[self.L_CA,:]
         cardCI = nrlsSmpl.cardClass[self.L_CI,:]
@@ -2743,8 +2114,8 @@ class BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(xmlio.XMLParamDrivenClass,
 
     def updateObsersables(self):
         GibbsSamplerVariable.updateObsersables(self)
-        sHrf = self.samplerEngine.getVariable('hrf')
-        sScale = self.samplerEngine.getVariable('scale')
+        sHrf = self.samplerEngine.get_variable('hrf')
+        sScale = self.samplerEngine.get_variable('scale')
 
         if sHrf.sampleFlag and np.allclose(sHrf.normalise,0.) and \
                 not sScale.sampleFlag and self.sampleFlag:
@@ -2875,7 +2246,7 @@ class BOLDSampler_Multi_SessInput :
 
         nmax = max([len(nl) for nl in graph])
 
-        self.neighboursIndexes = numpy.zeros((self.nbVoxels, nmax), dtype=int)
+        self.neighboursIndexes = np.zeros((self.nbVoxels, nmax), dtype=int)
         self.neighboursIndexes -= 1
         for i in xrange(self.nbVoxels):
             self.neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -2914,35 +2285,35 @@ class BOLDSampler_Multi_SessInput :
         yTQy=[]
         XtX=[]
         for iSess in xrange(self.nbSessions):
-            self.matXQX = numpy.zeros( (self.nbConditions, self.nbConditions,
+            self.matXQX = np.zeros( (self.nbConditions, self.nbConditions,
                                         self.nbColX, self.nbColX),dtype=float)
-            self.matXQ = numpy.zeros((self.nbConditions, self.nbColX, self.ny),
+            self.matXQ = np.zeros((self.nbConditions, self.nbColX, self.ny),
                                     dtype=float)
 
             for j in xrange(self.nbConditions):
-                self.matXQ[j,:,:] = numpy.dot(self.varX[iSess,j,:,:].transpose(),
+                self.matXQ[j,:,:] = np.dot(self.varX[iSess,j,:,:].transpose(),
                                             self.delta[iSess] )
                 for k in xrange(self.nbConditions):
-                    self.matXQX[j,k,:,:] = numpy.dot( self.matXQ[j,:,:],
+                    self.matXQX[j,k,:,:] = np.dot( self.matXQ[j,:,:],
                                                     self.varX[iSess,k,:,:] )
             XQX.append(self.matXQX)
             XQ.append(self.matXQ)
             # Qy, yTQ & yTQy  :
-            self.matQy = numpy.zeros((self.ny,self.nbVoxels), dtype=float)
-            self.yTQ = numpy.zeros((self.ny,self.nbVoxels), dtype=float)
-            self.yTQy = numpy.zeros(self.nbVoxels, dtype=float)
+            self.matQy = np.zeros((self.ny,self.nbVoxels), dtype=float)
+            self.yTQ = np.zeros((self.ny,self.nbVoxels), dtype=float)
+            self.yTQy = np.zeros(self.nbVoxels, dtype=float)
 
             for i in xrange(self.nbVoxels):
-                self.matQy[:,i] = dot(self.delta[iSess],self.varMBY[iSess][:,i])
-                self.yTQ[:,i] = dot(self.varMBY[iSess][:,i],self.delta[iSess])
-                self.yTQy[i] = dot(self.varMBY[iSess][:,i],self.matQy[:,i])
+                self.matQy[:,i] = np.dot(self.delta[iSess],self.varMBY[iSess][:,i])
+                self.yTQ[:,i] = np.dot(self.varMBY[iSess][:,i],self.delta[iSess])
+                self.yTQy[i] = np.dot(self.varMBY[iSess][:,i],self.matQy[:,i])
 
 
-            self.matXtX = numpy.zeros( (self.nbConditions, self.nbConditions,
+            self.matXtX = np.zeros( (self.nbConditions, self.nbConditions,
                         self.nbColX, self.nbColX),dtype=float)
             for j in xrange(self.nbConditions):
                 for k in xrange(self.nbConditions):
-                    self.matXtX[j,k,:,:] = numpy.dot( self.varX[iSess,j,:,:].transpose(),
+                    self.matXtX[j,k,:,:] = np.dot( self.varX[iSess,j,:,:].transpose(),
                     self.varX[iSess,k,:,:] )
 
             Qy.append(self.matQy)
@@ -2990,7 +2361,7 @@ class BOLDSampler_Multi_SessInput :
         self.paradigmData = [rp[n] for n in self.cNames]
 
         pyhrf.verbose(3, 'building paradigm convol matrix ...')
-        availIdx = [arange(0,n, dtype=int) for n in self.nys]
+        availIdx = [np.arange(0,n, dtype=int) for n in self.nys]
         self.buildParadigmConvolMatrix(hrfZc, hrfDuration, availIdx,
                                        self.paradigmData)
         pyhrf.verbose(5, 'matrix X : %s' %str(self.varX.shape))
@@ -3014,52 +2385,52 @@ class BOLDSampler_Multi_SessInput :
             elif typeLFD == 'cosine':
                 lfdMat = self.buildCosMat( paramLFD , self.nys[iSess])
             elif typeLFD == 'None':
-                lfdMat = numpy.zeros((self.nys[iSess],2))
+                lfdMat = np.zeros((self.nys[iSess],2))
 
             pyhrf.verbose(3, 'LFD Matrix :')
             pyhrf.verbose.printNdarray(3, lfdMat)
             #print lfdMat
             self.lfdMat.append(lfdMat)
-            varPPt = numpy.dot(lfdMat, lfdMat.transpose())
+            varPPt = np.dot(lfdMat, lfdMat.transpose())
             if typeLFD is not 'None':
-                self.colP = shape(lfdMat)[1]
+                self.colP = np.shape(lfdMat)[1]
             else:
                 self.colP = 0
 
-            self.delta.append(numpy.eye(self.nys[iSess], dtype=float) - varPPt)
-            self.varPtP.append(numpy.dot(lfdMat.transpose(), lfdMat))
+            self.delta.append(np.eye(self.nys[iSess], dtype=float) - varPPt)
+            self.varPtP.append(np.dot(lfdMat.transpose(), lfdMat))
 
             pyhrf.verbose(6, 'varPtP :')
             pyhrf.verbose.printNdarray(6, self.varPtP[-1])
             if typeLFD != 'None':
-                assert numpy.allclose(self.varPtP[-1],
-                                      numpy.eye(self.colP, dtype=float),
+                assert np.allclose(self.varPtP[-1],
+                                      np.eye(self.colP, dtype=float),
                                       rtol=1e-5 )
 
 
     def buildPolyMat( self, paramLFD , n ):
 
-        regressors = self.tr*arange(0, n)
-        timePower = numpy.arange(0,paramLFD+1, dtype=int)
-        regMat = numpy.zeros((len(regressors),paramLFD+1),dtype=float)
+        regressors = self.tr * np.arange(0, n)
+        timePower = np.arange(0,paramLFD+1, dtype=int)
+        regMat = np.zeros((len(regressors),paramLFD+1),dtype=float)
         for v in xrange(paramLFD+1):
             regMat[:,v] = regressors[:]
 
-        tPowerMat = numpy.matlib.repmat(timePower, n, 1)
-        lfdMat = numpy.power(regMat,tPowerMat)
-        lfdMat = numpy.array(scipy.linalg.orth(lfdMat))
+        tPowerMat = np.matlib.repmat(timePower, n, 1)
+        lfdMat = np.power(regMat,tPowerMat)
+        lfdMat = np.array(scipy.linalg.orth(lfdMat))
         return lfdMat
 
     def buildCosMat( self, paramLFD , ny):
-        n = numpy.arange(0,ny)
-        fctNb = numpy.fix(2*(ny*self.tr)/paramLFD + 1.);# +1 stands for the
+        n = np.arange(0,ny)
+        fctNb = np.fix(2*(ny*self.tr)/paramLFD + 1.);# +1 stands for the
                                                         # mean/cst regressor
-        lfdMat = numpy.zeros( (ny, fctNb), dtype=float)
-        lfdMat[:,0] = numpy.ones( ny, dtype= float)/sqrt(ny)
-        samples = 1. + numpy.arange(fctNb-2)
+        lfdMat = np.zeros( (ny, fctNb), dtype=float)
+        lfdMat[:,0] = np.ones( ny, dtype= float) / np.sqrt(ny)
+        samples = 1. + np.arange(fctNb-2)
         for k in samples:
-          lfdMat[:,k] = numpy.sqrt(2/ny) \
-                        * numpy.cos( numpy.pi*(2.*n+1.)*k / (2*ny) )
+          lfdMat[:,k] = np.sqrt(2/ny) \
+                        * np.cos( np.pi*(2.*n+1.)*k / (2*ny) )
         return lfdMat
 
     def buildParadigmConvolMatrix(self, zc, estimDuration, availableDataIndex,
@@ -3073,7 +2444,7 @@ class BOLDSampler_Multi_SessInput :
         lgt = (self.ny+2)*osf
         allMatH = []
         for iSess in xrange(self.nbSessions):
-            matH = zeros( (lgt, self.nbConditions), dtype=int)
+            matH = np.zeros( (lgt, self.nbConditions), dtype=int)
             for j in xrange(self.nbConditions) :
                 matH[:len(parData[j][iSess]), j] = parData[j][iSess][:]
             pyhrf.verbose(6, 'matH for Sess %d :' %iSess)
@@ -3090,27 +2461,27 @@ class BOLDSampler_Multi_SessInput :
         pyhrf.verbose(5, 'hrfLength = int(round(%d/%1.2g))=%d' \
                           % (estimDuration,self.dt,self.hrfLength))
         if zc :
-            self.hrfColIndex = arange(1, self.hrfLength-1, dtype=int)
-            self.colIndex = arange(0, self.hrfLength-2, dtype=int)
+            self.hrfColIndex = np.arange(1, self.hrfLength-1, dtype=int)
+            self.colIndex = np.arange(0, self.hrfLength-2, dtype=int)
         else :
-            self.hrfColIndex = arange(0, self.hrfLength, dtype=int)
-            self.colIndex = arange(0, self.hrfLength, dtype=int)
+            self.hrfColIndex = np.arange(0, self.hrfLength, dtype=int)
+            self.colIndex = np.arange(0, self.hrfLength, dtype=int)
         self.lgCI = len(self.colIndex)
         pyhrf.verbose(5, 'lgCI = %d'% self.lgCI)
 
-        self.varOSAvailDataIdx = [array(ai*osf, dtype=int)
+        self.varOSAvailDataIdx = [np.array(ai*osf, dtype=int)
                                   for ai in availableDataIndex]
         vX = []
         pyhrf.verbose(2, 'Build pseudo teoplitz matrices')
         for iSess in xrange(self.nbSessions):
             self.lenData = len(self.varOSAvailDataIdx[iSess])
-            varX = zeros( (self.nbConditions, self.lenData, self.lgCI),
+            varX = np.zeros( (self.nbConditions, self.lenData, self.lgCI),
                           dtype=int )
             pyhrf.verbose(6, 'iSess : %d' %iSess)
             for j in xrange(self.nbConditions):
                 pyhrf.verbose(6, ' cond : %d' %j)
-                col = concatenate(([allMatH[iSess][0,j]],
-                                   zeros(self.hrfLength-1, dtype=int)))
+                col = np.concatenate(([allMatH[iSess][0,j]],
+                                   np.zeros(self.hrfLength-1, dtype=int)))
                 pyhrf.verbose(6, ' col :')
                 if pyhrf.verbose.verbosity >= 6:
                     print ' [',
@@ -3119,7 +2490,7 @@ class BOLDSampler_Multi_SessInput :
                     print ']'
 
 
-                matTmp = array(toeplitz( allMatH[iSess][:,j], col), dtype=int)
+                matTmp = np.array(scipy.linalg.toeplitz( allMatH[iSess][:,j], col), dtype=int)
                 pyhrf.verbose(6, ' matTmp :')
                 if pyhrf.verbose.verbosity >= 6:
                     for b in xrange(matTmp.shape[0]):
@@ -3137,7 +2508,7 @@ class BOLDSampler_Multi_SessInput :
         pyhrf.verbose(4, 'varX : ' + str(self.varX.shape))
         self.buildOtherMatX()
 
-        self.nbColX = shape(self.varX[0])[2]
+        self.nbColX = np.shape(self.varX[0])[2]
 
     def buildOtherMatX(self):
         varMBX=[]
@@ -3145,9 +2516,9 @@ class BOLDSampler_Multi_SessInput :
         Id=[]
 
         for s in xrange(self.nbSessions):
-            self.varMBX = zeros( (self.ny, self.nbConditions*self.lgCI),
+            self.varMBX = np.zeros( (self.ny, self.nbConditions*self.lgCI),
                              dtype=int)
-            self.stackX = zeros( (self.ny*self.nbConditions, self.lgCI),
+            self.stackX = np.zeros( (self.ny*self.nbConditions, self.lgCI),
                              dtype=int)
 
             for j in xrange(self.nbConditions):
@@ -3156,7 +2527,7 @@ class BOLDSampler_Multi_SessInput :
                 self.stackX[self.ny*j:self.ny*(j+1), :] = self.varX[s, j,:,:]
 
 
-            self.notNullIdxStack = dstack(where(self.stackX != 0)).ravel()
+            self.notNullIdxStack = np.dstack(np.where(self.stackX != 0)).ravel()
 
             varMBX.append(self.varMBX)
             stackX.append(self.stackX)
@@ -3175,26 +2546,26 @@ class BOLDSampler_Multi_SessInput :
         pyhrf.verbose(2, 'Trying to set dt automatically from data')
 
         tr = self.tr
-        vectSOA = array([], dtype=float)
+        vectSOA = np.array([], dtype=float)
         for ons in self.onsets:
-            vectSOA = concatenate((vectSOA, ons))
+            vectSOA = np.concatenate((vectSOA, ons))
 
         vectSOA.sort()
         pyhrf.verbose(5, 'vectSOA %s:' %str(vectSOA.shape))
         pyhrf.verbose.printNdarray(5,vectSOA)
 
-        momRT = arange(0, vectSOA[-1]+tr, tr)
+        momRT = np.arange(0, vectSOA[-1]+tr, tr)
         pyhrf.verbose(5,'momRT %s:' %str(momRT.shape))
         pyhrf.verbose.printNdarray(5, momRT)
 
-        momVect = concatenate((vectSOA, momRT))
+        momVect = np.concatenate((vectSOA, momRT))
         momVect.sort()
 
-        varSOA = diff(momVect)
+        varSOA = np.diff(momVect)
         pyhrf.verbose(5, 'vectSOA diff:')
         pyhrf.verbose.printNdarray(5, vectSOA)
 
-        nonZeroSOA = varSOA[where(varSOA > 0.0)]
+        nonZeroSOA = varSOA[np.where(varSOA > 0.0)]
         pyhrf.verbose(5, 'nonZeroSOA :')
         pyhrf.verbose.printNdarray(5, nonZeroSOA)
 
@@ -3232,134 +2603,62 @@ class BOLDSampler_Multi_SessInput :
         self.cleanPrecalculations()
 
 
-class BOLDGibbs_Multi_SessSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
+class BOLDGibbs_Multi_SessSampler(xmlio.XmlInitable, GibbsSampler):
 
     #TODO : comment
 
-    # Indices and labels of each variable registered in sampler :
-    I_NRLS_SESS = 2
-    P_NRLS_SESS = 'responseLevels_by_session'
-
-    I_NRLS_SESS_VAR = 3
-    P_NRLS_SESS_VAR = 'responseLevels_by_sessionVariance'
-
-    I_NRLS_BAR  = 0
-    P_NRLS_BAR  = 'MeanresponseLevels'
-
-    I_NOISE_VAR_SESS = 11
-    P_NOISE_VAR_SESS = 'noiseVariance'
-
-    I_DRIFT = 6
-    P_DRIFT = 'drift'
-
-    I_ETA = 7
-    P_ETA = 'driftVar'
-
-    I_RH = 5
-    P_RH = 'HRFVariance'
-
-    I_WEIGHTING_PROBA_NRLS_BAR = 8
-    P_WEIGHTING_PROBA_NRLS_BAR = 'mixtureWeights_for_responseLevels_by_session'
-
-    I_MIXT_PARAM_NRLS_BAR = 1
-    P_MIXT_PARAM_NRLS_BAR = 'mixtureParameters_for_responseLevels_by_session'
-
-    I_SCALE = 9
-    P_SCALE = 'scale'
-
-    I_BETA = 10
-    P_BETA = 'beta'
-
-    I_HRF = 4
-    P_HRF = 'HRF'
 
     inputClass = BOLDSampler_Multi_SessInput
 
-    #### Sampling HRF at the end
-    variablesToSample = [ P_NRLS_BAR, P_MIXT_PARAM_NRLS_BAR, P_NRLS_SESS, P_NRLS_SESS_VAR,
-                            P_HRF, P_RH, P_DRIFT, P_ETA,
-                            P_WEIGHTING_PROBA_NRLS_BAR,
-                            P_SCALE, P_BETA, P_NOISE_VAR_SESS ]
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_GLOB_OBS_HIST_PACE = 'globalObservablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-    P_STOP_THRESHOLD = 'stop_criterion_threshold'
-    P_CRIT_DIFF_FROM_START = 'crit_diff_from_start'
-    P_CHECK_FINAL_VALUE = 'check_final_value_close_to_true'
-
-    defaultParameters = {
-        P_OBS_HIST_PACE : -1.,
-        P_GLOB_OBS_HIST_PACE : -1,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_RANDOM_SEED : 193843200,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS_SESS : NRL_Multi_Sess_Sampler(),
-        P_NRLS_SESS_VAR : Variance_GaussianNRL_Multi_Sess(),
-        P_NRLS_BAR : NRLsBar_Drift_Multi_Sess_Sampler(),
-        P_BETA : BetaSampler(),
-        P_DRIFT : Drift_MultiSess_Sampler(),
-        P_ETA : ETASampler_MultiSess(), #drift variance
-        P_NOISE_VAR_SESS : NoiseVariance_Drift_Multi_Sess_Sampler(),
-        P_HRF : HRF_MultiSess_Sampler(),
-        P_RH : RHSampler(),
-        P_WEIGHTING_PROBA_NRLS_BAR : MixtureWeightsSampler(),
-        #P_MIXT_PARAM_NRLS_BAR : BiGaussMixtureParams_Multi_Sess_NRLsBar_Sampler(),
-        P_MIXT_PARAM_NRLS_BAR : BiGaussMixtureParamsSampler(),
-        P_SCALE : ScaleSampler(),
-        P_STOP_THRESHOLD : -1,
-        P_CRIT_DIFF_FROM_START : False, #False,
-        P_CHECK_FINAL_VALUE : None,
-        }
-
     if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters[P_NB_ITERATIONS] = 3
-        parametersToShow = [P_NB_ITERATIONS, P_SMPL_HIST_PACE, P_OBS_HIST_PACE,
-                            P_GLOB_OBS_HIST_PACE,
-                            P_NB_SWEEPS,
-                            P_RANDOM_SEED,
-                            P_CALLBACK, P_NRLS_SESS, P_NRLS_BAR, P_BETA, P_NOISE_VAR_SESS,
-                            P_HRF, P_RH, P_DRIFT, P_ETA,
-                            P_WEIGHTING_PROBA_NRLS_BAR,  P_MIXT_PARAM_NRLS_BAR, P_SCALE,
-                            P_STOP_THRESHOLD, P_CRIT_DIFF_FROM_START]
-
+        default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters[P_NB_ITERATIONS] = 3000
-        parametersToShow = [P_NB_ITERATIONS, P_NRLS_SESS, P_HRF, P_RH, P_RANDOM_SEED]
+        default_nb_its = 3000
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
     parametersComments = {
-        P_SMPL_HIST_PACE: 'To save the samples at each iteration\n'\
+        'smpl_hist_pace': 'To save the samples at each iteration\n'\
             'If x<0: no save\n ' \
-            'If 0<x<1: define the fraction of iterations for which samples are saved\n'\
-            'If x>=1: define the step in iterations number between backup copies.\n'\
+            'If 0<x<1: define the fraction of iterations for which samples are '\
+            'saved\n'\
+            'If x>=1: define the step in iterations number between saved '\
+            ' samples.\n'\
             'If x=1: save samples at each iteration.',
-        P_OBS_HIST_PACE: 'See comment for samplesHistoryPaceSave.'
+        'obs_hist_pace' : 'See comment for samplesHistoryPaceSave.'
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+
+    def __init__(self, nb_its=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 response_levels_sess=NRL_Multi_Sess_Sampler(),
+                 response_levels_mean=NRLsBar_Drift_Multi_Sess_Sampler(),
+                 beta=BetaSampler(),
+                 noise_var=NoiseVariance_Drift_Multi_Sess_Sampler(),
+                 hrf=HRF_MultiSess_Sampler(),
+                 hrf_var=RHSampler(), mixt_weights=MixtureWeightsSampler(),
+                 mixt_params=BiGaussMixtureParamsSampler(), scale=ScaleSampler(),
+                 drift=Drift_MultiSess_Sampler(),
+                 drift_var=ETASampler_MultiSess(), stop_crit_threshold=-1,
+                 stop_crit_from_start=False, check_final_value=None):
         """
-        #TODO : comment
-
+        check_final_value: None, 'print' or 'raise'
         """
+        #print 'param:', parameters
+        xmlio.XmlInitable.__init__(self)
 
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-        #print self.variablesToSample
-        #for vLab in self.variablesToSample:
-             #print vLab
+        variables = [response_levels_sess, response_levels_mean, hrf, hrf_var,
+                     mixt_weights, mixt_params, beta, scale, noise_var, drift,
+                     drift_var]
 
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        globalObsHistPace = self.parameters[self.P_GLOB_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
+        nbIt = nb_its
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
+
+        check_ftval = check_final_value
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
@@ -3373,22 +2672,19 @@ class BOLDGibbs_Multi_SessSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         if nbSweeps > 0. and nbSweeps < 1.:
             nbSweeps = int(round(nbIt * nbSweeps))
 
+        #pyhrf.verbose(2,'smplHistPace: %d'%smplHistPace)
+        #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
-        self.stop_threshold = self.parameters[self.P_STOP_THRESHOLD]
-        self.crit_diff_from_start = self.parameters[self.P_CRIT_DIFF_FROM_START]
-        seed = self.parameters[self.P_RANDOM_SEED]
+        self.stop_threshold = stop_crit_threshold
+        self.crit_diff_from_start = stop_crit_from_start
+        #callbackObj = self.parameters[self.P_CALLBACK]
         self.full_crit_diff_trajectory = defaultdict(list)
         self.full_crit_diff_trajectory_timing = []
         self.crit_diff0 = {}
-        if self.crit_diff_from_start:
-            callbackObj = CallbackCritDiff()
-        else:
-            callbackObj = GSDefaultCallbackHandler()
-
-        check_ftval = self.parameters[self.P_CHECK_FINAL_VALUE]
+        #print 'self.crit_diff_from_start:', self.crit_diff_from_start
+        callbackObj = GSDefaultCallbackHandler()
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
-                              obsHistPace, nbSweeps,
-                              callbackObj, randomSeed=seed,
+                              obsHistPace, nbSweeps, callbackObj,
                               globalObsHistoryPace=globalObsHistPace,
                               check_ftval=check_ftval)
 
@@ -3442,7 +2738,7 @@ class BOLDGibbs_Multi_SessSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
             self.crit_diff.update(self.compute_crit_diff(self.variables_old_val))
 
     def cleanObservables(self):
-        BOLDGibbsSampler.cleanObservables(self)
+        #TODO: more to clean ?
         del self.variables_old_val
 
     def saveGlobalObservables(self, it):
@@ -3451,30 +2747,6 @@ class BOLDGibbs_Multi_SessSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         if self.stop_threshold >= 0.:
             for vn, d in self.crit_diff.iteritems():
                 self.conv_crit_diff[vn].append(d)
-
-    def buildSharedDataTree(self):
-
-        self.sharedData = Pipeline()
-        self.regVarsInPipeline()
-
-        computeRules = []
-        # Some more roots :
-        computeRules.append({'label' : 'matXQX', 'ref' : self.matXQX})
-        computeRules.append({'label' : 'varX', 'ref' : self.varX})
-        computeRules.append({'label' : 'varMBY', 'ref' : self.varMBY})
-
-        # Add shared quantities to update during sampling :
-        computeRules.append({'label' : 'hXQXh', 'dep' : ['hrf','matXQX'],
-                             'computeFunc' : computehXQXh})
-        computeRules.append({'label' : 'matXh' , 'dep' : ['varX', 'hrf'],
-                             'computeFunc' : computeXh})
-
-        computeRules.append({'label' : 'sumj_aXh', 'dep' : ['matXh','nrl'],
-                             'computeFunc' : computeSumjaXh})
-
-        computeRules.append({'label' : 'yTilde', 'dep' : ['sumj_aXh','varMBY'],
-                             'computeFunc' : computeYTilde})
-
 
     def finalizeSampling(self):
         return
@@ -3547,19 +2819,19 @@ class BOLDGibbs_Multi_SessSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         nbSess = self.dataInput.nbSessions
 
         nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if hrf is None:
             hrf = shrf.currentValue
         elif shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl_by_session').finalValue
+        nrl = self.get_variable('nrl_by_session').finalValue
         if nrl is None:
-            nrl = self.getVariable('nrl_by_session').currentValue
+            nrl = self.get_variable('nrl_by_session').currentValue
 
-        stimIndSignal = numpy.zeros((nbSess, nbVals, nbVox), dtype=numpy.float32)
-        drift = self.getVariable('drift').get_final_value()
+        stimIndSignal = np.zeros((nbSess, nbVals, nbVox), dtype=np.float32)
+        drift = self.get_variable('drift').get_final_value()
         for s in xrange(nbSess):
             stimIndSignal[s] = np.dot(vXh[s], nrl[s]) + drift[s]
 
@@ -3646,15 +2918,15 @@ class BOLDGibbs_Multi_SessSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         nbSess = self.dataInput.nbSessions
 
         nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl_by_session').finalValue
+        nrl = self.get_variable('nrl_by_session').finalValue
 
-        self.stimIndSignal = numpy.zeros((nbSess, nbVals, nbVox))
-        meanBold = numpy.zeros((nbSess, nbVox))
+        self.stimIndSignal = np.zeros((nbSess, nbVals, nbVox))
+        meanBold = np.zeros((nbSess, nbVox))
 
         for s in xrange(nbSess):
             meanBold[s] = self.dataInput.varMBY[s].mean(axis=0)
@@ -3671,7 +2943,7 @@ class BOLDGibbs_Multi_SessSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
 ## for simulations #######################
 ##########################################
 from pyhrf import Condition
-from pyhrf.boldsynth.scenarios import *
+import pyhrf.boldsynth.scenarios as msimu
 from pyhrf.tools import Pipeline
 from pyhrf.core import FmriData
 
@@ -3688,34 +2960,34 @@ def simulate_single_session(output_dir, var_sessions_nrls, cdefs, nrls_bar,
         'var_sess' : var_sessions_nrls,
         'condition_defs' : cdefs,
         # Paradigm
-        'paradigm' : create_localizer_paradigm_avd,
-        'rastered_paradigm' : rasterize_paradigm,
+        'paradigm' : msimu.create_localizer_paradigm_avd,
+        'rastered_paradigm' : msimu.rasterize_paradigm,
         # Labels
         'labels_vol' : labels_vol,
         'labels' : labels,
         'nb_voxels': labels.shape[1],
         # Nrls
         'nrls' : nrls_bar,#create_time_invariant_gaussian_nrls,
-        'nrls_session' : create_gaussian_nrls_sessions_and_mean,
+        'nrls_session' : msimu.create_gaussian_nrls_sessions_and_mean,
         # HRF
-        'primary_hrf' : create_canonical_hrf,
-        'hrf' : duplicate_hrf,
+        'primary_hrf' : msimu.create_canonical_hrf,
+        'hrf' : msimu.duplicate_hrf,
         # Stim induced
-        'stim_induced_signal' : create_multisess_stim_induced_signal,
+        'stim_induced_signal' : msimu.create_multisess_stim_induced_signal,
         # Noise
         'v_gnoise' : v_noise,
-        'v_noise' : duplicate_noise_var,
-        'noise' : create_gaussian_noise,
+        'v_noise' : msimu.duplicate_noise_var,
+        'noise' : msimu.create_gaussian_noise,
         # Drift
         'drift_order' : 4,
         'drift_coeff_var' : drift_coeff_var,
         'drift_amplitude' : drift_amplitude,
         'drift_mean' : 0.,
-        'drift_coeffs': create_drift_coeffs,
-        'drift' : create_polynomial_drift_from_coeffs,
+        'drift_coeffs': msimu.create_drift_coeffs,
+        'drift' : msimu.create_polynomial_drift_from_coeffs,
         # Bold
-        'bold_shape' : get_bold_shape,
-        'bold' : create_bold_from_stim_induced,
+        'bold_shape' : msimu.get_bold_shape,
+        'bold' : msimu.create_bold_from_stim_induced,
         }
     simu_graph = Pipeline(simulation_steps)
 
@@ -3729,7 +3001,7 @@ def simulate_single_session(output_dir, var_sessions_nrls, cdefs, nrls_bar,
 
     # Save outputs o simulation: nii volumes:
     if output_dir is not None:
-        simulation_save_vol_outputs(simulation, output_dir)
+        msimu.simulation_save_vol_outputs(simulation, output_dir)
 
     # print 'Simulation done.'
     # print ''
@@ -3775,10 +3047,10 @@ def simulate_sessions(output_dir, snr_scenario='high_snr', spatial_size='tiny'):
     nb_sessions = len(vars_noise)
 
     # Common variable across sessions:
-    labels_vol = create_labels_vol(conditions)
-    labels     = flatten_labels_vol(labels_vol)
+    labels_vol = msimu.create_labels_vol(conditions)
+    labels     = msimu.flatten_labels_vol(labels_vol)
     # nrls_bar is the same for all sessions, must be computed before loop over sessions
-    nrls_bar = create_time_invariant_gaussian_nrls(conditions, labels)
+    nrls_bar = msimu.create_time_invariant_gaussian_nrls(conditions, labels)
 
     simu_sessions = []
     simus = []

@@ -233,430 +233,164 @@ def writexndarrayToTex(cuboid, fileName):
     texs = v.getAllViews()
     writeDictVolumesTex(texs, fileName)
 
-from pyhrf.xmlio import XMLParamDrivenClass
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
-from pyhrf.tools import cartesian, set_leaf
+if 0:
+    ### old ndarray <-> xml feature
+    from pyhrf.xmlio import XMLParamDrivenClass
+    from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
+    from pyhrf.tools import cartesian, set_leaf
 
 
-class xndarrayXml(XMLParamDrivenClass):
+    class xndarrayXml(XMLParamDrivenClass):
 
-    defaultParameters = {
-        'domains' : {},
-        'orientation' : [],
-        'explodedAxes' : [],
-        'name' : 'cname',
-        'value_label' : 'value',
-        'dataFiles' : [],
-        }
-
-    @staticmethod
-    def slice_idx_from_filename(fn, cname):
-
-        i = 1
-        while '_'*i in fn:
-            i += 1
-        sep = '_'*(i-1)
-        #print 'sep:', sep
-        #print 'cname:', cname
-        #print 'fn:', fn
-        sfn = fn[len(cname)+len(sep):]
-        #print 'sfn:', sfn
-        l = sfn.split(sep)
-        return l[::2], l[1::2]
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel,
-                                     xmlComment)
-
-        clabel = self.parameters['name']
-        ad = self.parameters['domains']
-        an = self.parameters['orientation']
-        vlab = self.parameters['value_label']
-        fl = self.parameters['dataFiles']
-        eaxes = self.parameters['explodedAxes']
-        self.outDir = './'
-        #print ''
-        #print 'clabel:', clabel
-        #print 'eaxes :', eaxes
-        #print 'an:', an
-
-        if len(fl) > 0:
-            ed = dict(zip(eaxes,[ad[ea] for ea in eaxes]))
-            if len(eaxes) > 0:
-                iaxes = list(set(an).difference(eaxes))
-            else:
-                iaxes = an
-            idomains = dict(zip(iaxes,[ad[ia] for ia in iaxes]))
-            ctree = {}
-            if 0:
-                print 'fl:', fl
-                print 'id:', idomains
-                print 'iaxes:', iaxes
-                print 'ad:', ad
-                print 'ed:', ed
-                print 'eaxes:', eaxes
-            if len(eaxes) > 0:
-                for fn in fl:
-                    n = os.path.splitext(os.path.basename(fn))[0]
-                    blabels, bvals = self.slice_idx_from_filename(n, clabel)
-                    if 0:
-                        print 'blabels:', blabels
-                        print 'bvals:', bvals
-                        print 'fn:', fn
-                    cdata = self.load_cuboid(fn, iaxes, vlab, idomains)
-                    #print 'ctree:'
-                    #print ctree
-                    #print 'cdata:', cdata
-                    set_leaf(ctree, bvals, cdata)
-                self.cuboid = tree_to_cuboid(ctree, branchLabels=blabels)
-            else:
-                self.cuboid = self.load_cuboid(fl[0], iaxes, vlab, idomains)
-
-            self.cuboid.set_orientation(an)
-        else:
-            self.cuboid = None
-        #    self.cuboid = xndarray(np.array([]),axes_names=an,
-        #                         axes_domains=ad, value_label=vlab)
-
-    def load_cuboid(self, fn, iaxes, vlab, idomains):
-        if 0:
-            print '~~~~~~~~~~~~~~~~~~~~~~~~~~'
-            print 'load_cuboid:'
-            print 'iaxes:', iaxes
-        base, ext = os.path.splitext(fn)
-        if ext == '.nii':
-            data, meta_data = read_volume(fn)
-
-            if 'iteration' in iaxes:
-                iaxes = MRI3Daxes + 'iteration'
-            elif 'time' in iaxes:
-                iaxes = list(MRI4Daxes)
-            else:
-                iaxes = list(MRI3Daxes)
-
-            if ('iteration' in iaxes or 'time' in iaxes) and data.ndim == 3:
-                data = data.reshape(1,data.shape[0],data.shape[1],
-                                    data.shape[2])
-
-        elif ext == '.h5':
-            import tables
-            h5file = tables.openFile(fn, mode='r')
-            data = h5file.root.array.read()
-            h5file.close()
-        elif ext == '.csv':
-            data = np.loadtxt(fn)
-        #print 'data:', data.shape, data.ndim
-        #print 'iaxes:', iaxes
-        #print 'id:', idomains
-        #print 'vlab:', vlab
-        if data.ndim == 0:
-            data.shape = tuple([1]*len(iaxes))
-        elif len(iaxes) == 2 and data.ndim == 1:
-            if len(idomains[iaxes[0]]) == 1:
-                data.shape = (1,data.shape[0])
-            else:
-                data.shape = (data.shape[0],1)
-        assert data.ndim == len(iaxes)
-        return xndarray(data, axes_names=iaxes, axes_domains=idomains,
-                      value_label=vlab)
-
-
-    @staticmethod
-    def fromxndarray(c, label='cname', outDir='./'):
-        p = {
-            'domains' : c.getAxesDomainsDict(),
-            'orientation' : c.axes_names,
-            'value_label' : c.value_label,
-            'name' : label,
+        defaultParameters = {
+            'domains' : {},
+            'orientation' : [],
+            'explodedAxes' : [],
+            'name' : 'cname',
+            'value_label' : 'value',
+            'dataFiles' : [],
             }
-        cxml = xndarrayXml(p)
-        cxml._set_cuboid(c)
-        cxml._set_output_dir(outDir)
-        return cxml
 
-    def _set_cuboid(self, c):
-        self.cuboid = c
+        @staticmethod
+        def slice_idx_from_filename(fn, cname):
 
-    def _set_output_dir(self, d):
-        self.outDir = d
-
-
-    @staticmethod
-    def longest_underscore(s):
-        return max(map(len,re.compile('[^_]+').subn('-',s)[0].split('-')))
-
-    def appendParametersToDOMTree(self, doc, node):
-        if self.cuboid is not None:
-            if 0:
-                print ''
-                print 'Appending to DOM tree:'
-                print '- parameters :'
-                print self.parameters
-                print '- cuboid descrip:'
-                print self.cuboid.descrip()
-            lu = max([self.longest_underscore(an) for an in self.cuboid.getAxesNames()])
-            lud = 0
-            for d in self.cuboid.getAxesDomains():
-                if 'str' in d.dtype.name:
-                    lud = max([self.longest_underscore(v) for v in d])
-            sep = '_'*(max([lud, lu])+1)
-
-            if self.cuboid.is_nii_writable():
-                fn0 = op.join(self.outDir, self.parameters['name']+'.nii')
-                eaxes, fns = writexndarrayToNiftii(self.cuboid, fn0, sep=sep)
-                fns = fns.values()
-            elif self.cuboid.getNbDims() <= 2:
-                eaxes = []
-                fns = [op.join(self.outDir,self.parameters['name'] + '.csv')]
-                self.cuboid.save(fns[0])
-            else:
-                eaxes = []
-                fns = [op.join(self.outDir,self.parameters['name'] + '.h5')]
-                self.cuboid.save(fns[0])
-
-            self.parameters['dataFiles'] = fns
-            self.parameters['explodedAxes'] = eaxes
-            #print 'eaxes:', eaxes
-            XMLParamDrivenClass.appendParametersToDOMTree(self, doc, node)
-
-    def cleanFiles(self):
-        for f in self.parameters['dataFiles']:
-            if os.path.exists(f):
-                os.remove(f)
-
-
-class xndarrayXml2(XMLParamDrivenClass):
-    loadxndarray = True
-    savexndarray = True
-
-    defaultParameters = {
-        'domains' : {},
-        'orientation' : [],
-        'explodedAxes' : [],
-        'name' : 'cname',
-        'value_label' : 'value',
-        'dataFiles' : {},
-        }
-
-    @staticmethod
-    def slice_idx_from_filename(fn, cname):
-
-        i = 1
-        while '_'*i in fn:
-            i += 1
-        sep = '_'*(i-1)
-        #print 'sep:', sep
-        #print 'cname:', cname
-        #print 'fn:', fn
-        sfn = fn[len(cname)+len(sep):]
-        #print 'sfn:', sfn
-        l = sfn.split(sep)
-        return l[::2], l[1::2]
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        if 0 : print 'xndarrayXml2.__init__ ...'
-        XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel,
-                                     xmlComment)
-
-        clabel = self.parameters['name']
-        ad = self.parameters['domains']
-        an = self.parameters['orientation']
-        vlab = self.parameters['value_label']
-        fl = self.parameters['dataFiles']
-        eaxes = self.parameters['explodedAxes']
-        self.outDir = './'
-        self.meta_data = None
-#         print ''
-#         print 'clabel:', clabel
-#         print 'eaxes :', eaxes
-#         print 'an:', an
-
-        if len(fl) > 0 and self.loadxndarray:
-            ed = dict(zip(eaxes,[ad[ea] for ea in eaxes]))
-            if len(eaxes) > 0:
-                iaxes = []
-                for a in an:
-                    if a not in eaxes:
-                        iaxes.append(a)
-                #iaxes = list(set(an).difference(eaxes))
-            else:
-                iaxes = an
-            idomains = dict(zip(iaxes,[ad[ia] for ia in iaxes]))
-            ctree = {}
-            if 0:
-                print 'fl:', fl
-                print 'id:', idomains
-                print 'iaxes:', iaxes
-                print 'ad:', ad
-                print 'ed:', ed
-                print 'eaxes:', eaxes
-            if len(eaxes) > 0:
-                for slice,fn in fl.iteritems():
-                    slice = list(slice)
-                    if 0:
-                        print 'slice:', slice
-                        print 'fn:', fn
-                    if slice is not None:
-                        if '_' in slice:
-                            slice.remove('_')
-                            if '_' in slice:
-                                slice.remove('_')
-                    cdata = self.load_cuboid(fn, iaxes, vlab, idomains)
-                    #print 'ctree:'
-                    #print ctree
-                    #print 'cdata:', cdata
-                    set_leaf(ctree, list(slice), cdata)
-                self.cuboid = tree_to_cuboid(ctree, branchLabels=eaxes)
-            else:
-                self.cuboid = self.load_cuboid(fl.values()[0], iaxes, vlab, idomains)
-
-            self.cuboid.set_orientation(an)
-        else:
-            self.cuboid = None
-
-        self.useRelativePath = False
-        #    self.cuboid = xndarray(np.array([]),axes_names=an,
-        #                         axes_domains=ad, value_label=vlab)
-
-    def load_cuboid(self, fn, iaxes, vlab, idomains):
-        base, ext = os.path.splitext(fn)
-        if 0:
-            print 'xndarrayXml2.load_cuboid ...'
-            print 'input iaxes:', iaxes
-        #print 'fn :', fn
-        if ext == '.nii':
-            data, self.meta_data = read_volume(fn)
-            if 'iteration' in iaxes:
-                iaxes = MRI3Daxes + ['iteration']
-            elif 'time' in iaxes:
-                iaxes = list(MRI4Daxes)
-            else:
-                iaxes = list(MRI3Daxes)
-
-
-            # print '-> iaxes', iaxes
-            # print 'MRI4Daxes:', MRI4Daxes
-
-            if ('iteration' in iaxes or 'time' in iaxes) and data.ndim == 3:
-                data = data.reshape(1,data.shape[0],data.shape[1],data.shape[2])
-        elif ext == '.h5':
-            import tables
-            h5file = tables.openFile(fn, mode='r')
-            data = h5file.root.array.read()
-            h5file.close()
-        elif ext == '.csv':
-            data = np.loadtxt(fn)
-        if 0:
-            print '--------------------'
-            print 'before cuboid creation ...'
-            print 'data:', data.shape, data.ndim
-            print 'iaxes:', iaxes
-            #print 'id:', idomains
-            print 'vlab:', vlab
-            print '--------------------'
-        if data.ndim == 0:
-            data.shape = tuple([1]*len(iaxes))
-        elif len(iaxes) == 2 and data.ndim == 1:
-            if len(idomains[iaxes[0]]) == 1:
-                data.shape = (1,data.shape[0])
-            else:
-                data.shape = (data.shape[0],1)
-        assert data.ndim == len(iaxes)
-
-        return xndarray(data, axes_names=iaxes, axes_domains=idomains,
-                      value_label=vlab)
-
-
-    @staticmethod
-    def fromxndarray(c, label='cname', outDir='./', relativePath=True,
-                   meta_data=None):
-        p = {
-            'domains' : c.getAxesDomainsDict(),
-            'orientation' : c.axes_names,
-            'value_label' : c.value_label,
-            'name' : label,
-            }
-        cxml = xndarrayXml2(p)
-        cxml._set_cuboid(c)
-        cxml._set_output_dir(outDir)
-        cxml.set_relative_path(relativePath)
-        cxml.meta_data = meta_data
-        return cxml
-
-    def _set_cuboid(self, c):
-        self.cuboid = c
-
-    def _set_output_dir(self, d):
-        self.outDir = d
-
-    def set_relative_path(self, p):
-        self.useRelativePath = p
-
-    def make_relative_path(self):
-        """
-        Make data file pathes be relative. Simply replace
-        every file name with its basename since by convention
-        all results are in the same directory as the output.xml
-        """
-        self.set_relative_path(True)
-        cfl = self.parameters['dataFiles']
-        for slice,fn in cfl.iteritems():
-            #print 'ofn:', cfl[slice]
-            cfl[slice] = op.basename(fn)
-            #print 'nfn:', cfl[slice]
-
-    def make_absolute_path(self,root='./'):
-        #print 'make_absolute_path ...'
-        self.set_relative_path(False)
-        cfl = self.parameters['dataFiles']
-        for slice,fn in cfl.iteritems():
+            i = 1
+            while '_'*i in fn:
+                i += 1
+            sep = '_'*(i-1)
+            #print 'sep:', sep
+            #print 'cname:', cname
             #print 'fn:', fn
-            cfl[slice] = op.abspath(op.join(root,fn))
-            #print 'nfn:', cfl[slice]
-
-    @staticmethod
-    def longest_underscore(s):
-        return max(map(len,re.compile('[^_]+').subn('-',s)[0].split('-')))
-
-    @staticmethod
-    def stack(clist, axisLabel, axisDomain):
-        pyhrf.verbose(6, 'xndarrayXml2.stack ...')
-        pyhrf.verbose(6, 'axisLabel: %s, axisDomain: %s' %(axisLabel, str(axisDomain)))
-        pyhrf.verbose(6, 'clist:')
-        pyhrf.verbose(6, str(clist))
-
-        cxml = copyModule.deepcopy(clist[0])
-        cxml.parameters['domains'][axisLabel] = axisDomain
-        #print 'orientation:',cxml.parameters['orientation']
-        cxml.parameters['orientation'].append(axisLabel)
-        cxml.parameters['explodedAxes'].append(axisLabel)
-        fl = {}
+            sfn = fn[len(cname)+len(sep):]
+            #print 'sfn:', sfn
+            l = sfn.split(sep)
+            return l[::2], l[1::2]
 
 
-        for c,dv in zip(clist, axisDomain):
-            if 0:
-                print 'c:', c
-                print 'dv:', dv
-            cfl = c.parameters['dataFiles']
-            for slice,fn in cfl.iteritems():
-                if 0:
-                    print 'slice:', slice
-                    print 'fn:', fn
-                if slice is not None:
-                    newSlice = slice + (dv,)
+        def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+                     xmlLabel=None, xmlComment=None):
+            XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel,
+                                         xmlComment)
+
+            clabel = self.parameters['name']
+            ad = self.parameters['domains']
+            an = self.parameters['orientation']
+            vlab = self.parameters['value_label']
+            fl = self.parameters['dataFiles']
+            eaxes = self.parameters['explodedAxes']
+            self.outDir = './'
+            #print ''
+            #print 'clabel:', clabel
+            #print 'eaxes :', eaxes
+            #print 'an:', an
+
+            if len(fl) > 0:
+                ed = dict(zip(eaxes,[ad[ea] for ea in eaxes]))
+                if len(eaxes) > 0:
+                    iaxes = list(set(an).difference(eaxes))
                 else:
-                    newSlice = (dv,)
-                fl[newSlice] = fn
-        cxml.parameters['dataFiles'] = fl
-        return cxml
+                    iaxes = an
+                idomains = dict(zip(iaxes,[ad[ia] for ia in iaxes]))
+                ctree = {}
+                if 0:
+                    print 'fl:', fl
+                    print 'id:', idomains
+                    print 'iaxes:', iaxes
+                    print 'ad:', ad
+                    print 'ed:', ed
+                    print 'eaxes:', eaxes
+                if len(eaxes) > 0:
+                    for fn in fl:
+                        n = os.path.splitext(os.path.basename(fn))[0]
+                        blabels, bvals = self.slice_idx_from_filename(n, clabel)
+                        if 0:
+                            print 'blabels:', blabels
+                            print 'bvals:', bvals
+                            print 'fn:', fn
+                        cdata = self.load_cuboid(fn, iaxes, vlab, idomains)
+                        #print 'ctree:'
+                        #print ctree
+                        #print 'cdata:', cdata
+                        set_leaf(ctree, bvals, cdata)
+                    self.cuboid = tree_to_cuboid(ctree, branchLabels=blabels)
+                else:
+                    self.cuboid = self.load_cuboid(fl[0], iaxes, vlab, idomains)
 
-    def appendParametersToDOMTree(self, doc, node):
-        if self.savexndarray:
-            if self.cuboid is not None :
+                self.cuboid.set_orientation(an)
+            else:
+                self.cuboid = None
+            #    self.cuboid = xndarray(np.array([]),axes_names=an,
+            #                         axes_domains=ad, value_label=vlab)
+
+        def load_cuboid(self, fn, iaxes, vlab, idomains):
+            if 0:
+                print '~~~~~~~~~~~~~~~~~~~~~~~~~~'
+                print 'load_cuboid:'
+                print 'iaxes:', iaxes
+            base, ext = os.path.splitext(fn)
+            if ext == '.nii':
+                data, meta_data = read_volume(fn)
+
+                if 'iteration' in iaxes:
+                    iaxes = MRI3Daxes + 'iteration'
+                elif 'time' in iaxes:
+                    iaxes = list(MRI4Daxes)
+                else:
+                    iaxes = list(MRI3Daxes)
+
+                if ('iteration' in iaxes or 'time' in iaxes) and data.ndim == 3:
+                    data = data.reshape(1,data.shape[0],data.shape[1],
+                                        data.shape[2])
+
+            elif ext == '.h5':
+                import tables
+                h5file = tables.openFile(fn, mode='r')
+                data = h5file.root.array.read()
+                h5file.close()
+            elif ext == '.csv':
+                data = np.loadtxt(fn)
+            #print 'data:', data.shape, data.ndim
+            #print 'iaxes:', iaxes
+            #print 'id:', idomains
+            #print 'vlab:', vlab
+            if data.ndim == 0:
+                data.shape = tuple([1]*len(iaxes))
+            elif len(iaxes) == 2 and data.ndim == 1:
+                if len(idomains[iaxes[0]]) == 1:
+                    data.shape = (1,data.shape[0])
+                else:
+                    data.shape = (data.shape[0],1)
+            assert data.ndim == len(iaxes)
+            return xndarray(data, axes_names=iaxes, axes_domains=idomains,
+                          value_label=vlab)
+
+
+        @staticmethod
+        def fromxndarray(c, label='cname', outDir='./'):
+            p = {
+                'domains' : c.getAxesDomainsDict(),
+                'orientation' : c.axes_names,
+                'value_label' : c.value_label,
+                'name' : label,
+                }
+            cxml = xndarrayXml(p)
+            cxml._set_cuboid(c)
+            cxml._set_output_dir(outDir)
+            return cxml
+
+        def _set_cuboid(self, c):
+            self.cuboid = c
+
+        def _set_output_dir(self, d):
+            self.outDir = d
+
+
+        @staticmethod
+        def longest_underscore(s):
+            return max(map(len,re.compile('[^_]+').subn('-',s)[0].split('-')))
+
+        def appendParametersToDOMTree(self, doc, node):
+            if self.cuboid is not None:
                 if 0:
                     print ''
                     print 'Appending to DOM tree:'
@@ -664,72 +398,341 @@ class xndarrayXml2(XMLParamDrivenClass):
                     print self.parameters
                     print '- cuboid descrip:'
                     print self.cuboid.descrip()
-                sep = '_'
+                lu = max([self.longest_underscore(an) for an in self.cuboid.getAxesNames()])
+                lud = 0
+                for d in self.cuboid.getAxesDomains():
+                    if 'str' in d.dtype.name:
+                        lud = max([self.longest_underscore(v) for v in d])
+                sep = '_'*(max([lud, lu])+1)
 
                 if self.cuboid.is_nii_writable():
                     fn0 = op.join(self.outDir, self.parameters['name']+'.nii')
-                    pyhrf.verbose(3, 'Writing cuboid for %s ...' \
-                                      %self.parameters['name'])
-                    eaxes, slicefns = writexndarrayToNiftii(self.cuboid, fn0,
-                                                          sep=sep,
-                                                          meta_data=self.meta_data)
-                    pyhrf.verbose(3, 'Written cuboid for %s' \
-                                      %self.parameters['name'])
+                    eaxes, fns = writexndarrayToNiftii(self.cuboid, fn0, sep=sep)
+                    fns = fns.values()
                 elif self.cuboid.getNbDims() <= 2:
                     eaxes = []
-                    fn = op.join(self.outDir,self.parameters['name'] + '.csv')
-                    #slicefns = { ('_','_') : fn }
-                    slicefns = { None : fn }
-                    self.cuboid.save(fn)
+                    fns = [op.join(self.outDir,self.parameters['name'] + '.csv')]
+                    self.cuboid.save(fns[0])
                 else:
                     eaxes = []
-                    fn = op.join(self.outDir,self.parameters['name'] + '.h5')
-                    #slicefns = { ('_','_') : fn }
-                    slicefns = { None : fn }
-                    self.cuboid.save(fn)
+                    fns = [op.join(self.outDir,self.parameters['name'] + '.h5')]
+                    self.cuboid.save(fns[0])
 
-
-                for s,f in slicefns.iteritems():
-                    if self.useRelativePath:
-                        slicefns[s] = op.join('./',op.basename(f))
-                    else:
-                        slicefns[s] = op.abspath(f)
-
-                self.parameters['dataFiles'] = slicefns
+                self.parameters['dataFiles'] = fns
                 self.parameters['explodedAxes'] = eaxes
                 #print 'eaxes:', eaxes
                 XMLParamDrivenClass.appendParametersToDOMTree(self, doc, node)
+
+        def cleanFiles(self):
+            for f in self.parameters['dataFiles']:
+                if os.path.exists(f):
+                    os.remove(f)
+
+
+    class xndarrayXml2(XMLParamDrivenClass):
+        loadxndarray = True
+        savexndarray = True
+
+        defaultParameters = {
+            'domains' : {},
+            'orientation' : [],
+            'explodedAxes' : [],
+            'name' : 'cname',
+            'value_label' : 'value',
+            'dataFiles' : {},
+            }
+
+        @staticmethod
+        def slice_idx_from_filename(fn, cname):
+
+            i = 1
+            while '_'*i in fn:
+                i += 1
+            sep = '_'*(i-1)
+            #print 'sep:', sep
+            #print 'cname:', cname
+            #print 'fn:', fn
+            sfn = fn[len(cname)+len(sep):]
+            #print 'sfn:', sfn
+            l = sfn.split(sep)
+            return l[::2], l[1::2]
+
+
+        def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
+                     xmlLabel=None, xmlComment=None):
+            if 0 : print 'xndarrayXml2.__init__ ...'
+            XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel,
+                                         xmlComment)
+
+            clabel = self.parameters['name']
+            ad = self.parameters['domains']
+            an = self.parameters['orientation']
+            vlab = self.parameters['value_label']
+            fl = self.parameters['dataFiles']
+            eaxes = self.parameters['explodedAxes']
+            self.outDir = './'
+            self.meta_data = None
+    #         print ''
+    #         print 'clabel:', clabel
+    #         print 'eaxes :', eaxes
+    #         print 'an:', an
+
+            if len(fl) > 0 and self.loadxndarray:
+                ed = dict(zip(eaxes,[ad[ea] for ea in eaxes]))
+                if len(eaxes) > 0:
+                    iaxes = []
+                    for a in an:
+                        if a not in eaxes:
+                            iaxes.append(a)
+                    #iaxes = list(set(an).difference(eaxes))
+                else:
+                    iaxes = an
+                idomains = dict(zip(iaxes,[ad[ia] for ia in iaxes]))
+                ctree = {}
+                if 0:
+                    print 'fl:', fl
+                    print 'id:', idomains
+                    print 'iaxes:', iaxes
+                    print 'ad:', ad
+                    print 'ed:', ed
+                    print 'eaxes:', eaxes
+                if len(eaxes) > 0:
+                    for slice,fn in fl.iteritems():
+                        slice = list(slice)
+                        if 0:
+                            print 'slice:', slice
+                            print 'fn:', fn
+                        if slice is not None:
+                            if '_' in slice:
+                                slice.remove('_')
+                                if '_' in slice:
+                                    slice.remove('_')
+                        cdata = self.load_cuboid(fn, iaxes, vlab, idomains)
+                        #print 'ctree:'
+                        #print ctree
+                        #print 'cdata:', cdata
+                        set_leaf(ctree, list(slice), cdata)
+                    self.cuboid = tree_to_cuboid(ctree, branchLabels=eaxes)
+                else:
+                    self.cuboid = self.load_cuboid(fl.values()[0], iaxes, vlab, idomains)
+
+                self.cuboid.set_orientation(an)
             else:
-                raise Exception('No cuboid to save')
+                self.cuboid = None
+
+            self.useRelativePath = False
+            #    self.cuboid = xndarray(np.array([]),axes_names=an,
+            #                         axes_domains=ad, value_label=vlab)
+
+        def load_cuboid(self, fn, iaxes, vlab, idomains):
+            base, ext = os.path.splitext(fn)
+            if 0:
+                print 'xndarrayXml2.load_cuboid ...'
+                print 'input iaxes:', iaxes
+            #print 'fn :', fn
+            if ext == '.nii':
+                data, self.meta_data = read_volume(fn)
+                if 'iteration' in iaxes:
+                    iaxes = MRI3Daxes + ['iteration']
+                elif 'time' in iaxes:
+                    iaxes = list(MRI4Daxes)
+                else:
+                    iaxes = list(MRI3Daxes)
+
+
+                # print '-> iaxes', iaxes
+                # print 'MRI4Daxes:', MRI4Daxes
+
+                if ('iteration' in iaxes or 'time' in iaxes) and data.ndim == 3:
+                    data = data.reshape(1,data.shape[0],data.shape[1],data.shape[2])
+            elif ext == '.h5':
+                import tables
+                h5file = tables.openFile(fn, mode='r')
+                data = h5file.root.array.read()
+                h5file.close()
+            elif ext == '.csv':
+                data = np.loadtxt(fn)
+            if 0:
+                print '--------------------'
+                print 'before cuboid creation ...'
+                print 'data:', data.shape, data.ndim
+                print 'iaxes:', iaxes
+                #print 'id:', idomains
+                print 'vlab:', vlab
+                print '--------------------'
+            if data.ndim == 0:
+                data.shape = tuple([1]*len(iaxes))
+            elif len(iaxes) == 2 and data.ndim == 1:
+                if len(idomains[iaxes[0]]) == 1:
+                    data.shape = (1,data.shape[0])
+                else:
+                    data.shape = (data.shape[0],1)
+            assert data.ndim == len(iaxes)
+
+            return xndarray(data, axes_names=iaxes, axes_domains=idomains,
+                          value_label=vlab)
+
+
+        @staticmethod
+        def fromxndarray(c, label='cname', outDir='./', relativePath=True,
+                       meta_data=None):
+            p = {
+                'domains' : c.getAxesDomainsDict(),
+                'orientation' : c.axes_names,
+                'value_label' : c.value_label,
+                'name' : label,
+                }
+            cxml = xndarrayXml2(p)
+            cxml._set_cuboid(c)
+            cxml._set_output_dir(outDir)
+            cxml.set_relative_path(relativePath)
+            cxml.meta_data = meta_data
+            return cxml
+
+        def _set_cuboid(self, c):
+            self.cuboid = c
+
+        def _set_output_dir(self, d):
+            self.outDir = d
+
+        def set_relative_path(self, p):
+            self.useRelativePath = p
+
+        def make_relative_path(self):
+            """
+            Make data file pathes be relative. Simply replace
+            every file name with its basename since by convention
+            all results are in the same directory as the output.xml
+            """
+            self.set_relative_path(True)
+            cfl = self.parameters['dataFiles']
+            for slice,fn in cfl.iteritems():
+                #print 'ofn:', cfl[slice]
+                cfl[slice] = op.basename(fn)
+                #print 'nfn:', cfl[slice]
+
+        def make_absolute_path(self,root='./'):
+            #print 'make_absolute_path ...'
+            self.set_relative_path(False)
+            cfl = self.parameters['dataFiles']
+            for slice,fn in cfl.iteritems():
+                #print 'fn:', fn
+                cfl[slice] = op.abspath(op.join(root,fn))
+                #print 'nfn:', cfl[slice]
+
+        @staticmethod
+        def longest_underscore(s):
+            return max(map(len,re.compile('[^_]+').subn('-',s)[0].split('-')))
+
+        @staticmethod
+        def stack(clist, axisLabel, axisDomain):
+            pyhrf.verbose(6, 'xndarrayXml2.stack ...')
+            pyhrf.verbose(6, 'axisLabel: %s, axisDomain: %s' %(axisLabel, str(axisDomain)))
+            pyhrf.verbose(6, 'clist:')
+            pyhrf.verbose(6, str(clist))
+
+            cxml = copyModule.deepcopy(clist[0])
+            cxml.parameters['domains'][axisLabel] = axisDomain
+            #print 'orientation:',cxml.parameters['orientation']
+            cxml.parameters['orientation'].append(axisLabel)
+            cxml.parameters['explodedAxes'].append(axisLabel)
+            fl = {}
+
+
+            for c,dv in zip(clist, axisDomain):
+                if 0:
+                    print 'c:', c
+                    print 'dv:', dv
+                cfl = c.parameters['dataFiles']
+                for slice,fn in cfl.iteritems():
+                    if 0:
+                        print 'slice:', slice
+                        print 'fn:', fn
+                    if slice is not None:
+                        newSlice = slice + (dv,)
+                    else:
+                        newSlice = (dv,)
+                    fl[newSlice] = fn
+            cxml.parameters['dataFiles'] = fl
+            return cxml
+
+        def appendParametersToDOMTree(self, doc, node):
+            if self.savexndarray:
+                if self.cuboid is not None :
+                    if 0:
+                        print ''
+                        print 'Appending to DOM tree:'
+                        print '- parameters :'
+                        print self.parameters
+                        print '- cuboid descrip:'
+                        print self.cuboid.descrip()
+                    sep = '_'
+
+                    if self.cuboid.is_nii_writable():
+                        fn0 = op.join(self.outDir, self.parameters['name']+'.nii')
+                        pyhrf.verbose(3, 'Writing cuboid for %s ...' \
+                                          %self.parameters['name'])
+                        eaxes, slicefns = writexndarrayToNiftii(self.cuboid, fn0,
+                                                              sep=sep,
+                                                              meta_data=self.meta_data)
+                        pyhrf.verbose(3, 'Written cuboid for %s' \
+                                          %self.parameters['name'])
+                    elif self.cuboid.getNbDims() <= 2:
+                        eaxes = []
+                        fn = op.join(self.outDir,self.parameters['name'] + '.csv')
+                        #slicefns = { ('_','_') : fn }
+                        slicefns = { None : fn }
+                        self.cuboid.save(fn)
+                    else:
+                        eaxes = []
+                        fn = op.join(self.outDir,self.parameters['name'] + '.h5')
+                        #slicefns = { ('_','_') : fn }
+                        slicefns = { None : fn }
+                        self.cuboid.save(fn)
+
+
+                    for s,f in slicefns.iteritems():
+                        if self.useRelativePath:
+                            slicefns[s] = op.join('./',op.basename(f))
+                        else:
+                            slicefns[s] = op.abspath(f)
+
+                    self.parameters['dataFiles'] = slicefns
+                    self.parameters['explodedAxes'] = eaxes
+                    #print 'eaxes:', eaxes
+                    XMLParamDrivenClass.appendParametersToDOMTree(self, doc, node)
+                else:
+                    raise Exception('No cuboid to save')
+            else:
+                XMLParamDrivenClass.appendParametersToDOMTree(self, doc, node)
+
+        def cleanFiles(self):
+            for f in self.parameters['dataFiles'].itervalues():
+                if os.path.exists(f):
+                    os.remove(f)
+
+    def tree_to_cuboidXml2(tree, branchLabels=None):
+        # print 'tree_to_cuboidXml2 recieve:'
+        # pprint.pprint(tree)
+        if branchLabels is None:
+            branchLabels = ['b%d'%i for i in xrange(len(treeBranches(tree).next()))]
+        assert len(branchLabels) == len(treeBranches(tree).next())
+
+        if isinstance(tree[tree.keys()[0]], dict):
+            for k in tree.iterkeys():
+                tree[k] = tree_to_cuboidXml2(tree[k], branchLabels[1:])
         else:
-            XMLParamDrivenClass.appendParametersToDOMTree(self, doc, node)
+            kiter = sorted(tree.keys())
+            allLeaves = []
+            #print 'axis domain for stacking:'
+            #print kiter
+            for k in kiter:
+                allLeaves.append(tree[k])
+            return xndarrayXml2.stack(allLeaves, branchLabels[0], kiter)
 
-    def cleanFiles(self):
-        for f in self.parameters['dataFiles'].itervalues():
-            if os.path.exists(f):
-                os.remove(f)
+        return tree_to_cuboidXml2(tree, [branchLabels[0]])
 
-def tree_to_cuboidXml2(tree, branchLabels=None):
-    # print 'tree_to_cuboidXml2 recieve:'
-    # pprint.pprint(tree)
-    if branchLabels is None:
-        branchLabels = ['b%d'%i for i in xrange(len(treeBranches(tree).next()))]
-    assert len(branchLabels) == len(treeBranches(tree).next())
-
-    if isinstance(tree[tree.keys()[0]], dict):
-        for k in tree.iterkeys():
-            tree[k] = tree_to_cuboidXml2(tree[k], branchLabels[1:])
-    else:
-        kiter = sorted(tree.keys())
-        allLeaves = []
-        #print 'axis domain for stacking:'
-        #print kiter
-        for k in kiter:
-            allLeaves.append(tree[k])
-        return xndarrayXml2.stack(allLeaves, branchLabels[0], kiter)
-
-    return tree_to_cuboidXml2(tree, [branchLabels[0]])
-
+### End of old ndarray <-> xml feature
 
 def sub_sample_vol(image_file, dest_file, dsf, interpolation='continuous',
                    verb_lvl=0):
@@ -738,7 +741,7 @@ def sub_sample_vol(image_file, dest_file, dsf, interpolation='continuous',
 
     pyhrf.verbose(verb_lvl, 'Subsampling at dsf=%d, %s -> %s' \
                   %(dsf, image_file, dest_file))
-                  
+
     interp = interpolation
     data_src, src_meta = read_volume(image_file)
     affine = src_meta[0]
@@ -1267,8 +1270,8 @@ def remote_mkdir(host, user, path):
     ssh.connect(host, username=user)
     sftp = ssh.open_sftp()
     sftp.mkdir(path)
-    
-    
+
+
 def rexists(host, user, path):
     """os.path.exists for paramiko's SCP object
     """

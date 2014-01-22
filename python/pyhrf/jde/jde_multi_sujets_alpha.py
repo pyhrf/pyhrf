@@ -85,10 +85,10 @@ class NoiseVariance_Drift_MultiSubj_Sampler(NoiseVariance_Drift_Sampler):
             self.currentValue = 0.5 * self.dataInput.varData
         
     def sampleNextInternal(self, variables):
-        smplHRF = self.samplerEngine.getVariable('hrf')
+        smplHRF = self.samplerEngine.get_variable('hrf')
         varXh = smplHRF.varXh
-        snrl = self.samplerEngine.getVariable('nrl')
-        matPl =  self.samplerEngine.getVariable('drift').matPl
+        snrl = self.samplerEngine.get_variable('nrl')
+        matPl =  self.samplerEngine.get_variable('drift').matPl
         
         varYbar = snrl.varYtilde - matPl
 
@@ -159,7 +159,7 @@ class Drift_MultiSubj_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                                            for ssd in sd])
 
     def checkAndSetInitValue(self, variables):
-        smplVarDrift = self.samplerEngine.getVariable('driftVar')
+        smplVarDrift = self.samplerEngine.get_variable('driftVar')
         smplVarDrift.checkAndSetInitValue(variables)
 
         if self.useTrueValue :
@@ -189,9 +189,9 @@ class Drift_MultiSubj_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                               for s in xrange(self.nbSubj)])
 
     def sampleNextInternal(self, variables):
-        eta =  self.samplerEngine.getVariable('driftVar').currentValue
-        snrls = self.samplerEngine.getVariable('nrl')
-        noise_vars = self.samplerEngine.getVariable('noise_var').currentValue
+        eta =  self.samplerEngine.get_variable('driftVar').currentValue
+        snrls = self.samplerEngine.get_variable('nrl')
+        noise_vars = self.samplerEngine.get_variable('noise_var').currentValue
 
         for j in xrange(self.nbVox):
             for s in xrange(self.nbSubj):
@@ -304,7 +304,7 @@ class ETASampler_MultiSubj(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         if dataInput.simulData is not None:
             sd = dataInput.simulData
 
-            self.P = self.getVariable('drift').P
+            self.P = self.get_variable('drift').P
             self.trueValue = np.array([np.dot(self.P.T, ssd['drift']).var() \
                                        for ssd in sd])
 
@@ -323,7 +323,7 @@ class ETASampler_MultiSubj(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        smpldrift = self.samplerEngine.getVariable('drift')
+        smpldrift = self.samplerEngine.get_variable('drift')
         for s in xrange(self.nbSubj):
             beta_d    = 0.5*smpldrift.norm[s]
             gammaSample = np.random.gamma( (smpldrift.dimDrift*self.nbVox - 1)/2, 1)
@@ -565,7 +565,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def checkAndSetInitValue(self, variables):
-        smplRH = self.samplerEngine.getVariable('hrf_subj_var')
+        smplRH = self.samplerEngine.get_variable('hrf_subj_var')
         smplRH.checkAndSetInitValue(variables)
         rh = smplRH.currentValue
         pyhrf.verbose(4, 'Hrf variance is :%s' %str(rh))
@@ -631,7 +631,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
                                                                      ])
 
     def getCurrentVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_subj_var')
+        smplRH = self.samplerEngine.get_variable('hrf_subj_var')
         rh = smplRH.currentValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -639,7 +639,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         return varR/rh
 
     def getFinalVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_subj_var')
+        smplRH = self.samplerEngine.get_variable('hrf_subj_var')
         rh = smplRH.finalValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -650,7 +650,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def samplingWarmUp(self, variables):
         if self.varR == None :
-            smplRH = self.samplerEngine.getVariable('hrf_subj_var')
+            smplRH = self.samplerEngine.get_variable('hrf_subj_var')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
                                                         self.hrfLength,
@@ -666,7 +666,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         varX = self.dataInput.varX[:,:,:]
         matXtX = self.dataInput.matXtX
-        drift_sampler = self.getVariable('drift')
+        drift_sampler = self.get_variable('drift')
         matPl = drift_sampler.matPl[subj]
         y = self.dataInput.varMBY[subj] - matPl
 
@@ -714,13 +714,13 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        snrl = self.samplerEngine.getVariable('nrl')
+        snrl = self.samplerEngine.get_variable('nrl')
         nrls = snrl.currentValue
-        rb   = self.samplerEngine.getVariable('noise_var').currentValue       
+        rb   = self.samplerEngine.get_variable('noise_var').currentValue       
         
-        hg = self.samplerEngine.getVariable('hrf_group').currentValue
+        hg = self.samplerEngine.get_variable('hrf_group').currentValue
         D1 = np.eye(self.hrfLength, k=1) - np.eye(self.hrfLength, k=-1)
-        alphas = self.samplerEngine.getVariable('alpha_hs').currentValue
+        alphas = self.samplerEngine.get_variable('alpha_hs').currentValue
         
         
         pyhrf.verbose(6, 'Computing StQS StQY optim fashion')
@@ -729,7 +729,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         pyhrf.verbose(6, 'Computing StQS StQY optim fashion'+\
                       ' done in %1.3f sec' %(time.time()-tSQSOptimIni))
 
-        rh = self.samplerEngine.getVariable('hrf_subj_var').currentValue
+        rh = self.samplerEngine.get_variable('hrf_subj_var').currentValue
 
         h = self.currentValue
         for s in xrange(self.nbSubj):
@@ -761,11 +761,11 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
                 f = self.norm[s]
                 #HACK retrieve normalized hrf
                 self.currentValue[s] = self.currentValue[s] / f #/(self.normalise+0.)
-            if 0 and self.getVariable('nrls_by_subject').sampleFlag:
-                self.getVariable('nrls_by_subject').currentValue *= f
+            if 0 and self.get_variable('nrls_by_subject').sampleFlag:
+                self.get_variable('nrls_by_subject').currentValue *= f
 
                 # Normalizing Mixture components
-                smixt_params = self.samplerEngine.getVariable('mixt_params')
+                smixt_params = self.samplerEngine.get_variable('mixt_params')
                 if 0 and smixt_params.sampleFlag:
                     # Normalizing Mean's activation class
                     smixt_params.currentValue[smixt_params.I_MEAN_CA] *= f
@@ -784,7 +784,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
         # update ytilde for nrls
-        nrlsmpl = self.samplerEngine.getVariable('nrl')
+        nrlsmpl = self.samplerEngine.get_variable('nrl')
         for s in xrange(self.nbSubj):
             nrlsmpl.computeVarYTildeOpt(self.varXh[s], s)
         
@@ -883,7 +883,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             for j in xrange(self.nbConditions):
                 hrep = np.repeat(self.currentValue,self.nbVox)
                 ncoeffs = self.currentValue.shape[0]
-                nrls = self.samplerEngine.getVariable('nrl').currentValue
+                nrls = self.samplerEngine.get_variable('nrl').currentValue
                 self.current_ah[:,:,j] = hrep.reshape(ncoeffs,self.nbVox) * \
                     nrls[j,:]
 
@@ -914,10 +914,10 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.error = np.zeros(self.hrfLength, dtype=float)
         if 0 and self.sampleFlag: #TODO adapt for multi subject
             # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
+            rh = self.samplerEngine.get_variable('hrf_var').finalValue
 
-            rb = self.samplerEngine.getVariable('noise_var').finalValue
-            nrls = self.samplerEngine.getVariable('nrl')
+            rb = self.samplerEngine.get_variable('noise_var').finalValue
+            nrls = self.samplerEngine.get_variable('nrl')
             nrls = nrls.finalValue
             aa = np.zeros_like(nrls.aa)
             nrls.computeAA(nrls, aa)
@@ -945,7 +945,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         outputs = GibbsSamplerVariable.getOutputs(self)
 
-        nrls = self.samplerEngine.getVariable('nrl').finalValue
+        nrls = self.samplerEngine.get_variable('nrl').finalValue
 
         # hrfs = self.finalValue
         # ah = np.zeros((hrfs.shape[0], hrfs[0].shape,
@@ -998,7 +998,7 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #print 'hrf - finalValue:'
         #print self.finalValue
         if 0 and pyhrf.__usemode__ == pyhrf.DEVEL:
-            nrls = self.samplerEngine.getVariable('nrl').finalValue
+            nrls = self.samplerEngine.get_variable('nrl').finalValue
             #print np.argmax(abs(nrls))
             #print nrls.shape
             nrlmax = nrls[np.unravel_index(np.argmax(abs(nrls)),nrls.shape)]
@@ -1080,9 +1080,9 @@ class Alpha_hgroup_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         self.nySubj = self.dataInput.nySubj
         self.nbSubj = self.dataInput.nbSubj
         self.nbVox = self.dataInput.nbVoxels
-        self.hg = self.samplerEngine.getVariable('hrf_group')
-        self.rhSubj = self.samplerEngine.getVariable('hrf_subj_var')
-        self.varAlpha = self.samplerEngine.getVariable('alpha_var')
+        self.hg = self.samplerEngine.get_variable('hrf_group')
+        self.rhSubj = self.samplerEngine.get_variable('hrf_subj_var')
+        self.varAlpha = self.samplerEngine.get_variable('alpha_var')
    
         sd = self.dataInput.simulData
         if sd is not None:
@@ -1104,7 +1104,7 @@ class Alpha_hgroup_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
         
     def sampleNextInternal(self, variables):
-        hs = self.samplerEngine.getVariable('hrf').currentValue
+        hs = self.samplerEngine.get_variable('hrf').currentValue
         D1 = np.eye(self.hg.currentValue.shape[0], k=1) - np.eye(self.hg.currentValue.shape[0], k=-1)
         #print D1.shape
         #print self.hg.currentValue.shape
@@ -1166,7 +1166,7 @@ class AlphaVar_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                                       sampleFlag=sampleFlag)
 
     def linkToData(self, dataInput):
-        self.alpha_hs = self.samplerEngine.getVariable('alpha_hs')
+        self.alpha_hs = self.samplerEngine.get_variable('alpha_hs')
         self.dataInput = dataInput
         self.nbSubj = self.dataInput.nbSubj
         sd = self.dataInput.simulData
@@ -1301,10 +1301,10 @@ class HRFVarianceSubjectSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable)
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        shrf = self.samplerEngine.getVariable('hrf')
+        shrf = self.samplerEngine.get_variable('hrf')
         hrf = shrf.currentValue
         varR = shrf.varR
-        hgroup = self.samplerEngine.getVariable('hrf_group').currentValue
+        hgroup = self.samplerEngine.get_variable('hrf_group').currentValue
         
         for s in xrange(self.nbSubj):
             hrfT_R_hrf = np.dot(np.dot( (hrf[s]-hgroup), varR), (hrf[s]-hgroup) )
@@ -1497,7 +1497,7 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.norm = sum(self.currentValue**2.0)**0.5
 
     def checkAndSetInitValue(self, variables):
-        smplRH = self.samplerEngine.getVariable('var_hrf_group')
+        smplRH = self.samplerEngine.get_variable('var_hrf_group')
         smplRH.checkAndSetInitValue(variables)
         rh = smplRH.currentValue
         pyhrf.verbose(4, 'Hrf variance is :%1.3f' %rh)
@@ -1561,7 +1561,7 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def getCurrentVar(self):
-        smplRH = self.samplerEngine.getVariable('var_hrf_group')
+        smplRH = self.samplerEngine.get_variable('var_hrf_group')
         rh = smplRH.currentValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -1569,7 +1569,7 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         return varR/rh
 
     def getFinalVar(self):
-        smplRH = self.samplerEngine.getVariable('var_hrf_group')
+        smplRH = self.samplerEngine.get_variable('var_hrf_group')
         rh = smplRH.finalValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -1580,7 +1580,7 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def samplingWarmUp(self, variables):
         if self.varR == None :
-            smplRH = self.samplerEngine.getVariable('var_hrf_group')
+            smplRH = self.samplerEngine.get_variable('var_hrf_group')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
                                                         self.hrfLength,
@@ -1593,11 +1593,11 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        alphas = self.samplerEngine.getVariable('alpha_hs').currentValue
+        alphas = self.samplerEngine.get_variable('alpha_hs').currentValue
         
-        rh = self.samplerEngine.getVariable('var_hrf_group').currentValue
-        rhSubj = self.samplerEngine.getVariable('hrf_subj_var').currentValue
-        hrf_subj = self.samplerEngine.getVariable('hrf').currentValue
+        rh = self.samplerEngine.get_variable('var_hrf_group').currentValue
+        rhSubj = self.samplerEngine.get_variable('hrf_subj_var').currentValue
+        hrf_subj = self.samplerEngine.get_variable('hrf').currentValue
         #self.currentValue = h
         hs_1alph_on_rh = np.zeros((hrf_subj.shape))
         s1alph_on_rh = np.zeros((self.nbSubj, hrf_subj.shape[1], hrf_subj.shape[1]))
@@ -1747,7 +1747,7 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #print 'hrf - finalValue:'
         #print self.finalValue
         if 0  and pyhrf.__usemode__ == pyhrf.DEVEL:
-            nrls = self.samplerEngine.getVariable('nrl').finalValue
+            nrls = self.samplerEngine.get_variable('nrl').finalValue
             #print np.argmax(abs(nrls))
             #print nrls.shape
             nrlmax = nrls[np.unravel_index(np.argmax(abs(nrls)),nrls.shape)]
@@ -1860,7 +1860,7 @@ class RHGroupSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        shrf = self.samplerEngine.getVariable('hrf_group')
+        shrf = self.samplerEngine.get_variable('hrf_group')
         hrf = shrf.currentValue
         varR = shrf.varR
         hrfT_R_hrf = np.dot(np.dot(hrf, varR), hrf)
@@ -1993,13 +1993,13 @@ class LabelSampler(GibbsSamplerVariable):
                                            self.nbVoxels), dtype=np.float64)
 
     def compute_ext_field(self):
-        smixtp_sampler = self.samplerEngine.getVariable('mixt_params')
+        smixtp_sampler = self.samplerEngine.get_variable('mixt_params')
 
         v = smixtp_sampler.get_current_vars()
 
         mu = smixtp_sampler.get_current_means()
 
-        nrls = self.samplerEngine.getVariable('nrl').currentValue
+        nrls = self.samplerEngine.get_variable('nrl').currentValue
 
         for s in xrange(self.nbSubj):
             for k in xrange(self.nbClasses):
@@ -2096,8 +2096,8 @@ class Variance_GaussianNRL_Multi_Subj(xmlio.XMLParamDrivenClass, GibbsSamplerVar
 
     def sampleNextInternal(self, variables):
 
-        nrls = variables[self.samplerEngine.I_NRLS_SESS].currentValue
-        nrlsBAR = variables[self.samplerEngine.I_NRLS_BAR].currentValue
+        nrls = self.get_variable('nrl_by_session').currentValue
+        nrlsBAR = self.get_variable('nrl_bar').currentValue
 
         #sum_s_j_m=0
         #for s in xrange(self.nbSessions):
@@ -2207,9 +2207,9 @@ class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
     def samplingWarmUp(self, variables):
         """
         """
-        varXh = self.samplerEngine.getVariable('hrf').varXh
-        self.response_sampler = self.samplerEngine.getVariable('hrf')
-        self.mixture_sampler = self.samplerEngine.getVariable('mixt_params')
+        varXh = self.samplerEngine.get_variable('hrf').varXh
+        self.response_sampler = self.samplerEngine.get_variable('hrf')
+        self.mixture_sampler = self.samplerEngine.get_variable('mixt_params')
 
 
         self.meanApost = np.zeros((self.nbSubj, self.nbConditions,
@@ -2231,15 +2231,15 @@ class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        labels = self.samplerEngine.getVariable('label').currentValue
-        v_b = self.samplerEngine.getVariable('noise_var').currentValue
+        labels = self.samplerEngine.get_variable('label').currentValue
+        v_b = self.samplerEngine.get_variable('noise_var').currentValue
 
-        varXh = self.samplerEngine.getVariable('hrf').varXh
+        varXh = self.samplerEngine.get_variable('hrf').varXh
         
         mixt_vars = self.mixture_sampler.get_current_vars()
         mixt_means = self.mixture_sampler.get_current_means()
         
-        matPl = self.samplerEngine.getVariable('drift').matPl
+        matPl = self.samplerEngine.get_variable('drift').matPl
         
         for s in xrange(self.nbSubj):
             ytilde = self.computeVarYTildeOpt(varXh[s], s) - matPl[s]
@@ -2282,13 +2282,13 @@ class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde[s].shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde[s])
-        matPl = self.getVariable('drift').matPl
+        matPl = self.get_variable('drift').matPl
         #self.varYbar[s] = self.varYtilde[s] - matPl[s]
 
         if self.dataInput.simulData is not None:
             sd = self.dataInput.simulData[s]
-            smplHRF = self.samplerEngine.getVariable('hrf')
-            smplDrift = self.samplerEngine.getVariable('drift')
+            smplHRF = self.samplerEngine.get_variable('hrf')
+            smplDrift = self.samplerEngine.get_variable('drift')
             
             osf = int(sd['tr'] / sd['dt'])
             if not self.sampleFlag and  not smplHRF.sampleFlag and\
@@ -2481,8 +2481,8 @@ class MixtureParamsSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        nrls_sampler = self.samplerEngine.getVariable('nrl')
-        label_sampler = self.samplerEngine.getVariable('label')
+        nrls_sampler = self.samplerEngine.get_variable('nrl')
+        label_sampler = self.samplerEngine.get_variable('label')
 
         for s in xrange(self.nbSubj):
             cardCA = label_sampler.cardClass[s,self.L_CA,:]
@@ -2878,7 +2878,7 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
 
 ##        print '- Sampling Mixt params ...'
 
-        nrlsSmpl = self.samplerEngine.getVariable('nrl')
+        nrlsSmpl = self.samplerEngine.get_variable('nrl')
 
         cardCA = nrlsSmpl.cardClass[self.L_CA,:]
         cardCI = nrlsSmpl.cardClass[self.L_CI,:]
@@ -2914,7 +2914,7 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
 
     def updateObsersables(self):
         GibbsSamplerVariable.updateObsersables(self)
-        sHrf = self.samplerEngine.getVariable('hrf')
+        sHrf = self.samplerEngine.get_variable('hrf')
 
         if sHrf.sampleFlag and np.allclose(sHrf.normalise,0.):
             pyhrf.verbose(6, 'Normalizing Posterior mean of Mixture Parameters at each iteration ...')
@@ -3727,7 +3727,7 @@ class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         nbVals = self.dataInput.ny
         
         #hrfs for all subjects
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if hrf is None:
             hrf = shrf.currentValue
@@ -3737,14 +3737,14 @@ class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         varXh = shrf.varXh
         
         #nrls for all subjects
-        nrls = self.getVariable('nrl').finalValue
+        nrls = self.get_variable('nrl').finalValue
         if nrls is None:
-            nrls = self.getVariable('nrl').currentValue
+            nrls = self.get_variable('nrl').currentValue
 
         stimIndSignal = np.zeros((nbSubj, nbVals, nbVox), dtype=np.float32)
         
         #drifts for all subjects
-        drift = self.getVariable('drift').get_final_value()
+        drift = self.get_variable('drift').get_final_value()
         
         
         for s in xrange(nbSubj):
@@ -3852,12 +3852,12 @@ class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         nbSubj = self.dataInput.nbSubj
 
         nbVals = self.dataInput.ny
-        shrf = self.getVariable('hrf')
+        shrf = self.get_variable('hrf')
         hrf = shrf.finalValue
         if shrf.zc:
             hrf = hrf[1:-1]
         vXh = shrf.calcXh(hrf) # base convolution
-        nrl = self.getVariable('nrl').finalValue
+        nrl = self.get_variable('nrl').finalValue
 
         self.stimIndSignal = np.zeros((nbSubj, nbVals, nbVox))
         meanBold = np.zeros((nbSubj, nbVox))

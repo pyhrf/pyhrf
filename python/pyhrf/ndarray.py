@@ -15,8 +15,6 @@ import pprint
 from pkg_resources import parse_version
 
 import pyhrf
-from pyhrf.xmlio import fromXML, toXML
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.tools import treeBranches, rescale_values, has_ext
 
 debug = False
@@ -24,7 +22,6 @@ debug = False
 MRI3Daxes = ['sagittal','coronal','axial']
 MRI4Daxes = MRI3Daxes + ['time']
 TIME_AXIS = 3
-
 
 class xndarray:
     """ Handles a multidimensional numpy array with axes that are labeled
@@ -414,10 +411,10 @@ class xndarray:
         table_line_end = '\\\\\n'
 
         c_to_print = self.reorient(row_axes + col_axes + inner_axes)
-        sh = c_to_print.get_shape()
-        data = c_to_print.data.reshape(np.prod([sh[a] for a in row_axes]),
-                                       np.prod([sh[a] for a in col_axes]),
-                                       np.prod([sh[a] for a in inner_axes]))
+        dsh = c_to_print.get_dshape()
+        data = c_to_print.data.reshape(int(np.prod([dsh[a] for a in row_axes])),
+                                       int(np.prod([dsh[a] for a in col_axes])),
+                                       int(np.prod([dsh[a] for a in inner_axes])))
 
 
         nb_rows, nb_cols = data.shape[:2]
@@ -978,11 +975,12 @@ class xndarray:
             raise Exception('xndarray does not have any meta data to get' \
                                 'voxel size')
 
-    def get_shape(self, axis=None):
-        if axis is None:
-            return dict(zip(self.axes_names, self.data.shape))
-        else:
-            return self.data.shape[self.get_axis_id(axis)]
+    def get_dshape(self):
+        """
+        Return the shape of the array as dict mapping an axis name to the
+        corresponding size
+        """
+        return dict(zip(self.axes_names, self.data.shape))
 
     def _prepare_for_operation(self, op_name, c):
         """ Make some checks before performing an operation between self and c.
@@ -1261,6 +1259,8 @@ class xndarray:
                       self.value_label, self.meta_data)
 
     def get_extra_info(self, fmt='dict'):
+        from pyhrf.xmlio import to_xml
+
         info = {
             'axes_names': self.axes_names,
             'axes_domains': self.axes_domains,
@@ -1269,7 +1269,7 @@ class xndarray:
         if fmt=='dict':
             return info
         elif fmt=='xml':
-            return toXML(info, handler=NumpyXMLHandler())
+            return to_xml(info)
 
 
     def save(self, file_name, meta_data=None, set_MRI_orientation=False):
@@ -1280,6 +1280,9 @@ class xndarray:
         All extra axis information is stored as an extension.
 
         """
+
+        from pyhrf.xmlio import from_xml, to_xml
+
         pyhrf.verbose(5, 'xndarray.save(%s)' %file_name)
         ext = op.splitext(file_name)[1]
         #print 'save:', file_name
@@ -1322,7 +1325,7 @@ class xndarray:
                 #print econtent
                 # Check if existing extension can be safely overwritten
                 try:
-                    prev_extra_info = fromXML(econtent)
+                    prev_extra_info = from_xml(econtent)
                     if not isinstance(extra_info, dict) and \
                             prev_extra_info.has_key('axes_names'):
                         raise IOError("Cannot safely overwrite Extension in "\
@@ -1344,10 +1347,10 @@ class xndarray:
             else:
                 prev_ext = ""
 
-            ext_str = toXML(extra_info, handler=NumpyXMLHandler())
+            ext_str = to_xml(extra_info)
             if len(ext_str) < len(prev_ext):
                 extra_info['dummy'] = '#'*(len(prev_ext)-len(ext_str))
-                ext_str = toXML(extra_info, handler=NumpyXMLHandler())
+                ext_str = to_xml(extra_info)
 
             pyhrf.verbose(5, 'Length of extension string: %s' %len(ext_str))
             pyhrf.verbose(5, 'Extension: \n %s' %ext_str)
@@ -1421,6 +1424,7 @@ class xndarray:
 
         TODO: gifti.
         """
+        from pyhrf.xmlio import from_xml
 
         pyhrf.verbose(3, 'xndarray.load(%s)' %file_name)
         ext = op.splitext(file_name)[1]
@@ -1447,7 +1451,7 @@ class xndarray:
                     ic = ecodes.index(ccode)
                     ext_content = h.extensions[ic].get_content()
                     try:
-                        cuboid_info = fromXML(ext_content)
+                        cuboid_info = from_xml(ext_content)
                     except Exception, e:
                         raise IOError('Extension for xndarray meta info can not '
                                       'be read from "comment" extension. '
@@ -1471,7 +1475,7 @@ class xndarray:
             # print 'meta data loaded from gii:'
             # print md
             if md.has_key('pyhrf_cuboid_data'):
-                cuboid_info = fromXML(md['pyhrf_cuboid_data'])
+                cuboid_info = from_xml(md['pyhrf_cuboid_data'])
             else:
                 cuboid_info = {}
             return xndarray(data, **cuboid_info)

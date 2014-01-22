@@ -184,7 +184,7 @@ DEFAULT_STIM_DURATIONS = OrderedDict(
      ('video', [np.array([])]))
 
     )
-DEFAULT_PARADIGM_CSV = get_data_file_name('paradigm_localizer_audio_video_only.csv')
+DEFAULT_PARADIGM_CSV = get_data_file_name('paradigm_loc_av.csv')
 DEFAULT_BOLD = get_data_file_name('subj0_bold_session0.nii.gz')
 
 DEFAULT_MESH = get_data_file_name('real_data_surf_tiny_mesh.gii')

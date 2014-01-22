@@ -5,7 +5,6 @@ import numpy.matlib
 
 import copy as copyModule
 
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.samplerbase import *
 from pyhrf.jde.beta import *
 
@@ -18,13 +17,6 @@ class NRLARSampler(NRLSampler):
     to Salima Makni (ISBI 2006). Inherits the abstract class C{GibbsSamplerVariable}.
     #TODO : comment attributes
     """
-    defaultParameters = copyModule.copy(NRLSampler.defaultParameters)
-    
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(), xmlLabel=None, xmlComment=None):
-        
-
-        NRLSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -52,9 +44,9 @@ class NRLARSampler(NRLSampler):
         ##print 'NRLs warming up ...'
 
         # Compute precalculations :
-        smplHRF = variables[self.samplerEngine.I_HRF]
+        smplHRF = self.get_variable('hrf')
         smplHRF.checkAndSetInitValue(variables)
-        smpldrift =  variables[self.samplerEngine.I_DRIFT]
+        smpldrift =  self.get_variable('drift')
         smpldrift.checkAndSetInitValue(variables)
         self.varYtilde = zeros((self.ny, self.nbVox), dtype=float)
         self.computeVarYTilde( smplHRF.varXh, smpldrift.varMBYPl )
@@ -82,8 +74,8 @@ class NRLARSampler(NRLSampler):
             self.varYtilde[:,i] = varMBYPl[:,i] - aijXjh.sum(axis=1)
 
     def sampleNextAlt(self, variables):
-        varXh = variables[self.samplerEngine.I_HRF].varXh
-        varMBYPl = variables[self.samplerEngine.I_DRIFT].varMBYPl
+        varXh = self.get_variable('hrf').varXh
+        varMBYPl = self.get_variable('drift').varMBYPl
         self.computeVarYTilde(varXh,varMBYPl)
 
     def computeMeanVarClassApost(self, j, variables):
@@ -95,8 +87,8 @@ class NRLARSampler(NRLSampler):
         #meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA]
         
         reps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        varXh = variables[self.samplerEngine.I_HRF].varXh
-        varMBYPl = variables[self.samplerEngine.I_DRIFT].varMBYPl
+        varXh = self.get_variable('hrf').varXh
+        varMBYPl = self.get_variable('drift').varMBYPl
         varInvAutoCorrNoise = variables[self.samplerEngine.I_NOISE_ARP].InvAutoCorrNoise
     
         nrls = self.currentValue
@@ -143,8 +135,8 @@ class NRLARSampler(NRLSampler):
         #meanCA = sIMixtP.currentValue[sIMixtP.I_MEAN_CA]
         
         #varReps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        varXh = variables[self.samplerEngine.I_HRF].varXh
-        varMBYPl = variables[self.samplerEngine.I_DRIFT].varMBYPl
+        varXh = self.get_variable('hrf').varXh
+        varMBYPl = self.get_variable('drift').varMBYPl
         varInvAutoCorrNoise = variables[self.samplerEngine.I_NOISE_ARP].InvAutoCorrNoise
         varLambda = variables[self.samplerEngine.I_WEIGHTING_PROBA].currentValue # (note : lambda = python reserved keyword)
 
@@ -238,7 +230,7 @@ class NRLARSampler(NRLSampler):
             self.computeVarYTilde(varXh,varMBYPl)
 
         self.countLabels(self.labels, self.voxIdx, self.cardClass)
-#        self.normHRF = variables[self.samplerEngine.I_HRF].norm
+#        self.normHRF = self.get_variable('hrf').norm
 
     def cleanMemory(self):
         # clean memory of temporary variables :

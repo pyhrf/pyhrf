@@ -129,15 +129,15 @@ class xndarrayIOTest(unittest.TestCase):
 
     # def test_cuboid_save_xml(self):
     #     cxml = xndarrayXml.fromxndarray(self.cubNDVol, 'mydata1')
-    #     #print pyhrf.xmlio.toXML(cxml,NumpyXMLHandler(),pretty=True)
+    #     #print pyhrf.xmlio.to_xml(cxml,NumpyXMLHandler(),pretty=True)
     #     cxml.cleanFiles()
 
     # def test_cuboid_load_xml(self):
     #     cxml = xndarrayXml.fromxndarray(self.cub4DVol, 'mydata2')
-    #     sxml = pyhrf.xmlio.toXML(cxml, NumpyXMLHandler(),pretty=True)
+    #     sxml = pyhrf.xmlio.to_xml(cxml, NumpyXMLHandler(),pretty=True)
     #     #print sxml
     #     #print 'loading from xml ...'
-    #     c = pyhrf.xmlio.fromXML(sxml, NumpyXMLHandler())
+    #     c = pyhrf.xmlio.from_xml(sxml, NumpyXMLHandler())
     #     #print 'loaded cuboid:'
     #     #print c.cuboid.descrip()
     #     #print c.cuboid.data
@@ -152,10 +152,10 @@ class xndarrayIOTest(unittest.TestCase):
     #     import cPickle
     #     #cPickle.dump(self.cubNDVol, open('./cubNDVol.pck','w'))
     #     #print 'Converting to XML & dumping data ...'
-    #     sxml = pyhrf.xmlio.toXML(cxml, NumpyXMLHandler(),pretty=True)
+    #     sxml = pyhrf.xmlio.to_xml(cxml, NumpyXMLHandler(),pretty=True)
     #     #print sxml
     #     #print 'loading from xml ...'
-    #     c = pyhrf.xmlio.fromXML(sxml, NumpyXMLHandler())
+    #     c = pyhrf.xmlio.from_xml(sxml, NumpyXMLHandler())
     #     #print 'loaded cuboid:'
     #     #print c.cuboid.descrip()
     #     #cPickle.dump(c.cuboid,open('./cubfromxml.pck','w'))

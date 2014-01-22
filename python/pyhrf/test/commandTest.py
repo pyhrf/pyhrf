@@ -15,7 +15,6 @@ from pyhrf.jde.models import availableModels
 
 
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.xmlio import read_xml #, write_xml
 
 from pyhrf.ui.jde import JDEMCMCAnalyser
@@ -28,13 +27,15 @@ class TreatmentCommandTest(unittest.TestCase):
         self.tmp_dir = tmpDir
 
     def tearDown(self):
-        shutil.rmtree(self.tmp_dir)
+        if 0: #HACK
+            shutil.rmtree(self.tmp_dir)
 
     def _test_buildcfg(self, cmd, paradigm, data_type, data_scenario,
                        **other_options):
         cfg_file = op.join(self.tmp_dir, 'pyhrf_cfg.xml')
-        scmd = '%s -p %s -d %s -t %s -o %s' \
-            %(cmd, paradigm, data_type, data_scenario, cfg_file)
+        scmd = '%s -p %s -d %s -t %s -o %s -v %d' \
+            %(cmd, paradigm, data_type, data_scenario, cfg_file,
+              pyhrf.verbose.verbosity)
         for k,v in other_options.iteritems():
             scmd += ' -%s %s' %(k,v)
         if os.system(scmd) != 0:
@@ -60,11 +61,12 @@ class TreatmentCommandTest(unittest.TestCase):
 
 
     def test_buildcfg_jde_locav_vol_default(self):
+        pyhrf.verbose.set_verbosity(0)
         cfg_file = self._test_buildcfg(cmd='pyhrf_jde_buildcfg',
                                        paradigm='loc_av',
                                        data_type='volume',
                                        data_scenario='default')
-
+        pyhrf.verbose(6, 'cfg_file: %s' %cfg_file)
         stim_names = sorted(pyhrf.paradigm.onsets_loc_av.keys())
         t = self._check_treatment_data(cfg_file, mask_shape=(53, 63, 46),
                                        bold_shape=(125, 1272),
@@ -105,7 +107,7 @@ class TreatmentCommandTest(unittest.TestCase):
 
         f = open(xmlFile,'r')
         xml = f.read()
-        t = xmlio.fromXML(xml)
+        t = xmlio.from_xml(xml)
         if t.data.data_type == 'volume':
             dataFn = pyhrf.get_data_file_name('dummySmallBOLD.nii.gz')
             maskFn = pyhrf.get_data_file_name('dummySmallMask.nii.gz')
@@ -130,7 +132,7 @@ class TreatmentCommandTest(unittest.TestCase):
             raise Exception('Unsupported class ... todo')
 
         f = open(xmlFile, 'w')
-        f.write(xmlio.toXML(t, handler=NumpyXMLHandler()))
+        f.write(xmlio.to_xml(t))
         f.close()
 
 
@@ -138,12 +140,12 @@ class TreatmentCommandTest(unittest.TestCase):
 
         f = open(xmlFile,'r')
         xml = f.read()
-        t = xmlio.fromXML(xml)
+        t = xmlio.from_xml(xml)
         sd = FMRISessionSimulationData(simulation_file=simu_file)
         t.set_init_param('fmri_data', FmriData.from_simu_ui(sessions_data=[sd]))
 
         f = open(xmlFile, 'w')
-        sxml = xmlio.toXML(t, handler=NumpyXMLHandler())
+        sxml = xmlio.to_xml(t)
         # print 'sxml:'
         # print sxml
         f.write(sxml)
@@ -154,10 +156,10 @@ class TreatmentCommandTest(unittest.TestCase):
 
         #print 'makeQuietOutputs ...'
         #print 'xmlFile:', xmlFile
-        t = xmlio.fromXML(file(xmlFile).read())
+        t = xmlio.from_xml(file(xmlFile).read())
         t.set_init_param('output_dir', None)
         f = open(xmlFile, 'w')
-        f.write(xmlio.toXML(t, handler=NumpyXMLHandler()))
+        f.write(xmlio.to_xml(t))
         f.close()
 
     def testDetectEstimDefault(self):
@@ -199,6 +201,7 @@ class TreatmentCommandTest(unittest.TestCase):
     #         self._testJDEModelCmd('ANSGGMS', datatype='surface')
 
     def test_WNSGGMS_surf_cmd(self):
+        pyhrf.verbose.set_verbosity(0)
         self._testJDEModelCmd('WNSGGMS', datatype='surface')
 
     def test_WNSGGMS(self):
@@ -262,14 +265,14 @@ class TreatmentCommandTest(unittest.TestCase):
         cfg_file = op.join(self.tmp_dir, DEFAULT_CFG_FILE)
         pyhrf.verbose(1,'Trying model: %s, datatype: %s' \
                           %(modelLabel, datatype))
-        cmd = 'pyhrf_jde_buildcfg -l %s -d %s -o %s' \
-            %(modelLabel, datatype, cfg_file)
+        cmd = 'pyhrf_jde_buildcfg -l %s -d %s -o %s -v %d' \
+            %(modelLabel, datatype, cfg_file, pyhrf.verbose.verbosity)
         if os.system(cmd) != 0 :
             raise Exception('"' + cmd + '" did not execute correctly')
 
         if not os.path.exists(cfg_file):
             raise Exception('Model %s - from cmd "%s" -> default cfg file'\
-                                'was not created' %(modelLabel,cmd))
+                                'was not created' %(modelLabel, cmd))
 
         self.setDummyInputData(cfg_file)
         # if pyhrf.__usemode__ == 'enduser':

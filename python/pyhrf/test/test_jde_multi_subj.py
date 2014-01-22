@@ -120,53 +120,51 @@ class MultiSubjTest(unittest.TestCase):
         # which will turn on specific samplers to test.
 
         self.sampler_params_for_single_test = {
-            BMSS.P_NB_ITERATIONS : 40,
-            BMSS.P_SMPL_HIST_PACE : -1,
-            BMSS.P_OBS_HIST_PACE : -1,
-            # level of spatial correlation = beta
-            #BMSS.P_BETA : BetaSampler(dict_beta_single),
+            'nb_iterations' : 40,
+            'smpl_hist_pace' : -1,
+            'obs_hist_pace' : -1,
             # HRF by subject
-            BMSS.P_HRF_SUBJ :  jms.HRF_Sampler(do_sampling=False,
-                                               normalise=1.,
-                                               use_true_value=True,
-                                               zero_contraint=False,
-                                               prior_type='singleHRF'),
+            'hrf_subj' :  jms.HRF_Sampler(do_sampling=False,
+                                          normalise=1.,
+                                          use_true_value=True,
+                                          zero_contraint=False,
+                                          prior_type='singleHRF'),
 
             # HRF variance
-            BMSS.P_RH_SUBJ : jms.HRFVarianceSubjectSampler(do_sampling=False,
+            'hrf_var_subj' : jms.HRFVarianceSubjectSampler(do_sampling=False,
                                                            use_true_value=True),
             # HRF group
-            BMSS.P_HRF_GROUP :  jms.HRF_Group_Sampler(do_sampling=False,
-                                                      normalise=1.,
-                                                      use_true_value=True,
-                                                      zero_contraint=False,
-                                                      prior_type='singleHRF'),
+            'hrf_group' :  jms.HRF_Group_Sampler(do_sampling=False,
+                                                 normalise=1.,
+                                                 use_true_value=True,
+                                                 zero_contraint=False,
+                                                 prior_type='singleHRF'),
             # HRF variance
-            BMSS.P_RH_GROUP : jms.RHGroupSampler(do_sampling=False,
+            'hrf_var_group' : jms.RHGroupSampler(do_sampling=False,
                                                  use_true_value=True),
 
             # neural response levels (stimulus-induced effects) by subject
-            BMSS.P_NRLS_SUBJ : jms.NRLs_Sampler(do_sampling=False,
-                                                use_true_value=True),
-            BMSS.P_LABELS : jms.LabelSampler(do_sampling=False,
-                                             use_true_value=True),
+            'response_levels' : jms.NRLs_Sampler(do_sampling=False,
+                                                 use_true_value=True),
+            'labels' : jms.LabelSampler(do_sampling=False,
+                                        use_true_value=True),
             # drift
-            BMSS.P_DRIFT : jms.Drift_MultiSubj_Sampler(do_sampling=False,
-                                                       use_true_value=True),
-            #drift variance
-            BMSS.P_ETA : jms.ETASampler_MultiSubj(do_sampling=False,
+            'drift' : jms.Drift_MultiSubj_Sampler(do_sampling=False,
                                                   use_true_value=True),
+            #drift variance
+            'drift_var' : jms.ETASampler_MultiSubj(do_sampling=False,
+                                                   use_true_value=True),
             #noise variance
-            BMSS.P_NOISE_VAR_SUBJ : \
-                jms.NoiseVariance_Drift_MultiSubj_Sampler(do_sampling=False,
-                                                          use_true_value=False),
+            'noise_var' : \
+              jms.NoiseVariance_Drift_MultiSubj_Sampler(do_sampling=False,
+                                                        use_true_value=False),
             #weights o fthe mixture
             #parameters of the mixture
-            BMSS.P_MIXT_PARAM_NRLS : jms.MixtureParamsSampler(do_sampling=False,
+            'mixt_params' : jms.MixtureParamsSampler(do_sampling=False,
                                                               use_true_value=False),
-            #BMSS.P_ALPHA_SUBJ : Alpha_hgroup_Sampler(dict_alpha_single),
-            #BMSS.P_ALPHA_VAR_SUBJ : AlphaVar_Sampler(dict_alpha_var_single),
-            BMSS.P_CHECK_FINAL_VALUE : 'none', #print or raise
+            #'alpha_subj' : Alpha_hgroup_Sampler(dict_alpha_single),
+            #'alpha_var_subj' : AlphaVar_Sampler(dict_alpha_var_single),
+            'check_final_value' : 'none', #print or raise
         }
 
 
@@ -220,16 +218,16 @@ class MultiSubjTest(unittest.TestCase):
 
 
         if nb_its is not None:
-            params[BMSS.P_NB_ITERATIONS] = nb_its
+            params['nb_iterations'] = nb_its
 
         if save_history:
-            params[BMSS.P_SMPL_HIST_PACE] = 1
-            params[BMSS.P_OBS_HIST_PACE] = 1
+            params['smpl_hist_pace'] = 1
+            params['obs_hist_pace'] = 1
 
         if check_fv is not None:
-            params[BMSS.P_CHECK_FINAL_VALUE] = check_fv
+            params['check_final_value'] = check_fv
 
-        sampler = BMSS(params)
+        sampler = BMSS(**params)
 
         output_dir = self.simu_dir
 
@@ -250,6 +248,6 @@ class MultiSubjTest(unittest.TestCase):
     def test_quick(self):
         """ Test running of JDE multi subject (do not test result accuracy) """
         simu = simulate_subjects(self.simu_dir, nb_subjects=2)
-        self._test_specific_samplers(['HRF_subject'], simu, nb_its=2,
+        self._test_specific_samplers(['hrf_subj'], simu, nb_its=2,
                                      check_fv=None)
 

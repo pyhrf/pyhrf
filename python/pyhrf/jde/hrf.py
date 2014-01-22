@@ -11,7 +11,6 @@ import copy as copyModule # avoids conflict with copy function from numpy
 from numpy.linalg import cholesky, det, inv, eigh
 import pyhrf
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 
 from samplerbase import *
 #import intensivecalc
@@ -20,8 +19,6 @@ from pyhrf.boldsynth.hrf import genGaussianSmoothHRF, buildFiniteDiffMatrix
 from pyhrf.boldsynth.hrf import genCanoBezierHRF, getCanoHRF
 
 from pyhrf.ndarray import xndarray
-from pyhrf.jde.nrl.bigaussian import NRL_Multi_Sess_Sampler
-NMS = NRL_Multi_Sess_Sampler()
 
 try:
     from pyhrf.stats import cRandom
@@ -179,109 +176,66 @@ def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 ##    return hrf
 
 
-class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
+class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
     """
     #TODO : HRF sampler for BiGaussian NLR mixture
     """
 
-    # parameter labels definitions :
-    P_ZERO_CONSTR = 'zeroConstraint'
-    P_DURATION = 'duration'
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    P_NORMALISE = 'normalise'
-    P_DERIV_ORDER = 'derivOrder'
-    P_COVAR_HACK = 'hackCovarApost'
-    P_PRIOR_TYPE = 'priorType'
-    P_VOXELWISE_OUTPUTS = 'voxelwiseOutputs'
-    P_COMPUTE_AH_ONLINE = 'compute_ah_online'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_DURATION : 25,
-        P_ZERO_CONSTR : True,
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_NORMALISE : 1., # By default, scale is not sampled
-                          #-> do not normalise h but normalise hPM
-        # P_NORMALISE : 1., # By default, scale is not sampled
-        #                   #-> we have to normalise h samples otherwise
-        #                   #   there are some scale amibuity issues
-        P_DERIV_ORDER : 2,
-        P_COVAR_HACK : False,
-        P_PRIOR_TYPE : 'voxelwiseIID', #voxelwiseIID or singleHRF
-        P_VOXELWISE_OUTPUTS : True, #HACK
-        P_COMPUTE_AH_ONLINE : False,
-        }
 
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_SAMPLE_FLAG, P_DURATION, P_ZERO_CONSTR]
-                           #P_USE_TRUE_VALUE,
-
-
+        parametersToShow = ['do_sampling', 'duration', 'zero_constraint']
 
     parametersComments = {
-        P_DURATION : 'HRF length in seconds',
-        P_ZERO_CONSTR : 'If True: impose first and last value = 0.\n'\
+        'duration' : 'HRF length in seconds',
+        'zero_constraint' : 'If True: impose first and last value = 0.\n'\
                         'If False: no constraint.',
-        P_SAMPLE_FLAG : 'Flag for the HRF estimation (True or False).\n'\
+        'do_sampling' : 'Flag for the HRF estimation (True or False).\n'\
                         'If set to False then the HRF is fixed to a canonical '\
                         'form.',
-        P_PRIOR_TYPE : 'Type of prior:\n - "singleHRF": one HRF modelled '\
+        'prior_type' : 'Type of prior:\n - "singleHRF": one HRF modelled '\
             'for the whole parcel ~N(0,v_h*R).\n' \
             ' - "voxelwiseIID": one HRF per voxel, '\
             'all HRFs are iid ~N(0,v_h*R).',
-        P_COVAR_HACK : 'Divide the term coming from the likelihood by the nb '\
+        'covar_hack' : 'Divide the term coming from the likelihood by the nb '\
             'of voxels\n when computing the posterior covariance. The aim is '\
             ' to balance\n the contribution coming from the prior with that '\
             ' coming from the likelihood.\n Note: this hack is only taken into '\
-            ' account when "singleHRf" is used for "%s"' %P_PRIOR_TYPE,
-        P_NORMALISE : 'If 1. : Normalise samples of Hrf and NRLs when they are sampled.\n'\
+            ' account when "singleHRf" is used for "prior_type"',
+        'normalise' : 'If 1. : Normalise samples of Hrf and NRLs when they are sampled.\n'\
                       'If 0. : Normalise posterior means of Hrf and NRLs when they are sampled.\n'\
                       'else : Do not normalise.'
 
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None, duration=25., zero_constraint=True,
+                 normalise=1., deriv_order=2, covar_hack=False,
+                 prior_type='voxelwiseIID', do_voxelwise_outputs=False,
+                 compute_ah_online=False):
         """
         #TODO : comment
         """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
+        xmlio.XmlInitable.__init__(self)
 
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        self.compute_ah_online = self.parameters[self.P_COMPUTE_AH_ONLINE]
-        #if pyhrf.__usemode__ == pyhrf.DEVEL:
-        #print 'hrf init devel mode ...'
-        GibbsSamplerVariable.__init__(self, 'hrf', valIni=valIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=useTrueVal,
+        self.compute_ah_online = compute_ah_online
+        GibbsSamplerVariable.__init__(self, 'hrf', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
                                       axes_names=['time'],
                                       value_label='delta BOLD')
-##         else:
-##             #print 'hrf init enduser mode ...'
-##             GibbsSamplerVariable.__init__(self, 'hrf', valIni=valIni,
-##                                           sampleFlag=sampleFlag,
-##                                           axes_names=['time', 'voxel'],
-##                                           value_label='delta BOLD')
 
-        self.duration = self.parameters[self.P_DURATION]
-        self.zc = self.parameters[self.P_ZERO_CONSTR]
-        self.normalise = self.parameters[self.P_NORMALISE]
+        self.Ini = val_ini
+        self.duration = duration
+        self.zc = zero_constraint
+        self.normalise = normalise
         #print 'normalise', self.normalise
-        self.Ini = valIni
-        self.derivOrder = self.parameters[self.P_DERIV_ORDER]
+        self.derivOrder = deriv_order
         self.varR = None
-        self.covarHack = self.parameters[self.P_COVAR_HACK]
-        self.priorType = self.parameters[self.P_PRIOR_TYPE]
+        self.covarHack = covar_hack
+        self.priorType = prior_type
+
         self.signErrorDetected = None
-        self.voxelwise_outputs = self.parameters[self.P_VOXELWISE_OUTPUTS]
+        self.voxelwise_outputs = do_voxelwise_outputs
 
     def linkToData(self, dataInput):
 
@@ -301,16 +255,6 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
                 self.trueValue = simu_hrf.data
             else:
                 self.trueValue = simu_hrf
-        else:
-            #print 'GLOB!'
-            #print self.Ini
-            #print self.trueValue
-            if self.Ini is not None:
-                self.trueValue = self.Ini[:self.hrfLength]
-                #if self.zc :
-                    #self.trueValue = self.trueValue[1:-1]
-                #print 'GLOB!'
-                #print self.trueValue
 
 
         # Allocations :
@@ -328,16 +272,10 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def checkAndSetInitValue(self, variables):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         smplRH.checkAndSetInitValue(variables)
         rh = smplRH.currentValue
         pyhrf.verbose(4, 'Hrf variance is :%1.3f' %rh)
-        pyhrf.verbose(4, 'hrfValIni is None -> setting it ...')
-
-        if self.Ini is None:
-            hrfValIni=None
-        else:
-            hrfValIni=self.Ini
 
         if self.useTrueValue :
             if self.trueValue is not None:
@@ -346,7 +284,13 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
                 raise Exception('Needed a true value for hrf init but '\
                                     'None defined')
 
+        if self.Ini is None:
+            hrfValIni=None
+        else:
+            hrfValIni=self.Ini
+
         if hrfValIni is None:
+            pyhrf.verbose(4, 'hrfValIni is None -> setting it ...')
             pyhrf.verbose(6, 'self.duration=%d, self.eventdt=%1.2f' \
                               %(self.duration,self.eventdt))
             tAxis = np.arange(0, self.duration+self.eventdt,
@@ -406,7 +350,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def getCurrentVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         rh = smplRH.currentValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -414,7 +358,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         return varR/rh
 
     def getFinalVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         rh = smplRH.finalValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -425,7 +369,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def samplingWarmUp(self, variables):
         if self.varR == None :
-            smplRH = variables[self.samplerEngine.I_RH]
+            smplRH = self.get_variable('hrf_var')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
                                                         self.hrfLength,
@@ -464,12 +408,12 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #TODO : comment
 
         try:
-            snrl = self.samplerEngine.getVariable('nrl_by_session')
+            snrl = self.samplerEngine.get_variable('nrl_by_session')
         except KeyError:
-            snrl = self.samplerEngine.getVariable('nrl')
+            snrl = self.samplerEngine.get_variable('nrl')
 
         nrls = snrl.currentValue
-        rb   = self.samplerEngine.getVariable('noise_var').currentValue
+        rb   = self.samplerEngine.get_variable('noise_var').currentValue
 
         if 1:
             pyhrf.verbose(6, 'Computing StQS StQY optim fashion')
@@ -519,7 +463,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 ##                  self.varStLambdaS.sum(2)[iDiffs].shape
 ##            print self.varStLambdaS.sum(2)[iDiffs]
 
-        rh = variables[self.samplerEngine.I_RH].currentValue
+        rh = self.get_variable('hrf_var').currentValue
 
 
         if self.priorType == 'voxelwiseIID':
@@ -552,14 +496,14 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             self.currentValue = self.currentValue / f #/(self.normalise+0.)
             if 1:
                 try:
-                    if self.samplerEngine.getVariable('nrl_by_session').sampleFlag:
-                        self.samplerEngine.getVariable('nrl_by_session').currentValue *= f
+                    if self.samplerEngine.get_variable('nrl_by_session').sampleFlag:
+                        self.samplerEngine.get_variable('nrl_by_session').currentValue *= f
                 except KeyError:
-                    if self.samplerEngine.getVariable('nrl').sampleFlag:
-                        self.samplerEngine.getVariable('nrl').currentValue *= f
+                    if self.samplerEngine.get_variable('nrl').sampleFlag:
+                        self.samplerEngine.get_variable('nrl').currentValue *= f
 
                     ## Normalizing Mixture components
-                    #smixt_params = self.samplerEngine.getVariable('mixt_params')
+                    #smixt_params = self.samplerEngine.get_variable('mixt_params')
                     #if 0 and smixt_params.sampleFlag:
                         #smixt_params.currentValue[smixt_params.I_MEAN_CA] *= f # Normalizing Mean's activation class
                         #smixt_params.currentValue[smixt_params.I_VAR_CI] *= f**2 # Normalizing Variance's activation class
@@ -572,10 +516,10 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         # update ytilde for nrls
         try:
-            self.samplerEngine.getVariable('nrl_by_session')
+            self.samplerEngine.get_variable('nrl_by_session')
         except KeyError: # only if not in multisession case, else ytilde update
                          # is handled by HRF_MultiSess_Sampler.sampleNextAlt
-            nrlsmpl = self.samplerEngine.getVariable('nrl')
+            nrlsmpl = self.samplerEngine.get_variable('nrl')
             nrlsmpl.computeVarYTildeOpt(self.varXh)
 
 
@@ -607,7 +551,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             pyhrf.verbose(5, 'HRF PM:')
             pyhrf.verbose.printNdarray(3, self.mean)
             pyhrf.verbose(5, 'NRLs PM:')
-            pyhrf.verbose.printNdarray(3, self.samplerEngine.getVariable('nrl').mean)
+            pyhrf.verbose.printNdarray(3, self.samplerEngine.get_variable('nrl').mean)
             pyhrf.verbose(5, 'nb negs: %d' %(self.mean <= 0.).sum(dtype=float))
             if (self.mean <= 0.).sum(dtype=float)/len(self.mean) > .9 or \
                     self.mean[np.argmax(abs(self.mean))] < -.2:
@@ -705,7 +649,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def updateObsersables(self):
         GibbsSamplerVariable.updateObsersables(self)
-        sScale = self.samplerEngine.getVariable('scale')
+        sScale = self.samplerEngine.get_variable('scale')
         if self.sampleFlag and np.allclose(self.normalise,0.) and \
                 not sScale.sampleFlag:
             pyhrf.verbose(6, 'Normalizing posterior mean of HRF each iteration ...')
@@ -724,7 +668,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             for j in xrange(self.nbConditions):
                 hrep = np.repeat(self.currentValue,self.nbVox)
                 ncoeffs = self.currentValue.shape[0]
-                nrls = self.samplerEngine.getVariable('nrl').currentValue
+                nrls = self.samplerEngine.get_variable('nrl').currentValue
                 self.current_ah[:,:,j] = hrep.reshape(ncoeffs,self.nbVox) * \
                     nrls[j,:]
 
@@ -744,10 +688,10 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.error = np.zeros(self.hrfLength, dtype=float)
         if self.sampleFlag: #TODO chech for NaNs ...  and not _np.isnan(rh):
             # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
+            rh = self.samplerEngine.get_variable('hrf_var').finalValue
 
-            rb = self.samplerEngine.getVariable('noise_var').finalValue
-            snrls = self.samplerEngine.getVariable('nrl')
+            rb = self.samplerEngine.get_variable('noise_var').finalValue
+            snrls = self.samplerEngine.get_variable('nrl')
             nrls = snrls.finalValue
             aa = np.zeros((self.nbConditions, self.nbConditions, self.nbVox),
                        dtype=float)
@@ -788,7 +732,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
         h = self.finalValue
-        nrls = self.samplerEngine.getVariable('nrl').finalValue
+        nrls = self.samplerEngine.get_variable('nrl').finalValue
         ah = np.zeros((h.shape[0],self.nbVox, self.nbConditions))
         for j in xrange(self.nbConditions):
             ah[:,:,j] = np.repeat(h,self.nbVox).reshape(h.shape[0],self.nbVox) * \
@@ -835,7 +779,7 @@ class HRFSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #print 'hrf - finalValue:'
         #print self.finalValue
         if pyhrf.__usemode__ == pyhrf.DEVEL:
-            nrls = self.samplerEngine.getVariable('nrl').finalValue
+            nrls = self.samplerEngine.get_variable('nrl').finalValue
             #print np.argmax(abs(nrls))
             #print nrls.shape
             nrlmax = nrls[np.unravel_index(np.argmax(abs(nrls)),nrls.shape)]
@@ -886,17 +830,12 @@ class HRF_Drift_Sampler(HRFSampler):
     Class handling the Gibbs sampling of Neural Response Levels in the case of
     joint drift sampling.
     """
-    defaultParameters = copyModule.copy(HRFSampler.defaultParameters)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        HRFSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
 
     def computeStDS_StDY(self, rb, nrls, aa):
 
         varX = self.dataInput.varX
         matXtX = self.dataInput.matXtX
-        matPl = self.samplerEngine.getVariable('drift').matPl
+        matPl = self.samplerEngine.get_variable('drift').matPl
         y = self.dataInput.varMBY - matPl
 
         varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
@@ -935,16 +874,6 @@ class HRFARSampler(HRFSampler) :
     sense that there is one AR parameter in combination with one
     noise variance per voxel.
     """
-    defaultParameters = copyModule.copy(HRFSampler.defaultParameters)
-
-
-    def __init__(self, parameters=None, xmlHandler=xmlio.TypedXMLHandler(), xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-        """
-
-        HRFSampler.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-
 
 
     def linkToData(self, dataInput):
@@ -975,11 +904,11 @@ class HRFARSampler(HRFSampler) :
     def sampleNextInternal(self, variables):
         #TODO : comment
         ##print '- Sampling HRF ...'
-        nrls = variables[self.samplerEngine.I_NRLS].currentValue
-        smpldrift =  variables[self.samplerEngine.I_DRIFT]
+        nrls = self.get_variable('nrl').currentValue
+        smpldrift =  self.get_variable('drift')
         varMBYPl = smpldrift.varMBYPl
-        varReps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        smplnoise = variables[self.samplerEngine.I_NOISE_ARP]
+        varReps = self.get_variable('noise_var').currentValue
+        smplnoise = self.get_variable('noiseARParam')
         noiseARp= smplnoise.currentValue
         noiseInvCov= smplnoise.InvAutoCorrNoise
 
@@ -1074,7 +1003,7 @@ class HRFARSampler(HRFSampler) :
 ##                  self.varStLambdaS.sum(2)[iDiffs].shape
 ##            print self.varStLambdaS.sum(2)[iDiffs]
 
-        rh = variables[self.samplerEngine.I_RH].currentValue
+        rh = self.get_variable('hrf_var').currentValue
 
 #        self.currentValue = sampleHRF(self.varXtLambdaX, self.varXtLambdaY,
 #                                      self.varR, rh, self.nbColX)
@@ -1109,14 +1038,14 @@ class HRFARSampler(HRFSampler) :
         self.errors = np.zeros(self.hrfLength, dtype=float)
         if self.sampleFlag:
             # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
-            snrls = self.samplerEngine.getVariable('nrl')
+            rh = self.samplerEngine.get_variable('hrf_var').finalValue
+            snrls = self.samplerEngine.get_variable('nrl')
             nrls = snrls.finalValue
-            sreps = self.samplerEngine.getVariable('noise_var')
+            sreps = self.samplerEngine.get_variable('noise_var')
             varReps = sreps.currentValue
-            sARp = self.samplerEngine.getVariable('noiseARParam')
+            sARp = self.samplerEngine.get_variable('noiseARParam')
             noiseInvCov= sARp.InvAutoCorrNoise
-            sdrift = self.samplerEngine.getVariable('drift')
+            sdrift = self.samplerEngine.get_variable('drift')
             varMBYPl = sdrift.varMBYPl
             stDS, useless = self.computeStDS_StDY(varReps,
                                                 noiseInvCov, nrls, varMBYPl)
@@ -1142,17 +1071,6 @@ class HRFARSampler(HRFSampler) :
 
 class HRFwithHabSampler(HRFSampler) :
 
-
-
-    defaultParameters = copyModule.copy(HRFSampler.defaultParameters)
-
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-
-        HRFSampler.__init__(self, parameters, xmlHandler,
-                            xmlLabel, xmlComment)
 
     def linkToData(self, dataInput):
 
@@ -1196,9 +1114,9 @@ class HRFwithHabSampler(HRFSampler) :
     def sampleNextInternal(self, variables):
         #TODO : comment
 
-        snrl = variables[self.samplerEngine.I_NRLS]
-        nrls = variables[self.samplerEngine.I_NRLS].currentValue
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
+        snrl = self.get_variable('nrl')
+        nrls = self.get_variable('nrl').currentValue
+        rb = self.get_variable('noise_var').currentValue
 
         sumaX = snrl.sumaX
         #sumaXQ = snrl.sumaXQ
@@ -1215,7 +1133,7 @@ class HRFwithHabSampler(HRFSampler) :
 
 
 
-        rh = variables[self.samplerEngine.I_RH].currentValue
+        rh = self.get_variable('hrf_var').currentValue
 
 
         self.currentValue = sampleHRF(self.varDeltaS, self.varDeltaY,
@@ -1234,7 +1152,7 @@ class HRFwithHabSampler(HRFSampler) :
             self.updateNorm()
 
 
-        self.varXh = variables[self.samplerEngine.I_NRLS].varXh
+        self.varXh = self.get_variable('nrl').varXh
 
         maxHRF = self.currentValue.max()
         tMaxHRF = np.where(self.currentValue==maxHRF)[0]*self.dt
@@ -1258,9 +1176,9 @@ class HRFwithHabSampler(HRFSampler) :
         self.error = np.zeros(self.hrfLength, dtype=float)
         if self.sampleFlag:
             # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
-            rb = self.samplerEngine.getVariable('noise_var').finalValue
-            snrls = self.samplerEngine.getVariable('nrl')
+            rh = self.samplerEngine.get_variable('hrf_var').finalValue
+            rb = self.samplerEngine.get_variable('noise_var').finalValue
+            snrls = self.samplerEngine.get_variable('nrl')
             nrls = snrls.finalValue
             #aa = np.zeros((self.nbConditions, self.nbConditions, self.nbVox),
                        #dtype=float)
@@ -1300,14 +1218,6 @@ class HRFSamplerWithRelVar(HRFSampler) :
             w = 1  otherwise
     """
 
-    defaultParameters = copyModule.copy(HRFSampler.defaultParameters)
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-
-        HRFSampler.__init__(self, parameters, xmlHandler,
-                        xmlLabel, xmlComment)
 
     def linkToData(self, dataInput):
 
@@ -1342,12 +1252,12 @@ class HRFSamplerWithRelVar(HRFSampler) :
 
         #TODO : comment
 
-        snrl = variables[self.samplerEngine.I_NRLS]
+        snrl = self.get_variable('nrl')
         #print '         varYbar begin =',snrl.varYbar.sum()
         #print '         varYtilde begin =',snrl.varYtilde.sum()
         nrls = snrl.currentValue
-        rb = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        w = variables[self.samplerEngine.I_W].currentValue
+        rb = self.get_variable('noise_var').currentValue
+        w = self.get_variable('W').currentValue
 
         if 1:
             pyhrf.verbose(6, 'Computing StQS StQY optim fashion')
@@ -1403,7 +1313,7 @@ class HRFSamplerWithRelVar(HRFSampler) :
             pyhrf.verbose.printNdarray(6, self.varStLambdaY.sum(1))
             iDiffs = (self.varDeltaS != self.varStLambdaS.sum(2))
 
-        rh = variables[self.samplerEngine.I_RH].currentValue
+        rh = self.get_variable('hrf_var').currentValue
 
 
         if self.priorType == 'voxelwiseIID':
@@ -1433,11 +1343,11 @@ class HRFSamplerWithRelVar(HRFSampler) :
             #HACK
             #f = self.currentValue.max()
             self.currentValue = self.currentValue / f #/(self.normalise+0.)
-            if self.samplerEngine.getVariable('nrl').sampleFlag:
-                self.samplerEngine.getVariable('nrl').currentValue *= f
+            if self.samplerEngine.get_variable('nrl').sampleFlag:
+                self.samplerEngine.get_variable('nrl').currentValue *= f
 
             ## Normalizing Mixture components
-            #smixt_params = self.samplerEngine.getVariable('mixt_params')
+            #smixt_params = self.samplerEngine.get_variable('mixt_params')
             #if 0 and smixt_params.sampleFlag:
                 #smixt_params.currentValue[smixt_params.I_MEAN_CA] *= f # Normalizing Mean's activation class
                 #smixt_params.currentValue[smixt_params.I_VAR_CI] *= f**2 # Normalizing Variance's activation class
@@ -1462,10 +1372,10 @@ class HRFSamplerWithRelVar(HRFSampler) :
         self.error = np.zeros(self.hrfLength, dtype=float)
         if self.sampleFlag: #TODO chech for NaNs ...  and not _np.isnan(rh):
             # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
-            w = self.samplerEngine.getVariable('W').finalValue
-            rb = self.samplerEngine.getVariable('noise_var').finalValue
-            snrls = self.samplerEngine.getVariable('nrl')
+            rh = self.samplerEngine.get_variable('hrf_var').finalValue
+            w = self.samplerEngine.get_variable('W').finalValue
+            rb = self.samplerEngine.get_variable('noise_var').finalValue
+            snrls = self.samplerEngine.get_variable('nrl')
             nrls = snrls.finalValue
             aa = np.zeros((self.nbConditions, self.nbConditions, self.nbVox),
                        dtype=float)
@@ -1494,11 +1404,6 @@ class HRF_Drift_SamplerWithRelVar(HRFSamplerWithRelVar):
     Class handling the Gibbs sampling of Neural Response Levels in the case of
     joint drift sampling.
     """
-    defaultParameters = copyModule.copy(HRFSamplerWithRelVar.defaultParameters)
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        HRFSamplerWithRelVar.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
 
     def computeStDS_StDY_WithRelVar(self, rb, nrls, aa, w):
 
@@ -1506,7 +1411,7 @@ class HRF_Drift_SamplerWithRelVar(HRFSamplerWithRelVar):
 
         varX = self.dataInput.varX
         matXtX = self.dataInput.matXtX
-        matPl = self.samplerEngine.getVariable('drift').matPl
+        matPl = self.samplerEngine.get_variable('drift').matPl
         y = self.dataInput.varMBY - matPl
 
         varDeltaS = np.zeros((self.nbColX,self.nbColX), dtype=float )
@@ -1536,111 +1441,7 @@ class HRF_Drift_SamplerWithRelVar(HRFSamplerWithRelVar):
 ####################################################
 ###### estimation in two parts of the HRF ##########
 ####################################################
-class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
-    """
-    #TODO : HRF sampler for BiGaussian NLR mixture
-    """
-
-    # parameter labels definitions :
-    P_ZERO_CONSTR = 'zeroConstraint'
-    P_DURATION = 'duration'
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    P_NORMALISE = 'normalise'
-    P_DERIV_ORDER = 'derivOrder'
-    P_OUTPUT_PMHRF = 'writeHrfOutput'
-    P_COVAR_HACK = 'hackCovarApost'
-    P_PRIOR_TYPE = 'priorType'
-    P_VOXELWISE_OUTPUTS = 'voxelwiseOutputs'
-    P_COMPUTE_AH_ONLINE = 'compute_ah_online'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_DURATION : 25,
-        P_ZERO_CONSTR : True,
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_NORMALISE : 1., # By default, scale is not sampled
-                          #-> do not normalise h but normalise hPM
-        # P_NORMALISE : 1., # By default, scale is not sampled
-        #                   #-> we have to normalise h samples otherwise
-        #                   #   there are some scale amibuity issues
-        P_DERIV_ORDER : 2,
-        P_OUTPUT_PMHRF : True,
-        P_COVAR_HACK : False,
-        P_PRIOR_TYPE : 'voxelwiseIID',
-        P_VOXELWISE_OUTPUTS : True, #HACK
-        P_COMPUTE_AH_ONLINE : False,
-        }
-
-    if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_DURATION, P_ZERO_CONSTR, P_SAMPLE_FLAG,
-                            P_OUTPUT_PMHRF,] #P_USE_TRUE_VALUE,
-
-
-
-    parametersComments = {
-        P_DURATION : 'HRF length in seconds',
-        P_ZERO_CONSTR : 'If True: impose first and last value = 0.\n'\
-                        'If False: no constraint.',
-        P_SAMPLE_FLAG : 'Flag for the HRF estimation (True or False).\n'\
-                        'If set to False then the HRF is fixed to a canonical '\
-                        'form.',
-        P_PRIOR_TYPE : 'Type of prior:\n - "singleHRF": one HRF modelled '\
-            'for the whole parcel ~N(0,v_h*R).\n' \
-            ' - "voxelwiseIID": one HRF per voxel, '\
-            'all HRFs are iid ~N(0,v_h*R).',
-        P_COVAR_HACK : 'Divide the term coming from the likelihood by the nb '\
-            'of voxels\n when computing the posterior covariance. The aim is '\
-            ' to balance\n the contribution coming from the prior with that '\
-            ' coming from the likelihood.\n Note: this hack is only taken into '\
-            ' account when "singleHRf" is used for "%s"' %P_PRIOR_TYPE,
-        P_NORMALISE : 'If 1. : Normalise samples of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
-                      'If 0. : Normalise posterior means of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
-                      'else : Do not normalise.'
-
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        self.compute_ah_online = self.parameters[self.P_COMPUTE_AH_ONLINE]
-        #if pyhrf.__usemode__ == pyhrf.DEVEL:
-        #print 'hrf init devel mode ...'
-        GibbsSamplerVariable.__init__(self, 'hrf', valIni=valIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=useTrueVal,
-                                      axes_names=['time'],
-                                      value_label='delta BOLD')
-##         else:
-##             #print 'hrf init enduser mode ...'
-##             GibbsSamplerVariable.__init__(self, 'hrf', valIni=valIni,
-##                                           sampleFlag=sampleFlag,
-##                                           axes_names=['time', 'voxel'],
-##                                           value_label='delta BOLD')
-
-        self.duration = self.parameters[self.P_DURATION]
-        self.zc = self.parameters[self.P_ZERO_CONSTR]
-        self.normalise = self.parameters[self.P_NORMALISE]
-        #print 'normalise', self.normalise
-
-        self.derivOrder = self.parameters[self.P_DERIV_ORDER]
-        self.varR = None
-        self.covarHack = self.parameters[self.P_COVAR_HACK]
-        self.priorType = self.parameters[self.P_PRIOR_TYPE]
-        self.signErrorDetected = None
-        self.voxelwise_outputs = self.parameters[self.P_VOXELWISE_OUTPUTS]
+class HRF_two_parts_Sampler(HRFSampler) :
 
     def linkToData(self, dataInput):
 
@@ -1676,7 +1477,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def checkAndSetInitValue(self, variables):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         smplRH.checkAndSetInitValue(variables)
         rh = smplRH.currentValue
         pyhrf.verbose(4, 'Hrf variance is :%1.3f' %rh)
@@ -1753,7 +1554,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
     def getCurrentVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         rh = smplRH.currentValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -1761,7 +1562,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         return varR/rh
 
     def getFinalVar(self):
-        smplRH = self.samplerEngine.getVariable('hrf_var')
+        smplRH = self.samplerEngine.get_variable('hrf_var')
         rh = smplRH.finalValue
         (useless, varR) = genGaussianSmoothHRF(self.zc,
                                                self.hrfLength,
@@ -1772,7 +1573,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def samplingWarmUp(self, variables):
         if self.varR == None :
-            smplRH = variables[self.samplerEngine.I_RH]
+            smplRH = self.get_variable('hrf_var')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
                                                         self.hrfLength,
@@ -1810,12 +1611,12 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #TODO : comment
 
         try:
-            snrl = self.samplerEngine.getVariable('nrl_by_session')
+            snrl = self.samplerEngine.get_variable('nrl_by_session')
         except KeyError:
-            snrl = self.samplerEngine.getVariable('nrl')
+            snrl = self.samplerEngine.get_variable('nrl')
 
         nrls = snrl.currentValue
-        rb   = self.samplerEngine.getVariable('noise_var').currentValue
+        rb   = self.samplerEngine.get_variable('noise_var').currentValue
 
         if 1:
             pyhrf.verbose(6, 'Computing StQS StQY optim fashion')
@@ -1865,7 +1666,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 ##                  self.varStLambdaS.sum(2)[iDiffs].shape
 ##            print self.varStLambdaS.sum(2)[iDiffs]
 
-        rh = variables[self.samplerEngine.I_RH].currentValue
+        rh = self.get_variable('hrf_var').currentValue
 
 
         if self.priorType == 'voxelwiseIID':
@@ -1898,14 +1699,14 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             self.currentValue = self.currentValue / f #/(self.normalise+0.)
             if 1:
                 try:
-                    if self.samplerEngine.getVariable('nrl_by_session').sampleFlag:
-                        self.samplerEngine.getVariable('nrl_by_session').currentValue *= f
+                    if self.samplerEngine.get_variable('nrl_by_session').sampleFlag:
+                        self.samplerEngine.get_variable('nrl_by_session').currentValue *= f
                 except KeyError:
-                    if self.samplerEngine.getVariable('nrl').sampleFlag:
-                        self.samplerEngine.getVariable('nrl').currentValue *= f
+                    if self.samplerEngine.get_variable('nrl').sampleFlag:
+                        self.samplerEngine.get_variable('nrl').currentValue *= f
 
                     # Normalizing Mixture components
-                    smixt_params = self.samplerEngine.getVariable('mixt_params')
+                    smixt_params = self.samplerEngine.get_variable('mixt_params')
                     if 0 and smixt_params.sampleFlag:
                         smixt_params.currentValue[smixt_params.I_MEAN_CA] *= f # Normalizing Mean's activation class
                         smixt_params.currentValue[smixt_params.I_VAR_CI] *= f**2 # Normalizing Variance's activation class
@@ -1918,10 +1719,10 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         # update ytilde for nrls
         try:
-            self.samplerEngine.getVariable('nrl_by_session')
+            self.samplerEngine.get_variable('nrl_by_session')
         except KeyError: # only if not in multisession case, else ytilde update
                          # is handled by HRF_MultiSess_Sampler.sampleNextAlt
-            nrlsmpl = self.samplerEngine.getVariable('nrl')
+            nrlsmpl = self.samplerEngine.get_variable('nrl')
             nrlsmpl.computeVarYTildeOpt(self.varXh)
 
 
@@ -1952,7 +1753,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             pyhrf.verbose(5, 'HRF PM:')
             pyhrf.verbose.printNdarray(3, self.mean)
             pyhrf.verbose(5, 'NRLs PM:')
-            pyhrf.verbose.printNdarray(3, self.samplerEngine.getVariable('nrl').mean)
+            pyhrf.verbose.printNdarray(3, self.samplerEngine.get_variable('nrl').mean)
             pyhrf.verbose(5, 'nb negs: %d' %(self.mean <= 0.).sum(dtype=float))
             if (self.mean <= 0.).sum(dtype=float)/len(self.mean) > .9 or \
                     self.mean[np.argmax(abs(self.mean))] < -.2:
@@ -2031,7 +1832,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def updateObsersables(self):
         GibbsSamplerVariable.updateObsersables(self)
-        sScale = self.samplerEngine.getVariable('scale')
+        sScale = self.samplerEngine.get_variable('scale')
         if self.sampleFlag and np.allclose(self.normalise,0.) and \
                 not sScale.sampleFlag:
             pyhrf.verbose(6, 'Normalizing posterior mean of HRF each iteration ...')
@@ -2050,7 +1851,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             for j in xrange(self.nbConditions):
                 hrep = np.repeat(self.currentValue,self.nbVox)
                 ncoeffs = self.currentValue.shape[0]
-                nrls = self.samplerEngine.getVariable('nrl').currentValue
+                nrls = self.samplerEngine.get_variable('nrl').currentValue
                 self.current_ah[:,:,j] = hrep.reshape(ncoeffs,self.nbVox) * \
                     nrls[j,:]
 
@@ -2070,10 +1871,10 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         self.error = np.zeros(self.hrfLength, dtype=float)
         if self.sampleFlag: #TODO chech for NaNs ...  and not _np.isnan(rh):
             # store errors:
-            rh = self.samplerEngine.getVariable('hrf_var').finalValue
+            rh = self.samplerEngine.get_variable('hrf_var').finalValue
 
-            rb = self.samplerEngine.getVariable('noise_var').finalValue
-            snrls = self.samplerEngine.getVariable('nrl')
+            rb = self.samplerEngine.get_variable('noise_var').finalValue
+            snrls = self.samplerEngine.get_variable('nrl')
             nrls = snrls.finalValue
             aa = np.zeros((self.nbConditions, self.nbConditions, self.nbVox),
                        dtype=float)
@@ -2114,7 +1915,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
         h = self.finalValue
-        nrls = self.samplerEngine.getVariable('nrl').finalValue
+        nrls = self.samplerEngine.get_variable('nrl').finalValue
         ah = np.zeros((h.shape[0],self.nbVox, self.nbConditions))
         for j in xrange(self.nbConditions):
             ah[:,:,j] = np.repeat(h,self.nbVox).reshape(h.shape[0],self.nbVox) * \
@@ -2161,7 +1962,7 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #print 'hrf - finalValue:'
         #print self.finalValue
         if pyhrf.__usemode__ == pyhrf.DEVEL:
-            nrls = self.samplerEngine.getVariable('nrl').finalValue
+            nrls = self.samplerEngine.get_variable('nrl').finalValue
             #print np.argmax(abs(nrls))
             #print nrls.shape
             nrlmax = nrls[np.unravel_index(np.argmax(abs(nrls)),nrls.shape)]
@@ -2217,53 +2018,25 @@ class HRF_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
 
 
-############################################################################
-#
-#		Sampling of the HRF prior variance
-############################################################################
+####################################################
+#		Sampling of the HRF prior variance         #
+####################################################
 
-class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
+class RHSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
     """
     #TODO : comment
     """
 
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_PR_MEAN = 'priorMean'
-    P_PR_VAR = 'priorVar'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    #P_HYPER_PRIOR = 'Jeffrey' #'Proper'
-
-    if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters = {
-            P_VAL_INI : np.array([0.15]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.001,
-            P_PR_VAR : 10.,#1000
-            P_USE_TRUE_VALUE : False,
-            }
-
-    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters = {
-            P_VAL_INI : np.array([0.05]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.001,
-            P_PR_VAR : 10.,
-            P_USE_TRUE_VALUE : False,
-            }
-
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_VAL_INI, P_SAMPLE_FLAG]
+        parametersToShow = ['do_sampling', 'val_ini']
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=np.array([0.1]), prior_mean=0.001, prior_var=10):
 
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        m = self.parameters[self.P_PR_MEAN]
-        v = self.parameters[self.P_PR_VAR]
+        xmlio.XmlInitable.__init__(self)
+        m = prior_mean
+        v = prior_var
         #a=m**2/v +2 , b=m**3/v + m
         if 0:
             self.alpha0 = m**2/v
@@ -2272,10 +2045,9 @@ class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             self.alpha0 = 1.
             self.beta0 = 0.
 
-        use_true = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self,'hrf_var', valIni=valIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=use_true)
+        GibbsSamplerVariable.__init__(self,'hrf_var', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value)
 
 
     def linkToData(self, dataInput):
@@ -2306,9 +2078,9 @@ class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        shrf = variables[self.samplerEngine.I_HRF]
+        shrf = self.get_variable('hrf')
         hrf = shrf.currentValue
-        varR = variables[self.samplerEngine.I_HRF].varR
+        varR = self.get_variable('hrf').varR
         hrfT_R_hrf = np.dot(np.dot(hrf, varR), hrf)
         pyhrf.verbose(5, 'hrfT_R^-1_hrf = ' + str(hrfT_R_hrf))
 
@@ -2347,7 +2119,7 @@ class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 
         scale_f = 1.
 
-        shrf = self.samplerEngine.getVariable('hrf')
+        shrf = self.samplerEngine.get_variable('hrf')
         hestim = shrf.finalValue
         htrue = shrf.trueValue
 
@@ -2364,7 +2136,7 @@ class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
     #     """
     #     scale_f = 1.
 
-    #     shrf = self.samplerEngine.getVariable('hrf')
+    #     shrf = self.samplerEngine.get_variable('hrf')
     #     hestim = shrf.finalValue
     #     htrue = shrf.trueValue
     #     print 'htrue:', (htrue**2).sum()
@@ -2390,155 +2162,141 @@ class RHSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             outputs = GibbsSamplerVariable.getOutputs(self)
         return outputs
 
-#######################################################################
-##### Cas where the hrf is estimated in two parts #####################
-#######################################################################
-class RH_two_parts_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
-    """
-    #TODO : comment
-    """
-
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI1 = 'initialValue1'
-    P_VAL_INI2 = 'initialValue2'
-    P_PR_MEAN = 'priorMean'
-    P_PR_VAR = 'priorVar'
-    #P_HYPER_PRIOR = 'Jeffrey' #'Proper'
-
-    if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters = {
-            P_VAL_INI1 : np.array([0.001]),
-            P_VAL_INI2 : np.array([0.01]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.0001,
-            P_PR_VAR : 1000.,
-            }
-
-    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters = {
-            P_VAL_INI1 : np.array([0.005]),
-            P_VAL_INI2 : np.array([0.05]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.001,
-            P_PR_VAR : 10.,
-            }
-
-    parametersToShow = [P_VAL_INI1, P_SAMPLE_FLAG, P_PR_MEAN, P_PR_VAR]
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-
+if 0: #not maintained
+    #######################################################################
+    ##### Cas where the hrf is estimated in two parts #####################
+    #######################################################################
+    class RH_two_parts_Sampler(GibbsSamplerVariable) :
+        """
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        m = self.parameters[self.P_PR_MEAN]
-        v = self.parameters[self.P_PR_VAR]
-        #a=m**2/v +2 , b=m**3/v + m
-        if 0:
-            self.alpha0 = m**2/v
-            self.beta0 = m**3/v + m
-        else: #Jeffrey
-            self.alpha0 = -1.
-            self.beta0 = 0.
+        """
 
-        GibbsSamplerVariable.__init__(self,'hrf_var', valIni=valIni,
-                                      sampleFlag=sampleFlag)
+        P_SAMPLE_FLAG = 'sampleFlag'
+        P_VAL_INI1 = 'initialValue1'
+        P_VAL_INI2 = 'initialValue2'
+        P_PR_MEAN = 'priorMean'
+        P_PR_VAR = 'priorVar'
+        #P_HYPER_PRIOR = 'Jeffrey' #'Proper'
 
-
-    def linkToData(self, dataInput):
-        self.dataInput = dataInput
-        self.nbColX = self.dataInput.nbColX
-        self.nbVox = self.dataInput.nbVoxels
-
-    def checkAndSetInitValue(self, variables):
-        if self.currentValue == None:
-            if not self.sampleFlag and self.dataInput.simulData != None \
-                   and self.dataInput.simulData.hrf.hrfParams.has_key('rh'):
-                simulRh = self.dataInput.simulData.hrf.hrfParams['rh']
-                self.currentValue = np.array([simulRh])
-            else:
-                self.currentValue = np.array([0.0001])
-
-    def sampleNextInternal(self, variables):
-        #TODO : comment
-        shrf = variables[self.samplerEngine.I_HRF]
-        hrf = shrf.currentValue
-        varR = variables[self.samplerEngine.I_HRF].varR
-        hrfT_R_hrf = np.dot(np.dot(hrf, varR), hrf)
-        pyhrf.verbose(5, 'hrfT_R^-1_hrf = ' + str(hrfT_R_hrf))
-
-
-        if shrf.priorType == 'voxelwiseIID':
-            alpha = 0.5*self.nbColX*self.nbVox +  self.alpha0 - 1
-            beta = .5*hrfT_R_hrf*self.nbVox + self.beta0
-        else:
-            alpha = 0.5*self.nbColX + self.alpha0 - 1
-            beta = .5*hrfT_R_hrf + self.beta0
-
-#         if shrf.trick:
-#             alpha = 0.5*(self.nbColX) * self.nbVox + self.alpha0 - 1
-#             beta = 1./(.5*self.nbVox*hrfT_R_hrf + self.beta0)
-#         else:
-#             alpha = 0.5*(self.nbColX) +  self.alpha0 - 1
-#             beta = 1./(.5*hrfT_R_hrf + self.beta0)
-
-        #alpha = 0.5*self.nbColX + 1 + self.alpha0 #check !!
-        #beta = 1/(.5*gJ*hrfT_R_hrf + self.beta0)
-        pyhrf.verbose(5, 'varHRF apost ~1/Ga(%f,%f)'%(alpha, beta))
-        if pyhrf.verbose.verbosity >= 5:
-            ig_samples =  1.0/np.random.gamma(alpha, 1./beta,1000)
-            pyhrf.verbose(5, 'empirical -> meanApost=%f, varApost=%f'
-                          %(ig_samples.mean(),ig_samples.var()))
-            pyhrf.verbose(5, 'theorical -> meanApost=%f, varApost=%f'
-                          %(beta/(alpha-1), beta**2/((alpha-1)**2*(alpha-2))))
-
-        #self.currentValue = 1.0/np.random.gamma(0.5*(self.nbColX+1)-1+self.alpha0,
-        #                                     1/(.5*gJ*hrfT_R_hrf + self.beta0))
-        self.currentValue = np.array([1.0/np.random.gamma(alpha, 1./beta)])
-
-        pyhrf.verbose(4,'varHRf curval = ' + str(self.currentValue))
-
-
-
-    def getOutputs(self):
-        outputs = {}
         if pyhrf.__usemode__ == pyhrf.DEVEL:
-            outputs = GibbsSamplerVariable.getOutputs(self)
-        return outputs
+            defaultParameters = {
+                P_VAL_INI1 : np.array([0.001]),
+                P_VAL_INI2 : np.array([0.01]),
+                P_SAMPLE_FLAG : False,
+                P_PR_MEAN : 0.0001,
+                P_PR_VAR : 1000.,
+                }
+
+        elif pyhrf.__usemode__ == pyhrf.ENDUSER:
+            defaultParameters = {
+                P_VAL_INI1 : np.array([0.005]),
+                P_VAL_INI2 : np.array([0.05]),
+                P_SAMPLE_FLAG : False,
+                P_PR_MEAN : 0.001,
+                P_PR_VAR : 10.,
+                }
+
+        parametersToShow = [P_VAL_INI1, P_SAMPLE_FLAG, P_PR_MEAN, P_PR_VAR]
+
+        def __init__(self, parameters=None, xmlHandler=None,
+                     xmlLabel=None, xmlComment=None):
+
+            #TODO : comment
+            xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
+            sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
+            valIni = self.parameters[self.P_VAL_INI]
+            m = self.parameters[self.P_PR_MEAN]
+            v = self.parameters[self.P_PR_VAR]
+            #a=m**2/v +2 , b=m**3/v + m
+            if 0:
+                self.alpha0 = m**2/v
+                self.beta0 = m**3/v + m
+            else: #Jeffrey
+                self.alpha0 = -1.
+                self.beta0 = 0.
+
+            GibbsSamplerVariable.__init__(self,'hrf_var', valIni=valIni,
+                                          sampleFlag=sampleFlag)
+
+
+        def linkToData(self, dataInput):
+            self.dataInput = dataInput
+            self.nbColX = self.dataInput.nbColX
+            self.nbVox = self.dataInput.nbVoxels
+
+        def checkAndSetInitValue(self, variables):
+            if self.currentValue == None:
+                if not self.sampleFlag and self.dataInput.simulData != None \
+                       and self.dataInput.simulData.hrf.hrfParams.has_key('rh'):
+                    simulRh = self.dataInput.simulData.hrf.hrfParams['rh']
+                    self.currentValue = np.array([simulRh])
+                else:
+                    self.currentValue = np.array([0.0001])
+
+        def sampleNextInternal(self, variables):
+            #TODO : comment
+            shrf = self.get_variable('hrf')
+            hrf = shrf.currentValue
+            varR = self.get_variable('hrf').varR
+            hrfT_R_hrf = np.dot(np.dot(hrf, varR), hrf)
+            pyhrf.verbose(5, 'hrfT_R^-1_hrf = ' + str(hrfT_R_hrf))
+
+
+            if shrf.priorType == 'voxelwiseIID':
+                alpha = 0.5*self.nbColX*self.nbVox +  self.alpha0 - 1
+                beta = .5*hrfT_R_hrf*self.nbVox + self.beta0
+            else:
+                alpha = 0.5*self.nbColX + self.alpha0 - 1
+                beta = .5*hrfT_R_hrf + self.beta0
+
+    #         if shrf.trick:
+    #             alpha = 0.5*(self.nbColX) * self.nbVox + self.alpha0 - 1
+    #             beta = 1./(.5*self.nbVox*hrfT_R_hrf + self.beta0)
+    #         else:
+    #             alpha = 0.5*(self.nbColX) +  self.alpha0 - 1
+    #             beta = 1./(.5*hrfT_R_hrf + self.beta0)
+
+            #alpha = 0.5*self.nbColX + 1 + self.alpha0 #check !!
+            #beta = 1/(.5*gJ*hrfT_R_hrf + self.beta0)
+            pyhrf.verbose(5, 'varHRF apost ~1/Ga(%f,%f)'%(alpha, beta))
+            if pyhrf.verbose.verbosity >= 5:
+                ig_samples =  1.0/np.random.gamma(alpha, 1./beta,1000)
+                pyhrf.verbose(5, 'empirical -> meanApost=%f, varApost=%f'
+                              %(ig_samples.mean(),ig_samples.var()))
+                pyhrf.verbose(5, 'theorical -> meanApost=%f, varApost=%f'
+                              %(beta/(alpha-1), beta**2/((alpha-1)**2*(alpha-2))))
+
+            #self.currentValue = 1.0/np.random.gamma(0.5*(self.nbColX+1)-1+self.alpha0,
+            #                                     1/(.5*gJ*hrfT_R_hrf + self.beta0))
+            self.currentValue = np.array([1.0/np.random.gamma(alpha, 1./beta)])
+
+            pyhrf.verbose(4,'varHRf curval = ' + str(self.currentValue))
 
 
 
+        def getOutputs(self):
+            outputs = {}
+            if pyhrf.__usemode__ == pyhrf.DEVEL:
+                outputs = GibbsSamplerVariable.getOutputs(self)
+            return outputs
 
 
-class ScaleSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
-
-    """
-    #TODO : comment
-    """
-
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : False,
-        }
+class ScaleSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     ########################################################
     #TODO : IMPORTANT ! : make it handle 3 class NRL model #
     ########################################################
+    ## Sampling not enabled by default -> link to GIG sampler not maintained
 
+    def __init__(self, do_sampling=False, use_true_value=False,
+                 val_ini=np.array([1.])):
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
 
-        GibbsSamplerVariable.__init__(self,'scale', valIni=valIni,
-                                      sampleFlag=sampleFlag)
+        GibbsSamplerVariable.__init__(self,'scale', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value)
         self.scaleArrayTmp = np.zeros(1, dtype=float)
 
     def linkToData(self, dataInput):
@@ -2550,28 +2308,21 @@ class ScaleSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
         self.theta = .5*(lhrf -1 - nbc*(nbv+1) )
 
-    def checkAndSetInitValue(self, variables):
-        if self.currentValue == None:
-            self.currentValue = np.array([1.0])
-#             shrf = variables[self.samplerEngine.I_HRF]
-#             shrf.checkAndSetInitValue(variables)
-#             self.currentValue = shrf.currentValue.max()
-
     def sampleNextInternal(self, variables):
 
         #print 'sampling scale ...'
         # Retrieve dependencies :
-        sHrf = variables[self.samplerEngine.I_HRF]
+        sHrf = self.get_variable('hrf')
         hrf = sHrf.currentValue
         varR = sHrf.varR
 
-        varHRF = variables[self.samplerEngine.I_RH].currentValue
-        sNrls = variables[self.samplerEngine.I_NRLS]
+        varHRF = self.get_variable('hrf_var').currentValue
+        sNrls = self.get_variable('nrl')
         nrl = sNrls.currentValue
         labels = sNrls.labels
         cardC1 = sNrls.cardClass[sNrls.L_CA]
 
-        sMixtP = variables[self.samplerEngine.I_MIXT_PARAM]
+        sMixtP = self.get_variable('mixt_params')
         meanC1 = sMixtP.currentValue[BiGaussMixtureParamsSampler.I_MEAN_CA]
         m1PrVar = sMixtP.meanCAPrVar
         varC1 = sMixtP.currentValue[BiGaussMixtureParamsSampler.I_VAR_CA]
@@ -2647,7 +2398,7 @@ class ScaleSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 #	    omega = eta
 #	    eta=omegab
         pyhrf.verbose(5, 'GIG(t=%f, o=%f, e=%f)' %(self.theta, omega, eta))
-        if cRandom != None:
+        if cRandom is not None:
             cRandom.gig(self.theta, omega, eta, 1, self.scaleArrayTmp)
         else:
             raise Exception('pyhrf.stat.cRandom is not available.')
@@ -2656,17 +2407,17 @@ class ScaleSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         assert not np.isnan(self.currentValue)
 
         # Update HRF scale :
-        shrf = self.samplerEngine.getVariable('hrf')
+        shrf = self.samplerEngine.get_variable('hrf')
         shrf.currentValue = hrfTilde*self.currentValue
         shrf.updateXh()
         shrf.updateNorm()
 
         # Update mixture component :
-        sMixtP = self.samplerEngine.getVariable('mixt_params')
+        sMixtP = self.samplerEngine.get_variable('mixt_params')
         sMixtP.currentValue[sMixtP.I_MEAN_CA] = meanC1Tilde/self.currentValue
 
         # Update NRLs :
-        sNRLs = self.samplerEngine.getVariable('nrl')
+        sNRLs = self.samplerEngine.get_variable('nrl')
         sNRLs.currentValue = nrlTilde/scale
 
 #    def finalizeSampling(self):

@@ -15,12 +15,8 @@ class SimulationTest(unittest.TestCase):
 
     def setUp(self):
         # called before any unit test of the class
-        #self.tmp_path = pyhrf.get_tmp_path() #create a temporary folder
-        #self.clean_tmp = False
-
-        #HACK:
-        self.tmp_path = '/home/tom/Data/Pyhrf/Test/Unittest'
-        self.clean_tmp = False
+        self.tmp_path = pyhrf.get_tmp_path() #create a temporary folder
+        self.clean_tmp = True
 
     def tearDown(self):
         # called after any unit test of the class

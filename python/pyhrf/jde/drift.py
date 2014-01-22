@@ -10,42 +10,30 @@ from numpy.matlib import repmat
 import pyhrf
 import intensivecalc
 from pyhrf import xmlio
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from samplerbase import *
 from numpy.matlib import *
 
-class DriftSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class DriftSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
     Gibbs sampler of the parameters modelling the low frequency drift in
     the fMRI time course, in the case of white noise.
     """
-    # parameter labels definitions :
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
 
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None):
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
+
         an = ['order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
+        GibbsSamplerVariable.__init__(self,'drift', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an,
                                       value_label='PM LFD')
 
     def linkToData(self, dataInput):
-        
+
         self.dataInput = dataInput
         self.nbSess = self.dataInput.nbSessions
         self.dimDrift = self.dataInput.colP
@@ -57,7 +45,7 @@ class DriftSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             self.trueValue = dataInput.simulData.rdrift.lfd
 
     def checkAndSetInitValue(self, variables):
-        smplVarDrift = variables[self.samplerEngine.I_ETA]
+        smplVarDrift = self.get_variable('drift_var')
         smplVarDrift.checkAndSetInitValue(variables)
         varDrift = smplVarDrift.currentValue
 
@@ -107,10 +95,10 @@ class DriftSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
 
     def sampleNextInternal(self, variables):
-        reps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        snrls = variables[self.samplerEngine.I_NRLS]
-        sHrf = variables[self.samplerEngine.I_HRF]
-        eta =  variables[self.samplerEngine.I_ETA].currentValue
+        reps = self.get_variable('noise_var').currentValue
+        snrls = self.get_variable('nrl')
+        sHrf = self.get_variable('hrf')
+        eta =  self.get_variable('drift_var').currentValue
 
         for i in xrange(self.nbVox):
             # inv_sigma = np.eye(self.dimDrift) * (1/eta + 1/reps[i])
@@ -163,39 +151,15 @@ class DriftSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
                                          value_label='Delta BOLD')
 
         return outputs
-        
+
 class DriftSamplerWithRelVar(DriftSampler):
     """
     Gibbs sampler of the parameters modelling the low frequency drift in
     the fMRI time course, in the case of white noise.
     """
-    # parameter labels definitions :
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        an = ['order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
-                                      value_label='PM LFD')
 
     def linkToData(self, dataInput):
-        
+
         self.dataInput = dataInput
         self.nbSess = self.dataInput.nbSessions
         self.dimDrift = self.dataInput.colP
@@ -208,7 +172,7 @@ class DriftSamplerWithRelVar(DriftSampler):
 
 
     def checkAndSetInitValue(self, variables):
-        smplVarDrift = variables[self.samplerEngine.I_ETA]
+        smplVarDrift = self.get_variable('drift_var')
         smplVarDrift.checkAndSetInitValue(variables)
         varDrift = smplVarDrift.currentValue
 
@@ -231,7 +195,7 @@ class DriftSamplerWithRelVar(DriftSampler):
             #else:
             self.currentValue = np.sqrt(varDrift) * \
                 np.random.randn(self.dimDrift, self.nbVox)
-        
+
         if self.currentValue is None:
             pyhrf.verbose(1,"Initialisation of Drift from the data")
             n = len(self.dataInput.varMBY)
@@ -239,7 +203,7 @@ class DriftSamplerWithRelVar(DriftSampler):
             invptp = numpy.linalg.inv(ptp)
             invptppt = numpy.dot(invptp, self.P.transpose())
             self.currentValue = numpy.dot(invptppt,self.dataInput.varMBY)
-        
+
         self.updateNorm()
         self.matPl = dot(self.P, self.currentValue)
         self.ones_Q_J = np.ones((self.dimDrift, self.nbVox))
@@ -260,16 +224,16 @@ class DriftSamplerWithRelVar(DriftSampler):
 
 
     def sampleNextInternal(self, variables):
-        
+
         #print 'Step 4 : Drift Sampling *****RelVar*****'
-        
-        reps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        snrls = variables[self.samplerEngine.I_NRLS]
+
+        reps = self.get_variable('noise_var').currentValue
+        snrls = self.get_variable('nrl')
         #print '         varYbar begin =',snrls.varYbar.sum()
         #print '         varYtilde begin =',snrls.varYtilde.sum()
-        sHrf = variables[self.samplerEngine.I_HRF]
-        eta =  variables[self.samplerEngine.I_ETA].currentValue
-        w = variables[self.samplerEngine.I_W].currentValue
+        sHrf = self.get_variable('hrf')
+        eta =  self.get_variable('drift_var').currentValue
+        w = self.get_variable('W').currentValue
 
         for i in xrange(self.nbVox):
             # inv_sigma = np.eye(self.dimDrift) * (1/eta + 1/reps[i])
@@ -324,224 +288,7 @@ class DriftSamplerWithRelVar(DriftSampler):
                                          value_label='Delta BOLD')
 
         return outputs
-##################################################
-#TODO : IMPORTANT : handle mutlisession inputs ! #
-##################################################
 
-# In case of multi-sessions
-
-class Drift_MultiSess_Sampler(DriftSampler):
-
-    #P_VAL_INI = 'initialValue'
-    #P_SAMPLE_FLAG = 'sampleFlag'
-    #P_USE_TRUE_VALUE = 'useTrueValue'
-
-    ## parameters definitions and default values :
-    #defaultParameters = {
-        #P_VAL_INI : None,
-        #P_SAMPLE_FLAG : True,
-        #P_USE_TRUE_VALUE : False,
-        #}
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                        xmlLabel=None, xmlComment=None):
-
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        an = ['session','order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
-                                      value_label='PM LFD')
-
-    def linkToData(self, dataInput):
-
-        self.dataInput = dataInput
-        self.ny = self.dataInput.ny
-        self.dimDrift = self.dataInput.colP
-        self.nbVox = self.dataInput.nbVoxels
-        self.P = self.dataInput.lfdMat # : for all sessions
-        self.nbSess = self.dataInput.nbSessions
-
-        if dataInput.simulData is not None and \
-           isinstance(dataInput.simulData[0], BOLDModel):
-            self.trueValue = np.array([sd.rdrift.lfd for sd in dataInput.simulData])
-        elif dataInput.simulData is not None and \
-          isinstance(dataInput.simulData, list):
-            self.trueValue = np.array([sd['drift_coeffs'] \
-                                       for sd in dataInput.simulData])
-
-    def checkAndSetInitValue(self, variables):
-        smplVarDrift = variables[self.samplerEngine.I_ETA]
-        smplVarDrift.checkAndSetInitValue(variables)
-        varDrift = smplVarDrift.currentValue
-
-        if self.useTrueValue :
-            if self.trueValue is not None:
-                self.currentValue = self.trueValue
-            else:
-                raise Exception('Needed a true value for drift init but '\
-                                    'None defined')
-
-
-        if self.currentValue is None :
-            #if not self.sampleFlag and self.dataInput.simulData is None :
-                #self.currentValue = self.dataInput.simulData.drift.lfd
-                #pyhrf.verbose(6,'drift dimensions :' \
-                              #+str(self.currentValue.shape))
-                #pyhrf.verbose(6,'self.dimDrift :' \
-                              #+str(self.dimDrift))
-                #assert self.dimDrift == self.currentValue.shape[0]
-            #else:
-            #self.currentValue = np.sqrt(varDrift) * \
-            #    np.random.randn(self.nbSess, self.dimDrift, self.nbVox)
-
-            # Init as lsq fit:
-            self.currentValue = np.zeros((self.nbSess, self.dimDrift, self.nbVox))
-            for s in xrange(self.nbSess):
-                self.currentValue[s,:,:] = np.dot(self.P[s].T, self.dataInput.varMBY[s])
-
-        self.updateNorm()
-        self.matPl = np.zeros((self.nbSess, self.ny, self.nbVox))
-        for s in xrange(self.nbSess):
-            self.matPl[s] = dot(self.P[s], self.currentValue[s])
-        #self.ones_Q_J = np.ones((self.dimDrift, self.nbVox))
-        self.ones_Q   = np.ones((self.dimDrift))
-
-        #sHrf = variables[self.samplerEngine.I_HRF]
-        #sHrf.checkAndSetInitValue(variables)
-        #self.varXh = sHrf.varXh
-        #nrlsmpl = variables[self.samplerEngine.I_NRLS_SESS]
-        #nrlsmpl.checkAndSetInitValue(variables)
-        #for s in xrange(self.nbSess):
-            #nrlsmpl.computeVarYTildeSessionOpt(self.varXh[s], s)
-
-    def updateNorm(self):
-        #for s in xrange(self.nbSess):
-            #norm = np.dot(self.currentValue[s].T, self.currentValue[s])
-
-        self.norm = np.array([(self.currentValue[s] * self.currentValue[s]).sum() \
-                              for s in xrange(self.nbSess)]).sum()
-
-
-        #if self.trueValue is not None:
-            #print 'cur drift norm:', self.norm
-            #print 'true drift norm:', (self.trueValue * self.trueValue).sum()
-
-    def sampleNextInternal(self, variables):
-        eta =  variables[self.samplerEngine.I_ETA].currentValue
-
-        for j in xrange(self.nbVox):
-            for s in xrange(self.nbSess):
-                reps = variables[self.samplerEngine.I_NOISE_VAR_SESS].currentValue[s,j]
-                snrls = self.samplerEngine.getVariable('nrl_by_session')
-                pyhrf.verbose(5, 'eta : %f' %eta)
-                pyhrf.verbose(5, 'reps :' )
-                pyhrf.verbose.printNdarray(5, reps)
-
-                ##inv_vars_l = 1/eta * self.ones_Q + 1/reps * np.dot(self.P[s].transpose(), self.P[s])
-                ##print 'PtP:', np.dot(self.P[s].transpose(), self.P[s])
-                #inv_vars_l = (1./eta +1./reps)* self.ones_Q
-                #mu_l = np.dot(1./inv_vars_l, np.dot(self.P[s].transpose(), snrls.varYtilde[s,:,j])) * 1./reps
-
-                #pyhrf.verbose(5, 'vars_l_j_s :')
-                #pyhrf.verbose.printNdarray(5, 1/inv_vars_l)
-                #pyhrf.verbose(5, 'mu_l_j_s :')
-                #pyhrf.verbose.printNdarray(5, mu_l)
-                #print 'mu et invl:', mu_l, inv_vars_l
-                #self.currentValue[s][:,j] = randn(self.dimDrift) * 1./inv_vars_l**.5 + mu_l
-                ##self.currentValue[s][:,j] = np.random.multivariate_normal(mu_l, 1/inv_vars_l)
-                #print j,s
-
-                v_lj = reps*eta / (reps + eta)
-                mu_lj = v_lj/reps * np.dot(self.P[s].transpose(),
-                                           snrls.varYtilde[s,:,j])
-
-                self.currentValue[s,:,j] = np.random.randn(self.dimDrift) * v_lj**.5 + mu_lj
-                #print 'drifts coeffs:', self.currentValue[s][:,j]
-
-        sHrf = variables[self.samplerEngine.I_HRF]
-        self.varXh = sHrf.varXh
-        nrlsmpl = variables[self.samplerEngine.I_NRLS_SESS]
-
-        for s in xrange(self.nbSess):
-            self.matPl[s] = dot(self.P[s], self.currentValue[s])
-            nrlsmpl.computeVarYTildeSessionOpt(self.varXh[s], s)
-
-        pyhrf.verbose(5, 'drift params :')
-        pyhrf.verbose.printNdarray(5, self.currentValue)
-
-
-    def sampleNextAlt(self, variables):
-        self.updateNorm()
-
-
-    #def checkAndSetInitValue(self, variables):
-        #smplVarDrift = variables[self.samplerEngine.I_ETA]
-        #smplVarDrift.checkAndSetInitValue(variables)
-        #varDrift = smplVarDrift.currentValue
-
-        #if self.useTrueValue :
-            #if self.trueValue is not None:
-                #self.currentValue = self.trueValue
-            #else:
-                #raise Exception('Needed a true value for drift init but '\
-                                    #'None defined')
-
-
-        #if self.currentValue is None :
-            #if not self.sampleFlag and self.dataInput.simulData is None :
-                #self.currentValue = self.dataInput.simulData.drift.lfd
-                #pyhrf.verbose(6,'drift dimensions :' \
-                              #+str(self.currentValue.shape))
-                #pyhrf.verbose(6,'self.dimDrift :' \
-                              #+str(self.dimDrift))
-                #assert self.dimDrift == self.currentValue.shape[0]
-            #else:
-                #curV=[]
-                #for s in xrange(self.nbSess):
-                    #self.currentValue = np.sqrt(varDrift) * \
-                            #np.random.randn(self.dimDrift, self.nbVox)
-                    #curV.append(self.currentValue)
-                #self.currentValue = np.array(curV)
-
-        #self.updateNorm()
-        #matPl=[]
-        #for s in xrange(self.nbSess):
-            #self.matPl = dot(self.P, self.currentValue)
-            #matPl.append(self.matPl)
-        #self.matPl = np.array(matPl)
-        #self.ones_Q_J = np.ones((self.dimDrift, self.nbVox))
-        #self.ones_Q   = np.ones((self.dimDrift))
-
-
-    def compute_drift_signal(self, drift_coeffs=None):
-        if drift_coeffs is None:
-            if self.finalValue is not None:
-                drift_coeffs = self.finalValue
-            else:
-                drift_coeffs = self.currentValue
-
-        drifts = np.zeros((self.nbSess, self.ny, self.nbVox))
-        for s in xrange(self.nbSess):
-            drifts[s] = np.dot(self.P[s], drift_coeffs[s])
-
-        return drifts
-
-    def getOutputs(self):
-
-        sn = self.dataInput.sNames
-        outputs = GibbsSamplerVariable.getOutputs(self)
-        drifts = self.compute_drift_signal()
-        an = ['session', 'time','voxel']
-        ad = {'time' : arange(self.ny)*self.dataInput.tr, 'session':sn}
-        outputs['drift_signal'] = xndarray(drifts, axes_names=an, axes_domains=ad,
-                                    value_label='Delta BOLD')
-
-        return outputs
 
 def sampleDrift( varInvSigma_drift, ptLambdaY, dim):
 
@@ -552,30 +299,23 @@ def sampleDrift( varInvSigma_drift, ptLambdaY, dim):
     return drift
 
 
-class DriftARSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class DriftARSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
-    Gibbs sampler of the parameters modelling the low frequency drift in the fMRI time course, in the case of AR noise
+    Gibbs sampler of the parameters modelling the low frequency drift in the
+    fMRI time course, in the case of AR noise
     """
 
-    # parameter labels definitions :
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=None):
 
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : 1
-        }
+        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-	an = ['order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
+        an = ['order','voxel']
+        GibbsSamplerVariable.__init__(self,'drift', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an,
                                       value_label='PM LFD')
 
 #        self.functionBasis = self.parameters[self.P_FUNCTION_BASIS]
@@ -609,7 +349,7 @@ class DriftARSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
             self.varYTilde[:,v] = self.varMBYPl[:,v] - avjXjh.sum(axis=1)
 
     def checkAndSetInitValue(self, variables):
-        smplVarDrift = variables[self.samplerEngine.I_ETA]
+        smplVarDrift = self.get_variable('drift_var')
         smplVarDrift.checkAndSetInitValue(variables)
         VarDrift = smplVarDrift.currentValue
 	#print 'nbscans=', self.ny, 'nbvox=', self.nbVox
@@ -637,9 +377,9 @@ class DriftARSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         """
         ##print 'Drift warming up ...'
         # Precalculations and allocations :
-        smplHRF = variables[self.samplerEngine.I_HRF]
+        smplHRF = self.get_variable('hrf')
         smplHRF.checkAndSetInitValue(variables)
-        smplNRLs = variables[self.samplerEngine.I_NRLS]
+        smplNRLs = self.get_variable('nrl')
         smplNRLs.checkAndSetInitValue(variables)
         self.varMBYPl = zeros((self.ny, self.nbVox), dtype=float)
         self.varYTilde = zeros((self.ny, self.nbVox), dtype=float)
@@ -647,19 +387,19 @@ class DriftARSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         self.computeVarYTilde(smplNRLs.currentValue, smplHRF.varXh)
 
     def sampleNextAlt(self, variables):
-        varXh = variables[self.samplerEngine.I_HRF].varXh
-        varNRLs = variables[self.samplerEngine.I_NRLS].currentValue
+        varXh = self.get_variable('hrf').varXh
+        varNRLs = self.get_variable('nrl').currentValue
         self.updateVarYmDrift()
         self.computeVarYTilde(varNRLs, varXh)
 
     def sampleNextInternal(self, variables):
-        reps = variables[self.samplerEngine.I_NOISE_VAR].currentValue
-        smplVarARp = variables[self.samplerEngine.I_NOISE_ARP]
+        reps = self.get_variable('noise_var').currentValue
+        smplVarARp = self.get_variable('noise_var')
         invAutoCorrNoise = smplVarARp.InvAutoCorrNoise
-        varNrls = variables[self.samplerEngine.I_NRLS].currentValue
-        smplVarh =  variables[self.samplerEngine.I_HRF]
+        varNrls = self.get_variable('nrl').currentValue
+        smplVarh =  self.get_variable('hrf')
         varXh = smplVarh.varXh
-        eta =  variables[self.samplerEngine.I_ETA].currentValue
+        eta =  self.get_variable('drift_var').currentValue
         invSigma= empty( ( self.dimDrift, self.dimDrift), dtype=float )
         datamPredict = empty(( self.ny), dtype=float)
         self.updateVarYmDrift()
@@ -745,35 +485,22 @@ class DriftARSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         del self.varYTilde
 
 
-class ETASampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class ETASampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
-        Gibbs sampler of the variance of the Inverse Gamma prior used to
-        regularise the estimation of the low frequency drift embedded
-        in the fMRI time course
+    Gibbs sampler of the variance of the Inverse Gamma prior used to
+    regularise the estimation of the low frequency drift embedded
+    in the fMRI time course
     """
 
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-
-    defaultParameters = {
-        P_VAL_INI : np.array([1.0]),
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, do_sampling=True, use_true_value=False,
+                 val_ini=np.array([1.0])):
 
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self,'driftVar', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag)
+        xmlio.XmlInitable.__init__(self)
+
+        GibbsSamplerVariable.__init__(self,'driftVar', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value)
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -791,7 +518,7 @@ class ETASampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
             # Better to recompute drift coeffs from drift signals
             # -> take into account amplitude factor
-            P = self.getVariable('drift').P
+            P = self.get_variable('drift').P
             v = np.var([np.dot(P[s].T, sd[s]['drift']) for s in xrange(len(sd))])
             self.trueValue = np.array([v])
 
@@ -808,7 +535,7 @@ class ETASampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
         #TODO : comment
-        smpldrift = variables[self.samplerEngine.I_DRIFT]
+        smpldrift = self.get_variable('drift')
 #        print 'shape dimDrift...', smpldrift.dimDrift
 #        print 'norm Drift', smpldrift.norm
         #alpha = .5 * (smpldrift.dimDrift*self.nbVox+1) - 1
@@ -830,27 +557,6 @@ class ETASampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
 class ETASampler_MultiSess(ETASampler):
 
-    #P_SAMPLE_FLAG = 'sampleFlag'
-    #P_VAL_INI = 'initialValue'
-    #P_USE_TRUE_VALUE = 'useTrueValue'
-
-    #defaultParameters = {
-        #P_VAL_INI : np.array([1.0]),
-        #P_SAMPLE_FLAG : True,
-        #P_USE_TRUE_VALUE : False,
-        #}
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-    xmlLabel=None, xmlComment=None):
-
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-        xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self,'driftVar', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag)
 
     def linkToData(self, dataInput):
         ETASampler.linkToData(self, dataInput)
@@ -866,7 +572,7 @@ class ETASampler_MultiSess(ETASampler):
 
     def sampleNextInternal(self, variables):
 
-        smpldrift = variables[self.samplerEngine.I_DRIFT]
+        smpldrift = self.get_variable('drift')
         alpha = .5 * (self.nbSessions*smpldrift.dimDrift*self.nbVox -1)
         beta_d = 0.5*smpldrift.norm
         pyhrf.verbose(4, 'eta ~ Ga(%1.3f,%1.3f)'%(alpha,beta_d))

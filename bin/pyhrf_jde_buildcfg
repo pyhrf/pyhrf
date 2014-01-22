@@ -87,11 +87,10 @@ if not options.variational_em:
     analyser = JDEMCMCAnalyser( sampler=currentModel() )
 
     if options.nbIterations is not None:
-        s = analyser.sampler
-        s.parameters[s.P_NB_ITERATIONS] = options.nbIterations
+        analyser.sampler.set_init_param('nb_iterations', options.nbIterations)
     try:
-        analyser.sampler.getVariable('nrl').parameters['contrasts'] = contrasts
-        #print 'Contrasts not set!'
+        analyser.sampler.getVariable('nrl').set_init_param('contrasts',
+                                                           constrasts)
     except:
         pass
 else:
@@ -112,8 +111,7 @@ else:
     treatment = ptr.FMRITreatment(analyser=analyser, fmri_data=fdata)
 
 # Save the treatment as an XML file:
-sXml = xmlio.toXML(treatment, handler=xmlio.xmlnumpy.NumpyXMLHandler(),
-                   objName='fMRI_treatment')
+sXml = xmlio.to_xml(treatment, label='fMRI_treatment')
 fOut = open(options.cfgFile,'w')
 fOut.write(sXml)
 fOut.close()

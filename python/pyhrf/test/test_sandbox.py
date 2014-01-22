@@ -148,12 +148,14 @@ class InitableTest(unittest.TestCase):
         self.assertEqual(root_node.child(2).child(0).child(0).label(), str(53))
 
         #                treatment.list
-        self.assertEqual(root_node.child(3).get_attribute('type'), list)
-        self.assertEqual(root_node.child(3).child(0).label(), str([5,6]))
+        self.assertEqual(root_node.child(3).get_attribute('type'), 'list')
+        self.assertEqual(root_node.child(3).child(0).label(), 'item0')
 
+        self.assertEqual(root_node.child(3).child(0).get_attribute('type'), int)
+        self.assertEqual(root_node.child(3).child(0).child(0).label(), '5')
 
     def test_xml_io(self):
-        pyhrf.verbose.set_verbosity(0)
+        pyhrf.verbose.set_verbosity(1)
 
         info = {'test':53}
         treatment = Treatment(FmriData(func_file='blah.nii'),
@@ -165,7 +167,6 @@ class InitableTest(unittest.TestCase):
         if pyhrf.verbose.verbosity > 0:
             print 'root_node:'
             print root_node.log()
-
 
         sxml = root_node.to_xml()
 
@@ -360,7 +361,7 @@ class CoreTest(unittest.TestCase):
 ########################
 
 import numpy as np
-from pyhrf.sandbox.parcellation import parcellate_spatial
+
 
 class SpatialParcellationTest(unittest.TestCase):
 
@@ -370,18 +371,19 @@ class SpatialParcellationTest(unittest.TestCase):
                                                  [2,2,2],
                                                  [2,2,2]])
 
-    def test_on_true_territories(self):
-        import matplotlib.pyplot as plt
-        parcellation = parcellate_spatial(self.territories_2D_2parcels)
+    # def test_on_true_territories(self):
+    #     from pyhrf.sandbox.parcellation import parcellate_spatial
+    #     import matplotlib.pyplot as plt
+    #     parcellation = parcellate_spatial(self.territories_2D_2parcels)
 
-        if 0:
-            plt.matshow(self.territories_2D_2parcels)
-            plt.title('True territories')
+    #     if 0:
+    #         plt.matshow(self.territories_2D_2parcels)
+    #         plt.title('True territories')
 
-            plt.matshow(parcellation)
-            plt.title('parcellation')
+    #         plt.matshow(parcellation)
+    #         plt.title('parcellation')
 
-            plt.show()
+    #         plt.show()
 
 
 

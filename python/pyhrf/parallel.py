@@ -24,7 +24,7 @@ class RemoteException(Exception):
     pass
 
 def save_treatment(t,f):
-    sXml = xmlio.toXML(t, handler=xmlio.xmlnumpy.NumpyXMLHandler())
+    sXml = xmlio.to_xml(t, handler=xmlio.xmlnumpy.NumpyXMLHandler())
     fOut = open(f,'w')
     fOut.write(sXml)
     fOut.close()

@@ -70,7 +70,7 @@ fdata = parse_data_options(options)
 
 treatment = FMRITreatment(analyser=analyser, fmri_data=fdata)
 
-sXml = xmlio.toXML(treatment, handler=NumpyXMLHandler())
+sXml = xmlio.to_xml(treatment, label='glm_treatment')
 fOut = open(options.cfgFile,'w')
 fOut.write(sXml)
 fOut.close()

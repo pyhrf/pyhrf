@@ -31,11 +31,10 @@ class GLMAnalyser(FMRIAnalyser):
                  hrf_model='Canonical', drift_model='Cosine', hfcut=128.,
                  residuals_model='spherical',fit_method='ols',
                  outputPrefix='glm_', rescale_results=False,
-                 rescale_factor_file='', fir_delays=[0]):
+                 rescale_factor_file=None, fir_delays=[0]):
 
+        xmlio.XmlInitable.__init__(self)
         FMRIAnalyser.__init__(self, outputPrefix)
-        xmlio.XMLable2.__init__(self)
-
 
         self.hrf_model = hrf_model
         self.drift_model = drift_model
@@ -48,7 +47,7 @@ class GLMAnalyser(FMRIAnalyser):
         self.con_bl = contrast_test_baseline
         self.rescale_results = rescale_results
 
-        if rescale_factor_file != '':
+        if rescale_factor_file is not None:
             self.rescale_factor = xndarray.load(rescale_factor_file).data
         else:
             self.rescale_factor = None
