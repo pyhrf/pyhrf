@@ -271,6 +271,126 @@ Assume the following file structure::
 pyhrf_list_datafiles
 --------------------
 
+Usage:
+^^^^^^
+::
+        
+   pyhrf_list_datafiles [options]
+
+Description:
+^^^^^^^^^^^^
+        This command lists all data files included in the package.
+
+Options
+^^^^^^^
+::
+   
+  -h, --help       show this help message and exit
+  -b, --base-name  Display only basenames
+
+Examples:
+^^^^^^^^^
+
+::
+
+   pyhrf_list_datafiles
+
+    /home/user/software/pyhrf/python/pyhrf/datafiles/SPM_v12.mat.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/SPM_v5.mat.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/SPM_v8.mat.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/cortex_occipital_hrf_territories_3mm.nii
+    /home/user/software/pyhrf/python/pyhrf/datafiles/cortex_occipital_hrf_territories_convex_hull.tgz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/cortex_occipital_right_GWmask_3mm.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/cortex_occipital_white_surf.gii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/dummySmallBOLD.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/dummySmallMask.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_V4.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_loc.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_loc_a.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_loc_av.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_loc_av_d.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_loc_c_only.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_loc_cp_only.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/paradigm_loc_cpcd.csv
+    /home/user/software/pyhrf/python/pyhrf/datafiles/real_data_surf_tiny_bold.gii
+    /home/user/software/pyhrf/python/pyhrf/datafiles/real_data_surf_tiny_mesh.gii
+    /home/user/software/pyhrf/python/pyhrf/datafiles/real_data_surf_tiny_parcellation.gii
+    /home/user/software/pyhrf/python/pyhrf/datafiles/real_data_vol_4_regions_BOLD.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/real_data_vol_4_regions_anatomy.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/real_data_vol_4_regions_mask.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu.pck
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_hrf_3_territories.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_hrf_3_territories_8x8.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_hrf_4_territories.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_activated.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_ghost.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_house_sun.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_icassp13.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_invader.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_pacman.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_small_spots_1.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_small_spots_2.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_stretched_1.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_template.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_tiny_1.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_tiny_2.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/simu_labels_tiny_3.png
+    /home/user/software/pyhrf/python/pyhrf/datafiles/subj0_anatomy.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/subj0_bold_session0.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/subj0_parcellation.nii.gz
+    /home/user/software/pyhrf/python/pyhrf/datafiles/subj0_single_roi.nii.gz
+
+::
+
+   pyhrf_list_datafiles -b
+
+    SPM_v12.mat.gz
+    SPM_v5.mat.gz
+    SPM_v8.mat.gz
+    cortex_occipital_hrf_territories_3mm.nii
+    cortex_occipital_hrf_territories_convex_hull.tgz
+    cortex_occipital_right_GWmask_3mm.nii.gz
+    cortex_occipital_white_surf.gii.gz
+    dummySmallBOLD.nii.gz
+    dummySmallMask.nii.gz
+    paradigm_V4.csv
+    paradigm_loc.csv
+    paradigm_loc_a.csv
+    paradigm_loc_av.csv
+    paradigm_loc_av_d.csv
+    paradigm_loc_c_only.csv
+    paradigm_loc_cp_only.csv
+    paradigm_loc_cpcd.csv
+    real_data_surf_tiny_bold.gii
+    real_data_surf_tiny_mesh.gii
+    real_data_surf_tiny_parcellation.gii
+    real_data_vol_4_regions_BOLD.nii.gz
+    real_data_vol_4_regions_anatomy.nii.gz
+    real_data_vol_4_regions_mask.nii.gz
+    simu.pck
+    simu_hrf_3_territories.png
+    simu_hrf_3_territories_8x8.png
+    simu_hrf_4_territories.png
+    simu_labels_activated.png
+    simu_labels_ghost.png
+    simu_labels_house_sun.png
+    simu_labels_icassp13.png
+    simu_labels_invader.png
+    simu_labels_pacman.png
+    simu_labels_small_spots_1.png
+    simu_labels_small_spots_2.png
+    simu_labels_stretched_1.png
+    simu_labels_template.png
+    simu_labels_tiny_1.png
+    simu_labels_tiny_2.png
+    simu_labels_tiny_3.png
+    subj0_anatomy.nii.gz
+    subj0_bold_session0.nii.gz
+    subj0_parcellation.nii.gz
+    subj0_single_roi.nii.gz
+   
+
+
 pyhrf_info
 ----------
 
