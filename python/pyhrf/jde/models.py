@@ -329,7 +329,7 @@ class BOLDSamplerInput:
         pyhrf.verbose(6, 'availableDataIndex :')
         pyhrf.verbose.printNdarray(6, availableDataIndex)
 
-        lgt = (self.ny+2)*osf
+        lgt = int((self.ny+2)*osf)
         allMatH = []
         for iSess in xrange(self.nbSessions):
             matH = np.zeros((lgt, self.nbConditions), dtype=int)
@@ -427,7 +427,7 @@ class BOLDSamplerInput:
         #parData[nonzero(parData)] = arange(size(nonzero(parData)))+ones(size(nonzero(parData)))
 
 
-        lgt = (self.ny+2)*osf
+        lgt = int((self.ny + 2) * osf)
         allMatH = []
         for iSess in xrange(self.nbSessions):
             nbTrials = np.zeros(self.nbConditions)
