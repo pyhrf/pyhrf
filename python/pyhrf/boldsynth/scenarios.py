@@ -620,7 +620,7 @@ def create_bold_stim_induced_signal(brls, rastered_paradigm, brf, condition_defs
     #print 'hrf:', hrf
     #print 'paradigm:', rastered_paradigm
     npos = brls.shape[1]
-    duration_dt = len(brf[:,0])+len(rastered_paradigm[0])-1
+    duration_dt = len(brf[:,0]) + len(rastered_paradigm[0]) - 1
     asl = np.zeros((duration_dt , npos))
 
     for ipos in xrange(npos):
@@ -952,7 +952,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
         dsf = simulation['dsf']
         perf = np.dot(simulation['ctrl_tag_mat'],
-                      simulation['perf_stim_induced'][::dsf])
+                      simulation['perf_stim_induced'][0:-1:dsf])
         stim_induced_vol = expand_array_in_mask(perf, mask_vol, flat_axis=1)
         write_volume(np.rollaxis(stim_induced_vol,0,4), fn_stim_induced)
 
