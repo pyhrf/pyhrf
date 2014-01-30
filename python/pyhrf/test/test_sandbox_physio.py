@@ -59,16 +59,13 @@ class SimulationTest(unittest.TestCase):
 
         r = phy.simulate_asl_physio_rfs()
         # let's just test the shapes of objects and the presence of some
-        # physio-specific simulation items
+        # physio-specific simulation items:
         item_names = r.keys()
         self.assertIn('perf_stim_induced', item_names)
         self.assertIn('primary_brf', item_names)
         self.assertIn('perf_stim_induced', item_names)
         self.assertEqual(r['labels_vol'].shape, (3,1,2,2)) #cond, spatial axes
-        self.assertEqual(r['bold'].shape, (321, 4)) #nb scans, flat spatial axis
-        #TODO: nb scans in final BOLD should be defined by the session length
-        #      from the paradigm -> 297 instead of 321
-
+        self.assertEqual(r['bold'].shape[1], 4) #flat spatial axis
 
 
     def test_create_tbg_neural_efficacies(self):
