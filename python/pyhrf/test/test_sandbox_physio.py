@@ -205,10 +205,3 @@ class SimulationTest(unittest.TestCase):
             plt.plot(t,f)
             plt.title('inflow')
             plt.show()
-
-
-
-####
-    def test_finite_dif_matrix(self):
-        phy.buildOrder1FiniteDiffMatrix(10)
-        return None
