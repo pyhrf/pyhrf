@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
 
+import pyhrf
+
 if 1:
     from core_test import *
     from boldsynthTest import *
@@ -26,9 +28,10 @@ if 1:
 
 from test_ndarray import *
 
-#from test_sandbox import *
-#from test_sandbox_parcellation import *
-#from test_sandbox_physio import *
+if pyhrf.__usemode__ == pyhrf.DEVEL:
+    from test_sandbox import *
+    from test_sandbox_parcellation import *
+    from test_sandbox_physio import *
 
 if __name__ == "__main__":
     unittest.main()
