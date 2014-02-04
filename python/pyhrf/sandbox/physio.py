@@ -191,7 +191,7 @@ def create_evoked_physio_signals(physiological_params, paradigm,
                                                      epsilon)
 
     #downsampling:
-    nb_scans = paradigm.get_rastered(dt)[first_cond][0].size
+    nb_scans = stim.size
     dsf = int(dt/integration_step)
     return np.swapaxes(integrated_vars[:,:,::dsf][:,:,:nb_scans], 1, 2)
 
@@ -231,7 +231,7 @@ def create_physio_brf(physiological_params, response_dt=.5,
           (for error checking of v and q generation in calc_hrfs)
     """
 
-    p = Paradigm({'c':[np.array([0.])]}, [response_duration+response_dt],
+    p = Paradigm({'c':[np.array([0.])]}, [response_duration],
                  {'c':[np.array([1.])]})
     n = np.array([[1.]])
     s,f,v,q = create_evoked_physio_signals(physiological_params, p, n,
@@ -262,7 +262,7 @@ def create_physio_prf(physiological_params, response_dt=.5,
         - also return brf_not_normalized, q, v when return_prf_q_v=True
           (for error checking of v and q generation in calc_hrfs)
     """
-    p = Paradigm({'c':[np.array([0.])]}, [response_duration+response_dt],
+    p = Paradigm({'c':[np.array([0.])]}, [response_duration],
                  {'c':[np.array([1.])]}) # response_dt to match convention
                                          # in JDE analysis
     n = np.array([[1.]])
@@ -457,10 +457,12 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     if noise_scenario == 'high_snr':
         v_noise = 0.05
         conditions = [
-            Condition(name='audio', perf_m_act=5., perf_v_act=.1, perf_v_inact=.2,
+            Condition(name='audio', perf_m_act=5., perf_v_act=.1,
+                      perf_v_inact=.2,
                       bold_m_act=15., bold_v_act=.1, bold_v_inact=.2,
                       label_map=lmap1),
-            Condition(name='video', perf_m_act=5., perf_v_act=.11, perf_v_inact=.21,
+            Condition(name='video', perf_m_act=5., perf_v_act=.11,
+                      perf_v_inact=.21,
                       bold_m_act=14., bold_v_act=.11, bold_v_inact=.21,
                       label_map=lmap2),
             Condition(name='damier', perf_m_act=12.,

@@ -952,7 +952,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
         dsf = simulation['dsf']
         perf = np.dot(simulation['ctrl_tag_mat'],
-                      simulation['perf_stim_induced'][::dsf])
+                      simulation['perf_stim_induced'][0:-1:dsf])
         stim_induced_vol = expand_array_in_mask(perf, mask_vol, flat_axis=1)
         write_volume(np.rollaxis(stim_induced_vol,0,4), fn_stim_induced)
 

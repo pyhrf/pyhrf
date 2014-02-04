@@ -589,11 +589,22 @@ class GibbsSamplerVariable:
         self.value_label = value_label
         self.useTrueValue = useTrueValue
         self.name = name
+
+        if valIni is not None and not isinstance(valIni, np.ndarray):
+            raise Exception('Init value of variable %s should be a numpy array '\
+                            '(if scalar variable then it should encapsulated in'\
+                            'an array)' %self.name)
+        if trueVal is not None and not isinstance(trueVal, np.ndarray):
+            raise Exception('true value of variable %s should be a numpy array '\
+                            '(if scalar variable then it should encapsulated in'\
+                            'an array)' %self.name)
+
         if self.useTrueValue:
             self.currentValue = trueVal
         else:
             self.currentValue = valIni # if None -> must be
                                        # generated later
+
 
         self.trueValue = trueVal #should only be defined with linkToData (?)
         self.sampleFlag = sampleFlag
@@ -962,14 +973,14 @@ class GibbsSamplerVariable:
             outputs[self.name+'_rel_err'] = xndarray(r['rel_error'],
                                                    axes_names=self.axes_names,
                                                    axes_domains=self.axes_domains)
-            #on = self.name+'_inaccuracies'
-            #an = r['is_accurate'][0]
-            #ad = {}
-            #if an is not None:
-                #ad = dict((a,self.axes_domains[a]) \
-                          #for a in an if self.axes_domains.has_key(a))
-            #outputs[on] = xndarray(np.bitwise_not(r['accuracy'][1]).astype(np.int8),
-                                 #axes_names=an, axes_domains=ad)
+            on = self.name+'_inaccuracies'
+            an = r['accuracy'][0]
+            ad = {}
+            if an is not None:
+                ad = dict((a,self.axes_domains[a]) \
+                          for a in an if self.axes_domains.has_key(a))
+            inacc = np.bitwise_not(r['accuracy'][1]).astype(np.int8)
+            outputs[on] = xndarray(inacc, axes_names=an, axes_domains=ad)
 
         return outputs
 
@@ -1072,7 +1083,7 @@ class GibbsSamplerVariable:
                 # report['final_value'] = fv
                 abs_error = np.abs(tv - fv)
                 report['abs_error'] = abs_error
-                rel_error = abs_error/np.maximum(np.abs(tv),np.abs(fv))
+                rel_error = abs_error/np.maximum(np.abs(tv), np.abs(fv))
                 report['rel_error'] = rel_error
 
                 report['accuracy'] = self.get_accuracy(abs_error, rel_error,
@@ -1100,6 +1111,9 @@ class GibbsSamplerVariable:
     def get_accuracy(self, abs_error, rel_error, fv, tv, atol, rtol):
         """ Return the accuray of the estimate *fv*, compared to the true
         value *tv*
+
+        Output:
+            axes_names (list of str), accuracy (numpy array of booleans)
         """
         # same criterion as np.allclose:
         acc = abs_error <= (atol + rtol * np.maximum(np.abs(tv),
