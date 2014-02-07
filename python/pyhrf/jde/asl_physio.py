@@ -251,10 +251,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         wa = bl_sampler.wa
         y = self.dataInput.varMBY
 
-        if 'deterministic' in self.get_variable('prf').prior_type:
-            ytilde = y - Pl - wa
-        else:
-            ytilde = y - sumcXg - Pl - wa
+        ytilde = y - sumcXg - Pl - wa
 
         if 0 and self.dataInput.simulData is not None: #hack
             sd = self.dataInput.simulData[0]
