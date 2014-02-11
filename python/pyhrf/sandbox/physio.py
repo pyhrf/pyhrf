@@ -602,7 +602,7 @@ def  buildOrder1FiniteDiffMatrix_central(size,dt):
     r[size-1] = -.5
     c[1] = -.5
     c[size-1] = .5
-    return toeplitz(r,c).T/(2*dt)
+    return toeplitz(r,c).T/dt  #WARNING!! Modified. Before: (2*dt)
 
 
 def plot_calc_hrf(hrf1_simu, hrf1_simu_name, hrf1_calc, hrf1_calc_name,
