@@ -96,7 +96,9 @@ class FMRIAnalyser(xmlio.XmlInitable):
 
 
     def analyse_roi_wrap(self, roiData):
-
+        """
+        Wrap the analyse_roi method to catch potential exception 
+        """
         report = 'ok'
         if self.pass_error:
             try:
@@ -125,6 +127,19 @@ class FMRIAnalyser(xmlio.XmlInitable):
                                       %self.__class__)
 
     def analyse(self, data, output_dir=None):
+        """
+        Launch the wrapped analyser onto the given data
+        
+        Args:
+            - data (pyhrf.core.FmriData): the input fMRI data set (there may be multi parcels)
+            - output_dir (str): the path where to store parcel-specific fMRI data sets 
+                                (after splitting according to the parcellation mask)
+                                
+        Return:
+            a list of analysis results (list of tuple(FmriData, None|output of analyse_roi, str))
+                                       (list of tuple(parcel data, analysis results, analysis report))
+            see method analyse_roi_wrap
+        """
         pyhrf.verbose(3, "Split data ...")
         explodedData = self.split_data(data, output_dir)
         pyhrf.verbose(3, "Data splitting returned %d rois" %len(explodedData))
@@ -294,13 +309,14 @@ class FMRIAnalyser(xmlio.XmlInitable):
         pyhrf.verbose(6, 'results :')
         pyhrf.verbose.printDict(6, results, exclude=['xmlHandler'])
 
+        # Handle analyses that crashed
         results = self.filter_crashed_results(results)
 
         if len(results) == 0:
             pyhrf.verbose(1, 'No more result to treat. Did everything crash ?')
             return {}, []
 
-
+        # Merge all the analysis outputs
         target_shape = results[0][0].spatial_shape
         meta_data = results[0][0].meta_obj
 

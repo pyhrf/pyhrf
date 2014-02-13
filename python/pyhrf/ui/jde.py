@@ -82,9 +82,13 @@ class JDEAnalyser(FMRIAnalyser):
 
 
 class JDEMCMCAnalyser(JDEAnalyser):
-
+    """
+    Class that wraps a JDE Gibbs Sampler to launch an fMRI analysis
+    TODO: remove parameters about dt and osf (should go in HRF Sampler class),
+    drift (should go in Drift Sampler class)
+    """
     P_SAMPLER = 'sampler'
-    P_OSFMAX = 'osfMax'
+    P_OSFMAX = 'osfMax'         # over-sampling factor
     P_DTMIN = 'dtMin'
     P_DT = 'dt'
     P_DRIFT_LFD_PARAM = 'driftParam'
@@ -131,6 +135,13 @@ class JDEMCMCAnalyser(JDEAnalyser):
         self.sampler.set_nb_iterations(3)
 
     def analyse_roi(self, atomData):
+        """
+        Launch the JDE Gibbs Sampler on a parcel-specific data set *atomData*
+        Args:
+            - atomData (pyhrf.core.FmriData): parcel-specific data 
+        Returns:
+            JDE sampler object
+        """
         #print 'atomData:', atomData
 
         sampler = copyModule.deepcopy(self.sampler)
