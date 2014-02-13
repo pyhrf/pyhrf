@@ -353,6 +353,13 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
             - 'basic_regularized'
 
         """
+        available_priors = ['physio_stochastic_regularized',
+                              'physio_stochastic_not_regularized',
+                              'physio_deterministic',
+                              'basic_regularized']
+        if prior_type not in available_priors:
+            raise Exception('Wrong prior type %s. Available choices: %s'\
+                            %(prior_type, available_priors))
         xmlio.XmlInitable.__init__(self)
         self.diff_res = diff_res
         ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', smooth_order,

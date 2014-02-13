@@ -30,12 +30,13 @@ class ASLTest(unittest.TestCase):
                                                     zero_constraint=False),
             'brf_var' :  \
                 jasl.PhysioBOLDResponseVarianceSampler(do_sampling=False,
-                                                       val_ini=np.array([.001]),
+                                                       val_ini=np.array([0.1]),
                                                        use_true_value=False),
             'prf' :  jasl.PhysioPerfResponseSampler(do_sampling=False,
                                                     normalise=1.,
                                                     use_true_value=True,
-                                                    zero_constraint=False),
+                                                    zero_constraint=False,
+                                                    prior_type='physio_stochastic_regularized'),
             'prf_var' :  \
                 jasl.PhysioPerfResponseVarianceSampler(do_sampling=False,
                                                        val_ini=np.array([.001]),
@@ -81,11 +82,11 @@ class ASLTest(unittest.TestCase):
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir)
         fdata = FmriData.from_simulation_dict(simu)
-        self._test_specific_samplers(['prf'], fdata, nb_its=100,
+        self._test_specific_samplers(['prf'], fdata, nb_its=20,
                                      check_fv='raise')
         #print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
 
-    def test_brf(self):
+    def test_brf_physio_reg(self):
         """ Validate estimation of BRF at high SNR"""
         pyhrf.verbose.set_verbosity(2)
         from pyhrf.jde.asl import simulate_asl
@@ -93,7 +94,18 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['brf'], fdata, nb_its=100,
                                      check_fv='raise')
-        #print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
+        print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
+        
+    def test_brf_basic_reg(self):
+        """ Validate estimation of BRF at high SNR"""
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['brf'], fdata, nb_its=100,
+                                     check_fv='raise',
+                                     rf_prior_type='basic_regularized')
+        print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
 
     def test_brls(self):
         """ Validate estimation of BRLs at high SNR"""
@@ -103,7 +115,7 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['bold_response_levels'], fdata, nb_its=100,
                                      check_fv='raise')
-        #print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
+        #print 'pyhrf_view_qt3 %s/*brl*nii' %self.tmp_dir
 
 
     def test_prls(self):
@@ -166,7 +178,8 @@ class ASLTest(unittest.TestCase):
     def _test_specific_samplers(self, sampler_names, fdata,
                                 nb_its=None, use_true_val=None,
                                 save_history=False, check_fv=None,
-                                normalize_brf=1., normalize_prf=1.):
+                                normalize_brf=1., normalize_prf=1.,
+                                rf_prior_type='physio_stochastic_regularized'):
         """
         Test specific samplers.
         """
@@ -195,7 +208,8 @@ class ASLTest(unittest.TestCase):
                   jasl.PhysioPerfResponseSampler(do_sampling=True,
                                            use_true_value=use_tval,
                                            normalise=normalize_brf,
-                                           zero_constraint=False)
+                                           zero_constraint=False,
+                                           prior_type=rf_prior_type)
             else:
                 params[var_name] = var_class(do_sampling=True,
                                              use_true_value=use_tval)
