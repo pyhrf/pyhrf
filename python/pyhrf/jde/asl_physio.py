@@ -550,8 +550,8 @@ class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitab
         R = resp_sampler.varR
         resp = resp_sampler.currentValue
 
-        alpha = (len(resp) * self.nbVoxels - 1)/2
-        beta = np.dot(np.dot(resp.T, R), resp)/2
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
+        beta = np.dot(np.dot(resp.T, R), resp)/2.
 
         self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
 
