@@ -35,7 +35,6 @@ Dependencies are:
     - `numpy <http://docs.scipy.org/doc/numpy/user/install.html>`_ >= 1.0
     - `scipy <http://www.scipy.org/install.html>`_ >= 0.7
     - `matplotlib <http://matplotlib.org/users/installing.html>`_ 
-    - `PyXML <http://pyxml.sourceforge.net/topics/index.html>`_ >= 0.8.4
     - `nibabel <http://nipy.sourceforge.net/nibabel/>`_
     - `nipy <http://nipy.sourceforge.net/nipy/stable/users/installation.html>`_
     - a C compiler 
@@ -121,7 +120,7 @@ Dependency troubleshooting
 **************************
 
 The pyhrf installation process relies on distribute (overlay of distutils), 
-therefore all python dependencies (numpy, scipy, PyXML, matplotlib,
+therefore all python dependencies (numpy, scipy, matplotlib,
 PyQt, nipy, nibabel) should be *"egg installed"*. 
 Python packages installed by the system might not compatible with the setuptools egg system. Special installation locations can be added to the ``'setup.cfg'`` file at the root directory of the pyhrf decompressed tarball. Simply append a line such as::
 ``site-dirs=/path/to/installed/package``

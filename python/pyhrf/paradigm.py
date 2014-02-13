@@ -487,9 +487,9 @@ def restarize_events(events, durations, dt, tMax):
     pyhrf.verbose(6, 'sampledOnsets :' + str(smplEvents.shape))
     pyhrf.verbose.printNdarray(6, smplEvents)
     if np.allclose(tMax%dt,0):
-        binSeq = np.zeros(tMax/dt + 1)
+        binSeq = np.zeros(int(tMax/dt) + 1)
     else:
-        binSeq = np.zeros(np.round((tMax + dt)/ dt))
+        binSeq = np.zeros(int(np.round((tMax + dt)/ dt)))
     binSeq[smplEvents] = 1
     pyhrf.verbose(6, 'bins :')
     pyhrf.verbose.printNdarray(6, binSeq)

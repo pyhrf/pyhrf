@@ -620,7 +620,7 @@ def create_bold_stim_induced_signal(brls, rastered_paradigm, brf, condition_defs
     #print 'hrf:', hrf
     #print 'paradigm:', rastered_paradigm
     npos = brls.shape[1]
-    duration_dt = len(brf[:,0])+len(rastered_paradigm[0])-1
+    duration_dt = len(brf[:,0]) + len(rastered_paradigm[0]) - 1
     asl = np.zeros((duration_dt , npos))
 
     for ipos in xrange(npos):
