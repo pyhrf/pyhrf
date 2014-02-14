@@ -27,14 +27,6 @@ def dependCheck(checkers):
     return dflags
 
 
-def checkPyXML():
-    try:
-        import xml
-    except ImportError:
-        return False
-    return True
-
-
 def checkPyhrf():
     try:
         import pyhrf
@@ -43,10 +35,7 @@ def checkPyhrf():
         return False
     return True
 
-dependCheckers = {
-    'pyxml': checkPyXML,
-    }
-
+dependCheckers = {}
 
 dependFlags = dependCheck(dependCheckers)
 

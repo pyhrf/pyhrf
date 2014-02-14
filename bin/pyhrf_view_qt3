@@ -1,0 +1,244 @@
+#! /bin/env python
+# -*- coding: utf-8 -*-
+import os, sys, string, cPickle, re
+from os.path import splitext, basename
+from optparse import OptionParser
+try:
+    from scipy.io.mio import loadmat
+except ImportError :
+    from scipy.io.matlab import loadmat
+
+import pyhrf
+from pyhrf import xmlio
+from pyhrf.verbose import dictToString
+import pyhrf.viewer.qt3 as ndview
+
+from pyhrf.tools.io import read_volume, MRI3Daxes, MRI4Daxes
+#from ndview.core import Cuboid, CuboidView
+from pyhrf.viewer.qt3 import xndarrayView as CuboidView
+from pyhrf.ndarray import xndarray
+import numpy as _N
+
+import cProfile
+
+
+def applyTrueLabelMask(views, sessionNames):
+    print 'applyTrueLabelMask ...'
+    if views.has_key('labels'):
+        print 'got labels !'
+        labc = views['labels'].cuboid
+        print 'labc:',
+        print labc.descrip()
+        mlabels = xndarray(labc.data+1, axes_names=labc.getAxesNames(),
+                         axesDomains=labc.getAxesDomainsDict(),
+                         valueLabel=labc.getValueLabel())
+        #print sessionNames
+        #for sessName in sessionNames:
+            #n = sessName+'_pmLabels'
+            #print 'got ', n, '!'
+            #if views.has_key(n):
+        for vn,v in views.items():
+            print '%s ...', vn
+            try:
+                v.applyMask(mlabels)
+            except Exception, e:
+                print 'couldnt apply mask to', vn
+                print v.cuboid.descrip()
+                print 'exception:'
+                print e
+                print ''
+            print ''
+    sys.stdout.flush()
+
+def getSessionName(fn):
+    if splitext(fn)[-1] == '.pck':
+        output = cPickle.load(open(fn,'r'))
+        if type(output) == dict:
+            return output.keys()
+    return None
+
+def parseXmlFile(fn):
+    f = open(fn,'r')
+    so = f.read()
+    o = xmlio.fromXML(so, handler=xmlio.xmlnumpy.NumpyXMLHandler())
+    for on,ov in o.iteritems():
+        #o[on] = xndarrayView(ov.cuboid)
+        o[on] = ov.cuboid
+    return o
+
+def parsePickledFile(fn):
+    print 'Viewing a pickled file ...'
+    print 'Loading outputs ...'
+    output = cPickle.load(open(fn,'r'))
+    print 'outputs loaded !'
+    key = basename(fn)
+    #print 'type output :', type(output)
+    #print 'output : ', output
+    if type(output) == dict:
+        return getDictOutput(output)
+    elif type(output) == _N.ndarray:
+        if len(output.shape) == 3:
+            return {key:xndarrayView(xndarray(output, axes_names=MRI3Daxes))}
+        elif len(output.shape) == 4:
+            return {key:xndarrayView(xndarray(output, axes_names=MRI4Daxes))}
+        else:
+            return {key:xndarrayView(xndarray(output))}
+    elif isinstance(output, xndarray):
+        return {key:xndarrayView(output)}
+
+def getDictOutput(output):
+    print 'Packing views ...'
+    mask = output.pop('roiMask', None)
+
+    dataType = output.get('dataType','jdeAnalysis')
+
+    if dataType == 'jdeAnalysis':
+        dataViews = {}
+        #for sess,sessData in output.items():
+        for idObj, data in output.items():
+            try:
+                v = ndview.core.xndarrayView(data)
+                try:
+                    if mask is not None:
+                        v.applyMask(mask, 'ROI')
+                except Exception , e :
+                    print 'In applying mask :'
+                    print repr(e)
+                dataViews[idObj] = v
+            except Exception , e:
+                print 'Couldn\'t build a view for', idObj
+                print '->', repr(e)
+        print 'Done !'
+        return dataViews
+    else:
+        print 'Datatype not understood !'
+        sys.exit(1)
+
+
+usage = 'usage: %%prog [options] FILES '
+
+description = 'Viewer of files handled by pyhrf:\n ' \
+              ' - nifti image (.nii)' \
+              ' - matlab file (mat) [printed to stdout]'
+
+parser = OptionParser(usage=usage, description=description)
+
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+parser.add_option('-m','--mask-file',dest='maskFile',metavar='FILE',
+                  help="n-ary mask to be applied on viewed data")
+parser.add_option('-n','--mask-name',dest='maskName',metavar='STRING',
+                  help="Name of mask", default='mask')
+
+
+(options,args) = parser.parse_args()
+pyhrf.verbose.set_verbosity(options.verbose)
+
+files = args
+
+if options.maskFile is not None:
+    if options.maskFile not in files:
+        files.append(options.maskFile)
+    mExt = splitext(options.maskFile)[1]
+    if mExt == '.ima':
+        mask, headMask = readImageWithAims(options.maskFile)
+        mask = xndarray(mask, axes_names=['axial','coronal','sagittal'])
+    elif mExt == '.img' or mExt == '.nii':
+        mask = xndarray.load(options.maskFile)
+    elif mExt == '.pck':
+        mask = cPickle.load(open(options.maskFile))
+        mask = xndarray(mask, axes_names=['axial','coronal','sagittal'])
+    assert mask.get_ndims() == 3
+else:
+    mask = None
+
+views = {}
+volsToStack = []
+print ''
+print 'files:', files
+print ''
+for f in files:
+    print 'doing:', f
+    base, ext = splitext(f)
+    if ext == '.gz':
+        base,ext = splitext(f[:-3])
+    if ext == '.mat':
+        print 'Printing the content of the mat file :'
+        print ' ', f
+        spm = loadmat(f)
+        print dictToString(spm, exclude=['private','dtype'])
+        sys.exit(0)
+    elif ext == '.pck':
+        views.update(parsePickledFile(f))
+    elif ext == '.xml':
+        views.update(parseXmlFile(f))
+    elif ext == '.nii' or ext == '.ima' or ext == '.img' \
+      or ext == '.gii':
+        if ext == '.nii' or ext == '.img':
+            data, header = read_volume(f)
+            if data.dtype == _N.int16:
+                data = data.astype(_N.int32)
+        elif ext == '.ima' :
+            data, header = read_volume(f)
+        tmp = basename(f)
+        name = basename(f)
+        i = 1
+        while views.has_key(tmp):
+            tmp = name + "(%d)" %i
+            i += 1
+        name = tmp
+        print 'name :', name
+        views[name] = xndarray.load(f)
+        # if data.ndim == 3:
+        #     views[name] = xndarrayView(xndarray(data, axesNames=MRI3Daxes))
+        # elif data.ndim == 4:
+        #     views[name] = xndarrayView(xndarray(data, axesNames=MRI4Daxes))
+        # else:
+        #     views[name] = xndarrayView(xndarray(data))
+    # elif ext == '.gz' and splitext(base)[1]=='.nii':
+    #     data, header = read_volume(f)
+    #     tmp = basename(f)
+    #     i = 1
+    #     while views.has_key(tmp):
+    #         tmp = name + "(%d)" %i
+    #         i += 1
+    #     name = tmp
+    #     print 'name :', name
+    #     if data.ndim == 3:
+    #         views[name] = xndarrayView(xndarray(data, axes_names=MRI3Daxes))
+    #     elif data.ndim == 4:
+    #         views[name] = xndarrayView(xndarray(data, axes_names=MRI4Daxes))
+    #     else:
+    #         views[name] = xndarray(data)
+    else:
+        print '"%s": unrecognized extension !' %f
+
+
+#sessionNames = []
+#for f in files:
+#    sn = getSessionName(f)
+#    if sn is not None:
+#        sessionNames.extend(sn)
+#applyTrueLabelMask(views, sessionNames)
+#applyTrueLabelMask(views, None)
+
+# if mask != None:
+#     print 'Applying mask ...'
+#     for viewName, view in views.iteritems():
+#         try:
+#             view.applyMask(mask, maskName=options.maskName)
+#         except Exception,e :
+#             print 'Mask could not be applied to %s' %viewName
+#             print 'exception:', e
+#             print ''
+#             print ''
+
+#for nv,v in views.iteritems():
+#   print 'nv:', nv
+#   print v.descrip()
+
+print 'Calling multiView (mask=%s)...' %str(mask)
+ndview.multiView(views, mask)
+sys.exit(0)

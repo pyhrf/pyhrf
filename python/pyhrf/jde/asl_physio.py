@@ -353,6 +353,13 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
             - 'basic_regularized'
 
         """
+        available_priors = ['physio_stochastic_regularized',
+                              'physio_stochastic_not_regularized',
+                              'physio_deterministic',
+                              'basic_regularized']
+        if prior_type not in available_priors:
+            raise Exception('Wrong prior type %s. Available choices: %s'\
+                            %(prior_type, available_priors))
         xmlio.XmlInitable.__init__(self)
         self.diff_res = diff_res
         ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', smooth_order,
@@ -543,8 +550,8 @@ class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitab
         R = resp_sampler.varR
         resp = resp_sampler.currentValue
 
-        alpha = (len(resp) * self.nbVoxels - 1)/2
-        beta = np.dot(np.dot(resp.T, R), resp)/2
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
+        beta = np.dot(np.dot(resp.T, R), resp)/2.
 
         self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
 
@@ -582,8 +589,8 @@ class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitab
         mu_g = np.dot(omega,resp)
         resp_minus_mean = resp-mu_g
 
-        alpha = (len(resp) * self.nbVoxels - 1)/2
-        beta = np.dot(np.dot( resp_minus_mean.T, R), resp_minus_mean)/2
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
+        beta = np.dot(np.dot( resp_minus_mean.T, R), resp_minus_mean)/2.
 
         self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
 
@@ -651,12 +658,12 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
     def sampleNextInternal(self, variables):
         y_tilde = self.compute_y_tilde()
 
-        beta = (y_tilde * y_tilde).sum(0)/2
+        beta = (y_tilde * y_tilde).sum(0)/2.
 
         #gammaSamples = np.random.gamma(0.5*(self.ny - self.dataInput.colP +1)-1, 1,
         #                            self.nbVoxels)
 
-        gammaSamples = np.random.gamma((self.ny - 1.)/2, 1, self.nbVoxels)
+        gammaSamples = np.random.gamma((self.ny - 1.)/2., 1, self.nbVoxels)
 
         np.divide(beta, gammaSamples, self.currentValue)
 
@@ -1640,7 +1647,7 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         alpha = self.samplerEngine.get_variable('perf_baseline').currentValue
 
         a = (self.nbVoxels - 1) / 2.
-        b = (alpha**2).sum() / 2
+        b = (alpha**2).sum() / 2.
 
         self.currentValue[0] = 1 / np.random.gamma(a, 1/b)
 
