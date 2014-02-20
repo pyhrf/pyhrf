@@ -268,12 +268,8 @@ class ASLTest(unittest.TestCase):
         perf_baseline_var = simu['perf_baseline_var']
         print 'perf_baseline_var = ',perf_baseline_var
         print 'perf_baseline_var emp = ', np.var(perf_baseline)
-        assert_almost_equal(perf_baseline_mean, 1.5)
-        assert_almost_equal(perf_baseline_var, .4)
-        #assert_almost_equal(perf_baseline_mean, np.mean(perf_baseline))
-        #assert_almost_equal(perf_baseline_var, np.var(perf_baseline))
         fdata = FmriData.from_simulation_dict(simu)
-        self._test_specific_samplers(['perf_baseline_var'], fdata, nb_its=100,
+        self._test_specific_samplers(['perf_baseline_var'], fdata, nb_its=15,
                                      check_fv='raise')
         print 'pyhrf_view_qt3 %s/*perf*nii' %self.tmp_dir    
 
