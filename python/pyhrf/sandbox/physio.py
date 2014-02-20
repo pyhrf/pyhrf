@@ -116,6 +116,7 @@ def phy_integrate_euler(phy_params, tstep, stim, epsilon, Y0=None):
     TODO: should the output signals be rescaled wrt their value at rest?
     """
 
+    epsilon = phy_params['eps']   #WARNING!! Added to compute figures 
     tau_s = phy_params['tau_s']
     tau_f = phy_params['tau_f']
     tau_m = phy_params['tau_m']
@@ -238,7 +239,7 @@ def create_physio_brf(physiological_params, response_dt=.5,
                                            response_dt)
     brf = create_bold_from_hbr_and_cbv(physiological_params, q[:,0], v[:,0])
     if return_brf_q_v:
-        return  brf/ (brf**2).sum()**.5, q, v
+        return  brf/ (brf**2).sum()**.5, q, v, s, f  #WARNING!! Added to compute figures
     else:
         return  brf / (brf**2).sum()**.5
 

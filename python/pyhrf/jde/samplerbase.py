@@ -1076,8 +1076,8 @@ class GibbsSamplerVariable:
             elif self.sampleFlag:
                 fv = self.get_final_value()
                 tv = self.get_true_value()
-                rtol = 0.1
-                atol = 0.1
+                rtol = 0.1      # Relative tolerance value: 10%
+                atol = 0.1      # Absolute tolerance value. TODO: dependency to parameter
 
                 # report['true_value'] = tv
                 # report['final_value'] = fv
