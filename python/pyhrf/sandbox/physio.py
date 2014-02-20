@@ -192,7 +192,7 @@ def create_evoked_physio_signals(physiological_params, paradigm,
                                                      epsilon)
 
     #downsampling:
-    nb_scans = stim.size
+    nb_scans = paradigm.get_rastered(dt)[first_cond][0].size
     dsf = int(dt/integration_step)
     return np.swapaxes(integrated_vars[:,:,::dsf][:,:,:nb_scans], 1, 2)
 
@@ -232,7 +232,7 @@ def create_physio_brf(physiological_params, response_dt=.5,
           (for error checking of v and q generation in calc_hrfs)
     """
 
-    p = Paradigm({'c':[np.array([0.])]}, [response_duration],
+    p = Paradigm({'c':[np.array([0.])]}, [response_duration+response_dt],
                  {'c':[np.array([1.])]})
     n = np.array([[1.]])
     s,f,v,q = create_evoked_physio_signals(physiological_params, p, n,
@@ -263,7 +263,7 @@ def create_physio_prf(physiological_params, response_dt=.5,
         - also return brf_not_normalized, q, v when return_prf_q_v=True
           (for error checking of v and q generation in calc_hrfs)
     """
-    p = Paradigm({'c':[np.array([0.])]}, [response_duration],
+    p = Paradigm({'c':[np.array([0.])]}, [response_duration+response_dt],
                  {'c':[np.array([1.])]}) # response_dt to match convention
                                          # in JDE analysis
     n = np.array([[1.]])
@@ -399,6 +399,152 @@ def simulate_asl_full_physio(output_dir=None, noise_scenario='high_snr',
         'perf_baseline_mean' : 0.,
         'perf_baseline_var': 0.,
         # maybe rename to ASL (should be also modified in JDE)#TODO
+        'bold' : simbase.create_asl_from_stim_induced,
+        }
+    simu_graph = Pipeline(simulation_steps)
+
+    # Compute everything
+    simu_graph.resolve()
+    simulation = simu_graph.get_values()
+
+    if output_dir is not None:
+        #simu_graph.save_graph_plot(op.join(output_dir, 'simulation_graph.png'))
+        simbase.simulation_save_vol_outputs(simulation, output_dir)
+
+        # f = open(op.join(output_dir, 'simulation.pck'), 'w')
+        # cPickle.dump(simulation, f)
+        # f.close()
+
+    return simulation
+
+
+def create_omega_prf(primary_brf, dt, physiological_params):
+    """
+    """
+    omega = linear_rf_operator(primary_brf.shape[0], physiological_params, dt)
+    prf = np.dot(omega, primary_brf)
+    prf = prf / (prf**2).sum()**.5
+    return prf
+
+def simulate_asl_phylin_prf(output_dir=None, noise_scenario='high_snr',
+                            spatial_size='tiny'):
+    """
+    Generate ASL data according to a LTI system, with canonical BRF and
+    PRF = Omega.BRF.
+
+    Args:
+        - output_dir (str|None): path where to save outputs as nifti files.
+                                 If None: no output files
+        - noise_scenario ("high_snr"|"low_snr"): scenario defining the SNR
+        - spatial_size  ("tiny"|"normal") : scenario for the size of the map
+                                            - "tiny" produces 2x2 maps
+                                            - "normal" produces 20x20 maps
+
+    Result:
+        dict (<item_label (str)> : <simulated_item (np.ndarray)>)
+        -> a dictionary mapping names of simulated items to their values
+
+        WARNING: in this dict the 'bold' item is in fact the ASL signal.
+                 This name was used to be compatible with JDE which assumes
+                 that the functional time series is named "bold".
+                 TODO: rather use the more generic label 'fmri_signal'.
+    """
+
+    drift_var = 10.
+    dt = .5
+    dsf = 2 #down sampling factor
+
+    if spatial_size == 'tiny':
+        lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
+    elif spatial_size == 'random_small':
+        lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
+    else:
+        lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
+
+    if noise_scenario == 'high_snr':
+        v_noise = 0.05
+        conditions = [
+            Condition(name='audio', perf_m_act=5., perf_v_act=.1, perf_v_inact=.2,
+                      bold_m_act=15., bold_v_act=.1, bold_v_inact=.2,
+                      label_map=lmap1),
+            Condition(name='video', perf_m_act=5., perf_v_act=.11, perf_v_inact=.21,
+                      bold_m_act=14., bold_v_act=.11, bold_v_inact=.21,
+                      label_map=lmap2),
+            Condition(name='damier', perf_m_act=12.,
+                      perf_v_act=.12, perf_v_inact=.22,
+                      bold_m_act=20., bold_v_act=.12, bold_v_inact=.22,
+                      label_map=lmap3),
+                      ]
+    elif noise_scenario == 'low_snr_low_prl':
+        v_noise = 7.
+        scale = .3
+        print 'noise_scenario: low_snr_low_prl'
+        conditions = [
+            Condition(name='audio', perf_m_act=1.6*scale, perf_v_act=.1,
+                      perf_v_inact=.1,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap1),
+            Condition(name='video', perf_m_act=1.6*scale, perf_v_act=.1,
+                      perf_v_inact=.1,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap2),
+                      ]
+
+    else: #low_snr
+        v_noise = 2.
+        conditions = [
+            Condition(name='audio', perf_m_act=1.6, perf_v_act=.3,
+                      perf_v_inact=.3,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap1),
+            Condition(name='video', perf_m_act=1.6, perf_v_act=.3,
+                      perf_v_inact=.3,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap2),
+                      ]
+
+    simulation_steps = {
+        'dt' : dt,
+        'dsf' : dsf,
+        'tr' : dt * dsf,
+        'condition_defs' : conditions,
+        # Paradigm
+        'paradigm' : simbase.create_localizer_paradigm_avd,
+        'rastered_paradigm' : simbase.rasterize_paradigm,
+        # Labels
+        'labels_vol' : simbase.create_labels_vol,
+        'labels' : simbase.flatten_labels_vol,
+        'nb_voxels': lambda labels: labels.shape[1],
+        # Physiological model (for generation of RFs)
+        'physiological_params' : PHY_PARAMS_FRISTON00,
+        # Brls
+        'brls' : simbase.create_time_invariant_gaussian_brls,
+        # Prls
+        'prls' : simbase.create_time_invariant_gaussian_prls,
+        # BRF
+        'primary_brf' : simbase.create_canonical_hrf,
+        'brf' : simbase.duplicate_brf,
+        # PRF
+        'primary_prf' : create_omega_prf,
+        'prf' : simbase.duplicate_prf,
+        # Perf baseline
+        'perf_baseline' : simbase.create_perf_baseline,
+        'perf_baseline_mean' : 1.5,
+        'perf_baseline_var': .4,
+        # Stim induced
+        'bold_stim_induced' : simbase.create_bold_stim_induced_signal,
+        'perf_stim_induced' : simbase.create_perf_stim_induced_signal,
+        # Noise
+        'v_gnoise' : v_noise,
+        'noise' : simbase.create_gaussian_noise_asl,
+        # Drift
+        'drift_order' : 4,
+        'drift_var' : drift_var,
+        'drift_coeffs':simbase.create_drift_coeffs_asl,
+        'drift' : simbase.create_polynomial_drift_from_coeffs_asl,
+        # Bold # maybe rename as ASL (should be handled afterwards ...
+        'ctrl_tag_mat' : simbase.build_ctrl_tag_matrix,
+        'asl_shape' : simbase.calc_asl_shape,
         'bold' : simbase.create_asl_from_stim_induced,
         }
     simu_graph = Pipeline(simulation_steps)

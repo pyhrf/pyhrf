@@ -218,7 +218,7 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         np.random.seed(25430)
         v = ['bold_response_levels', 'perf_response_levels', 'drift', 'drift_var',
-             'brf', 'brf_var', 'prf', 'prf', 'labels', 'bold_mixt_params', 
+             'brf', 'brf_var', 'prf', 'labels', 'bold_mixt_params', 
              'perf_mixt_params', 'perf_baseline', 'perf_baseline_var']
 
         self._test_specific_samplers(v, fdata, nb_its=500, check_fv='print')
