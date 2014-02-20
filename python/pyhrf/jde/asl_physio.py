@@ -93,8 +93,8 @@ class ResponseSampler(GibbsSamplerVariable):
 
         self.ytilde = np.zeros((self.ny,self.nbVoxels), dtype=float)
 
-        # self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
-        #                             axes_names=['time', 'voxel'])
+        self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
+                                    axes_names=['time', 'voxel'])
 
     def checkAndSetInitValue(self, variables):
 
@@ -241,13 +241,19 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
     def get_mat_XtWX(self):
         return self.dataInput.XtWX
 
+    def samplingWarmUp(self, v):
+        self.new_factor_mean = np.zeros_like(self.currentValue)
+        self.track_sampled_quantity(self.new_factor_mean, self.name + '_new_factor_mean',
+                                    axes_names=['time'])
+        
+            
     def computeYTilde(self):
         """ y - \sum cWXg - Pl - wa """
 
-        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
-        drift_sampler = self.samplerEngine.get_variable('drift_coeff')
+        sumcXg = self.get_variable('prl').sumBXResp
+        drift_sampler = self.get_variable('drift_coeff')
         Pl = drift_sampler.Pl
-        bl_sampler = self.samplerEngine.get_variable('perf_baseline')
+        bl_sampler = self.get_variable('perf_baseline')
         wa = bl_sampler.wa
         y = self.dataInput.varMBY
 
@@ -256,9 +262,9 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         if 0 and self.dataInput.simulData is not None: #hack
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
-            brl_sampler = self.samplerEngine.get_variable('brl')
-            prl_sampler = self.samplerEngine.get_variable('prl')
-            prf_sampler = self.samplerEngine.get_variable('prf')
+            brl_sampler = self.get_variable('brl')
+            prl_sampler = self.get_variable('prl')
+            prf_sampler = self.get_variable('prf')
 
             if not prl_sampler.sampleFlag and not prf_sampler.sampleFlag and\
                     prl_sampler.useTrueValue and prf_sampler.useTrueValue:
@@ -289,11 +295,11 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         changes to var:
         """
 
-        rl_sampler = self.samplerEngine.get_variable(self.response_level_name)
+        rl_sampler = self.get_variable(self.response_level_name)
         rl = rl_sampler.currentValue
         rlrl = rl_sampler.rr
 
-        noise_var = self.samplerEngine.get_variable('noise_var').currentValue
+        noise_var = self.get_variable('noise_var').currentValue
 
         mx = self.get_mat_X()
         mxtx = self.get_mat_XtX()
@@ -303,7 +309,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, rlrl,
                                    self.yBj, self.BjBk_vb)
 
-        v_resp = self.samplerEngine.get_variable(self.var_name).currentValue
+        v_resp = self.get_variable(self.var_name).currentValue
 
         omega = self.get_variable('prf').omega_value
 
@@ -311,17 +317,17 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         if 'deterministic' in self.get_variable('prf').prior_type:
             v_prf = 1.
         else:
-            v_prf =  self.samplerEngine.get_variable('prf_var').currentValue
+            v_prf =  self.get_variable('prf_var').currentValue
 
-        sigma_g_inv = self.samplerEngine.get_variable('prf').varR
+        sigma_g_inv = self.get_variable('prf').varR
 
-        new_factor_mean = np.dot(np.dot(omega.transpose(),sigma_g_inv),prf)\
-                          /v_prf
+        self.new_factor_mean[:] = np.dot(np.dot(omega.transpose(),sigma_g_inv),prf)\
+                                  /v_prf
         new_factor_var = np.dot(np.dot(omega.transpose(), sigma_g_inv),omega)\
                          /v_prf
 
         varInvSigma = StS + self.nbVoxels * self.varR / v_resp + new_factor_var
-        mean_h = np.linalg.solve(varInvSigma,StY+new_factor_mean)
+        mean_h = np.linalg.solve(varInvSigma,StY + self.new_factor_mean)
         resp = np.random.multivariate_normal(mean_h,np.linalg.inv(varInvSigma))
         if self.normalise:
             norm = (resp**2).sum()**.5
@@ -407,9 +413,9 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         brl_sampler = self.get_variable('brl')
         sumaXh = brl_sampler.sumBXResp
 
-        drift_sampler = self.samplerEngine.get_variable('drift_coeff')
+        drift_sampler = self.get_variable('drift_coeff')
         Pl = drift_sampler.Pl
-        perf_baseline_sampler = self.samplerEngine.get_variable('perf_baseline')
+        perf_baseline_sampler = self.get_variable('perf_baseline')
         wa = perf_baseline_sampler.wa
         y = self.dataInput.varMBY
 
@@ -454,17 +460,17 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         changes to mean: add a factor of Omega h Sigma_g^-1 v_g^-1
         """
 
-        rl_sampler = self.samplerEngine.get_variable(self.response_level_name)
+        rl_sampler = self.get_variable(self.response_level_name)
         rl = rl_sampler.currentValue
         rlrl = rl_sampler.rr
-        smpl_brf = self.samplerEngine.get_variable('brf')
+        smpl_brf = self.get_variable('brf')
         omega = self.omega_value
         brf = smpl_brf.currentValue
 
         if 'deterministic' in self.prior_type:
             resp = np.dot(omega,brf)
         else: #stochastic
-            noise_var = self.samplerEngine.get_variable('noise_var').currentValue
+            noise_var = self.get_variable('noise_var').currentValue
 
             mx = self.get_mat_X()
             mxtx = self.get_mat_XtX()
@@ -474,7 +480,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
             StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, rlrl,
                                        self.yBj, self.BjBk_vb)
 
-            v_resp = self.samplerEngine.get_variable(self.var_name).currentValue
+            v_resp = self.get_variable(self.var_name).currentValue
 
             sigma_g_inv = self.varR
 
@@ -526,9 +532,22 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
                 self.currentValue = self.trueValue.astype(np.float64)
 
     def sampleNextInternal(self, v):
-        raise NotImplementedError()
+        """
+        Sample variance of BRF or PRF
 
+        TODO: change code below --> no changes necessary so far
+        """
+        resp_sampler = self.get_variable(self.response_name)
+        R = resp_sampler.varR
+        resp = resp_sampler.currentValue
 
+        alpha = (len(resp) * self.nbVoxels - 1)/2.  
+        #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
+        beta = np.dot(np.dot(resp.T, R), resp)/2.
+
+        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
+
+        
 class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
@@ -538,24 +557,7 @@ class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitab
         ResponseVarianceSampler.__init__(self, 'brf_var', 'brf',
                                          val_ini, do_sampling, use_true_value)
 
-
-
-    def sampleNextInternal(self, v):
-        """
-        Sample variance of BRF
-
-        TODO: change code below --> no changes necessary so far
-        """
-        resp_sampler = self.samplerEngine.get_variable(self.response_name)
-        R = resp_sampler.varR
-        resp = resp_sampler.currentValue
-
-        alpha = (len(resp) * self.nbVoxels - 1)/2.
-        beta = np.dot(np.dot(resp.T, R), resp)/2.
-
-        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
-
-
+                                         
 class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
@@ -563,38 +565,6 @@ class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitab
         xmlio.XmlInitable.__init__(self)
         ResponseVarianceSampler.__init__(self, 'prf_var', 'prf',
                                          val_ini, do_sampling, use_true_value)
-
-    def samplingWarmUp(self, variables):
-
-        from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
-        from pyhrf.sandbox.physio import buildOrder1FiniteDiffMatrix_central
-        from pyhrf.sandbox.physio import linear_rf_operator
-
-        hrf_length = self.samplerEngine.get_variable('prf').hrfLength
-        hrf_dt = self.samplerEngine.get_variable('prf').dt
-
-    def sampleNextInternal(self, v):
-        """
-        Sample variance of PRF
-
-        changes:
-          - mu_g = omega h
-          - new beta calculation, based on physio_inspired prior
-        """
-        resp_sampler = self.samplerEngine.get_variable(self.response_name)
-        R = resp_sampler.varR
-        resp = resp_sampler.currentValue
-        omega = self.get_variable('prf').omega_value
-
-        mu_g = np.dot(omega,resp)
-        resp_minus_mean = resp-mu_g
-
-        alpha = (len(resp) * self.nbVoxels - 1)/2.
-        beta = np.dot(np.dot( resp_minus_mean.T, R), resp_minus_mean)/2.
-
-        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
-
-
 
 
 class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
@@ -646,10 +616,10 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
     def compute_y_tilde(self):
         pyhrf.verbose(4, 'NoiseVarianceSampler.compute_y_tilde ...')
 
-        sumaXh = self.samplerEngine.get_variable('brl').sumBXResp
-        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
-        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
+        sumaXh = self.get_variable('brl').sumBXResp
+        sumcXg = self.get_variable('prl').sumBXResp
+        Pl = self.get_variable('drift_coeff').Pl
+        wa = self.get_variable('perf_baseline').wa
 
         y = self.dataInput.varMBY
 
@@ -657,16 +627,12 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, variables):
         y_tilde = self.compute_y_tilde()
-
+        
+        alpha = (self.ny - 1.)/2.
         beta = (y_tilde * y_tilde).sum(0)/2.
 
-        #gammaSamples = np.random.gamma(0.5*(self.ny - self.dataInput.colP +1)-1, 1,
-        #                            self.nbVoxels)
-
-        gammaSamples = np.random.gamma((self.ny - 1.)/2., 1, self.nbVoxels)
-
-        np.divide(beta, gammaSamples, self.currentValue)
-
+        gammaSamples = np.random.gamma(alpha, 1./beta)
+        self.currentValue = 1.0/gammaSamples
 
 
 class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
@@ -700,7 +666,7 @@ class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, variables):
 
-        smpldrift = self.samplerEngine.get_variable('drift_coeff')
+        smpldrift = self.get_variable('drift_coeff')
 #        print 'shape dimDrift...', smpldrift.dimDrift
 #        print 'norm Drift', smpldrift.norm
         alpha = .5 * (smpldrift.dimDrift * self.nbVoxels - 1)
@@ -708,7 +674,7 @@ class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         pyhrf.verbose(4, 'eta ~ Ga(%1.3f,%1.3f)'%(alpha,beta))
         self.currentValue[0] = 1.0/np.random.gamma(alpha,beta)
 
-        if 1:
+        if 0:
             beta = 1/beta
             if self.trueValue is not None:
                 pyhrf.verbose(4, 'true var drift : %f' %self.trueValue)
@@ -761,15 +727,16 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             #self.currentValue = np.random.randn(self.dimDrift,
             #                                    self.nbVoxels).astype(np.float64)
             self.currentValue = np.dot(self.P.T, self.dataInput.varMBY)
+            # Projection of data y on P.T
 
         self.Pl = np.dot(self.P, self.currentValue)
         self.updateNorm()
 
     def compute_y_tilde(self):
 
-        sumaXh = self.samplerEngine.get_variable('brl').sumBXResp
-        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
+        sumaXh = self.get_variable('brl').sumBXResp
+        sumcXg = self.get_variable('prl').sumBXResp
+        wa = self.get_variable('perf_baseline').wa
 
         y = self.dataInput.varMBY
 
@@ -780,8 +747,8 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         ytilde = self.compute_y_tilde()
 
-        v_l = self.samplerEngine.get_variable('drift_var').currentValue
-        v_b = self.samplerEngine.get_variable('noise_var').currentValue
+        v_l = self.get_variable('drift_var').currentValue
+        v_b = self.get_variable('noise_var').currentValue
 
         pyhrf.verbose(5, 'Noise vars :' )
         pyhrf.verbose.printNdarray(5, v_b)
@@ -902,8 +869,8 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         """
         """
 
-        self.response_sampler = self.samplerEngine.get_variable(self.response_name)
-        self.mixture_sampler = self.samplerEngine.get_variable(self.mixture_name)
+        self.response_sampler = self.get_variable(self.response_name)
+        self.mixture_sampler = self.get_variable(self.mixture_name)
 
 
         self.meanApost = np.zeros((self.nbConditions, self.nbVoxels), dtype=float)
@@ -920,8 +887,8 @@ class ResponseLevelSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        labels = self.samplerEngine.get_variable('label').currentValue
-        v_b = self.samplerEngine.get_variable('noise_var').currentValue
+        labels = self.get_variable('label').currentValue
+        v_b = self.get_variable('noise_var').currentValue
 
         Xresp = self.response_sampler.varXResp
 
@@ -991,40 +958,35 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         update_perf should only be used at init of variable values.
         """
 
-
         pyhrf.verbose(4, ' BOLDResp.computeVarYTildeOpt(update_perf=%s) ...' \
                       %str(update_perf))
 
-        brf_sampler = self.get_variable('brf')
+        brf_sampler = self.get_variable('brf') 
         Xh = brf_sampler.varXResp
         sumaXh = self.sumBXResp
 
-        prl_sampler = self.samplerEngine.get_variable('prl')
+        prl_sampler = self.get_variable('prl')
         prls = prl_sampler.currentValue
         sumcXg = prl_sampler.sumBXResp
-        prf_sampler = self.samplerEngine.get_variable('prf')
+        prf_sampler = self.get_variable('prf')
         WXg = prf_sampler.varXResp
 
-
         compute_bold = 1
-
         if update_perf:
             compute_perf = 1
         else:
             compute_perf = 0
-
         asl_compute_y_tilde(Xh, WXg, self.currentValue, prls,
                             self.dataInput.varMBY, self.varYtilde,
                             sumaXh, sumcXg, compute_bold, compute_perf)
-
         if update_perf:
             ytilde_perf = prl_sampler.varYtilde
             asl_compute_y_tilde(Xh, WXg, self.currentValue, prls,
                                 self.dataInput.varMBY, ytilde_perf,
                                 sumaXh, sumcXg, 0, 0)
 
-
-        if self.dataInput.simulData is not None:
+        if self.dataInput.simulData is not None: 
+            # Some tests
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
             if not self.sampleFlag and not brf_sampler.sampleFlag and\
@@ -1037,13 +999,11 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
         #print 'sumaXh = ', self.sumaXh
         #print 'varYtilde = ', self.varYtilde
-
-
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde.shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde)
 
-        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
+        Pl = self.get_variable('drift_coeff').Pl
+        wa = self.get_variable('perf_baseline').wa
 
         return self.varYtilde - Pl - wa
 
@@ -1099,25 +1059,24 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
         pyhrf.verbose(4, ' PerfRespLevel.computeVarYTildeOpt() ...')
 
-        brf_sampler = self.samplerEngine.get_variable('brf')
+        brf_sampler = self.get_variable('brf')
         Xh = brf_sampler.varXResp
-        brl_sampler = self.samplerEngine.get_variable('brl')
+        brl_sampler = self.get_variable('brl')
         sumaXh = brl_sampler.sumBXResp
         brls = brl_sampler.currentValue
 
-        prf_sampler = self.samplerEngine.get_variable('prf')
+        prf_sampler = self.get_variable('prf')
         WXg = prf_sampler.varXResp
         sumcXg = self.sumBXResp
 
         compute_bold = 0
         compute_perf = 1
-
         asl_compute_y_tilde(Xh, WXg, brls, self.currentValue,
                             self.dataInput.varMBY, self.varYtilde,
                             sumaXh, sumcXg, compute_bold, compute_perf)
 
-
         if self.dataInput.simulData is not None:
+            # Some tests
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
             if not brl_sampler.sampleFlag and not brf_sampler.sampleFlag and\
@@ -1128,18 +1087,16 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
                 perf = np.dot(self.dataInput.W, sd['perf_stim_induced'][0:-1:osf])
                 assert_almost_equal(sumcXg, perf)
 
-
         #print 'sumaXh = ', self.sumaXh
         #print 'varYtilde = ', self.varYtilde
-
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde.shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde)
 
         if np.isnan(self.varYtilde).any():
             raise Exception('Nan values in ytilde of prf')
 
-        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
+        Pl = self.get_variable('drift_coeff').Pl
+        wa = self.get_variable('perf_baseline').wa
 
         return self.varYtilde - Pl - wa
 
@@ -1227,8 +1184,8 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
                                            self.nbVoxels), dtype=np.float64)
 
     def compute_ext_field(self):
-        bold_mixtp_sampler = self.samplerEngine.get_variable('bold_mixt_params')
-        asl_mixtp_sampler = self.samplerEngine.get_variable('perf_mixt_params')
+        bold_mixtp_sampler = self.get_variable('bold_mixt_params')
+        asl_mixtp_sampler = self.get_variable('perf_mixt_params')
 
         v = bold_mixtp_sampler.get_current_vars()
         rho = asl_mixtp_sampler.get_current_vars()
@@ -1236,12 +1193,13 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         mu = bold_mixtp_sampler.get_current_means()
         eta = asl_mixtp_sampler.get_current_means()
 
-        a = self.samplerEngine.get_variable('brl').currentValue
-        c = self.samplerEngine.get_variable('prl').currentValue
+        a = self.get_variable('brl').currentValue
+        c = self.get_variable('prl').currentValue
 
         for k in xrange(self.nbClasses):
             for j in xrange(self.nbConditions):
-                e = .5 * (-np.log2(v[k,j] * rho[k,j]) - \
+                # WARNING!! log base changed from 2 to e
+                e = .5 * (-np.log(v[k,j] * rho[k,j]) - \
                           (a[j,:] - mu[k,j])**2 / v[k,j]  - \
                           (c[j,:] - eta[k,j])**2 / rho[k,j])
                 self.current_ext_field[k,j,:] = e
@@ -1422,8 +1380,8 @@ class MixtureParamsSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        rl_sampler = self.samplerEngine.get_variable(self.response_level_name)
-        label_sampler = self.samplerEngine.get_variable('label')
+        rl_sampler = self.get_variable(self.response_level_name)
+        label_sampler = self.get_variable('label')
 
         cardCA = label_sampler.cardClass[self.L_CA,:]
         cardCI = label_sampler.cardClass[self.L_CI,:]
@@ -1557,13 +1515,13 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def compute_residuals(self):
 
-        brf_sampler = self.samplerEngine.get_variable('brf')
-        prf_sampler = self.samplerEngine.get_variable('prf')
+        brf_sampler = self.sget_variable('brf')
+        prf_sampler = self.get_variable('prf')
 
-        prl_sampler = self.samplerEngine.get_variable('prl')
-        brl_sampler = self.samplerEngine.get_variable('brl')
+        prl_sampler = self.get_variable('prl')
+        brl_sampler = self.get_variable('brl')
 
-        drift_sampler = self.samplerEngine.get_variable('drift_coeff')
+        drift_sampler = self.get_variable('drift_coeff')
 
         sumcXg = prl_sampler.sumBXResp
         sumaXh = brl_sampler.sumBXResp
@@ -1597,7 +1555,7 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         w = np.diag(self.dataInput.W)
 
         residuals = self.compute_residuals()
-        v_b = self.samplerEngine.get_variable('noise_var').currentValue
+        v_b = self.get_variable('noise_var').currentValue
 
         for i in xrange(self.nbVoxels):
             m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
@@ -1644,7 +1602,7 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, v):
 
-        alpha = self.samplerEngine.get_variable('perf_baseline').currentValue
+        alpha = self.get_variable('perf_baseline').currentValue
 
         a = (self.nbVoxels - 1) / 2.
         b = (alpha**2).sum() / 2.
@@ -1706,9 +1664,9 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  prf_var=PhysioPerfResponseSampler(),
                  bold_mixt_params=BOLDMixtureSampler(),
                  perf_mixt_params=PerfMixtureSampler(),
-                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
-                 perf_baseline=PerfBaselineSampler(),
-                 perf_baseline_var=PerfBaselineVarianceSampler(),
+                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(), 
+                 perf_baseline=PerfBaselineSampler(),               
+                 perf_baseline_var=PerfBaselineVarianceSampler(),   
                  check_final_value=None):
 
         variables = [noise_var, brf, brf_var, prf, prf_var,
