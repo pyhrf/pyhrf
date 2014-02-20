@@ -708,9 +708,9 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         self.ones_Q_J = np.ones((self.dimDrift, self.nbVoxels))
 
         if dataInput.simulData is not None:
-            if isinstance(dataInput.simulData, list): #multisession
+            if isinstance(dataInput.simulData, list):   # multisession
                 self.trueValue = dataInput.simulData[0]['drift_coeffs']
-            elif isinstance(dataInput.simulData, dict): #one session (old case)
+            elif isinstance(dataInput.simulData, dict): # one session (old case)
                 self.trueValue = dataInput.simulData['drift_coeffs']
 
     def checkAndSetInitValue(self, variables):
@@ -758,23 +758,34 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         pyhrf.verbose(5, 'Noise vars :' )
         pyhrf.verbose.printNdarray(5, v_b)
-
+        
+        PtP = np.dot(self.P.transpose(),self.P)
+        I_F = np.eye((self.P.shape[1]))
+        assert_almost_equal( PtP, I_F)
+        
         for i in xrange(self.nbVoxels):
-
+            
             v_lj = v_b[i] * v_l / (v_b[i] + v_l)
-            mu_lj = v_lj/v_b[i] * np.dot(self.P.transpose(), self.ytilde[:,i])
-            pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f mu_lj=%s' \
-                          %(i,v_lj,v_lj**.5, str(mu_lj)))
-
+            S_lj = v_b[i] * v_l / (v_b[i] + v_l) * I_F
+            S_lj2 = v_b[i] * v_l * np.linalg.inv(v_b[i] * I_F + v_l * PtP) 
+            mu_lj = v_lj * np.dot(self.P.transpose(), self.ytilde[:,i]) / v_b[i]
+            mu_lj1 = np.dot(S_lj, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+            mu_lj2 = np.dot(S_lj2, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+            #pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f mu_lj=%s' \
+            #              %(i,S_lj,S_lj**.5, str(mu_lj)))
             self.currentValue[:,i] = (np.random.randn(self.dimDrift) * \
                                       v_lj**.5) + mu_lj
+            #print 'res1 = ',(np.random.randn(self.dimDrift) * v_lj**.5) + mu_lj
+            #print 'res2 = ',np.random.multivariate_normal(mu_lj1, S_lj)
+            #print 'res3 = ',np.random.multivariate_normal(mu_lj2, S_lj2)
+            #self.currentValue[:,i] = np.random.multivariate_normal(mu_lj1, S_lj)
 
             pyhrf.verbose(5, 'v_l : %f' %v_l)
 
         pyhrf.verbose(5, 'drift params :')
         pyhrf.verbose.printNdarray(5, self.currentValue)
 
-        if 0:
+        if 1: # some tests
             inv_vars_l = (1/v_b + 1/v_l) * self.ones_Q_J
             mu_l = 1/inv_vars_l * np.dot(self.P.transpose(), self.ytilde)
 
@@ -793,7 +804,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         self.updateNorm()
         self.Pl = np.dot(self.P, self.currentValue)
-
+        
     def updateNorm(self):
 
         self.norm = (self.currentValue * self.currentValue).sum()
@@ -803,10 +814,10 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             pyhrf.verbose(4, 'true drift norm:' %(self.trueValue * \
                                                   self.trueValue).sum())
 
-
     def getOutputs(self):
         outputs = GibbsSamplerVariable.getOutputs(self)
         drift_signal = np.dot(self.P, self.finalValue)
+        print drift_signal
         an = ['time','voxel']
         a = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
         if self.trueValue is not None:
@@ -816,9 +827,6 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         outputs['drift_signal_pm'] = a
         return outputs
-
-
-
 
 
 
@@ -1525,7 +1533,7 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def compute_residuals(self):
 
-        brf_sampler = self.sget_variable('brf')
+        brf_sampler = self.get_variable('brf')
         prf_sampler = self.get_variable('prf')
 
         prl_sampler = self.get_variable('prl')
@@ -1568,8 +1576,10 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         v_b = self.get_variable('noise_var').currentValue
 
         for i in xrange(self.nbVoxels):
-            m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
-                      ( self.ny + v_b[i] / v_alpha)
+            #m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
+            #          ( self.ny + v_b[i] / v_alpha)
+            m_apost = ( np.dot(w.T, residuals[:,i]) * v_alpha) /  \
+                      ( self.ny * v_alpha + v_b[i])
             v_apost = ( v_alpha * v_b[i] ) / ( self.ny * v_alpha + v_b[i])
 
             a = np.random.randn() * v_apost**.5 + m_apost
