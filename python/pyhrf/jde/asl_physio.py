@@ -732,6 +732,12 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         self.Pl = np.dot(self.P, self.currentValue)
         self.updateNorm()
 
+    def samplingWarmUp(self, v):
+        self.ytilde = np.zeros((self.ny,self.nbVoxels), dtype=float)
+        self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
+                                    axes_names=['time', 'voxel'])
+
+
     def compute_y_tilde(self):
 
         sumaXh = self.get_variable('brl').sumBXResp
@@ -745,7 +751,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, variables):
 
-        ytilde = self.compute_y_tilde()
+        self.ytilde[:] = self.compute_y_tilde()
 
         v_l = self.get_variable('drift_var').currentValue
         v_b = self.get_variable('noise_var').currentValue
@@ -756,7 +762,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         for i in xrange(self.nbVoxels):
 
             v_lj = v_b[i] * v_l / (v_b[i] + v_l)
-            mu_lj = v_lj/v_b[i] * np.dot(self.P.transpose(), ytilde[:,i])
+            mu_lj = v_lj/v_b[i] * np.dot(self.P.transpose(), self.ytilde[:,i])
             pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f mu_lj=%s' \
                           %(i,v_lj,v_lj**.5, str(mu_lj)))
 
@@ -770,7 +776,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         if 0:
             inv_vars_l = (1/v_b + 1/v_l) * self.ones_Q_J
-            mu_l = 1/inv_vars_l * np.dot(self.P.transpose(), ytilde)
+            mu_l = 1/inv_vars_l * np.dot(self.P.transpose(), self.ytilde)
 
             pyhrf.verbose(5, 'vars_l :')
             pyhrf.verbose.printNdarray(5, 1/inv_vars_l)
@@ -802,9 +808,13 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         outputs = GibbsSamplerVariable.getOutputs(self)
         drift_signal = np.dot(self.P, self.finalValue)
         an = ['time','voxel']
-        outputs['drift_signal_pm'] = xndarray(drift_signal,
-                                            axes_names=an,
-                                            value_label='Delta ASL')
+        a = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
+        if self.trueValue is not None:
+            ta = xndarray(np.dot(self.P, self.trueValue),
+                          axes_names=an, value_label='Delta ASL')
+            a = stack_cuboids([a, ta], 'type', ['estim', 'true'])
+
+        outputs['drift_signal_pm'] = a
         return outputs
 
 
