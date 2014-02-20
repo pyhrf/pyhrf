@@ -1586,6 +1586,8 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             self.currentValue[i] = a
             self.wa[:,i] = self.w * a
 
+            
+            
 class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
@@ -1614,22 +1616,26 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
                 self.currentValue = self.trueValue.copy()
             else:
                 raise Exception('Needed a true value but none defined')
-
+        
         if self.currentValue is None:
             self.currentValue = np.array([(self.dataInput.varMBY * \
               self.dataInput.w[:,np.newaxis]).mean(0).var()])
-
+              
+        print_theoretical = True
 
     def sampleNextInternal(self, v):
 
         alpha = self.get_variable('perf_baseline').currentValue
-
         a = (self.nbVoxels - 1) / 2.
-        b = (alpha**2).sum() / 2.
+        b = (alpha * alpha).sum() / 2.
+        #print 'alpha_mean next', np.mean(alpha)
+        #print 'alpha_var next', np.var(alpha)
+        #print 'theoretical IG(', a, ',', b, ' = ', b/(a-1)
+        self.currentValue[0] = 1. / np.random.gamma(a, 1./b)
+        #print 'v_alpha = ', 1. / np.random.gamma(a, 1./b)
+        
 
-        self.currentValue[0] = 1 / np.random.gamma(a, 1/b)
-
-
+        
 class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
 
     def makePrecalculations(self):

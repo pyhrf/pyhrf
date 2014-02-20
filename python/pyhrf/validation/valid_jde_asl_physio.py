@@ -11,6 +11,7 @@ import pyhrf.jde.asl_physio as jasl
 from pyhrf.core import FmriData
 from pyhrf.ui.jde import JDEMCMCAnalyser
 from pyhrf.ui.treatment import FMRITreatment
+from numpy.testing import assert_almost_equal
 
 class ASLTest(unittest.TestCase):
 
@@ -260,6 +261,17 @@ class ASLTest(unittest.TestCase):
         pyhrf.verbose.set_verbosity(2)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        perf_baseline = simu['perf_baseline']
+        perf_baseline_mean = simu['perf_baseline_mean']
+        print 'perf_baseline_mean = ',perf_baseline_mean
+        print 'perf_baseline_mean emp = ', np.mean(perf_baseline)
+        perf_baseline_var = simu['perf_baseline_var']
+        print 'perf_baseline_var = ',perf_baseline_var
+        print 'perf_baseline_var emp = ', np.var(perf_baseline)
+        assert_almost_equal(perf_baseline_mean, 1.5)
+        assert_almost_equal(perf_baseline_var, .4)
+        #assert_almost_equal(perf_baseline_mean, np.mean(perf_baseline))
+        #assert_almost_equal(perf_baseline_var, np.var(perf_baseline))
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['perf_baseline_var'], fdata, nb_its=100,
                                      check_fv='raise')
