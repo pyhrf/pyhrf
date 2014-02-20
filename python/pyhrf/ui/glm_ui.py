@@ -11,7 +11,7 @@ try:
     from collections import OrderedDict
 except ImportError:
     from pyhrf.backport import OrderedDict
-from pyhrf.ndarray import xndarray, tree_to_cuboid, stack_cuboids
+from pyhrf.ndarray import xndarray, tree_to_xndarray, stack_cuboids
 
 from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.glm import glm_nipy
@@ -132,7 +132,7 @@ class GLMAnalyser(FMRIAnalyser):
                     fir[delay][cond] = xndarray(glm.beta[ib], axes_names=['voxel'])
 
             if self.hrf_model == 'FIR':
-                chrf = tree_to_cuboid(fir, ['time', 'condition'])
+                chrf = tree_to_xndarray(fir, ['time', 'condition'])
                 outputs['hrf'] = chrf
                 outputs['hrf_norm'] = (chrf**2).sum('time')**.5
 
