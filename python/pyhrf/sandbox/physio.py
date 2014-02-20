@@ -659,7 +659,7 @@ def linear_rf_operator(rf_size, phy_params, dt, calculating_brf=False):
 
     A3 = tau_m_inv*( (D + (alpha_w_inv*tau_m_inv)*eye).I )
     A4 = c * (D+tau_m_inv*eye).I - (D+tau_m_inv*eye).I*((1-alpha_w)*alpha_w_inv* tau_m_inv**2)* (D+alpha_w_inv*tau_m_inv*eye).I
-    A = V0 * ( (k1+k2)*A4 + (k3-k2)* A3 )
+    A = V0 * ( (k1+k2)*A4 + (k3-k2)* A3 ) # A = h x2^{-1} = Omega^{-1}
 
     if (calculating_brf):
         return -A.A

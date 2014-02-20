@@ -117,6 +117,17 @@ class ASLTest(unittest.TestCase):
                                      rf_prior_type='basic_regularized')
         print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
         
+    def test_prf_basic_reg(self):
+        """ Validate estimation of BRF at high SNR"""
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['prf'], fdata, nb_its=100,
+                                     check_fv='raise',
+                                     rf_prior_type='basic_regularized')
+        print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
+        
     def test_brf_var(self):
         """ Validate estimation of BRF at high SNR"""
         pyhrf.verbose.set_verbosity(2)
