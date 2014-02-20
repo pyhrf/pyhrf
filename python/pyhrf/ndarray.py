@@ -62,7 +62,7 @@ class xndarray:
             pyhrf.verbose(5, 'Data shape: %s' %str(narray.shape))
             pyhrf.verbose(5, 'Axes names: %s' %str(axes_names))
 
-        assert isinstance(narray, np.ndarray)
+        narray = np.asarray(narray)
         self.data = narray
         self.value_label = value_label
         self.meta_data = meta_data
@@ -1645,27 +1645,49 @@ def merge(arrays, mask, axis, fill_value=0):
 
     return dest_c
 
-def tree_to_cuboid(tree, branchLabels=None):
-    #print 'tree_to_cuboid recieve:'
-    #pprint(tree)
-    nb_branches = len(treeBranches(tree).next())
-    if branchLabels is None:
-        branchLabels = ['b%d'%i for i in xrange(nb_branches)]
-    assert len(branchLabels) == len(treeBranches(tree).next())
+def tree_to_xndarray(tree, level_labels=None):
+    """
+    Stack all arrays within input tree into a single array.
 
-    if isinstance(tree[tree.keys()[0]], dict):
-        for k in tree.iterkeys():
-            tree[k] = tree_to_cuboid(tree[k], branchLabels[1:])
-    else:
-        kiter = sorted(tree.keys())
-        allLeaves = []
-        #print 'axis domain for stacking:'
-        #print kiter
-        for k in kiter:
-            allLeaves.append(tree[k])
-        return stack_cuboids(allLeaves, branchLabels[0], kiter)
+    Args:
+        - tree (dict): nested dictionnaries of xndarray objects.
+                       Each level of the tree correspond to a target axis,
+                       each key of the tree correspond to an element of the
+                       domain associated to that axis.
+        - level_labels (list of str): axis labels corresponding to each level
+                       of the tree
 
-    return tree_to_cuboid(tree, [branchLabels[0]])
+    Return:
+        xndarray object
+
+    Example:
+    >>> from pyhrf.ndarray import xndarray, tree_to_xndarray
+    >>> d = { 1 : { .1 : xndarray([1,2], axes_names=['inner_axis']),
+                    .2 : xndarray([3,4], axes_names=['inner_axis']),
+                  },
+              2 : { .1 : xndarray([1,2], axes_names=['inner_axis']),
+                    .2 : xndarray([3,4], axes_names=['inner_axis']),
+                  }
+            }
+    >>> tree_to_xndarray(d, ['level_1', 'level_2'])
+    axes: ['level_1', 'level_2', 'inner_axis']
+    array([[[1, 2],
+           [2, 4]],
+          [[1, 2],
+           [2, 4]]])
+    """
+    tree_depth = len(treeBranches(tree).next())
+    level_labels = level_labels or ['axis_%d'%i for i in xrange(tree_depth)]
+    assert len(level_labels) == tree_depth
+
+    def _reduce(node, level):
+        if isinstance(node, xndarray): #leaf node
+            return node
+        else:
+            domain = sorted(node.keys())
+            return stack_cuboids([_reduce(node[c], level+1) for c in domain],
+                                 level_labels[level], domain)
+    return _reduce(tree, level=0)
 
 
 from pyhrf.tools import add_suffix

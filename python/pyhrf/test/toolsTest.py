@@ -387,26 +387,6 @@ class treeToolsTest(unittest.TestCase):
 
 #        print stack_trees([d1,d2])
 
-    def test_tree_to_cuboid(self):
-        from pyhrf.ndarray import xndarray, tree_to_cuboid
-        import numpy as _np
-        d1 = {}
-        set_leaf(d1, ['1','2.1','3.1'], xndarray(_np.array([1])))
-        set_leaf(d1, ['1','2.1','3.2'], xndarray(_np.array([2])))
-        set_leaf(d1, ['1','2.2','3.3'], xndarray(_np.array([3])))
-
-        d2 = {}
-        set_leaf(d2, ['1','2.1','3.1'], xndarray(_np.array([10])))
-        set_leaf(d2, ['1','2.1','3.2'], xndarray(_np.array([11])))
-        set_leaf(d2, ['1','2.2','3.3'], xndarray(_np.array([12])))
-
-        d = {'d1':d1, 'd2':d2}
-        labels = ['case', 'p1', 'p2', 'p3']
-
-        c = tree_to_cuboid(d, labels)
-        #print c.descrip()
-
-
     def test_rearrange(self):
 
         d1 = {}

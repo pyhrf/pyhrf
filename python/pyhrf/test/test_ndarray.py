@@ -727,3 +727,27 @@ class xndarrayTest(unittest.TestCase):
         assert (c_stacked.data == a_stacked).all()
 
 
+    def test_tree_to_xndarray(self):
+        from pyhrf.ndarray import xndarray, tree_to_xndarray
+        from pyhrf.tools import set_leaf
+        d1 = {}
+        set_leaf(d1, ['1','2.1','3.1'], xndarray(np.array([1])))
+        set_leaf(d1, ['1','2.1','3.2'], xndarray(np.array([2])))
+        set_leaf(d1, ['1','2.2','3.1'], xndarray(np.array([3])))
+        set_leaf(d1, ['1','2.2','3.2'], xndarray(np.array([3.1])))
+        d2 = {}
+        set_leaf(d2, ['1','2.1','3.1'], xndarray(np.array([10])))
+        set_leaf(d2, ['1','2.1','3.2'], xndarray(np.array([11])))
+        set_leaf(d2, ['1','2.2','3.1'], xndarray(np.array([12])))
+        set_leaf(d2, ['1','2.2','3.2'], xndarray(np.array([13])))
+
+        d = {'d1':d1, 'd2':d2}
+        labels = ['case', 'p1', 'p2', 'p3']
+
+        c = tree_to_xndarray(d, labels)
+        self.assertEqual(c.data.shape, (2,1,2,2,1))
+        
+        npt.assert_array_equal(c.axes_domains['case'], ['d1', 'd2'])
+        npt.assert_array_equal(c.axes_domains['p1'], ['1'])
+        npt.assert_array_equal(c.axes_domains['p2'], ['2.1', '2.2'])
+        npt.assert_array_equal(c.axes_domains['p3'], ['3.1', '3.2'])
