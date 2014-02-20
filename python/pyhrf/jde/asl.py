@@ -1837,7 +1837,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         'prf' : duplicate_prf,
         # Perf baseline
         'perf_baseline' : create_perf_baseline,
-        'perf_baseline_mean' : 1.5,
+        'perf_baseline_mean' : 0.,
         'perf_baseline_var': .4,
         # Stim induced
         'bold_stim_induced' : create_bold_stim_induced_signal,
