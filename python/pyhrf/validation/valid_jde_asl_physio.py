@@ -11,6 +11,7 @@ import pyhrf.jde.asl_physio as jasl
 from pyhrf.core import FmriData
 from pyhrf.ui.jde import JDEMCMCAnalyser
 from pyhrf.ui.treatment import FMRITreatment
+from numpy.testing import assert_almost_equal
 
 class ASLTest(unittest.TestCase):
 
@@ -76,7 +77,7 @@ class ASLTest(unittest.TestCase):
             pyhrf.verbose(1, 'Keep tmp dir %s' %self.tmp_dir)
 
 
-    def test_prf(self):
+    def test_prf_physio_reg(self):
         """ Validate estimation of PRF """
         pyhrf.verbose.set_verbosity(2)
         from pyhrf.jde.asl import simulate_asl
@@ -85,16 +86,6 @@ class ASLTest(unittest.TestCase):
         self._test_specific_samplers(['prf'], fdata, nb_its=20,
                                      check_fv='raise')
         print 'pyhrf_view_qt3 %s/*nii' %self.tmp_dir
-        
-    def test_prf_var(self):
-        """ Validate estimation of PRF """
-        pyhrf.verbose.set_verbosity(2)
-        from pyhrf.jde.asl import simulate_asl
-        simu = simulate_asl(self.tmp_dir)
-        fdata = FmriData.from_simulation_dict(simu)
-        self._test_specific_samplers(['prf_var'], fdata, nb_its=20,
-                                     check_fv='raise')
-        print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
         
     def test_brf_physio_reg(self):
         """ Validate estimation of BRF at high SNR"""
@@ -117,6 +108,61 @@ class ASLTest(unittest.TestCase):
                                      rf_prior_type='basic_regularized')
         print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
         
+    def test_prf_basic_reg(self):
+        """ Validate estimation of BRF at high SNR"""
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['prf'], fdata, nb_its=100,
+                                     check_fv='raise',
+                                     rf_prior_type='basic_regularized')
+        print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
+        
+    def test_brf_physio_nonreg(self):
+        """ Validate estimation of BRF at high SNR"""
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['brf'], fdata, nb_its=100,
+                                     check_fv='raise',
+                                     rf_prior_type='physio_stochastic_not_regularized')
+        print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
+        
+    def test_prf_physio_nonreg(self):
+        """ Validate estimation of BRF at high SNR"""
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['prf'], fdata, nb_its=100,
+                                     check_fv='raise',
+                                     rf_prior_type='physio_stochastic_not_regularized')
+        print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
+        
+    def test_brf_physio_det(self):
+        """ Validate estimation of BRF at high SNR"""
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['brf'], fdata, nb_its=100,
+                                     check_fv='raise',
+                                     rf_prior_type='physio_deterministic')
+        print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
+        
+    def test_prf_physio_det(self):
+        """ Validate estimation of BRF at high SNR"""
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['prf'], fdata, nb_its=100,
+                                     check_fv='raise',
+                                     rf_prior_type='physio_deterministic')
+        print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
+        
     def test_brf_var(self):
         """ Validate estimation of BRF at high SNR"""
         pyhrf.verbose.set_verbosity(2)
@@ -126,7 +172,17 @@ class ASLTest(unittest.TestCase):
         self._test_specific_samplers(['brf_var'], fdata, nb_its=100,
                                      check_fv='raise')
         print 'pyhrf_view_qt3 %s/*brf*nii' %self.tmp_dir
-        
+    
+    def test_prf_var(self):
+        """ Validate estimation of PRF """
+        pyhrf.verbose.set_verbosity(2)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir)
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_samplers(['prf_var'], fdata, nb_its=20,
+                                     check_fv='raise')
+        print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
+    
     def test_brls(self):
         """ Validate estimation of BRLs at high SNR"""
         pyhrf.verbose.set_verbosity(2)
@@ -176,7 +232,7 @@ class ASLTest(unittest.TestCase):
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
-        self._test_specific_samplers(['drift'], fdata, nb_its=100,
+        self._test_specific_samplers(['drift'], fdata, nb_its=200,
                                      check_fv='raise')
         print 'pyhrf_view_qt3 %s/*drift*nii' %self.tmp_dir
     
@@ -205,6 +261,17 @@ class ASLTest(unittest.TestCase):
         pyhrf.verbose.set_verbosity(2)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        perf_baseline = simu['perf_baseline']
+        perf_baseline_mean = simu['perf_baseline_mean']
+        print 'perf_baseline_mean = ',perf_baseline_mean
+        print 'perf_baseline_mean emp = ', np.mean(perf_baseline)
+        perf_baseline_var = simu['perf_baseline_var']
+        print 'perf_baseline_var = ',perf_baseline_var
+        print 'perf_baseline_var emp = ', np.var(perf_baseline)
+        assert_almost_equal(perf_baseline_mean, 1.5)
+        assert_almost_equal(perf_baseline_var, .4)
+        #assert_almost_equal(perf_baseline_mean, np.mean(perf_baseline))
+        #assert_almost_equal(perf_baseline_var, np.var(perf_baseline))
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['perf_baseline_var'], fdata, nb_its=100,
                                      check_fv='raise')
