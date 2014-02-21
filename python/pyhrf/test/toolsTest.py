@@ -133,21 +133,26 @@ class CartesianTest(unittest.TestCase):
 
     def test_cartesian_apply(self):
         from pyhrf.tools import cartesian_apply
-
+        from pyhrf.tools.backports import OrderedDict
+        
         def foo(a, b, c=1, d=2):
             return a + b + c + d
 
-        varying_args = {'a': range(2),
-                        'b' : range(2),
-                        'c' : range(2)
-                        }
+        # OrderDict to keep track of parameter orders in the result
+        # arg values must be hashable
+        varying_args = OrderedDict([('a' , range(2)),
+                                    ('b' , range(2)),
+                                    ('c' , range(2))])
 
         fixed_args = {'d' : 10}
 
-        result = cartesian_apply(varying_args, foo,
-                                 fixed_args=fixed_args)
+        result_tree = cartesian_apply(varying_args, foo,
+                               fixed_args=fixed_args)
 
-        self.assertEqual(result, [10, 11, 11, 12, 11, 12, 12, 13])
+        self.assertEqual(result_tree, {0 : { 0 : { 0 : 10, 1 : 11},
+                                             1 : { 0 : 11, 1 : 12}},
+                                       1 : { 0 : { 0 : 11, 1 : 12},
+                                             1 : { 0 : 12, 1 : 13}}})
 
 
 class DictToStringTest(unittest.TestCase):
