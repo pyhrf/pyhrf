@@ -754,8 +754,8 @@ class xndarrayTest(unittest.TestCase):
 
     def test_cartesian_eval(self):
         """
-        Test the multiple evaluation of a function that returns
-        a xndarray over the cartesian products of arguments.
+        Test the multiple evaluations of a function that returns
+        a xndarray, over the cartesian products of given arguments.
         """
 
         def foo(a, b, size, aname):
