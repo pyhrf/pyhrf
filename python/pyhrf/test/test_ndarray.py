@@ -746,8 +746,31 @@ class xndarrayTest(unittest.TestCase):
 
         c = tree_to_xndarray(d, labels)
         self.assertEqual(c.data.shape, (2,1,2,2,1))
-        
+
         npt.assert_array_equal(c.axes_domains['case'], ['d1', 'd2'])
         npt.assert_array_equal(c.axes_domains['p1'], ['1'])
         npt.assert_array_equal(c.axes_domains['p2'], ['2.1', '2.2'])
         npt.assert_array_equal(c.axes_domains['p3'], ['3.1', '3.2'])
+
+    def test_cartesian_eval(self):
+        """
+        Test the multiple evaluation of a function that returns
+        a xndarray over the cartesian products of arguments.
+        """
+
+        def foo(a, b, size, aname):
+            return xndarray(np.ones(size) * a + b, axes_names=[aname])
+
+        from pyhrf.tools import cartesian_apply
+        from pyhrf.tools.backports import OrderedDict
+
+        varying_args = OrderedDict([ ('a', [1,2]), ('b', [.5, 1.5]) ])
+        fixed_args = {'size' : 2, 'aname': 'my_axis'}
+
+        res = tree_to_xndarray(cartesian_apply(varying_args, foo, fixed_args))
+
+        self.assertEqual(res.data.shape, (2, 2, 2))
+        npt.assert_array_equal(res.data, np.array([[[1.5, 1.5],
+                                                    [2.5, 2.5]],
+                                                   [[2.5, 2.5],
+                                                    [3.5, 3.5]]]))
