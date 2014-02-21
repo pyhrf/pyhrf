@@ -244,13 +244,13 @@ def cartesian_combine_args(varying_args, fixed_args=None):
     """
     Construst the cartesian product of varying_args and append fixed_args to it.
 
-    'varying_args': Specify the arguments which are varying as a dict mapping
+    'varying_args': Specify varying arguments as a dict mapping
                     arg names to iterables of arg values.
                     e.g:
                       { 'my_arg1' : ['a','b','c'],
                         'my_arg2' : [2, 5, 10],
                       }
-    'fixed_args' : Specify the argument which remain constant as a dict mapping
+    'fixed_args' : Specify constant arguments as a dict mapping
                    arg names to arg values
                    e.g:
                      { 'my_arg3' : ['fixed_value'] }
@@ -295,9 +295,42 @@ def icartesian_combine_args(varying_args, fixed_args=None):
 
 
 def cartesian_apply(varying_args, func, fixed_args=None):
+    """
+    Apply function *func* iteratively on the cartesian product of *varying_args*
+    with fixed args *fixed_args*. Produce a tree (nested dicts) mapping arg values    to the corresponding evaluation of function *func*
 
+    Arg:
+        - varying_args (OrderedDict): a dictionnary mapping argument names to
+                                      a list of values. The Orderdict is
+                                      used to keep track of argument order in
+                                      the result.
+                                      WARNING: all argument values must be
+                                               hashable
+        - func (function): the function to be applied on the cartesian product
+                           of given arguments
+        - fixed_args (dict): arguments that are fixed
+                             (do not enter cartesian product)
+
+    Return:
+        nested dicts (tree) where each node is an argument value from varying
+        args and each leaf is the result of the evaluation of the function.
+        The order to the tree levels corresponds the order in the input
+        OrderedDict of varying arguments.
+
+    Example:
+    >>> from pyhrf.tools import cartesian_apply
+    >>> from pyhrf.tools.backports import OrderedDict
+    >>> def foo(a,b,c): return a + b + c
+    >>> v_args = OrderedDict( [('a',[0,1]), ('b',[1,2])] )
+    >>> fixed_args = {'c': 3}
+    >>> cartesian_apply(v_args, foo, fixed_args)
+    { 0 : { 1:4, 2:5}, 1 : { 1:5, 2:6} }
+    """
+    from pyhrf.tools.backports import OrderedDict
+    assert isinstance(varying_args, OrderedDict)
     args_iter = icartesian_combine_args(varying_args, fixed_args)
-    return [func(**kwargs) for kwargs in args_iter]
+    return tree([ ([kwargs[a] for a in varying_args.keys()], func(**kwargs)) \
+                  for kwargs in args_iter])
 
 
 def format_duration(dt):
@@ -361,7 +394,7 @@ class PickleableStaticMethod(object):
         self.cls = cls
         self.fn = fn
         self.__name__ = fn.__name__
-        
+
     def __call__(self, *args, **kwargs):
         if self.cls is None:
             return self.fn(*args, **kwargs)
@@ -1300,6 +1333,12 @@ def treeBranches(tree, branch=None):
     else:
         yield branch
 
+
+def tree(branched_leaves):
+    d = {}
+    for branch, leaf in branched_leaves:
+        set_leaf(d, branch, leaf)
+    return d
 
 def treeBranchesClasses(tree, branch=None):
     #print "tree", tree
