@@ -15,9 +15,12 @@ import pprint
 from pkg_resources import parse_version
 
 import pyhrf
-from pyhrf.tools import treeBranches, rescale_values, has_ext
-from pyhrf.tools.backports import OrderedDict
+import pyhrf.plot as pplot
+import matplotlib.pyplot as plt
+from pyhrf.tools import treeBranches, rescale_values, has_ext, tree_items, \
+     html_cell, html_list_to_row, html_row, html_table, html_img
 
+from pyhrf.tools.backports import OrderedDict
 debug = False
 
 MRI3Daxes = ['sagittal','coronal','axial']
@@ -328,6 +331,114 @@ class xndarray:
         #s += '\n'.join([ '  '+s for s in sdomain.split('\n')])
 
         return s
+
+
+    def _html_table_headers(self, row_axes, col_axes):
+        """
+        Build table row and column headers corresponding to axes in *row_axes* and
+        *col_axes* respectively. Headers comprises axis names and domain values.
+
+        Return:
+             tuple(list of str, list of str)
+          -> tuple(list of html code for the row header (without <tr> tags),
+                   list of html code for the col header (with <tr> tags))
+        """
+        dsh = self.get_dshape()
+        nb_blank_cols = len(row_axes) * 2 #nb of blank cols preprended to
+                                          #each line of the column header
+        nb_rows = int(np.prod([dsh[a] for a in row_axes]))
+        nb_cols = int(np.prod([dsh[a] for a in col_axes]))
+        # col header
+        if nb_blank_cols > 0:
+            blank_cells = ['']
+            blank_cells_attrs = [{'colspan':str(nb_blank_cols)}]
+        else:
+            blank_cells = []
+            blank_cells_attrs = []
+        col_header = []
+        nb_repets = 1
+        span = nb_cols
+        for a in col_axes:
+            dom = [str(v) for v in self.get_domain(a)] #TODO: better dv format
+            span /= len(dom)
+            # row showing the axis label
+            col_header.append(html_list_to_row(blank_cells + [a], 'h',
+                                               blank_cells_attrs + \
+                                                [{'colspan':nb_cols}]))
+            # row showing domain values
+            col_header.append(html_list_to_row(blank_cells + dom * nb_repets, 'h',
+                                               blank_cells_attrs +
+                                               [{'colspan':str(span)}] * \
+                                                 len(dom) * nb_repets))
+            nb_repets *= len(dom)
+
+        # row header
+        # initialization of all rows because row filling wont be sequential:
+        row_header = [[] for i in range(nb_rows)]
+        nb_repets = 1
+        span = nb_rows
+        for a in row_axes:
+            # 1st row contains all axis labels:
+            row_header[0].append(html_cell(a, 'h', {'rowspan':nb_rows}))
+
+            # dispatch domain values across corresponding rows:
+            dom = [str(v) for v in self.get_domain(a)] #TODO: better dv format
+            span /= len(dom)
+            for idv, dv in enumerate(dom * nb_repets):
+                row_header[idv*span].append(html_cell(dv, 'h', {'rowspan':span}))
+
+            nb_repets *= len(dom)
+
+        return [''.join(r) for r in row_header], col_header
+
+    def to_html_table(self, row_axes, col_axes, inner_axes, cell_format='txt',
+                      plot_dir=None, plot_fig_prefix='xarray_',
+                      plot_style='image', plot_args=None):
+        """
+        Render the array as an html table whose column headers correspond
+        to domain values and axis names defined by *col_axes*, row headers
+        defined by *row_axes* and inner cell axes defined by *inner_axes*
+        Data within a cell can be render as text or as a plot figure (image
+        files are produced)
+
+        Args:
+            -
+
+        Return:
+            html code (str)
+        """
+        plot_dir = plot_dir or pyhrf.get_tmp_path()
+        outer_axes = row_axes + col_axes
+        plot_args = plot_args or {}
+
+        def format_cell(slice_info, cell_val):
+            if cell_format == 'txt':
+                return html_cell(str(cell_val))
+            elif cell_format == 'plot':
+                suffix = '_'.join(['_'.join(e) \
+                                   for e in zip(outer_axes, slice_info)])
+                fig_fn = op.join(plot_dir, plot_fig_prefix + suffix + '.png' )
+                plt.figure()
+                if plot_style == 'image':
+                    pplot.plot_cub_as_image(cell_val, **plot_args)
+                else:
+                    pplot.plot_cub_as_curve(cell_val, **plot_args)
+                plt.savefig(fig_fn)
+                return html_cell(html_img(fig_fn))
+            else:
+                raise Exception('Wrong plot_style "%s"' %plot_style)
+
+
+        row_header, col_header = self._html_table_headers(row_axes, col_axes)
+        cell_vals = tree_items(self.to_tree(row_axes + col_axes, inner_axes))
+
+        dsh = self.get_dshape()
+        nb_cols = int(np.prod([dsh[a] for a in col_axes]))
+        content = []
+        for i, r in enumerate(row_header):
+            content += html_row(r + ''.join([format_cell(*cell_vals.next()) \
+                                             for c in range(nb_cols)]))
+        return html_table(''.join(col_header + content))
 
 
 

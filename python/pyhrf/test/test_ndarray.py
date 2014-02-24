@@ -794,3 +794,94 @@ class xndarrayTest(unittest.TestCase):
         self.assertEqual(uc.data.shape, (size,))
         self.assertEqual(len(uc.axes_domains), 1)
         npt.assert_array_equal(uc.axes_domains['a1'], ad)
+
+
+class TestHtml(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp_dir = pyhrf.get_tmp_path()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+
+    def test_txt_1d_col_axes_only(self):
+        a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
+        html = a.to_html_table([], ['measure'], [])
+        self.assertIsInstance(html, str)
+        self.assertEqual(html, '<table><tr><th colspan="2">measure</th></tr>' \
+                               '<tr><th colspan="1">mon</th>' \
+                               '<th colspan="1">tue</th></tr>' \
+                               '<tr><td >1</td><td >2</td></tr></table>')
+
+    def test_txt_1d_row_axes_only(self):
+        a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
+        html = a.to_html_table(['measure'], [], [])
+        self.assertIsInstance(html, str)
+        self.assertEqual(html, '<table><tr><th rowspan="2">measure</th>' \
+                               '<th rowspan="1">mon</th><td >1</td></tr>' \
+                               '<tr><th rowspan="1">tue</th><td >2</td></tr>' \
+                               '</table>')
+
+    def test_plot(self):
+        sh = (2,3,4)
+        a = xndarray(np.arange(np.prod(sh)).reshape(sh),
+                     ['day', 'strength', 'position'],
+                     {'day' : ['mon', 'tue'],
+                      'strength':[0., .5, 1.2],
+                      'position':[0, 10, 20, 30]})
+
+        html = a.to_html_table([], ['day'],['strength', 'position'],
+                               cell_format='plot', plot_style='image',
+                               plot_dir=self.tmp_dir,
+                               plot_args={'show_colorbar':True})
+
+
+        expected = '<table><tr><th colspan="2">day</th></tr>'\
+                          '<tr><th colspan="1">mon</th>'\
+                              '<th colspan="1">tue</th></tr>' \
+                          '<tr><td ><img src="%s"></td>' \
+                              '<td ><img src="%s"></td>' \
+                          '</tr></table>' \
+                          %(op.join(self.tmp_dir, 'xarray_day_mon.png'),
+                            op.join(self.tmp_dir, 'xarray_day_tue.png'))
+        
+        self.assertEqual(html, expected)
+
+    def test_table_header(self):
+        sh = (2,3,4)
+        a = xndarray(np.arange(np.prod(sh)).reshape(sh),
+                     ['day', 'strength', 'position'],
+                     {'day' : ['mon', 'tue'],
+                      'strength':[0., .5, 1.2],
+                      'position':[0, 10, 20, 30]})
+        rh, ch = a._html_table_headers(['position'], ['day', 'strength'])
+
+        self.assertEqual(''.join(ch), '<tr><th colspan="2"></th>' \
+                                      '<th colspan="6">day</th>' \
+                                      '</tr>' \
+                                      '<tr>' \
+                                      '<th colspan="2"></th>' \
+                                      '<th colspan="3">mon</th>' \
+                                      '<th colspan="3">tue</th>' \
+                                      '</tr>' \
+                                      '<tr>' \
+                                      '<th colspan="2"></th>' \
+                                      '<th colspan="6">strength</th>' \
+                                      '</tr>' \
+                                      '<tr>'
+                                      '<th colspan="2"></th>' \
+                                      '<th colspan="1">0.0</th>' \
+                                      '<th colspan="1">0.5</th>' \
+                                      '<th colspan="1">1.2</th>' \
+                                      '<th colspan="1">0.0</th>' \
+                                      '<th colspan="1">0.5</th>' \
+                                      '<th colspan="1">1.2</th>' \
+                                      '</tr>')
+        self.assertEqual(''.join([html_row(r) for r in rh]),
+                          '<tr><th rowspan="4">position</th>' \
+                          '<th rowspan="1">0</th>' \
+                          '</tr>' \
+                          '<tr><th rowspan="1">10</th></tr>' \
+                          '<tr><th rowspan="1">20</th></tr>' \
+                          '<tr><th rowspan="1">30</th></tr>')
+
