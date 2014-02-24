@@ -176,14 +176,14 @@ class JDETest(unittest.TestCase):
 if 0:
     from pyhrf.jde.noise import NoiseVarianceARSampler
     class JDEARnoiseTest(unittest.TestCase):
-    
+
         def setUp(self):
             np.random.seed(8652761)
-    
+
             tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                       dir=pyhrf.cfg['global']['tmp_path'])
             self.tmp_dir = tmpDir
-    
+
             bf = 'subj0_bold_session0.nii.gz'
             self.boldFiles = [pyhrf.get_data_file_name(bf)]
             pf = 'subj0_parcellation.nii.gz'
@@ -194,10 +194,10 @@ if 0:
             self.durations = None
             self.nbIt = 3
             self.pfMethod = 'es'
-    
+
             simu = simulate_bold(self.tmp_dir, spatial_size='random_small')
             self.data_simu = FmriData.from_simulation_dict(simu)
-    
+
             #print 'Create sampler_params_for_single_test ...'
             self.sampler_params_for_single_test = {
                 BG.P_NB_ITERATIONS : 100,
@@ -239,11 +239,11 @@ if 0:
                         NoiseARParamsSampler.P_SAMPLE_FLAG : False,
                         NoiseARParamsSampler.P_USE_TRUE_VALUE : True,
                         }),
-    
+
                 BG.P_CHECK_FINAL_VALUE : 'raise', #print or raise
                 }
-    
-    
+
+
             #print 'Create sampler_params_for_full_test ...'
             self.sampler_params_for_full_test = {
                 BG.P_NB_ITERATIONS : 500,
@@ -287,20 +287,20 @@ if 0:
                         }),
                 BG.P_CHECK_FINAL_VALUE : 'print', #print or raise
                 }
-    
+
         def tearDown(self):
             if 1:
                 pyhrf.verbose(1, 'Remove tmp dir %s' %self.tmp_dir)
                 shutil.rmtree(self.tmp_dir)
             else:
                 pyhrf.verbose(1, 'Keep tmp dir %s' %self.tmp_dir)
-    
-    
+
+
         def test_surface_treatment(self):
             #pyhrf.verbose.set_verbosity(2)
             treatment, xml_file, result = jde_surf_from_files(nbIterations=2,
                                                               outputDir=self.tmp_dir)
-    
+
 
 
 
@@ -365,10 +365,10 @@ class ASLTest(unittest.TestCase):
 
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=.5, driftParam=4, driftType='polynomial',
-                                   outputFile=None,outputPrefix='jde_mcmc_',
-                                   randomSeed=None)
+                                   outputPrefix='jde_mcmc_', randomSeed=None)
 
-        treatment = FMRITreatment(fmri_data=fdata, analyser=analyser)
+        treatment = FMRITreatment(fmri_data=fdata, analyser=analyser,
+                                  output_dir=None)
 
         treatment.run()
 
@@ -393,7 +393,7 @@ class ASLPhysioTest(unittest.TestCase):
         pyhrf.verbose.set_verbosity(0)
 
         sampler_params = {
-            'nb_iterations' : 100,
+            'nb_iterations' : 3,
             'smpl_hist_pace' : 1,
             'obs_hist_pace' : 1,
             'brf' : jde_asl_physio.PhysioBOLDResponseSampler(zero_constraint=False),
@@ -424,10 +424,10 @@ class ASLPhysioTest(unittest.TestCase):
         dt = simu_items['dt']
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=dt, driftParam=4, driftType='polynomial',
-                                   outputFile=None,outputPrefix='jde_mcmc_',
-                                   randomSeed=None)
+                                   outputPrefix='jde_mcmc_')
 
-        treatment = FMRITreatment(fmri_data=simu_fdata, analyser=analyser)
+        treatment = FMRITreatment(fmri_data=simu_fdata, analyser=analyser,
+                                  output_dir=None)
         treatment.run()
 
 
@@ -488,7 +488,7 @@ class MultiSessTest(unittest.TestCase):
 
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=.5, driftParam=4, driftType='polynomial',
-                                   outputFile=None,outputPrefix='jde_MS_mcmc_',
+                                   outputPrefix='jde_MS_mcmc_',
                                    randomSeed=9778946)
 
         treatment = FMRITreatment(fmri_data=self.data_simu,

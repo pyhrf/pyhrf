@@ -232,7 +232,7 @@ def create_physio_brf(physiological_params, response_dt=.5,
           (for error checking of v and q generation in calc_hrfs)
     """
 
-    p = Paradigm({'c':[np.array([0.])]}, [response_duration+response_dt],
+    p = Paradigm({'c':[np.array([0.])]}, [response_duration],
                  {'c':[np.array([1.])]})
     n = np.array([[1.]])
     s,f,v,q = create_evoked_physio_signals(physiological_params, p, n,
@@ -263,7 +263,7 @@ def create_physio_prf(physiological_params, response_dt=.5,
         - also return brf_not_normalized, q, v when return_prf_q_v=True
           (for error checking of v and q generation in calc_hrfs)
     """
-    p = Paradigm({'c':[np.array([0.])]}, [response_duration+response_dt],
+    p = Paradigm({'c':[np.array([0.])]}, [response_duration],
                  {'c':[np.array([1.])]}) # response_dt to match convention
                                          # in JDE analysis
     n = np.array([[1.]])
