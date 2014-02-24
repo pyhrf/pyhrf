@@ -774,3 +774,23 @@ class xndarrayTest(unittest.TestCase):
                                                     [2.5, 2.5]],
                                                    [[2.5, 2.5],
                                                     [3.5, 3.5]]]))
+    def test_unstack_2D(self):
+        c = xndarray(np.arange(6).reshape(2,3), axes_names=['a1','ia'],
+                     axes_domains={'a1':['out_dv1', 'out_dv2'],
+                                   'ia':['in_dv1', 'in_dv2', 'in_dv3']})
+        uc = c.unstack(['a1'], ['ia'])
+
+        self.assertEqual(uc.data.shape, (2,))
+        self.assertEqual(uc.data[0].data.shape, (3,))
+        self.assertEqual(len(uc.axes_domains), 1)
+        npt.assert_array_equal(uc.axes_domains['a1'], ['out_dv1', 'out_dv2'])
+
+    def test_unstack_empty_inner_axes(self):
+        size = 6
+        ad = ['out_dv%d'%i for i in range(size)]
+        c = xndarray(np.arange(size), axes_names=['a1'], axes_domains={'a1':ad})
+        uc = c.unstack(['a1'], [])
+
+        self.assertEqual(uc.data.shape, (size,))
+        self.assertEqual(len(uc.axes_domains), 1)
+        npt.assert_array_equal(uc.axes_domains['a1'], ad)

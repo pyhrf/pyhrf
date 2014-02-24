@@ -16,6 +16,7 @@ from pkg_resources import parse_version
 
 import pyhrf
 from pyhrf.tools import treeBranches, rescale_values, has_ext
+from pyhrf.tools.backports import OrderedDict
 
 debug = False
 
@@ -83,11 +84,14 @@ class xndarray:
 
         self.axes_ids = dict( [(self.axes_names[i],i) for i in xrange(nbDims)] )
 
-        # By default: slices of axis <=> domain of axis
+        # By default: domain of axis = array of slice indexes
         sh = self.data.shape
         self.axes_domains = dict([(axis,np.arange(sh[i])) \
-                                      for i,axis in enumerate(self.axes_names)])
+                                  for i,axis in enumerate(self.axes_names)])
+
         if axes_domains is not None:
+            assert isinstance(axes_domains, dict)
+
             for an,dom in axes_domains.iteritems():
                 if an not in self.axes_names:
                     raise Exception('Axis "%s" defined in domains not '\
@@ -98,16 +102,19 @@ class xndarray:
                 l = self.data.shape[ia]
                 if len(dom) != l:
                     raise Exception('Length of domain for axis "%s" (%d) ' \
-                                        'does not match length of data '\
-                                        'axis %d (%d) ' %(an, len(dom), ia, l))
+                                    'does not match length of data '\
+                                    'axis %d (%d) ' %(an, len(dom), ia, l))
 
-                if isinstance(dom,list) or isinstance(dom,tuple):
-                    axes_domains[an] = np.array(dom)
 
-                assert type(axes_domains) == dict
+                if len(set(dom)) != len(dom):
+                    raise Exception('Domain of axis "%s" does not contain '\
+                                    'unique values' %an)
+
+                axes_domains[an] = np.asarray(dom)
+
             self.axes_domains.update(axes_domains)
-            # for ia,dv in axes_domains.items():
-            #     self.set_axis_domain(ia,dv)
+        # for ia,dv in axes_domains.items():
+        #     self.set_axis_domain(ia,dv)
 
         if pyhrf.verbose.verbosity > 5:
             pyhrf.verbose(6, 'Axes names: %s' %str(self.axes_names))
@@ -138,7 +145,7 @@ class xndarray:
         return self.data.shape[self.get_axis_id(axis)]
 
     def __repr__(self):
-        return 'axes: ' + str(self.axes_names) + '\n' + repr(self.data)
+        return 'axes: ' + str(self.axes_names) + ', ' + repr(self.data)
 
     def get_axis_id(self, axis_name):
         """ Return the id of an axis from the given name.
@@ -190,7 +197,7 @@ class xndarray:
                        axes_domains={'y' : ['plop','plip']})
         >>> c.get_domain('y')
         ['plop', 'plip']
-        >>> c.get_domain('x')
+        >>> c.get_domain('x') #default domain made of slice indexes
         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         """
         if axis_id in self.axes_domains:
@@ -322,6 +329,8 @@ class xndarray:
 
         return s
 
+
+
     def _combine_domains(self, axes):
         """
         Hierarchically combine domains of axes
@@ -339,8 +348,8 @@ class xndarray:
         return reduce(stack_dvalues, [self.axes_domains[a] for a in axes], [])
 
     def to_latex(self, row_axes=None, col_axes=None, inner_axes=None,
-                 header_styles=None, hval_fmt=None, val_fmt='%1.2f',
-                 col_align=None):
+                 inner_separator=' | ', header_styles=None, hval_fmt=None,
+                 val_fmt='%1.2f', col_align=None):
 
         def multicol(n, s, align='c'):
             return '\\multicolumn{%d}{%s}{%s}' %(n,align,s)
@@ -416,6 +425,7 @@ class xndarray:
                                        int(np.prod([dsh[a] for a in col_axes])),
                                        int(np.prod([dsh[a] for a in inner_axes])))
 
+        #data = np.atleast_2d(self.unstack(row_axes + col_axes, inner_axes).data)
 
         nb_rows, nb_cols = data.shape[:2]
 
@@ -499,12 +509,15 @@ class xndarray:
                                  for a in row_axes]  + \
                              ['|'] * (len(row_axes)>0) + \
                              all_col_align)
+
         s = '\\begin{tabular}{%s}\n' %table_align
         s += header
         def fmt_cell(c):
-            if len(c) > 1:
-                return ' | '.join(map(fmt_val, c))
-            else:
+            if isinstance(c, xndarray):
+                return inner_separator.join(map(fmt_val, c.data))
+            elif isinstance(c, np.ndarray):
+                return inner_separator.join(map(fmt_val, c))
+            else: #scalar
                 return fmt_val(c)
         s += table_line_end.join([lh + " & ".join(map(fmt_cell,l)) \
                                   for lh, l in zip(row_header,data)]) + \
@@ -752,8 +765,8 @@ class xndarray:
 
     def explode(self, cmask, new_axis='position'):
         """
-        Explode array according to the given n-ary *mask* so that axes that
-        correspond to those of *mask* are flatten into *new_axis*.
+        Explode array according to the given n-ary *mask* so that axes matchin
+        those of *mask* are flatten into *new_axis*.
 
         Args:
             - mask (xndarray[int]): n-ary mask that defines "regions" used
@@ -771,14 +784,80 @@ class xndarray:
 
     def split(self, axis):
         """ Split a cuboid along given axis.
-        Return a dict of cuboids.
+        Return an OrderedDict of cuboids.
         """
         if axis not in self.axes_names:
             raise Exception('Axis %s not found. Available axes: %s' \
                                 %(axis, self.axes_names))
 
-        return dict( (dv, self.sub_cuboid(**{axis:dv})) \
-                         for dv in self.axes_domains[axis] )
+        return OrderedDict( (dv, self.sub_cuboid(**{axis:dv})) \
+                            for dv in self.axes_domains[axis] )
+
+    def unstack(self, outer_axes, inner_axes):
+        """
+        Unstack the array along outer_axes and produce a xndarray of xndarrays
+
+        Args:
+            - outer_axes (list of str): list of axis names defining the target
+                                        unstacked xndarray
+            - inner_axes (list of str): list of axis names of any given sub-array
+                                        of the target unstacked xndarray
+
+        Return:
+            xndarray object
+
+        Example:
+        >>> from pyhrf.ndarray import xndarray
+        >>> import numpy as np
+        >>> c = xndarray(np.arange(4).reshape(2,2), axes_names=['a1','ia'],
+                         axes_domains={'a1':['out_dv1', 'out_dv2'],
+                                       'ia':['in_dv1', 'in_dv2']})
+        >>> c.unstack(['a1'], ['ia'])
+        axes: ['a1'], array([axes: ['ia'], array([0, 1]),
+                             axes: ['ia'], array([2, 3])], dtype=object)
+        """
+
+        def _unstack(xa, ans):
+            if len(ans) > 0:
+                return [_unstack(suba, ans[1:]) \
+                        for suba in xa.split(ans[0]).itervalues()]
+            else:
+                return xa
+        xarray = self.reorient(outer_axes + inner_axes)
+        return xndarray(_unstack(xarray, outer_axes), axes_names=outer_axes,
+                        axes_domains=dict((a, self.axes_domains[a]) \
+                                           for a in outer_axes))
+
+
+    def to_tree(self, level_axes, leaf_axes):
+        """
+        Convert nested dictionary mapping where each key is a domain value
+        and each leaf is an array or a scalar value if *leaf_axes* is empty.
+
+        Return:
+            OrderedDict such as:
+                {dv_axis1 : {dv_axis2 : {... : xndarray|scalar_type}
+
+        Example:
+        >>> from pyhrf.ndarray import xndarray
+        >>> import numpy as np
+        >>> c = xndarray(np.arange(4).reshape(2,2), axes_names=['a1','ia'],
+                         axes_domains={'a1':['out_dv1', 'out_dv2'],
+                                       'ia':['in_dv1', 'in_dv2']})
+        >>> c.to_tree(['a1'], ['ia'])
+        OrderedDict([('out_dv1', axes: ['ia'], array([0, 1])),
+                     ('out_dv2', axes: ['ia'], array([2, 3]))])
+        """
+        def _to_tree(xa, ans):
+            if len(ans) != len(leaf_axes):
+                return OrderedDict( (dv, _to_tree(suba, ans[1:])) \
+                                    for dv,suba in xa.split(ans[0]).iteritems())
+            else:
+                return xa
+
+        xarray = self.reorient(level_axes + leaf_axes)
+        return _to_tree(xarray, xarray.axes_names)
+
 
     def _format_dvalues(self, axis):
         if (np.diff(self.axes_domains[axis]) == 1).all():
