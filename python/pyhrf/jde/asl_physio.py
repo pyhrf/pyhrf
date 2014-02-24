@@ -766,13 +766,13 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         for i in xrange(self.nbVoxels):
             
             v_lj = v_b[i] * v_l / (v_b[i] + v_l)
-            S_lj = v_b[i] * v_l / (v_b[i] + v_l) * I_F
-            S_lj2 = v_b[i] * v_l * np.linalg.inv(v_b[i] * I_F + v_l * PtP) 
+            #S_lj = v_b[i] * v_l / (v_b[i] + v_l) * I_F
+            #S_lj2 = v_b[i] * v_l * np.linalg.inv(v_b[i] * I_F + v_l * PtP) 
             mu_lj = v_lj * np.dot(self.P.transpose(), self.ytilde[:,i]) / v_b[i]
-            mu_lj1 = np.dot(S_lj, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
-            mu_lj2 = np.dot(S_lj2, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
-            #pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f mu_lj=%s' \
-            #              %(i,S_lj,S_lj**.5, str(mu_lj)))
+            #mu_lj1 = np.dot(S_lj, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+            #mu_lj2 = np.dot(S_lj2, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+            pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f mu_lj=%s' \
+                          %(i,v_lj,v_lj**.5, str(mu_lj)))
             self.currentValue[:,i] = (np.random.randn(self.dimDrift) * \
                                       v_lj**.5) + mu_lj
             #print 'res1 = ',(np.random.randn(self.dimDrift) * v_lj**.5) + mu_lj
@@ -817,6 +817,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
     def getOutputs(self):
         outputs = GibbsSamplerVariable.getOutputs(self)
         drift_signal = np.dot(self.P, self.finalValue)
+
         an = ['time','voxel']
         a = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
         if self.trueValue is not None:
@@ -1049,7 +1050,7 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
 
     def checkAndSetInitValue(self, variables):
-
+        
         if self.useTrueValue:
             if self.trueValue is None:
                 raise Exception('Needed a true value for %s init but '\

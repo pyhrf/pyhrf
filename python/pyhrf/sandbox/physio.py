@@ -567,7 +567,7 @@ def simulate_asl_phylin_prf(output_dir=None, noise_scenario='high_snr',
 
 
 def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
-                           spatial_size='tiny'):
+                           spatial_size='tiny', v_noise=None):
     """
     Generate ASL data according to a LTI system, with PRF and BRF generated
     from a physiological model.
@@ -602,7 +602,7 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
         lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
 
     if noise_scenario == 'high_snr':
-        v_noise = 0.05
+        v_noise = v_noise or 0.05
         conditions = [
             Condition(name='audio', perf_m_act=5., perf_v_act=.1,
                       perf_v_inact=.2,
@@ -618,7 +618,7 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
                       label_map=lmap3),
                       ]
     elif noise_scenario == 'low_snr_low_prl':
-        v_noise = 7.
+        v_noise = v_noise or 7.
         scale = .3
         print 'noise_scenario: low_snr_low_prl'
         conditions = [
@@ -633,7 +633,7 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
                       ]
 
     else: #low_snr
-        v_noise = 2.
+        v_noise = v_noise or 2.
         conditions = [
             Condition(name='audio', perf_m_act=1.6, perf_v_act=.3,
                       perf_v_inact=.3,
