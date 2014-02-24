@@ -233,7 +233,7 @@ class MultiSessTest(unittest.TestCase):
 
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=.5, driftParam=4, driftType='polynomial',
-                                   outputFile=None,outputPrefix='jde_MS_mcmc_',
+                                   outputPrefix='jde_MS_mcmc_',
                                    randomSeed=9778946)
 
         treatment = FMRITreatment(fmri_data=self.data_simu,
@@ -300,7 +300,7 @@ class MultiSessTest(unittest.TestCase):
 
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=.5, driftParam=4, driftType='polynomial',
-                                   outputFile=None,outputPrefix='jde_MS_mcmc_',
+                                   outputPrefix='jde_MS_mcmc_',
                                    randomSeed=5421087)
 
         treatment = FMRITreatment(fmri_data=simu, analyser=analyser,
@@ -380,7 +380,7 @@ class MultiSessTest(unittest.TestCase):
 
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=.5, driftParam=4, driftType='polynomial',
-                                   outputFile=None,outputPrefix='jde_MS_mcmc_',
+                                   outputPrefix='jde_MS_mcmc_',
                                    randomSeed=None)
 
         treatment = FMRITreatment(fmri_data=self.data_simu,

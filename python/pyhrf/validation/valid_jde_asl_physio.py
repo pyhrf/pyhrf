@@ -344,7 +344,7 @@ class ASLTest(unittest.TestCase):
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=fdata.simulation[0]['dt'], driftParam=4,
                                    driftType='polynomial',
-                                   outputFile=None, outputPrefix='jde_mcmc_',
+                                   outputPrefix='jde_mcmc_',
                                    pass_error=False)
 
         treatment = FMRITreatment(fmri_data=fdata, analyser=analyser,

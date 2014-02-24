@@ -17,7 +17,6 @@ from pyhrf.tools.io import read_volume
 #from pyhrf.parcellation import parcellation_for_jde
 
 DEFAULT_CFG_FILE = 'detectestim.xml'
-DEFAULT_OUTPUT_FILE = 'jde_output.xml'
 
 distribName = 'pyhrf'
 
@@ -117,12 +116,12 @@ class JDEMCMCAnalyser(JDEAnalyser):
 
     def __init__(self, sampler=BOLDGibbsSampler(), osfMax=4, dtMin=.4,
                  dt=.6, driftParam=4, driftType='polynomial',
-                 outputFile=DEFAULT_OUTPUT_FILE,outputPrefix='jde_mcmc_',
+                 outputPrefix='jde_mcmc_',
                  randomSeed=None, pass_error=True):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix, pass_error=pass_error)
-        
+
 
         self.sampler = copyModule.copy(sampler)
         self.osfMax = osfMax
@@ -138,7 +137,7 @@ class JDEMCMCAnalyser(JDEAnalyser):
         """
         Launch the JDE Gibbs Sampler on a parcel-specific data set *atomData*
         Args:
-            - atomData (pyhrf.core.FmriData): parcel-specific data 
+            - atomData (pyhrf.core.FmriData): parcel-specific data
         Returns:
             JDE sampler object
         """
@@ -167,7 +166,7 @@ class JDEMCMCAnalyser(JDEAnalyser):
             shrf = self.sampler.get_variable('hrf')
         except KeyError:
             shrf = self.sampler.get_variable('brf')
-            
+
         hrfDuration = shrf.duration
         zc = shrf.zc
 
@@ -270,11 +269,10 @@ def runEstimationBetaEstim(params):
             BOLDGibbsSampler.P_RH : hrfVarSampler,
             })
 
-    analyser = JDEAnalyser(sampler=sampler, dt=0.5,
-                            outputFile=None)
+    analyser = JDEAnalyser(sampler=sampler, dt=0.5)
 
     result = analyser.analyse(sessData)
-    output = analyser.outputResults(result)
+    output = analyser.outputResults(result, outputResults)
 
     return output
 

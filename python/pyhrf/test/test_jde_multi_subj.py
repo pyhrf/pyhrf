@@ -233,7 +233,7 @@ class MultiSubjTest(unittest.TestCase):
 
         analyser = JDEMCMCAnalyser(sampler=sampler, osfMax=4, dtMin=.4,
                                    dt=.6, driftParam=4, driftType='polynomial',
-                                   outputFile=None, outputPrefix='jde_mcmc_',
+                                   outputPrefix='jde_mcmc_',
                                    randomSeed=5421087, pass_error=False)
 
         treatment = FMRITreatment(fmri_data=simu, analyser=analyser,
