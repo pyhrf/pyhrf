@@ -28,7 +28,7 @@ def compute_StS_StY(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
     for j in xrange(nb_conditions):
         np.divide(ybar, v_b, yaj)
         yaj *= rls[j,:]
-        varDeltaY +=  np.dot(mx[j,:,:].T, yaj.sum(1))
+        varDeltaY += np.dot(mx[j,:,:].T, yaj.sum(1))
 
         for k in xrange(nb_conditions):
             np.divide(rlrl[j,k,:], v_b, ajak_vb)
@@ -38,6 +38,30 @@ def compute_StS_StY(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
 
     return (varDeltaS, varDeltaY)
 
+    
+def compute_StS_StY_deterministic(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
+    """ yaj and ajak_vb are only used to store intermediate quantities, 
+    they're not inputs.
+    """
+    nb_col_X = mx.shape[2]
+    nb_conditions = mxtx.shape[0]
+    varDeltaS = np.zeros((nb_col_X,nb_col_X), dtype=float )
+    varDeltaY = np.zeros((nb_col_X), dtype=float )
+
+    for j in xrange(nb_conditions):
+        np.divide(ybar, v_b, yaj)
+        yaj *= rls[j,:]
+        varDeltaY += np.dot(mx[j,:,:].T, yaj.sum(1))
+
+        for k in xrange(nb_conditions):
+            np.divide(rlrl[j,k,:], v_b, ajak_vb)
+            pyhrf.verbose(6, 'ajak/rb :')
+            pyhrf.verbose.printNdarray(6, ajak_vb)
+            varDeltaS1 += ajak_vb.sum() * mxtx[j,k,:,:]
+            varDeltaS2 += ajak_vb.sum() * mxtx[j,k,:,:]
+
+    return (varDeltaS, varDeltaY)
+   
 
 def compute_bRpR(brl, prl, nbConditions, nbVoxels):
     # aa[m,n,:] == aa[n,m,:] -> nb ops can be /2
@@ -306,9 +330,6 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
         self.ytilde[:] = self.computeYTilde()
 
-        StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, rlrl,
-                                   self.yBj, self.BjBk_vb)
-
         v_resp = self.get_variable(self.var_name).currentValue
 
         omega = self.get_variable('prf').omega_value
@@ -316,8 +337,13 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         prf = self.get_variable('prf').currentValue
         if 'deterministic' in self.get_variable('prf').prior_type:
             v_prf = 1.
+            StS, StY = compute_StS_StY_deterministic(rl, noise_var,
+                                    mx, mxtx, self.ytilde, rlrl,
+                                    self.yBj, self.BjBk_vb)
         else:
             v_prf =  self.get_variable('prf_var').currentValue
+            StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, rlrl,
+                                   self.yBj, self.BjBk_vb)
 
         sigma_g_inv = self.get_variable('prf').varR
 
