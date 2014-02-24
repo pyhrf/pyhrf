@@ -843,7 +843,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
     def getOutputs(self):
         outputs = GibbsSamplerVariable.getOutputs(self)
         drift_signal = np.dot(self.P, self.finalValue)
-        
+
         an = ['time','voxel']
         a = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
         if self.trueValue is not None:

@@ -1987,4 +1987,32 @@ def PPMcalculus_jde(threshold_value, apost_mean_activ_fn, apost_var_activ_fn,  \
     return PPM.data, PPMinv.data, Pval.data
 
 
+## HTML formating ##
 
+def html_row(s):
+    return '<tr>%s</tr>' %s
+
+def html_table(s):
+    return '<table>%s</table>' %s
+
+def html_img(fn):
+    return '<img src="%s">' %fn
+
+def html_cell(s, cell_type='d', attrs=None):
+    attrs = attrs or {}
+    sattrs = ' '.join(['%s="%s"' %(k,v) for k,v in attrs.items()])
+    return '<t%s %s>%s</t%s>' %(cell_type, sattrs, s, cell_type)
+
+def html_list_to_row(l, cell_types, attrs):
+    if not isinstance(attrs, (list, tuple)):
+        attrs  = [attrs] * len(l)
+    else:
+        assert len(attrs) == len(l)
+
+    if not isinstance(cell_types, (list, tuple)):
+        cell_types  = [cell_types] * len(l)
+    else:
+        assert len(cell_types) == len(l)
+
+    return html_row(''.join([html_cell(e, t, a) \
+                             for e,t,a in zip(l,cell_types,attrs)]))

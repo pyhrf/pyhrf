@@ -30,7 +30,7 @@ from test_ndarray import *
 
 if pyhrf.__usemode__ == pyhrf.DEVEL:
     from test_sandbox import *
-    from test_sandbox_parcellation import *
+    #from test_sandbox_parcellation import *
     from test_sandbox_physio import *
 
 if __name__ == "__main__":
