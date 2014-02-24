@@ -342,8 +342,7 @@ def plot_gaussian_mixture(values, props=None, color='k', lw=1.75):
 
 
 def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
-                      show_axis_labels=True,
-                      show_legend=False, axes=None):
+                      show_axis_labels=True, show_legend=False, axes=None):
     """
     Plot a cuboid (ndims <= 2) as curve(s).
     If the input is 1D: one single curve.
@@ -379,7 +378,7 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
             col = colors.get(val, None)
             if col is not None:
                 pkwargs['color'] = col
-            pkwargs['label'] = legend_prefix + str(val)
+            pkwargs['label'] = legend_prefix + c.axes_names[0] + '=' + str(val)
             plot_cub_as_curve(sub_c, plot_kwargs=pkwargs, axes=axes,
                               show_axis_labels=False)
         if show_legend:
