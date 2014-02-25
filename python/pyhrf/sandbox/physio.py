@@ -620,7 +620,6 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     elif noise_scenario == 'low_snr_low_prl':
         v_noise = v_noise or 7.
         scale = .3
-        print 'noise_scenario: low_snr_low_prl'
         conditions = [
             Condition(name='audio', perf_m_act=1.6*scale, perf_v_act=.1,
                       perf_v_inact=.1,
