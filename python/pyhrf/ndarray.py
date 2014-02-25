@@ -379,7 +379,8 @@ class xndarray:
         span = nb_rows
         for a in row_axes:
             # 1st row contains all axis labels:
-            row_header[0].append(html_cell(a, 'h', {'rowspan':nb_rows}))
+            row_header[0].append(html_cell(a, 'h', {'rowspan':nb_rows,
+                                                    'class':'rotate'}))
 
             # dispatch domain values across corresponding rows:
             dom = [str(v) for v in self.get_domain(a)] #TODO: better dv format
@@ -411,14 +412,20 @@ class xndarray:
         outer_axes = row_axes + col_axes
         plot_args = plot_args or {}
 
+        def protect_html_fn(fn):
+            base,ext = op.splitext(fn)
+            return base.replace('.', '-') + ext
+
         def format_cell(slice_info, cell_val):
             if cell_format == 'txt':
                 return html_cell(str(cell_val))
             elif cell_format == 'plot':
-                suffix = '_'.join(['_'.join(e) \
-                                   for e in zip(outer_axes, slice_info)])
-                fig_fn = op.join(plot_dir, plot_fig_prefix + suffix + '.png' )
-                plt.figure()
+                suffix = '_'.join(['%s_%s' %(a, str(s)) \
+                                   for a,s in zip(outer_axes, slice_info)])
+                fig_fn = op.join(plot_dir, plot_fig_prefix + '_' + \
+                                 suffix + '.png' )
+                fig_fn = protect_html_fn(fig_fn)
+                plt.figure(figsize=(4,3), dpi=40) #TODO: expose this as parameter
                 if plot_style == 'image':
                     pplot.plot_cub_as_image(cell_val, **plot_args)
                 else:
@@ -428,13 +435,15 @@ class xndarray:
             else:
                 raise Exception('Wrong plot_style "%s"' %plot_style)
 
-
+        pyhrf.verbose(2, 'Generate html table headers ...')
         row_header, col_header = self._html_table_headers(row_axes, col_axes)
+        pyhrf.verbose(2, 'Convert xarray to tree ...')
         cell_vals = tree_items(self.to_tree(row_axes + col_axes, inner_axes))
 
         dsh = self.get_dshape()
         nb_cols = int(np.prod([dsh[a] for a in col_axes]))
         content = []
+        pyhrf.verbose(2, 'Generate cells ...') 
         for i, r in enumerate(row_header):
             content += html_row(r + ''.join([format_cell(*cell_vals.next()) \
                                              for c in range(nb_cols)]))
