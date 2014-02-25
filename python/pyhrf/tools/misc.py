@@ -38,6 +38,25 @@ except ImportError:
             for prod in result:
                 yield tuple(prod)
 
+class PickleableStaticMethod(object):
+    def __init__(self, fn, cls=None):
+        self.cls = cls
+        self.fn = fn
+        self.__name__ = fn.__name__
+
+    def __call__(self, *args, **kwargs):
+        if self.cls is None:
+            return self.fn(*args, **kwargs)
+        else:
+            return self.fn(self.cls, *args, **kwargs)
+    def __get__(self, obj, cls):
+        return PickleableStaticMethod(self.fn, cls)
+    def __getstate__(self):
+        return (self.cls, self.fn.__name__)
+    def __setstate__(self, state):
+        self.cls, name = state
+        self.fn = getattr(self.cls, name).fn
+
 
 def is_importable(module_name, func_name=None):
     """ Return True if given *module_name* (str) is importable """
@@ -294,7 +313,8 @@ def icartesian_combine_args(varying_args, fixed_args=None):
                 for vp in iproduct(*varying_args.values()))
 
 
-def cartesian_apply(varying_args, func, fixed_args=None):
+def cartesian_apply(varying_args, func, fixed_args=None, nb_parallel_procs=1,
+                    joblib_verbose=0):
     """
     Apply function *func* iteratively on the cartesian product of *varying_args*
     with fixed args *fixed_args*. Produce a tree (nested dicts) mapping arg values    to the corresponding evaluation of function *func*
@@ -328,9 +348,19 @@ def cartesian_apply(varying_args, func, fixed_args=None):
     """
     from pyhrf.tools.backports import OrderedDict
     assert isinstance(varying_args, OrderedDict)
-    args_iter = icartesian_combine_args(varying_args, fixed_args)
-    return tree([ ([kwargs[a] for a in varying_args.keys()], func(**kwargs)) \
-                  for kwargs in args_iter])
+
+    if nb_parallel_procs == 1:
+        args_iter = icartesian_combine_args(varying_args, fixed_args)
+        return tree([ ([kwargs[a] for a in varying_args.keys()], func(**kwargs)) \
+                      for kwargs in args_iter])
+    else:
+        from joblib import Parallel, delayed
+        p = Parallel(n_jobs=nb_parallel_procs, verbose=joblib_verbose)
+        args = cartesian_combine_args(varying_args, fixed_args)
+        results = p(delayed(func)(**kwargs) for kwargs in args)
+        return tree([ ([kwargs[a] for a in varying_args.keys()], r) \
+                      for kwargs, r in zip(args, results)])
+
 
 
 def format_duration(dt):
@@ -387,26 +417,6 @@ def cartesian_eval(func, varargs, fixedargs=None):
         #print 'p.values:', [p[k] for k in varargs.iterkeys()]
         set_leaf(resultTree, [p[k] for k in varargs.iterkeys()], func(**fargs))
     return varargs.keys(), resultTree
-
-
-class PickleableStaticMethod(object):
-    def __init__(self, fn, cls=None):
-        self.cls = cls
-        self.fn = fn
-        self.__name__ = fn.__name__
-
-    def __call__(self, *args, **kwargs):
-        if self.cls is None:
-            return self.fn(*args, **kwargs)
-        else:
-            return self.fn(self.cls, *args, **kwargs)
-    def __get__(self, obj, cls):
-        return PickleableStaticMethod(self.fn, cls)
-    def __getstate__(self):
-        return (self.cls, self.fn.__name__)
-    def __setstate__(self, state):
-        self.cls, name = state
-        self.fn = getattr(self.cls, name).fn
 
 
 

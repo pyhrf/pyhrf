@@ -120,6 +120,9 @@ class PeelVolumeTest(unittest.TestCase):
 ##        print 'peeledM:'
 ##        print peeledM
 
+def foo(a, b, c=1, d=2):
+    return a + b + c + d
+
 class CartesianTest(unittest.TestCase):
 
     def testCartesianBasic(self):
@@ -134,7 +137,7 @@ class CartesianTest(unittest.TestCase):
     def test_cartesian_apply(self):
         from pyhrf.tools import cartesian_apply
         from pyhrf.tools.backports import OrderedDict
-        
+
         def foo(a, b, c=1, d=2):
             return a + b + c + d
 
@@ -147,7 +150,29 @@ class CartesianTest(unittest.TestCase):
         fixed_args = {'d' : 10}
 
         result_tree = cartesian_apply(varying_args, foo,
-                               fixed_args=fixed_args)
+                                      fixed_args=fixed_args)
+
+        self.assertEqual(result_tree, {0 : { 0 : { 0 : 10, 1 : 11},
+                                             1 : { 0 : 11, 1 : 12}},
+                                       1 : { 0 : { 0 : 11, 1 : 12},
+                                             1 : { 0 : 12, 1 : 13}}})
+
+
+    def test_cartesian_apply_parallel(self):
+        from pyhrf.tools import cartesian_apply
+        from pyhrf.tools.backports import OrderedDict
+
+        # OrderDict to keep track of parameter orders in the result
+        # arg values must be hashable
+        varying_args = OrderedDict([('a' , range(2)),
+                                    ('b' , range(2)),
+                                    ('c' , range(2))])
+
+        fixed_args = {'d' : 10}
+
+        result_tree = cartesian_apply(varying_args, foo,
+                                      fixed_args=fixed_args,
+                                      nb_parallel_procs=4)
 
         self.assertEqual(result_tree, {0 : { 0 : { 0 : 10, 1 : 11},
                                              1 : { 0 : 11, 1 : 12}},
