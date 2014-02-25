@@ -215,6 +215,15 @@ class ResponseSampler(GibbsSamplerVariable):
         pyhrf.verbose.printNdarray(4, self.finalValue)
 
 
+    def getOutputs(self):
+
+        outputs = GibbsSamplerVariable.getOutputs(self)
+        if self.trueValue is not None:
+            err = ((self.finalValue - self.trueValue)**2).sum()**.5
+            err = xndarray([err], axes_names=['err'])
+            outputs[self.name + '_norm_error'] = err
+
+        return outputs
 
 class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
@@ -245,8 +254,8 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         self.new_factor_mean = np.zeros_like(self.currentValue)
         self.track_sampled_quantity(self.new_factor_mean, self.name + '_new_factor_mean',
                                     axes_names=['time'])
-        
-            
+
+
     def computeYTilde(self):
         """ y - \sum cWXg - Pl - wa """
 
@@ -450,7 +459,8 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         if not self.diff_res:
             return res
         else:
-            return np.dot(self.dataInput.W, res)
+            #return np.dot(self.dataInput.W, res)
+            return self.dataInput.w[:, np.newaxis] * res #much faster
 
 
     def sampleNextInternal(self, variables):
@@ -541,13 +551,13 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
         R = resp_sampler.varR
         resp = resp_sampler.currentValue
 
-        alpha = (len(resp) * self.nbVoxels - 1)/2.  
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
         #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
         beta = np.dot(np.dot(resp.T, R), resp)/2.
 
         self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
 
-        
+
 class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
@@ -557,7 +567,7 @@ class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitab
         ResponseVarianceSampler.__init__(self, 'brf_var', 'brf',
                                          val_ini, do_sampling, use_true_value)
 
-                                         
+
 class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
@@ -627,7 +637,7 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def sampleNextInternal(self, variables):
         y_tilde = self.compute_y_tilde()
-        
+
         alpha = (self.ny - 1.)/2.
         beta = (y_tilde * y_tilde).sum(0)/2.
 
@@ -758,34 +768,45 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         pyhrf.verbose(5, 'Noise vars :' )
         pyhrf.verbose.printNdarray(5, v_b)
-        
-        PtP = np.dot(self.P.transpose(),self.P)
-        I_F = np.eye((self.P.shape[1]))
-        assert_almost_equal( PtP, I_F)
-        
-        for i in xrange(self.nbVoxels):
-            
-            v_lj = v_b[i] * v_l / (v_b[i] + v_l)
-            #S_lj = v_b[i] * v_l / (v_b[i] + v_l) * I_F
-            #S_lj2 = v_b[i] * v_l * np.linalg.inv(v_b[i] * I_F + v_l * PtP) 
-            mu_lj = v_lj * np.dot(self.P.transpose(), self.ytilde[:,i]) / v_b[i]
-            #mu_lj1 = np.dot(S_lj, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
-            #mu_lj2 = np.dot(S_lj2, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
-            pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f mu_lj=%s' \
-                          %(i,v_lj,v_lj**.5, str(mu_lj)))
-            self.currentValue[:,i] = (np.random.randn(self.dimDrift) * \
-                                      v_lj**.5) + mu_lj
-            #print 'res1 = ',(np.random.randn(self.dimDrift) * v_lj**.5) + mu_lj
-            #print 'res2 = ',np.random.multivariate_normal(mu_lj1, S_lj)
-            #print 'res3 = ',np.random.multivariate_normal(mu_lj2, S_lj2)
-            #self.currentValue[:,i] = np.random.multivariate_normal(mu_lj1, S_lj)
 
-            pyhrf.verbose(5, 'v_l : %f' %v_l)
+        #PtP = np.dot(self.P.transpose(),self.P)
+        #I_F = np.eye((self.P.shape[1]))
+        #assert_almost_equal( PtP, I_F)
+
+        rnd = np.random.randn(self.dimDrift, self.nbVoxels)
+        pty = np.dot(self.P.T, self.ytilde)
+        
+        # for i in xrange(self.nbVoxels):
+
+        #     v_lj = v_b[i] * v_l / (v_b[i] + v_l)
+        #     #S_lj = v_b[i] * v_l / (v_b[i] + v_l) * I_F
+        #     #S_lj2 = v_b[i] * v_l * np.linalg.inv(v_b[i] * I_F + v_l * PtP)
+        #     mu_lj =  v_lj * pty[:,i] / v_b[i]
+        #     #mu_lj1 = np.dot(S_lj, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+        #     #mu_lj2 = np.dot(S_lj2, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+
+        #     if pyhrf.verbose >= 5:
+        #         pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f' \
+        #                       %(i,v_lj,v_lj**.5))
+        #         pyhrf.verbose(5, 'mu_lj:')
+        #         pyhrf.verbose.printNdarray(5, mu_lj)
+
+        #     self.currentValue[:,i] = (rnd[:,i] * v_lj**.5) + mu_lj
+        #     #print 'res1 = ',(np.random.randn(self.dimDrift) * v_lj**.5) + mu_lj
+        #     #print 'res2 = ',np.random.multivariate_normal(mu_lj1, S_lj)
+        #     #print 'res3 = ',np.random.multivariate_normal(mu_lj2, S_lj2)
+        #     #self.currentValue[:,i] = np.random.multivariate_normal(mu_lj1, S_lj)
+
+        #     pyhrf.verbose(5, 'v_l : %f' %v_l)
+
+        v_lj = v_b * v_l / (v_b + v_l)
+        mu_lj =  v_lj * pty / v_b
+        self.currentValue[:] = (rnd * v_lj**.5) + mu_lj
 
         pyhrf.verbose(5, 'drift params :')
         pyhrf.verbose.printNdarray(5, self.currentValue)
 
-        if 1: # some tests
+        if 0: # some tests
             inv_vars_l = (1/v_b + 1/v_l) * self.ones_Q_J
             mu_l = 1/inv_vars_l * np.dot(self.P.transpose(), self.ytilde)
 
@@ -804,12 +825,12 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         self.updateNorm()
         self.Pl = np.dot(self.P, self.currentValue)
-        
+
     def updateNorm(self):
 
         self.norm = (self.currentValue * self.currentValue).sum()
 
-        if self.trueValue is not None:
+        if self.trueValue is not None and pyhrf.verbose.verbosity >= 4:
             pyhrf.verbose(4, 'cur drift norm: %f' %self.norm)
             pyhrf.verbose(4, 'true drift norm:' %(self.trueValue * \
                                                   self.trueValue).sum())
@@ -979,7 +1000,7 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         pyhrf.verbose(4, ' BOLDResp.computeVarYTildeOpt(update_perf=%s) ...' \
                       %str(update_perf))
 
-        brf_sampler = self.get_variable('brf') 
+        brf_sampler = self.get_variable('brf')
         Xh = brf_sampler.varXResp
         sumaXh = self.sumBXResp
 
@@ -1003,7 +1024,7 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
                                 self.dataInput.varMBY, ytilde_perf,
                                 sumaXh, sumcXg, 0, 0)
 
-        if self.dataInput.simulData is not None: 
+        if self.dataInput.simulData is not None:
             # Some tests
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
@@ -1050,7 +1071,7 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
 
     def checkAndSetInitValue(self, variables):
-        
+
         if self.useTrueValue:
             if self.trueValue is None:
                 raise Exception('Needed a true value for %s init but '\
@@ -1570,24 +1591,34 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
     def sampleNextInternal(self, v):
 
         v_alpha = self.get_variable('perf_baseline_var').currentValue
-        w = np.diag(self.dataInput.W)
+        w = self.dataInput.w
 
         residuals = self.compute_residuals()
         v_b = self.get_variable('noise_var').currentValue
 
-        for i in xrange(self.nbVoxels):
-            #m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
-            #          ( self.ny + v_b[i] / v_alpha)
-            m_apost = ( np.dot(w.T, residuals[:,i]) * v_alpha) /  \
-                      ( self.ny * v_alpha + v_b[i])
-            v_apost = ( v_alpha * v_b[i] ) / ( self.ny * v_alpha + v_b[i])
+        rnd = np.random.randn(self.nbVoxels)
 
-            a = np.random.randn() * v_apost**.5 + m_apost
-            self.currentValue[i] = a
-            self.wa[:,i] = self.w * a
+        # for i in xrange(self.nbVoxels):
+        #     #m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
+        #     #          ( self.ny + v_b[i] / v_alpha)
+        #     m_apost = ( np.dot(w.T, residuals[:,i]) * v_alpha) /  \
+        #               ( self.ny * v_alpha + v_b[i])
+        #     v_apost = ( v_alpha * v_b[i] ) / ( self.ny * v_alpha + v_b[i])
 
-            
-            
+        #     a = rnd[i] * v_apost**.5 + m_apost
+        #     self.currentValue[i] = a
+        #     self.wa[:,i] = self.w * a
+
+        m_apost = (( w[:,np.newaxis] * residuals).sum(0) * v_alpha) /  \
+                  ( self.ny * v_alpha + v_b)
+        v_apost = ( v_alpha * v_b ) / ( self.ny * v_alpha + v_b)
+        a = rnd * v_apost**.5 + m_apost
+        self.currentValue[:] = a
+        self.wa[:] = w[:,np.newaxis] * a
+
+
+
+
 class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
@@ -1616,11 +1647,11 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
                 self.currentValue = self.trueValue.copy()
             else:
                 raise Exception('Needed a true value but none defined')
-        
+
         if self.currentValue is None:
             self.currentValue = np.array([(self.dataInput.varMBY * \
               self.dataInput.w[:,np.newaxis]).mean(0).var()])
-              
+
         print_theoretical = True
 
     def sampleNextInternal(self, v):
@@ -1633,9 +1664,9 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         #print 'theoretical IG(', a, ',', b, ' = ', b/(a-1)
         self.currentValue[0] = 1. / np.random.gamma(a, 1./b)
         #print 'v_alpha = ', 1. / np.random.gamma(a, 1./b)
-        
 
-        
+
+
 class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
 
     def makePrecalculations(self):
@@ -1690,9 +1721,9 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  prf_var=PhysioPerfResponseSampler(),
                  bold_mixt_params=BOLDMixtureSampler(),
                  perf_mixt_params=PerfMixtureSampler(),
-                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(), 
-                 perf_baseline=PerfBaselineSampler(),               
-                 perf_baseline_var=PerfBaselineVarianceSampler(),   
+                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
+                 perf_baseline=PerfBaselineSampler(),
+                 perf_baseline_var=PerfBaselineVarianceSampler(),
                  check_final_value=None):
 
         variables = [noise_var, brf, brf_var, prf, prf_var,
