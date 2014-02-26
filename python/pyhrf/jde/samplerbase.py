@@ -584,7 +584,7 @@ class GibbsSamplerVariable:
         """
         self.axes_domains = {} if axes_domains is None else axes_domains
         self.axes_names = axes_names
-        pyhrf.verbose(2, 'Init of GibbsSamplerVariable %s with axes: %s' \
+        pyhrf.verbose(3, 'Init of GibbsSamplerVariable %s with axes: %s' \
                           %(name, str(axes_names)))
         self.value_label = value_label
         self.useTrueValue = useTrueValue
