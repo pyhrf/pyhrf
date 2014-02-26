@@ -733,35 +733,8 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         pyhrf.verbose(5, 'Noise vars :' )
         pyhrf.verbose.printNdarray(5, v_b)
 
-        #PtP = np.dot(self.P.transpose(),self.P)
-        #I_F = np.eye((self.P.shape[1]))
-        #assert_almost_equal( PtP, I_F)
-
         rnd = np.random.randn(self.dimDrift, self.nbVoxels)
         pty = np.dot(self.P.T, self.ytilde)
-        
-        # for i in xrange(self.nbVoxels):
-
-        #     v_lj = v_b[i] * v_l / (v_b[i] + v_l)
-        #     #S_lj = v_b[i] * v_l / (v_b[i] + v_l) * I_F
-        #     #S_lj2 = v_b[i] * v_l * np.linalg.inv(v_b[i] * I_F + v_l * PtP)
-        #     mu_lj =  v_lj * pty[:,i] / v_b[i]
-        #     #mu_lj1 = np.dot(S_lj, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
-        #     #mu_lj2 = np.dot(S_lj2, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
-
-        #     if pyhrf.verbose >= 5:
-        #         pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f' \
-        #                       %(i,v_lj,v_lj**.5))
-        #         pyhrf.verbose(5, 'mu_lj:')
-        #         pyhrf.verbose.printNdarray(5, mu_lj)
-
-        #     self.currentValue[:,i] = (rnd[:,i] * v_lj**.5) + mu_lj
-        #     #print 'res1 = ',(np.random.randn(self.dimDrift) * v_lj**.5) + mu_lj
-        #     #print 'res2 = ',np.random.multivariate_normal(mu_lj1, S_lj)
-        #     #print 'res3 = ',np.random.multivariate_normal(mu_lj2, S_lj2)
-        #     #self.currentValue[:,i] = np.random.multivariate_normal(mu_lj1, S_lj)
-
-        #     pyhrf.verbose(5, 'v_l : %f' %v_l)
 
         v_lj = v_b * v_l / (v_b + v_l)
         mu_lj =  v_lj * pty / v_b
@@ -1561,17 +1534,6 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         v_b = self.get_variable('noise_var').currentValue
 
         rnd = np.random.randn(self.nbVoxels)
-
-        # for i in xrange(self.nbVoxels):
-        #     #m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
-        #     #          ( self.ny + v_b[i] / v_alpha)
-        #     m_apost = ( np.dot(w.T, residuals[:,i]) * v_alpha) /  \
-        #               ( self.ny * v_alpha + v_b[i])
-        #     v_apost = ( v_alpha * v_b[i] ) / ( self.ny * v_alpha + v_b[i])
-
-        #     a = rnd[i] * v_apost**.5 + m_apost
-        #     self.currentValue[i] = a
-        #     self.wa[:,i] = self.w * a
 
         m_apost = (( w[:,np.newaxis] * residuals).sum(0) * v_alpha) /  \
                   ( self.ny * v_alpha + v_b)
