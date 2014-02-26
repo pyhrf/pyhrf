@@ -284,7 +284,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         """
         """
         xmlio.XmlInitable.__init__(self)
-        ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', smooth_order,
+        ResponseSampler.__init__(self, 'brf', 'brl', 'prfbrf_var', smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)
 
@@ -397,7 +397,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
             #                /v_prf  
         elif 'deterministic' in self.get_variable('prf').prior_type:    # deterministic real
             #v_prf = 1.
-            v_prf = self.get_variable('prf_var').currentValue
+            v_prf = self.get_variable('prfbrf_var').currentValue
             mwx = self.get_mat_WX()
             mxtwx = self.get_mat_XtWX()
             mwxtwx = self.get_mat_WXtWX()
@@ -413,7 +413,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
             self.new_factor_mean[:] = 0.
             new_factor_var = 0.
         else:           # stochastic
-            v_prf =  self.get_variable('prf_var').currentValue
+            v_prf =  self.get_variable('prfbrf_var').currentValue
             StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, 
                                     rlrl, self.yBj, self.BjBk_vb)
             self.new_factor_mean[:] = np.dot(np.dot(omega.transpose(),sigma_g_inv),prf)\
@@ -460,13 +460,14 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
                               'physio_stochastic_not_regularized',
                               'physio_deterministic',
                               'physio_deterministic_hack',
-                              'basic_regularized']
+                              'basic_regularized',
+                              'physio_joint']
         if prior_type not in available_priors:
             raise Exception('Wrong prior type %s. Available choices: %s'\
                             %(prior_type, available_priors))
         xmlio.XmlInitable.__init__(self)
         self.diff_res = diff_res
-        ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', smooth_order,
+        ResponseSampler.__init__(self, 'prf', 'prl', 'prfbrf_var', smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)
         self.prior_type = prior_type
@@ -603,16 +604,15 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         rl_sampler.computeVarYTildeOpt()
 
 
+class PhysioJointResponseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
-class ResponseVarianceSampler(GibbsSamplerVariable):
-
-    def __init__(self, name, response_name, val_ini=None, do_sampling=True,
+    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
                  use_true_value=False):
-        self.response_name = response_name
-        GibbsSamplerVariable.__init__(self, name, valIni=val_ini,
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'prfbrf_var', valIni=val_ini,
                                       sampleFlag=do_sampling,
                                       useTrueValue=use_true_value,
-                                      value_label='Var ' + self.response_name)
+                                      value_label='Joint PRF BRF Var')
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -632,42 +632,30 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, v):
         """
-        Sample variance of BRF or PRF
-
-        TODO: change code below --> no changes necessary so far
+        Sample joint variance of BRF and PRF
         """
-        resp_sampler = self.get_variable(self.response_name)
-        R = resp_sampler.varR
-        resp = resp_sampler.currentValue
-
-        alpha = (len(resp) * self.nbVoxels - 1)/2.  
-        #alpha = (len(resp) - 1)/2.  
-        #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
+        Rh = self.get_variable('brf').varR
+        Rg = self.get_variable('prf').varR
+        resp_h = self.get_variable('brf').currentValue
+        resp_g = self.get_variable('prf').currentValue
+        omega = self.get_variable('prf').omega_value
         
-        beta = np.dot(np.dot(resp.T, R), resp)/2.
+        #alpha = (len(resp_h) - 1)/2.  
+        alpha = (len(resp_h) * self.nbVoxels - 1)/2.  
+        #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
 
-        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
+        aux_h = Rh + np.dot(np.dot(omega.T, resp_g), omega)
+        aux_oh = np.dot(omega,resp_h)
+        beta = (np.dot(np.dot(resp_h.T, aux_h), resp_h) \
+                + np.dot(np.dot(resp_g.T, Rg), resp_g) \
+                - np.dot(np.dot(resp_g.T, Rg), aux_oh) \
+                - np.dot(np.dot(resp_g.T, Rg), aux_oh).T )/2.
 
+        print 'alpha = ', alpha
+        print 'beta = ', beta
 
-class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
-
-    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
-                 use_true_value=False):
-        xmlio.XmlInitable.__init__(self)
-
-        ResponseVarianceSampler.__init__(self, 'brf_var', 'brf',
-                                         val_ini, do_sampling, use_true_value)
-
-
-class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
-
-    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
-                 use_true_value=False):
-        xmlio.XmlInitable.__init__(self)
-        ResponseVarianceSampler.__init__(self, 'prf_var', 'prf',
-                                         val_ini, do_sampling, use_true_value)
-
-                                         
+        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)                                         
+                                      
                                          
 class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
@@ -1808,9 +1796,8 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  perf_response_levels=PerfResponseLevelSampler(),
                  labels=LabelSampler(), noise_var=NoiseVarianceSampler(),
                  brf=PhysioBOLDResponseSampler(),
-                 brf_var=PhysioBOLDResponseVarianceSampler(),
                  prf=PhysioPerfResponseSampler(),
-                 prf_var=PhysioPerfResponseVarianceSampler(),
+                 prfbrf_var=PhysioJointResponseVarianceSampler(),
                  bold_mixt_params=BOLDMixtureSampler(),
                  perf_mixt_params=PerfMixtureSampler(),
                  drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
@@ -1818,7 +1805,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  perf_baseline_var=PerfBaselineVarianceSampler(),
                  check_final_value=None):
 
-        variables = [noise_var, brf, brf_var, prf, prf_var,
+        variables = [noise_var, brf, prf, prfbrf_var,
                      drift_var, drift, perf_response_levels,
                      bold_response_levels, perf_baseline, perf_baseline_var,
                      bold_mixt_params, perf_mixt_params, labels]

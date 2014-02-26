@@ -161,7 +161,7 @@ class ASLTest(unittest.TestCase):
         print simu['prf'].shape
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['prf'], fdata, nb_its=100,
-                                     check_fv='print',
+                                     check_fv='raise',
                                      rf_prior_type='physio_deterministic')
         print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
         
