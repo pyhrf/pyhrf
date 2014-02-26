@@ -576,9 +576,10 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
             varInvSigma = StS + self.nbVoxels * self.varR / v_resp
             mean_h = np.linalg.solve(varInvSigma, StY+new_factor)
-            resp = np.random.multivariate_normal(mean_h,
-                                                 np.linalg.inv(varInvSigma))
-
+            #resp = np.random.multivariate_normal(mean_h,
+            #                                     np.linalg.inv(varInvSigma))
+            resp = mean_h
+            
         if self.normalise:
             norm = (resp**2).sum()**.5
             resp /= norm
