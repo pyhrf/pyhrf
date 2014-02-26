@@ -4,10 +4,12 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 import os.path as op
+import os
 
 from pyhrf.ndarray import *
 import shutil
 from pyhrf.tools import add_suffix
+import difflib
 
 debug = False
 
@@ -808,19 +810,37 @@ class TestHtml(unittest.TestCase):
         a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
         html = a.to_html_table([], ['measure'], [])
         self.assertIsInstance(html, str)
-        self.assertEqual(html, '<table><tr><th colspan="2">measure</th></tr>' \
-                               '<tr><th colspan="1">mon</th>' \
-                               '<th colspan="1">tue</th></tr>' \
-                               '<tr><td >1</td><td >2</td></tr></table>')
+        expected = '<table><tr><th colspan="2">measure</th></tr>' \
+                   '<tr><th colspan="1">mon</th>' \
+                   '<th colspan="1">tue</th></tr>' \
+                   '<tr><td>1</td><td>2</td></tr></table>'
+        self.assertEqual(html, expected)
 
     def test_txt_1d_row_axes_only(self):
         a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
         html = a.to_html_table(['measure'], [], [])
         self.assertIsInstance(html, str)
-        self.assertEqual(html, '<table><tr><th rowspan="2">measure</th>' \
-                               '<th rowspan="1">mon</th><td >1</td></tr>' \
-                               '<tr><th rowspan="1">tue</th><td >2</td></tr>' \
-                               '</table>')
+        expected = '<table><tr><th rowspan="2">' \
+                               '<div class="rotate">measure</div></th>' \
+                               '<th rowspan="1">mon</th><td>1</td></tr>' \
+                               '<tr><th rowspan="1">tue</th><td>2</td></tr>' \
+                               '</table>'
+        self.assert_html_equal(html, expected)
+
+    def test_txt_tooltip(self):
+        a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
+        html = a.to_html_table(['measure'], [], [], tooltip=True)
+        self.assertIsInstance(html, str)
+        expected = '<table><tr>'\
+                   '<th rowspan="2">'\
+                   '<div class="rotate">measure</div></th>' \
+                   '<th rowspan="1">mon</th>'\
+                   '<td title="measure=mon">1</td></tr>' \
+                   '<tr><th rowspan="1">tue</th>'\
+                   '<td title="measure=tue">2</td></tr>' \
+                   '</table>'
+        self.assert_html_equal(html, expected)
+
 
     def test_plot(self):
         sh = (2,3,4)
@@ -830,22 +850,36 @@ class TestHtml(unittest.TestCase):
                       'strength':[0., .5, 1.2],
                       'position':[0, 10, 20, 30]})
 
+        fig_dir = op.join(self.tmp_dir, 'figs')
+        os.makedirs(fig_dir)
         html = a.to_html_table([], ['day'],['strength', 'position'],
                                cell_format='plot', plot_style='image',
-                               plot_dir=self.tmp_dir,
+                               rel_plot_dir='./figs', plot_dir=fig_dir,
                                plot_args={'show_colorbar':True})
 
 
         expected = '<table><tr><th colspan="2">day</th></tr>'\
                           '<tr><th colspan="1">mon</th>'\
                               '<th colspan="1">tue</th></tr>' \
-                          '<tr><td ><img src="%s"></td>' \
-                              '<td ><img src="%s"></td>' \
-                          '</tr></table>' \
-                          %(op.join(self.tmp_dir, 'xarray_day_mon.png'),
-                            op.join(self.tmp_dir, 'xarray_day_tue.png'))
-        
-        self.assertEqual(html, expected)
+                          '<tr><td><img src="./figs/xarray_day_mon.png"></td>' \
+                              '<td><img src="./figs/xarray_day_tue.png"></td>' \
+                          '</tr></table>'
+        self.assert_html_equal(html, expected)
+
+    def assert_html_equal(self, html, expected):
+        try:
+            from BeautifulSoup import BeautifulSoup
+            html, expected = BeautifulSoup(html).prettify(), \
+                             BeautifulSoup(expected).prettify()
+        except ImportError:
+            html += '\n'
+            expected += '\n'
+        if html != expected:
+            raise Exception(' html is not as expected. Diff is following '\
+                            '(1st diff line: html, 2nd diff line: expected)\n%s' \
+                            %''.join(difflib.ndiff(html.splitlines(1),
+                                                   expected.splitlines(2))))
+
 
     def test_table_header(self):
         sh = (2,3,4)
@@ -856,32 +890,35 @@ class TestHtml(unittest.TestCase):
                       'position':[0, 10, 20, 30]})
         rh, ch = a._html_table_headers(['position'], ['day', 'strength'])
 
-        self.assertEqual(''.join(ch), '<tr><th colspan="2"></th>' \
-                                      '<th colspan="6">day</th>' \
-                                      '</tr>' \
-                                      '<tr>' \
-                                      '<th colspan="2"></th>' \
-                                      '<th colspan="3">mon</th>' \
-                                      '<th colspan="3">tue</th>' \
-                                      '</tr>' \
-                                      '<tr>' \
-                                      '<th colspan="2"></th>' \
-                                      '<th colspan="6">strength</th>' \
-                                      '</tr>' \
-                                      '<tr>'
-                                      '<th colspan="2"></th>' \
-                                      '<th colspan="1">0.0</th>' \
-                                      '<th colspan="1">0.5</th>' \
-                                      '<th colspan="1">1.2</th>' \
-                                      '<th colspan="1">0.0</th>' \
-                                      '<th colspan="1">0.5</th>' \
-                                      '<th colspan="1">1.2</th>' \
-                                      '</tr>')
-        self.assertEqual(''.join([html_row(r) for r in rh]),
-                          '<tr><th rowspan="4">position</th>' \
-                          '<th rowspan="1">0</th>' \
-                          '</tr>' \
-                          '<tr><th rowspan="1">10</th></tr>' \
-                          '<tr><th rowspan="1">20</th></tr>' \
-                          '<tr><th rowspan="1">30</th></tr>')
+        expected = '<tr><th colspan="2"></th>' \
+                   '<th colspan="6">day</th>' \
+                   '</tr>' \
+                   '<tr>' \
+                   '<th colspan="2"></th>' \
+                   '<th colspan="3">mon</th>' \
+                   '<th colspan="3">tue</th>' \
+                   '</tr>' \
+                   '<tr>' \
+                   '<th colspan="2"></th>' \
+                   '<th colspan="6">strength</th>' \
+                   '</tr>' \
+                   '<tr>' \
+                   '<th colspan="2"></th>' \
+                   '<th colspan="1">0.0</th>' \
+                   '<th colspan="1">0.5</th>' \
+                   '<th colspan="1">1.2</th>' \
+                   '<th colspan="1">0.0</th>' \
+                   '<th colspan="1">0.5</th>' \
+                   '<th colspan="1">1.2</th>' \
+                   '</tr>'
+        self.assert_html_equal(''.join(ch), expected)
+
+        expected = '<tr><th rowspan="4">'\
+                       '<div class="rotate">position</div></th>' \
+                   '<th rowspan="1">0</th>' \
+                   '</tr>' \
+                   '<tr><th rowspan="1">10</th></tr>' \
+                   '<tr><th rowspan="1">20</th></tr>' \
+                   '<tr><th rowspan="1">30</th></tr>'
+        self.assert_html_equal(''.join([html_row(r) for r in rh]), expected)
 
