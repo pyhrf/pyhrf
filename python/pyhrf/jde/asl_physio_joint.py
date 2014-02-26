@@ -351,8 +351,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
-                 use_true_value=False, diff_res=True,
-                 prior_type='physio_joint'):
+                 use_true_value=False, diff_res=True):
         """
         *diff_res*: if True then residuals (ytilde values) are differenced
         so that sampling is the same as for BRF.
@@ -364,7 +363,6 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         ResponseSampler.__init__(self, 'prf', 'prl', 'prfbrf_var', smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)
-        self.prior_type = prior_type
 
     def get_stackX(self):
         return self.dataInput.stackWX
