@@ -2002,16 +2002,28 @@ def PPMcalculus_jde(threshold_value, apost_mean_activ_fn, apost_var_activ_fn,  \
 def html_row(s):
     return '<tr>%s</tr>' %s
 
-def html_table(s):
-    return '<table>%s</table>' %s
+def html_table(s, border=None):
+    if border is None:
+        return '<table>%s</table>' %s
+    else:
+        return '<table border="%d">%s</table>' %(border, s)
 
-def html_img(fn):
-    return '<img src="%s">' %fn
+
+def attrs_to_string(attrs):
+    attrs = attrs or {}
+    sattrs = ''
+    if len(attrs) > 0:
+        sattrs = ' '+' '.join(['%s="%s"' %(k,v) for k,v in attrs.items()])
+    return sattrs
+
+def html_img(fn, attrs=None):
+    return '<img src="%s"%s>' %(fn,attrs_to_string(attrs))
 
 def html_cell(s, cell_type='d', attrs=None):
-    attrs = attrs or {}
-    sattrs = ' '.join(['%s="%s"' %(k,v) for k,v in attrs.items()])
-    return '<t%s %s>%s</t%s>' %(cell_type, sattrs, s, cell_type)
+    return '<t%s%s>%s</t%s>' %(cell_type, attrs_to_string(attrs), s, cell_type)
+
+def html_div(s, attrs=None):
+    return '<div%s>%s</div>' %(attrs_to_string(attrs), s)
 
 def html_list_to_row(l, cell_types, attrs):
     if not isinstance(attrs, (list, tuple)):
@@ -2026,3 +2038,16 @@ def html_list_to_row(l, cell_types, attrs):
 
     return html_row(''.join([html_cell(e, t, a) \
                              for e,t,a in zip(l,cell_types,attrs)]))
+
+def html_doc(s):
+    return '<!DOCTYPE html><html>' + s + '</html>'
+
+def html_head(s):
+    return '<head>' + s + '</head>'
+
+def html_style(s):
+    return '<style>' + s + '</style>'
+
+def html_body(s):
+    return '<body>' + s + '</body>'
+

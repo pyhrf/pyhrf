@@ -18,7 +18,7 @@ import pyhrf
 import pyhrf.plot as pplot
 import matplotlib.pyplot as plt
 from pyhrf.tools import treeBranches, rescale_values, has_ext, tree_items, \
-     html_cell, html_list_to_row, html_row, html_table, html_img
+     html_cell, html_list_to_row, html_row, html_table, html_img, html_div
 
 from pyhrf.tools.backports import OrderedDict
 debug = False
@@ -379,8 +379,8 @@ class xndarray:
         span = nb_rows
         for a in row_axes:
             # 1st row contains all axis labels:
-            row_header[0].append(html_cell(a, 'h', {'rowspan':nb_rows,
-                                                    'class':'rotate'}))
+            row_header[0].append(html_cell(html_div(a,{'class':'rotate'}), 'h',
+                                           {'rowspan':nb_rows}))
 
             # dispatch domain values across corresponding rows:
             dom = [str(v) for v in self.get_domain(a)] #TODO: better dv format
@@ -393,8 +393,9 @@ class xndarray:
         return [''.join(r) for r in row_header], col_header
 
     def to_html_table(self, row_axes, col_axes, inner_axes, cell_format='txt',
-                      plot_dir=None, plot_fig_prefix='xarray_',
-                      plot_style='image', plot_args=None):
+                      plot_dir=None, rel_plot_dir=None, plot_fig_prefix='xarray_',
+                      plot_style='image', plot_args=None, tooltip=False,
+                      border=None):
         """
         Render the array as an html table whose column headers correspond
         to domain values and axis names defined by *col_axes*, row headers
@@ -409,29 +410,44 @@ class xndarray:
             html code (str)
         """
         plot_dir = plot_dir or pyhrf.get_tmp_path()
+
         outer_axes = row_axes + col_axes
         plot_args = plot_args or {}
+
+        norm = plt.normalize(self.min(), self.max())
 
         def protect_html_fn(fn):
             base,ext = op.splitext(fn)
             return base.replace('.', '-') + ext
 
         def format_cell(slice_info, cell_val):
+            attrs = {}
+            if tooltip:
+                stooltip = '|| '.join(['%s=%s' %(a, str(s)) \
+                                     for a,s in zip(outer_axes, slice_info)])
+                attrs['title'] = stooltip
+
+
             if cell_format == 'txt':
-                return html_cell(str(cell_val))
+                return html_cell(str(cell_val), attrs=attrs)
             elif cell_format == 'plot':
+                # Forge figure filename
                 suffix = '_'.join(['%s_%s' %(a, str(s)) \
                                    for a,s in zip(outer_axes, slice_info)])
-                fig_fn = op.join(plot_dir, plot_fig_prefix + '_' + \
-                                 suffix + '.png' )
+                fig_fn = op.join(plot_dir, plot_fig_prefix + suffix + '.png' )
                 fig_fn = protect_html_fn(fig_fn)
-                plt.figure(figsize=(4,3), dpi=40) #TODO: expose this as parameter
+                # Render figure
+                plt.figure(figsize=(4,3), dpi=40) #TODO: expose these parameters
                 if plot_style == 'image':
-                    pplot.plot_cub_as_image(cell_val, **plot_args)
+                    pplot.plot_cub_as_image(cell_val, norm=norm, **plot_args)
                 else:
                     pplot.plot_cub_as_curve(cell_val, **plot_args)
                 plt.savefig(fig_fn)
-                return html_cell(html_img(fig_fn))
+                # Create html code
+                html_fig_fn = fig_fn
+                if rel_plot_dir is not None:
+                    html_fig_fn = op.join(rel_plot_dir, op.basename(fig_fn))
+                return html_cell(html_img(html_fig_fn), attrs=attrs)
             else:
                 raise Exception('Wrong plot_style "%s"' %plot_style)
 
@@ -443,11 +459,12 @@ class xndarray:
         dsh = self.get_dshape()
         nb_cols = int(np.prod([dsh[a] for a in col_axes]))
         content = []
-        pyhrf.verbose(2, 'Generate cells ...') 
+        pyhrf.verbose(2, 'Generate cells ...')
         for i, r in enumerate(row_header):
+            # at each row, concatenate row header + table content
             content += html_row(r + ''.join([format_cell(*cell_vals.next()) \
                                              for c in range(nb_cols)]))
-        return html_table(''.join(col_header + content))
+        return html_table(''.join(col_header + content), border=border)
 
 
 
@@ -1936,6 +1953,22 @@ def split_and_save(cub, axes, fn, meta_data=None, set_MRI_orientation=False,
                        output_dir=output_dir)
 
 
+# Html stuffs
+
+# Define the style of cells in html table output, especially the "rotate" class to
+# show axis labels in vertical orientation
+# This should be put in the <head> section of the final html doc 
+ndarray_html_style = """<!-- td {
+  border-collapse:collapse;
+  border: 1px black solid;
+}
+.rotate {
+     -moz-transform: rotate(-90.0deg);  /* FF3.5+ */
+       -o-transform: rotate(-90.0deg);  /* Opera 10.5 */
+  -webkit-transform: rotate(-90.0deg);  /* Saf3.1+, Chrome */
+             filter:  progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083);  /* IE6,IE7 */
+         -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083)"; /* IE8 */
+} -->"""
 
 
 
