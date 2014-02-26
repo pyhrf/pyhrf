@@ -296,18 +296,6 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def get_mat_XtX(self):
         return self.dataInput.matXtX
-
-    def get_mat_XtWX(self):
-        return self.dataInput.XtWX
-    
-    def get_mat_WXtWX(self):
-        return self.dataInput.WXtWX
-
-    def get_mat_WX(self):
-        return self.dataInput.WX
-        
-    def get_mat_W(self):
-        return self.dataInput.W
         
     def samplingWarmUp(self, v):
         self.new_factor_mean = np.zeros_like(self.currentValue)
@@ -398,10 +386,10 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         elif 'deterministic' in self.get_variable('prf').prior_type:    # deterministic real
             #v_prf = 1.
             v_prf = self.get_variable('prf_var').currentValue
-            mwx = self.get_mat_WX()
-            mxtwx = self.get_mat_XtWX()
-            mwxtwx = self.get_mat_WXtWX()
-            W = self.get_mat_W()
+            mwx = self.dataInput.WX
+            mxtwx = self.dataInput.XtWX
+            mwxtwx = self.dataInput.WXtWX
+            W = self.dataInput.W
             BjBk_vb_perf = self.get_variable('prf').BjBk_vb
             rlrl_perf = self.get_variable('prl').rr
             prl = self.get_variable('prl').currentValue
