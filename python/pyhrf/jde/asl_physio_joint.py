@@ -1915,7 +1915,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
 
 import pyhrf.jde.models
-pyhrf.jde.models.allModels['ASL_PHYSIO0'] = {'class' : ASLPhysioSampler,
+pyhrf.jde.models.allModels['ASL_PHYSIO_JOINT_RF'] = {'class' : ASLPhysioSampler,
     'doc' : 'BOLD and perfusion component, physiological prior on responses,'
     'BiGaussian prior on stationary response levels, iid white noise, '\
     'explicit drift'
