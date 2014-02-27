@@ -103,7 +103,7 @@ class ResponseSampler(GibbsSamplerVariable):
     Generic parent class to perfusion response & BOLD response samplers
     """
 
-    def __init__(self, name, response_level_name, variance_name, smooth_order=2,
+    def __init__(self, name, response_level_name, variance_name, prior_type, smooth_order=2,
                  zero_constraint=True, duration=25., normalise=1., val_ini=None,
                  do_sampling=True, use_true_value=False):
 
@@ -121,6 +121,7 @@ class ResponseSampler(GibbsSamplerVariable):
         self.duration = duration
         self.varR = None
         self.derivOrder = smooth_order
+        self.prior_type = prior_type
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -155,6 +156,10 @@ class ResponseSampler(GibbsSamplerVariable):
                                              self.hrfLength,
                                              self.eventdt, 1.,
                                              order=self.derivOrder)
+
+        if 'not_regularized' in self.prior_type:
+            self.varR = np.eye(self.varR.shape[0])
+        
         hrfValIni = None
         if self.useTrueValue :
             if self.trueValue is not None:
@@ -284,10 +289,10 @@ class PhysioTrueBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
-                 use_true_value=False):
-
+                 use_true_value=False, prior_type = 'regularized'):
+        
         xmlio.XmlInitable.__init__(self)
-        ResponseSampler.__init__(self, 'truebrf', '', 'truebrf_var', smooth_order,
+        ResponseSampler.__init__(self, 'truebrf', '', 'truebrf_var', prior_type ,smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)        
     
@@ -304,21 +309,22 @@ class PhysioTrueBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         """
         Sample TRUE BRF
         """
-        I = np.eye(self.varR.shape[0])
-        v_resp = self.get_variable(self.var_name).currentValue
+        R_resp = self.varR
         
         omega = self.get_variable('prf').omega_value
         prf = self.get_variable('prf').currentValue
         brf = self.get_variable('brf').currentValue
         sigma_h_inv = self.get_variable('brf').varR
+        sigma_g_inv = self.get_variable('prf').varR
         v_mu = self.get_variable('truebrf_var').currentValue
         v_brf = self.get_variable('brf_var').currentValue
         v_prf = self.get_variable('prf_var').currentValue
-        sigma_mu_inv = I
         
-        varInvSigma = sigma_h_inv / v_resp + sigma_mu_inv / v_brf + np.dot(omega.T, omega) / v_prf
+        varInvSigma = R_resp / v_mu + sigma_h_inv / v_brf + \
+                      np.dot(np.dot(omega.T, sigma_g_inv), omega) / v_prf
                 
-        mean_mu = np.linalg.solve(varInvSigma, brf / v_brf + np.dot(omega.T, prf) / v_prf )
+        mean_mu = np.linalg.solve(varInvSigma, np.dot(sigma_h_inv, brf)/v_brf + \
+                        np.dot(np.dot(omega.T, sigma_g_inv), prf) / v_prf )
         
         resp = np.random.multivariate_normal( mean_mu, np.linalg.inv(varInvSigma))
         
@@ -336,10 +342,10 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
-                 use_true_value=False):
+                 use_true_value=False, prior_type = 'not_regularized'):
 
         xmlio.XmlInitable.__init__(self)
-        ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', smooth_order,
+        ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', prior_type, smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)
 
@@ -408,7 +414,6 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         rl_sampler = self.get_variable(self.response_level_name)
         rl = rl_sampler.currentValue
         rlrl = rl_sampler.rr
-        I = np.eye(self.varR.shape[0])
 
         noise_var = self.get_variable('noise_var').currentValue
 
@@ -417,13 +422,15 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         
         self.ytilde[:] = self.computeYTilde()
         
-        truebrf = self.get_variable('truebrf').currentValue
-        v_brf =  self.get_variable('brf_var').currentValue
+        mu_brf = self.get_variable('truebrf').currentValue
+        sigma_h_inv = self.varR
+        v_brf = self.get_variable('brf_var').currentValue
         
         StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, 
                                 rlrl, self.yBj, self.BjBk_vb)
-        new_factor_mean = truebrf / v_brf
-        new_factor_var = I / v_brf        
+                                
+        new_factor_mean = np.dot(sigma_h_inv, mu_brf) / v_brf      
+        new_factor_var = sigma_h_inv / v_brf        
 
         varInvSigma = StS + new_factor_var
         
@@ -447,7 +454,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
-                 use_true_value=False, diff_res=True):
+                 use_true_value=False, diff_res=True, prior_type = 'not_regularized'):
         """
         *diff_res*: if True then residuals (ytilde values) are differenced
         so that sampling is the same as for BRF.
@@ -462,7 +469,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         """
         xmlio.XmlInitable.__init__(self)
         self.diff_res = diff_res
-        ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', smooth_order,
+        ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', prior_type, smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)
 
@@ -550,7 +557,6 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         rl_sampler = self.get_variable(self.response_level_name)
         rl = rl_sampler.currentValue
         rlrl = rl_sampler.rr
-        I = np.eye(self.varR.shape[0])
 
         noise_var = self.get_variable('noise_var').currentValue
 
@@ -559,19 +565,22 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         
         self.ytilde[:] = self.computeYTilde()
         
-        truebrf = self.get_variable('truebrf').currentValue
-        v_prf =  self.get_variable('prf_var').currentValue
+        omega = self.get_variable('prf').omega_value
+        mu_brf = self.get_variable('truebrf').currentValue
+        sigma_g_inv = self.varR
+        v_prf = self.get_variable('prf_var').currentValue
         
         StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, 
                                 rlrl, self.yBj, self.BjBk_vb)
-        new_factor_mean = truebrf / v_prf
-        new_factor_var = I / v_prf        
+                                
+        new_factor_mean = np.dot(sigma_g_inv, mu_brf) / v_prf      
+        new_factor_var = sigma_g_inv / v_prf        
 
         varInvSigma = StS + new_factor_var
         
-        mean_h = np.linalg.solve(varInvSigma, StY + new_factor_mean)
+        mean_g = np.linalg.solve(varInvSigma, StY + new_factor_mean)
         
-        resp = np.random.multivariate_normal(mean_h,np.linalg.inv(varInvSigma))
+        resp = np.random.multivariate_normal(mean_g,np.linalg.inv(varInvSigma))
             
         if self.normalise:
             norm = (resp**2).sum()**.5
@@ -660,7 +669,6 @@ class PhysioBOLDResponseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable)
         """
         brf = self.get_variable('brf').currentValue
         truebrf = self.get_variable('truebrf').currentValue
-        #R = self.get_variable('brf').varR
         aux = brf - truebrf
         
         alpha = (len(resp) * self.nbVoxels - 1)/2.  
