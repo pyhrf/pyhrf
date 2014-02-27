@@ -32,17 +32,17 @@ def compute_StS_StY(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
 
         for k in xrange(nb_conditions):
             np.divide(rlrl[j,k,:], v_b, ajak_vb)        # sumj(aj*sumk(ak))/vb
-            pyhrf.verbose(6, 'ajak/rb :')               
+            pyhrf.verbose(6, 'ajak/rb :')
             pyhrf.verbose.printNdarray(6, ajak_vb)
             varDeltaS += ajak_vb.sum() * mxtx[j,k,:,:]  # X^tX*sumj(aj*sumk(ak))/vb = StS
 
     return (varDeltaS, varDeltaY)
 
-    
+
 def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mwx, mxtwx, mwxtwx,
                                   ybar, rlrl_bold, rlrl_perf, brlprl, omega,
                                   yj, ajak_vb):
-    """ yj, ajak_vb and cjck_vb are only used to store intermediate quantities, 
+    """ yj, ajak_vb and cjck_vb are only used to store intermediate quantities,
     they're not inputs.
     """
     nb_col_X = mx.shape[2]
@@ -66,28 +66,28 @@ def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mwx, mxtwx, mwxtwx,
 
         for k in xrange(nb_conditions):
             np.divide(rlrl_bold[j,k,:], v_b, ajak_vb)       # sumj(aj*sumk(ak))/vb
-            varDeltaS_bold += ajak_vb.sum() * mxtx[j,k,:,:] # sumj(aj*sumk(ak))*X^tX/vb 
-            
+            varDeltaS_bold += ajak_vb.sum() * mxtx[j,k,:,:] # sumj(aj*sumk(ak))*X^tX/vb
+
             np.divide(rlrl_perf[j,k,:], v_b, cjck_vb)       # sumj(cj*sumk(ck))/vb
-            varDeltaS_perf += cjck_vb.sum()*mwxtwx[j,k,:,:] # sumj(cj*sumk(ck))*(WX)^t(WX)/vb 
+            varDeltaS_perf += cjck_vb.sum()*mwxtwx[j,k,:,:] # sumj(cj*sumk(ck))*(WX)^t(WX)/vb
 
             np.divide(brlprl[j,k,:], v_b, ajck_vb)          # sumj(aj*sumk(ck))/vb
-            varDeltaS_bp += ajck_vb.sum() * mxtwx[j,k,:,:]  # sumj(aj*sumk(ck))*X^tWX/vb 
+            varDeltaS_bp += ajck_vb.sum() * mxtwx[j,k,:,:]  # sumj(aj*sumk(ck))*X^tWX/vb
 
     varDeltaS_perf = np.dot(omega.transpose(), np.dot(varDeltaS_perf, omega))
-    # Omega^t * sumj(cj*sumk(ck)) * (WX)^t(WX) * Omega / vb 
+    # Omega^t * sumj(cj*sumk(ck)) * (WX)^t(WX) * Omega / vb
     varDeltaS_bp = np.dot(varDeltaS_bp, omega)
-    # sumj(aj*sumk(ck)) * X^t WX * Omega / vb 
-    
+    # sumj(aj*sumk(ck)) * X^t WX * Omega / vb
+
     varDeltaS = varDeltaS_bold + varDeltaS_perf + 2*varDeltaS_bp
     # StS = (sumj(aj*sumk(ak))*XtX + Omega^t*sumj(cj*sumk(ck))*(WX)^t(WX)*Omega
     #       + sumj(aj*sumk(ck))*X^t WX*Omega + (sumj(aj*sumk(ck))*X^t WX*Omega).T) / vb
-    
-    varDeltaY = varDeltaY_bold + np.dot(omega.T, varDeltaY_perf) 
+
+    varDeltaY = varDeltaY_bold + np.dot(omega.T, varDeltaY_perf)
     # StY = (X^t * sumj(aj*yj) + Omega^t * X^t * W^t * sumj(cj*yj)) / vb
 
     return (varDeltaS, varDeltaY)
-   
+
 
 def compute_bRpR(brl, prl, nbConditions, nbVoxels):
     # aa[m,n,:] == aa[n,m,:] -> nb ops can be /2
@@ -152,7 +152,7 @@ class ResponseSampler(GibbsSamplerVariable):
                                              self.hrfLength,
                                              self.eventdt, 1.,
                                              order=self.derivOrder)
-        hrfValIni = None
+        hrfValIni = self.currentValue
         if self.useTrueValue :
             if self.trueValue is not None:
                 hrfValIni = self.trueValue[:]
@@ -183,7 +183,8 @@ class ResponseSampler(GibbsSamplerVariable):
                           +str(self.hrfLength))
 
         normHRF = (sum(hrfValIni**2))**(0.5)
-        hrfValIni /= normHRF
+        if normHRF != 0.:
+            hrfValIni /= normHRF
 
         self.currentValue = hrfValIni[:]
 
@@ -296,13 +297,13 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def get_mat_XtX(self):
         return self.dataInput.matXtX
-        
+
     def samplingWarmUp(self, v):
         self.new_factor_mean = np.zeros_like(self.currentValue)
         self.track_sampled_quantity(self.new_factor_mean, self.name + '_new_factor_mean',
                                     axes_names=['time'])
-        
-            
+
+
     def computeYTilde(self):
         """ y - \sum cWXg - Pl - wa """
 
@@ -312,7 +313,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         bl_sampler = self.get_variable('perf_baseline')
         wa = bl_sampler.wa
         y = self.dataInput.varMBY
-        
+
         if ('deterministic' in self.get_variable('prf').prior_type) and not ('hack' in self.get_variable('prf').prior_type):
             ytilde = y - Pl - wa
         else:
@@ -361,20 +362,20 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
         mx = self.get_mat_X()
         mxtx = self.get_mat_XtX()
-        
+
         self.ytilde[:] = self.computeYTilde()
 
 
         v_resp = self.get_variable(self.var_name).currentValue
-        
+
         omega = self.get_variable('prf').omega_value
 
         prf = self.get_variable('prf').currentValue
-        
+
         sigma_g_inv = self.get_variable('prf').varR
-        
+
         if 'deterministic_hack' in self.get_variable('prf').prior_type: # deterministic hack
-            StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, 
+            StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde,
                                         rlrl, self.yBj, self.BjBk_vb)
             v_prf = 1.
             self.new_factor_mean[:] = 0.
@@ -382,7 +383,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
             #self.new_factor_mean[:] = np.dot(np.dot(omega.transpose(),sigma_g_inv),prf)\
             #                        /v_prf
             #new_factor_var = np.dot(np.dot(omega.transpose(), sigma_g_inv),omega)\
-            #                /v_prf  
+            #                /v_prf
         elif 'deterministic' in self.get_variable('prf').prior_type:    # deterministic real
             #v_prf = 1.
             v_prf = self.get_variable('prf_var').currentValue
@@ -394,26 +395,26 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
             rlrl_perf = self.get_variable('prl').rr
             prl = self.get_variable('prl').currentValue
             brlprl = compute_bRpR(rl, prl, self.nbConditions, self.nbVoxels)
-            StS, StY = compute_StS_StY_deterministic(rl, prl, noise_var, 
+            StS, StY = compute_StS_StY_deterministic(rl, prl, noise_var,
                                     mx, mxtx, mwx, mxtwx, mwxtwx,
-                                    self.ytilde, rlrl, rlrl_perf, brlprl, 
+                                    self.ytilde, rlrl, rlrl_perf, brlprl,
                                     omega, self.yBj, self.BjBk_vb)
             self.new_factor_mean[:] = 0.
             new_factor_var = 0.
         else:           # stochastic
             v_prf =  self.get_variable('prf_var').currentValue
-            StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, 
+            StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde,
                                     rlrl, self.yBj, self.BjBk_vb)
             self.new_factor_mean[:] = np.dot(np.dot(omega.transpose(),sigma_g_inv),prf)\
                                     /v_prf
             new_factor_var = np.dot(np.dot(omega.transpose(), sigma_g_inv),omega)\
-                            /v_prf        
+                            /v_prf
 
         varInvSigma = StS + self.nbVoxels * self.varR / v_resp + new_factor_var
         #varInvSigma = StS + self.varR / v_resp + new_factor_var
         mean_h = np.linalg.solve(varInvSigma,StY + self.new_factor_mean)
         resp = np.random.multivariate_normal(mean_h,np.linalg.inv(varInvSigma))
-        
+
         if self.normalise:
             norm = (resp**2).sum()**.5
             resp /= norm
@@ -628,10 +629,10 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
         R = resp_sampler.varR
         resp = resp_sampler.currentValue
 
-        alpha = (len(resp) * self.nbVoxels - 1)/2.  
-        #alpha = (len(resp) - 1)/2.  
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
+        #alpha = (len(resp) - 1)/2.
         #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
-        
+
         beta = np.dot(np.dot(resp.T, R), resp)/2.
 
         self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
@@ -655,8 +656,8 @@ class PhysioPerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitab
         ResponseVarianceSampler.__init__(self, 'prf_var', 'prf',
                                          val_ini, do_sampling, use_true_value)
 
-                                         
-                                         
+
+
 class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
@@ -855,7 +856,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         rnd = np.random.randn(self.dimDrift, self.nbVoxels)
         pty = np.dot(self.P.T, self.ytilde)
-        
+
         # for i in xrange(self.nbVoxels):
 
         #     v_lj = v_b[i] * v_l / (v_b[i] + v_l)
@@ -1151,7 +1152,7 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
 
     def checkAndSetInitValue(self, variables):
-        
+
         if self.useTrueValue:
             if self.trueValue is None:
                 raise Exception('Needed a true value for %s init but '\
@@ -1727,11 +1728,11 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
                 self.currentValue = self.trueValue.copy()
             else:
                 raise Exception('Needed a true value but none defined')
-        
+
         if self.currentValue is None:
             self.currentValue = np.array([(self.dataInput.varMBY * \
               self.dataInput.w[:,np.newaxis]).mean(0).var()])
-              
+
         print_theoretical = True
 
     def sampleNextInternal(self, v):
@@ -1744,9 +1745,9 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         #print 'theoretical IG(', a, ',', b, ' = ', b/(a-1)
         self.currentValue[0] = 1. / np.random.gamma(a, 1./b)
         #print 'v_alpha = ', 1. / np.random.gamma(a, 1./b)
-        
 
-        
+
+
 class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
 
     def makePrecalculations(self):
