@@ -62,10 +62,6 @@ class xndarray:
         """
         pyhrf.verbose(5, 'xndarray.__init__ ...')
 
-        if pyhrf.verbose.verbosity > 4:
-            pyhrf.verbose(5, 'Data shape: %s' %str(narray.shape))
-            pyhrf.verbose(5, 'Axes names: %s' %str(axes_names))
-
         narray = np.asarray(narray)
         self.data = narray
         self.value_label = value_label
