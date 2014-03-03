@@ -143,8 +143,8 @@ class ResponseSampler(GibbsSamplerVariable):
 
         self.ytilde = np.zeros((self.ny,self.nbVoxels), dtype=float)
 
-        self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
-                                    axes_names=['time', 'voxel'])
+        #self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
+        #                            axes_names=['time', 'voxel'])
 
     def checkAndSetInitValue(self, variables):
 
@@ -300,8 +300,9 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def samplingWarmUp(self, v):
         self.new_factor_mean = np.zeros_like(self.currentValue)
-        self.track_sampled_quantity(self.new_factor_mean, self.name + '_new_factor_mean',
-                                    axes_names=['time'])
+        # self.track_sampled_quantity(self.new_factor_mean,
+        #                             self.name + '_new_factor_mean',
+        #                             axes_names=['time'])
 
 
     def computeYTilde(self):
@@ -446,10 +447,10 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
         """
         available_priors = ['physio_stochastic_regularized',
-                              'physio_stochastic_not_regularized',
-                              'physio_deterministic',
-                              'physio_deterministic_hack',
-                              'basic_regularized']
+                            'physio_stochastic_not_regularized',
+                            'physio_deterministic',
+                            'physio_deterministic_hack',
+                            'basic_regularized']
         if prior_type not in available_priors:
             raise Exception('Wrong prior type %s. Available choices: %s'\
                             %(prior_type, available_priors))
@@ -483,7 +484,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         hrf_length = self.currentValue.shape[0]
 
         self.omega_operator =  linear_rf_operator(hrf_length, phy_params, self.dt,
-                                    calculating_brf=False)
+                                                  calculating_brf=False)
 
         if 'physio' in self.prior_type:
             self.omega_value = self.omega_operator
@@ -580,7 +581,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
             resp = np.random.multivariate_normal(mean_h,
                                                  np.linalg.inv(varInvSigma))
             #resp = mean_h
-            
+
         if self.normalise:
             norm = (resp**2).sum()**.5
             resp /= norm
@@ -826,8 +827,8 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def samplingWarmUp(self, v):
         self.ytilde = np.zeros((self.ny,self.nbVoxels), dtype=float)
-        self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
-                                    axes_names=['time', 'voxel'])
+        # self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
+        #                             axes_names=['time', 'voxel'])
 
 
     def compute_y_tilde(self):
@@ -922,7 +923,8 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         drift_signal = np.dot(self.P, self.finalValue)
 
         an = ['time','voxel']
-        a = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
+        a = xndarray(drift_signal.astype(np.float32), axes_names=an,
+                     value_label='Delta ASL')
         if self.trueValue is not None:
             ta = xndarray(np.dot(self.P, self.trueValue),
                           axes_names=an, value_label='Delta ASL')
@@ -1806,7 +1808,8 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
                  perf_baseline=PerfBaselineSampler(),
                  perf_baseline_var=PerfBaselineVarianceSampler(),
-                 check_final_value=None):
+                 check_final_value=None,
+                 output_fit=False):
 
         variables = [noise_var, brf, brf_var, prf, prf_var,
                      drift_var, drift, perf_response_levels,
@@ -1820,6 +1823,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         nbSweeps = burnin
 
         check_ftval = check_final_value
+        self.output_fit = output_fit
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
@@ -1954,7 +1958,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         outputs = GibbsSampler.getGlobalOutputs(self)
 
         bf = outputs.pop('bold_fit', None)
-        if bf is not None:
+        if bf is not None and self.output_fit:
             cdict = bf.split('stype')
             signal = cdict['bold']
             fit = cdict['fit']
@@ -1998,13 +2002,16 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
             ad = fit.axes_domains
             fitted_drift = xndarray(np.dot(p, l), axes_names=an, axes_domains=ad)
             w = self.dataInput.w
-            fitted_perf = xndarray(w[:,np.newaxis] * np.dot(vXg, prl) + \
-                                 fitted_drift.data + \
-                                 perf_baseline, axes_names=an, axes_domains=ad)
-            fitted_bold = xndarray(np.dot(vXh, brl) + fitted_drift.data,
-                                 axes_names=an, axes_domains=ad)
-            fitted_perf_baseline = xndarray(perf_baseline + fitted_drift.data,
-                                          axes_names=an, axes_domains=ad)
+            fitted_perf = w[:,np.newaxis] * np.dot(vXg, prl) + \
+                          fitted_drift.data + perf_baseline
+            fitted_perf = xndarray(fitted_perf.astype(np.float32),
+                                   axes_names=an, axes_domains=ad)
+            fitted_bold = np.dot(vXh, brl) + fitted_drift.data
+            fitted_bold = xndarray(fitted_bold.astype(np.float32),
+                                   axes_names=an, axes_domains=ad)
+            fitted_perf_baseline = perf_baseline + fitted_drift.data
+            fitted_perf_baseline = xndarray(fitted_perf_baseline.astype(np.float32),
+                                            axes_names=an, axes_domains=ad)
 
             rp = self.dataInput.paradigm.get_rastered(self.dataInput.tr,
                                                       tMax=ad['time'].max())
