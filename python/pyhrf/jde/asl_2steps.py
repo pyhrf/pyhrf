@@ -104,7 +104,6 @@ def jde_analyse_2steps(output_dir, fmri_data, dt, nb_iterations, brf_var=None,
 
 def dummy_jde(fmri_data, dt):
     print 'run dummy_jde ...'
-    output_dir = pyhrf.get_tmp_path()
     jde_mcmc_sampler = \
       physio_build_jde_mcmc_sampler(3, 'basic_regularized', do_sampling_prf=False,
                                     do_sampling_brf=False,
@@ -114,10 +113,8 @@ def dummy_jde(fmri_data, dt):
 
     analyser = JDEMCMCAnalyser(jde_mcmc_sampler, copy_sampler=False, dt=dt)
     analyser.set_pass_errors(False)
-    print 'sampler:', jde_mcmc_sampler
-    tjde_mcmc = FMRITreatment(fmri_data, analyser, output_dir=output_dir)
+    tjde_mcmc = FMRITreatment(fmri_data, analyser, output_dir=None)
     outputs, fns = tjde_mcmc.run()
-    print' tjde_mcmc.analyser.sampler:',  tjde_mcmc.analyser.sampler
     print 'dummy_jde done!'
     return tjde_mcmc.analyser.sampler
 
