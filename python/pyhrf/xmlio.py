@@ -15,6 +15,9 @@ from pyhrf.tools import PickleableStaticMethod
 
 NEWLINE_TAG = '##'
 
+class DeprecatedXMLFormatException(Exception):
+    pass
+
 def protect_xml_attr(sa):
     if NEWLINE_TAG in sa:
         raise Exception('Cannot safely protect new line chars')
@@ -565,6 +568,12 @@ class UiNode(object):
             attributes = self.unserialize_attributes(attributes)
         else:
             attributes = None
+
+        # Manage deprecated API:
+        if getattr(node, 'tagName', 'N/A') == 'root' and \
+          attributes is not None and attributes.has_key('pythonXMLHandlerModule'):
+          raise DeprecatedXMLFormatException('Deprecated XML format (root node)')
+
         node_name = str(node.nodeName)
         if node_name != '#text':
             n = UiNode(node_name, attributes=attributes)

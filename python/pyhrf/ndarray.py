@@ -66,6 +66,8 @@ class xndarray:
         self.data = narray
         self.value_label = value_label
         self.meta_data = meta_data
+        self.has_deprecated_xml_header = True
+
         nbDims = self.data.ndim
 
         if axes_names is None:
@@ -1493,7 +1495,7 @@ class xndarray:
 
         """
 
-        from pyhrf.xmlio import from_xml, to_xml
+        from pyhrf.xmlio import from_xml, to_xml, DeprecatedXMLFormatException
 
         pyhrf.verbose(5, 'xndarray.save(%s)' %file_name)
         ext = op.splitext(file_name)[1]
@@ -1538,18 +1540,23 @@ class xndarray:
                 # Check if existing extension can be safely overwritten
                 try:
                     prev_extra_info = from_xml(econtent)
-                    if not isinstance(extra_info, dict) and \
-                            prev_extra_info.has_key('axes_names'):
-                        raise IOError("Cannot safely overwrite Extension in "\
-                                          "Header. It already has a readable "\
-                                          "XML 'comment' extension, but it's "\
-                                          "not related to xndarray meta info." )
+                except DeprecatedXMLFormatException, e:
+                    from pyhrf.xmliobak import from_xml as from_xml_bak
+                    prev_extra_info = from_xml_bak(econtent)
                 except Exception:
                     raise IOError("Cannot safely overwrite Extension in " \
                                       "Header. It already has a 'comment' " \
                                       "extension " \
                                       "with the following content:\n" +
                                   str(econtent))
+
+                if not isinstance(prev_extra_info, dict) and \
+                  prev_extra_info.has_key('axes_names'):
+                    raise IOError("Cannot safely overwrite Extension in "\
+                                  "Header. It already has a readable "\
+                                  "XML 'comment' extension, but it's "\
+                                  "not related to xndarray meta info." )
+
 
                 # Checks are OK, remove the previous extension:
                 prev_ext = header.extensions.pop(ic).get_content()
@@ -1636,7 +1643,8 @@ class xndarray:
 
         TODO: gifti.
         """
-        from pyhrf.xmlio import from_xml
+        from pyhrf.xmlio import from_xml, DeprecatedXMLFormatException
+        has_deprecated_xml_header = False
 
         pyhrf.verbose(3, 'xndarray.load(%s)' %file_name)
         ext = op.splitext(file_name)[1]
@@ -1664,6 +1672,10 @@ class xndarray:
                     ext_content = h.extensions[ic].get_content()
                     try:
                         cuboid_info = from_xml(ext_content)
+                    except DeprecatedXMLFormatException, e:
+                        from pyhrf.xmliobak import from_xml as from_xml_bak
+                        cuboid_info = from_xml_bak(ext_content)
+                        has_deprecated_xml_header = True
                     except Exception, e:
                         raise IOError('Extension for xndarray meta info can not '
                                       'be read from "comment" extension. '
@@ -1678,7 +1690,9 @@ class xndarray:
             meta_data = (i.get_affine(), h)
             cuboid_info = dict((str(k),v) for k,v in cuboid_info.iteritems())
             data[np.where(np.isnan(data))] = 0
-            return xndarray(data, meta_data=meta_data, **cuboid_info)
+            a = xndarray(data, meta_data=meta_data, **cuboid_info)
+            a.has_deprecated_xml_header = has_deprecated_xml_header
+            return a
         elif ext == '.gii' or \
                 (ext == '.gz' and op.splitext(file_name[:-3])[1] == '.gii'):
             from pyhrf.tools.io import read_texture
@@ -1953,7 +1967,7 @@ def split_and_save(cub, axes, fn, meta_data=None, set_MRI_orientation=False,
 
 # Define the style of cells in html table output, especially the "rotate" class to
 # show axis labels in vertical orientation
-# This should be put in the <head> section of the final html doc 
+# This should be put in the <head> section of the final html doc
 ndarray_html_style = """<!-- td {
   border-collapse:collapse;
   border: 1px black solid;
