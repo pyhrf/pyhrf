@@ -111,7 +111,8 @@ class GLMAnalyser(FMRIAnalyser):
                                      axes_domains={'time':np.arange(ns)*tr})
 
 
-        outputs['s2'] = xndarray(glm.s2, axes_names=['voxel'])
+        s2 = np.atleast_1d(glm.s2)
+        outputs['s2'] = xndarray(s2, axes_names=['voxel'])
 
 
         if 0:
