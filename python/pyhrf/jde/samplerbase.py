@@ -40,7 +40,7 @@ class GibbsSampler:
     def __init__(self, variables, nbIt, smplHistoryPace=-1,
                  obsHistoryPace=-1, nbSweeps=None,
                  callbackObj=None, randomSeed=None, globalObsHistoryPace=-1,
-                 check_ftval=None):
+                 check_ftval=None, output_fit=False):
         """
         Initialize a new GibbsSampler object.
         @param variables: contains all instances of type C{GibbsSamplerVariable}
@@ -79,7 +79,7 @@ class GibbsSampler:
 
         self.nbSweeps = nbSweeps
         self.nbIterations = nbIt
-
+        self.output_fit = output_fit
         self.smplHistoryPace = smplHistoryPace
         self.obsHistoryPace = obsHistoryPace
         self.globalObsHistoryPace = globalObsHistoryPace
@@ -418,62 +418,55 @@ class GibbsSampler:
                                      axes_names=['condition','time','P'],
                                      axes_domains=ad,
                                      value_label='value')
-        #if self.fit is not None:
-        try:
-            fit = self.computeFit()
-            if self.dataInput.varMBY.ndim == 2:
-                axes_names = ['time', 'voxel']
-            else: #multisession
-                axes_names = ['session', 'time', 'voxel']
-            bold = xndarray(self.dataInput.varMBY.astype(np.float32),
-                          axes_names=axes_names,
-                          axes_domains=axes_domains,
-                          value_label='BOLD')
+        if self.output_fit:
+            try:
+                fit = self.computeFit()
+                if self.dataInput.varMBY.ndim == 2:
+                    axes_names = ['time', 'voxel']
+                else: #multisession
+                    axes_names = ['session', 'time', 'voxel']
+                bold = xndarray(self.dataInput.varMBY.astype(np.float32),
+                              axes_names=axes_names,
+                              axes_domains=axes_domains,
+                              value_label='BOLD')
+    
+                #TODO: outputs of paradigm
+                # outputs of onsets, per condition:
+                # get binary sequence sampled at TR
+                # build a xndarray from it
+                # build time axis values
 
-            #TODO: outputs of paradigm
-            # outputs of onsets, per condition:
-            # get binary sequence sampled at TR
-            # build a xndarray from it
-            # build time axis values
-            if pyhrf.__usemode__ == pyhrf.DEVEL:
                 cfit = xndarray(fit.astype(np.float32),
                               axes_names=axes_names,
                               axes_domains=axes_domains,
                               value_label='BOLD')
                 #if self.dataInput.simulData is not None:
-
+    
                     #s = xndarray(self.dataInput.simulData.stimInduced,
                                #axes_names=axes_names,
                                #axes_domains=axes_domains,
                                #value_label='BOLD')
-
+    
                     #outputs['fit'] = stack_cuboids([s,cfit], 'type',
                                                   #['simu', 'fit'])
                 #else:
                 outputs['bold_fit'] = stack_cuboids([bold,cfit],
                                                     'stype', ['bold', 'fit'])
-
-            if 0 and pyhrf.__usemode__ == pyhrf.DEVEL:
-                #print 'stack fit, bold'
-                #outputs['fit'] = stack_cuboids([bold,cfit], 'type',
-                #['bold', 'fit'])
-
-                outputs['bold'] = bold
-                outputs['fit'] = cfit
+    
                 #e = np.sqrt((fit.astype(np.float32) - \
-                #                 self.dataInput.varMBY.astype(np.float32))**2)
+                #             self.dataInput.varMBY.astype(np.float32))**2)
                 #outputs['error'] = xndarray(e, axes_names=axes_names,
                 #                            axes_domains=axes_domains,
                 #                            value_label='Error')
                 #outputs['rmse'] = xndarray(e.mean(0), axes_names=['voxel'],
                 #                            value_label='Rmse')
-
-
-
-        except NotImplementedError :
-            print 'Compute fit not implemented !'
-            pass
-
+    
+    
+    
+            except NotImplementedError :
+                print 'Compute fit not implemented !'
+                pass
+    
         return outputs
 
     #def initGlobalObservablesOutputs(self, outputs, nbROI):

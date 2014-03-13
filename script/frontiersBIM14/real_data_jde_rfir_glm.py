@@ -51,13 +51,13 @@ def main():
                                     paradigm_csv_file=paradigm_file)
 
     glm_hcano_output_dir = get_dir(output_dir, 'glm_cano')
-    if 0:
+    if 1:
         # GLM with canonical HRF
         print 'GLM with canonical HRF'
         glm_analyse(fdata, contrasts, output_dir=glm_hcano_output_dir,
                     output_prefix='glm_hcano_')
 
-    if 0:
+    if 1:
         # GLM with basis set
         print 'GLM with basis set'
         glm_hderiv_output_dir = get_dir(output_dir, 'glm_hderivs')
@@ -65,17 +65,17 @@ def main():
                     output_dir=glm_hderiv_output_dir,
                     output_prefix='glm_hderivs_')
 
-    parcellation_file =  op.join(parcellation_dir,  'parcellation_func.nii')
-    if 0:
+    parcellation_file =  op.join(parcellation_dir,  'parcellation_func.nii.gz')
+    if 1:
         # parcellation from results of GLM basis set
 
-        mask_file = op.join(glm_hderiv_output_dir, 'glm_hderivs_mask.nii')
-        beta_files = [op.join(glm_hderiv_output_dir,'glm_hderivs_beta_%s.nii'%c)\
+        mask_file = op.join(glm_hderiv_output_dir, 'glm_hderivs_mask.nii.gz')
+        beta_files = [op.join(glm_hderiv_output_dir,'glm_hderivs_beta_%s.nii.gz'%c)\
                               for c in fdata.get_condition_names()]
         make_parcellation_from_files(beta_files, mask_file, parcellation_file,
                                      nparcels=20, method='ward_and_gkm')
     jde_output_dir = get_dir(output_dir, 'jde')
-    if 0:
+    if 1:
         # JDE
         print 'JDE'
         fdata_parc = FmriData.from_vol_files(mask_file=parcellation_file,
@@ -84,12 +84,12 @@ def main():
         jde_analyse(fdata_parc, contrasts, jde_output_dir)
 
     glm_hcano_rs_output_dir = get_dir(output_dir,'glm_hcano_rescaled_on_jde')
-    if 0:
+    if 1:
         # GLM hcano rescaled onto JDE (provide the same results as normal
         # GLM hcano but with effects resized so that there is a consistency btw
         # X^m.h in JDE and the corresponding column of the design matrix in GLM
         print 'GLM rescaled'
-        rescale_factor_file = op.join(jde_output_dir, 'scale_factor_for_glm.nii')
+        rescale_factor_file = op.join(jde_output_dir, 'scale_factor_for_glm.nii.gz')
         compute_jde_glm_rescaling(jde_output_dir, glm_hcano_output_dir,
                                   rescale_factor_file)
 
@@ -107,7 +107,7 @@ def main():
             paradigm_tag = 'loc'
 
         paradigm_file = get_data_file_name('paradigm_%s.csv' %paradigm_tag)
-        fir_mask = op.join(parcellation_dir, 'mask_single_voxel_for_fir_%s.nii'\
+        fir_mask = op.join(parcellation_dir, 'mask_single_voxel_for_fir_%s.nii.gz'\
                            %paradigm_tag)
         make_mask_from_points([point_of_interest], mask_file, fir_mask)
         fdata_fir = FmriData.from_vol_files(mask_file=fir_mask,
@@ -149,6 +149,7 @@ def glm_analyse(fdata, contrasts, output_dir, output_prefix,
                                outputPrefix=output_prefix, fir_delays=fir_delays,
                                rescale_factor_file=rescale_factor_file)
     glm_analyser.set_pass_errors(False)
+    glm_analyser.set_gzip_outputs(True)
     tt = FMRITreatment(fdata, glm_analyser, output_dir=output_dir)
     tt.run()
 
@@ -157,18 +158,20 @@ def jde_analyse(fdata, contrasts, output_dir):
     from pyhrf.jde.hrf import RHSampler
     from pyhrf.jde.nrl.bigaussian import NRLSampler
 
-    sampler = BG(nb_iterations=2, # HACK
+    sampler = BG(nb_iterations=250,
                  hrf_var=RHSampler(do_sampling=False, val_ini=np.array([0.05])),
                  response_levels=NRLSampler(contrasts=contrasts))
 
     analyser = JDEMCMCAnalyser(sampler=sampler)
+    analyser.set_gzip_outputs(True)
     tt = FMRITreatment(fdata, analyser, output_dir=output_dir)
     tt.run(parallel='local')
 
 def rfir_analyse(fdata, output_dir):
-    analyser = RFIRAnalyser(RFIREstim(nb_its_max=3)) #HACK
+    analyser = RFIRAnalyser(RFIREstim(nb_its_max=150))
+    analyser.set_gzip_outputs(True)
     tt = FMRITreatment(fdata, analyser, output_dir=output_dir)
-    tt.run(parallel='local')
+    tt.run()
 
 
 def compute_jde_glm_rescaling(jde_path, glm_path, output_file):
@@ -178,7 +181,7 @@ def compute_jde_glm_rescaling(jde_path, glm_path, output_file):
     # load matX from JDE results (same for all parcels)
     # matX is a matrix of shape (time x nb_hrf_coeff)
     # matX = sum_m(X^m * m) where X is the matrix defined in the fwd JDE model
-    # jde_dm_fn = op.join(jde_path,'jde_mcmc_matX.nii')
+    # jde_dm_fn = op.join(jde_path,'jde_mcmc_matX.nii.gz')
     # jde_dm = xndarray.load(jde_dm_fn).sub_cuboid(ROI=12).reorient(('time','P'))
 
     # print 'jde_dm:'
@@ -193,7 +196,7 @@ def compute_jde_glm_rescaling(jde_path, glm_path, output_file):
     #     varX[j,:,:] = (jde_dm.data == j).astype(int)
 
 
-    jde_varX_fn = op.join(jde_path,'jde_mcmc_varX.nii')
+    jde_varX_fn = op.join(jde_path,'jde_mcmc_varX.nii.gz')
     jde_varX = xndarray.load(jde_varX_fn).sub_cuboid(ROI=1)
     jde_varX = jde_varX.reorient(('condition', 'time','P'))
 
@@ -212,7 +215,7 @@ def compute_jde_glm_rescaling(jde_path, glm_path, output_file):
     print 'stackX:', stackX.shape
 
     # Load HRFs from JDE results
-    jde_hrf_fn =  op.join(jde_path, 'jde_mcmc_hrf_pm.nii')
+    jde_hrf_fn =  op.join(jde_path, 'jde_mcmc_hrf_pm.nii.gz')
     jde_hrf = xndarray.load(jde_hrf_fn).reorient(('ROI','time'))
 
     print 'jde_hrf:'
@@ -228,11 +231,11 @@ def compute_jde_glm_rescaling(jde_path, glm_path, output_file):
         stackXh = np.dot(stackX, h)
         jde_xh[iroi,:,:] = np.reshape(stackXh, (nbConditions,ny)).transpose()
 
-    jde_roi_mask_fn =  op.join(jde_path, 'jde_mcmc_roi_mapping.nii')
+    jde_roi_mask_fn =  op.join(jde_path, 'jde_mcmc_roi_mapping.nii.gz')
     print 'jde_roi_mask_fn:', jde_roi_mask_fn
     jde_roi_mask = xndarray.load(jde_roi_mask_fn)
 
-    glm_dm_fn =  op.join(glm_path, 'glm_hcano_design_matrix.nii')
+    glm_dm_fn =  op.join(glm_path, 'glm_hcano_design_matrix.nii.gz')
     glm_dm = xndarray.load(glm_dm_fn).sub_cuboid(ROI=1).reorient(('time',
                                                                   'regressor'))
 
@@ -294,7 +297,7 @@ def plot_detection_results(fig_dir, poi, condition, coi, parcellation_file,
     """
     if condition == 'audio':
         condition = 'phraseaudio'
-        
+
     orientation = ['coronal',  'sagittal']
     axial_slice =  poi['axial']
 
@@ -308,7 +311,7 @@ def plot_detection_results(fig_dir, poi, condition, coi, parcellation_file,
     detection_plots_params = []
 
     #JDE NRLs
-    fn = op.join(jde_output_dir, 'jde_mcmc_nrl_pm.nii')
+    fn = op.join(jde_output_dir, 'jde_mcmc_nrl_pm.nii.gz')
 
     slice_def = {'axial':axial_slice, 'condition':condition}
     fig_fn = op.join(fig_dir, 'real_data_jde_mcmc_nrls_%s.png' %condition)
@@ -317,7 +320,7 @@ def plot_detection_results(fig_dir, poi, condition, coi, parcellation_file,
                                    'output_fig_fn':fig_fn})
 
     #GLM hcano
-    fn = op.join(glm_hcano_rs_output_dir, 'glm_hcano_rs_beta_%s.nii' %condition)
+    fn = op.join(glm_hcano_rs_output_dir, 'glm_hcano_rs_beta_%s.nii.gz' %condition)
 
     slice_def = {'axial':axial_slice}
 
@@ -341,7 +344,7 @@ def plot_detection_results(fig_dir, poi, condition, coi, parcellation_file,
 
 
     #JDE Contrast
-    fn = op.join(jde_output_dir, 'jde_mcmc_nrl_contrasts.nii')
+    fn = op.join(jde_output_dir, 'jde_mcmc_nrl_contrasts.nii.gz')
 
     slice_def = {'axial':axial_slice, 'contrast':coi}
     fig_fn = op.join(fig_dir, 'real_data_jde_mcmc_con_%s.png' %coi)
@@ -350,7 +353,7 @@ def plot_detection_results(fig_dir, poi, condition, coi, parcellation_file,
                                    'output_fig_fn':fig_fn})
 
     #GLM hcano
-    fn = op.join(glm_hcano_rs_output_dir, 'glm_hcano_rs_con_effect_%s.nii' %coi)
+    fn = op.join(glm_hcano_rs_output_dir, 'glm_hcano_rs_con_effect_%s.nii.gz'%coi)
 
     slice_def = {'axial':axial_slice}
 
@@ -381,17 +384,17 @@ def plot_estimation_results(fig_dir, poi, jde_roi, cond, plot_label,
 
     ## HRF plots
 
-    fn = op.join(glm_fir_output_dir, 'glm_fir_hrf.nii')
+    fn = op.join(glm_fir_output_dir, 'glm_fir_hrf.nii.gz')
     fir = xndarray.load(fn).sub_cuboid(condition=cond, **poi)
     #fir /= (fir**2).sum()**.5
     fir /= fir.max()
 
-    fn = op.join(rfir_output_dir, 'rfir_ehrf.nii')
+    fn = op.join(rfir_output_dir, 'rfir_ehrf.nii.gz')
     rfir = xndarray.load(fn).sub_cuboid(condition=cond, **poi)
     #rfir /= (rfir**2).sum()**.5
     rfir /= rfir.max()
 
-    fn = op.join(jde_output_dir, 'jde_mcmc_hrf_pm.nii')
+    fn = op.join(jde_output_dir, 'jde_mcmc_hrf_pm.nii.gz')
     jde = xndarray.load(fn).sub_cuboid(ROI=jde_roi)
     jde /= jde.max()
 

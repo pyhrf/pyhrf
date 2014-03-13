@@ -3153,10 +3153,10 @@ class BiGaussMixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                                               axes_domains=ad)
 
 
-            mixtp_mapped = np.tile(mixtp, (self.nbVox, 1, 1, 1))
+            mixtp_mapped = np.tile(mixtp, (self.nbVox,1,1,1)).astype(np.float32)
             outputs['pm_'+self.name+'_mapped'] = xndarray(mixtp_mapped,
-                                                        axes_names=['voxel']+an,
-                                                        axes_domains=ad)
+                                                          axes_names=['voxel']+an,
+                                                          axes_domains=ad)
 
             region_is_active = self.finalValue[self.I_MEAN_CA,:].max() > \
                 self.activ_thresh

@@ -31,13 +31,15 @@ class FMRIAnalyser(xmlio.XmlInitable):
         P_OUTPUT_PREFIX : 'Tag to prefix every output name',
         }
 
-    def __init__(self, outputPrefix='', roiAverage=False, pass_error=True):
+    def __init__(self, outputPrefix='', roiAverage=False, pass_error=True,
+                 gzip_outputs=False):
         xmlio.XmlInitable.__init__(self)
         if len(outputPrefix) == 0: outputPrefix = 'pyhrf_'
         self.outPrefix = outputPrefix
         self.outFile = add_prefix('outputs.xml', self.outPrefix)
         self.roiAverage = roiAverage
         self.pass_error = pass_error
+        self.gzip_outputs = gzip_outputs
         #self.roi_ids = roi_ids
 
     def get_label(self):
@@ -46,6 +48,9 @@ class FMRIAnalyser(xmlio.XmlInitable):
     def set_pass_errors(self, pass_error):
         self.pass_error = pass_error
 
+    def set_gzip_outputs(self, gzip_outputs):
+        self.gzip_outputs = gzip_outputs
+        
     def __call__(self, *args, **kargs):
         return self.analyse_roi_wrap(*args,**kargs)
 
@@ -97,7 +102,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
 
     def analyse_roi_wrap(self, roiData):
         """
-        Wrap the analyse_roi method to catch potential exception 
+        Wrap the analyse_roi method to catch potential exception
         """
         report = 'ok'
         if self.pass_error:
@@ -129,16 +134,19 @@ class FMRIAnalyser(xmlio.XmlInitable):
     def analyse(self, data, output_dir=None):
         """
         Launch the wrapped analyser onto the given data
-        
+
         Args:
-            - data (pyhrf.core.FmriData): the input fMRI data set (there may be multi parcels)
-            - output_dir (str): the path where to store parcel-specific fMRI data sets 
-                                (after splitting according to the parcellation mask)
-                                
+            - data (pyhrf.core.FmriData): the input fMRI data set (there may be
+                                          multi parcels)
+            - output_dir (str): the path where to store parcel-specific fMRI data
+                                sets (after splitting according to the
+                                parcellation mask)
+
         Return:
-            a list of analysis results (list of tuple(FmriData, None|output of analyse_roi, str))
-                                       (list of tuple(parcel data, analysis results, analysis report))
-            see method analyse_roi_wrap
+            a list of analysis results
+               ->  (list of tuple(FmriData, None|output of analyse_roi, str))
+               =   (list of tuple(parcel data, analysis results, analysis report))
+            See method analyse_roi_wrap
         """
         pyhrf.verbose(3, "Split data ...")
         explodedData = self.split_data(data, output_dir)
@@ -326,6 +334,9 @@ class FMRIAnalyser(xmlio.XmlInitable):
         else: #surfacic
             targetAxes = ['voxel']
             ext = '.gii'
+
+        if self.gzip_outputs:
+            ext += '.gz'
 
         if hasattr(results[0][1], 'getOutputs'):
             all_outputs = stack_trees([r[1].getOutputs() for r in results])

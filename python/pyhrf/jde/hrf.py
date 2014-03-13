@@ -211,7 +211,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
                  val_ini=None, duration=25., zero_constraint=True,
                  normalise=1., deriv_order=2, covar_hack=False,
                  prior_type='voxelwiseIID', do_voxelwise_outputs=False,
-                 compute_ah_online=False):
+                 compute_ah_online=False, output_ah=False):
         """
         #TODO : comment
         """
@@ -223,7 +223,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
                                       useTrueValue=use_true_value,
                                       axes_names=['time'],
                                       value_label='delta BOLD')
-
+        
         self.Ini = val_ini
         self.duration = duration
         self.zc = zero_constraint
@@ -233,7 +233,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
         self.varR = None
         self.covarHack = covar_hack
         self.priorType = prior_type
-
+        self.output_ah = output_ah
         self.signErrorDetected = None
         self.voxelwise_outputs = do_voxelwise_outputs
 
@@ -731,17 +731,19 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
                 outputs[on] = newOutput
 
 
-        h = self.finalValue
-        nrls = self.samplerEngine.get_variable('nrl').finalValue
-        ah = np.zeros((h.shape[0],self.nbVox, self.nbConditions))
-        for j in xrange(self.nbConditions):
-            ah[:,:,j] = np.repeat(h,self.nbVox).reshape(h.shape[0],self.nbVox) * \
-                nrls[j,:]
-        ad = self.axes_domains.copy()
-        ad['condition'] = self.dataInput.cNames
-        outputs['ah'] = xndarray(ah, axes_names=['time','voxel','condition'],
-                               axes_domains=ad,
-                               value_label='Delta BOLD')
+        if self.output_ah:
+            h = self.finalValue
+            nrls = self.samplerEngine.get_variable('nrl').finalValue
+            ah = np.zeros((h.shape[0],self.nbVox, self.nbConditions))
+            for j in xrange(self.nbConditions):
+                ah[:,:,j] = np.repeat(h,self.nbVox).reshape(h.shape[0],
+                                                            self.nbVox) * \
+                    nrls[j,:]
+            ad = self.axes_domains.copy()
+            ad['condition'] = self.dataInput.cNames
+            outputs['ah'] = xndarray(ah, axes_names=['time','voxel','condition'],
+                                   axes_domains=ad,
+                                   value_label='Delta BOLD')
 
         if self.zc:
             dm = self.calcXh(self.finalValue[1:-1])
