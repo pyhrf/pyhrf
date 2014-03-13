@@ -17,7 +17,6 @@ from pyhrf.tools.io import read_volume
 #from pyhrf.parcellation import parcellation_for_jde
 
 DEFAULT_CFG_FILE = 'detectestim.xml'
-DEFAULT_OUTPUT_FILE = 'jde_output.xml'
 
 distribName = 'pyhrf'
 
@@ -82,9 +81,13 @@ class JDEAnalyser(FMRIAnalyser):
 
 
 class JDEMCMCAnalyser(JDEAnalyser):
-
+    """
+    Class that wraps a JDE Gibbs Sampler to launch an fMRI analysis
+    TODO: remove parameters about dt and osf (should go in HRF Sampler class),
+    drift (should go in Drift Sampler class)
+    """
     P_SAMPLER = 'sampler'
-    P_OSFMAX = 'osfMax'
+    P_OSFMAX = 'osfMax'         # over-sampling factor
     P_DTMIN = 'dtMin'
     P_DT = 'dt'
     P_DRIFT_LFD_PARAM = 'driftParam'
@@ -113,27 +116,37 @@ class JDEMCMCAnalyser(JDEAnalyser):
 
     def __init__(self, sampler=BOLDGibbsSampler(), osfMax=4, dtMin=.4,
                  dt=.6, driftParam=4, driftType='polynomial',
-                 outputFile=DEFAULT_OUTPUT_FILE,outputPrefix='jde_mcmc_',
-                 randomSeed=None, pass_error=True):
+                 outputPrefix='jde_mcmc_', randomSeed=None, pass_error=True,
+                 copy_sampler=True):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix, pass_error=pass_error)
-        
 
-        self.sampler = copyModule.copy(sampler)
+        self.sampler = sampler
         self.osfMax = osfMax
         self.dtMin = dtMin
         self.dt = dt
         self.driftLfdParam = driftParam
         self.driftLfdType = driftType
-
+        self.copy_sampler = copy_sampler
+        
     def enable_draft_testing(self):
         self.sampler.set_nb_iterations(3)
 
     def analyse_roi(self, atomData):
+        """
+        Launch the JDE Gibbs Sampler on a parcel-specific data set *atomData*
+        Args:
+            - atomData (pyhrf.core.FmriData): parcel-specific data
+        Returns:
+            JDE sampler object
+        """
         #print 'atomData:', atomData
 
-        sampler = copyModule.deepcopy(self.sampler)
+        if self.copy_sampler:
+            sampler = copyModule.deepcopy(self.sampler)
+        else:
+            sampler = self.sampler
         sInput = self.packSamplerInput(atomData)
         sampler.linkToData(sInput)
         #if self.parameters[self.P_RANDOM_SEED] is not None:
@@ -144,7 +157,6 @@ class JDEMCMCAnalyser(JDEAnalyser):
         #         return None
 
         pyhrf.verbose(1, 'Treating region %d' %(atomData.get_roi_id()))
-        tStart = time.time()
         sampler.runSampling()
         pyhrf.verbose(1, 'Cleaning memory ...')
         sampler.dataInput.cleanMem()
@@ -156,7 +168,7 @@ class JDEMCMCAnalyser(JDEAnalyser):
             shrf = self.sampler.get_variable('hrf')
         except KeyError:
             shrf = self.sampler.get_variable('brf')
-            
+
         hrfDuration = shrf.duration
         zc = shrf.zc
 
@@ -259,11 +271,10 @@ def runEstimationBetaEstim(params):
             BOLDGibbsSampler.P_RH : hrfVarSampler,
             })
 
-    analyser = JDEAnalyser(sampler=sampler, dt=0.5,
-                            outputFile=None)
+    analyser = JDEAnalyser(sampler=sampler, dt=0.5)
 
     result = analyser.analyse(sessData)
-    output = analyser.outputResults(result)
+    output = analyser.outputResults(result, outputResults)
 
     return output
 

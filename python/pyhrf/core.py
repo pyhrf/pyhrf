@@ -524,47 +524,34 @@ def get_roi_simulation(simu_sessions, mask, roi_id):
     if simu_sessions is None:
         return None
 
+
     simus = []
     for simu in simu_sessions:
         roi_simu = {}
         m = np.where(mask==roi_id)
-        # for now, just extract nrls, labels, hrf, prf,
-        # prls, brls, brf if available
-        roi_simu['labels'] = simu['labels'][:, m[0]]
-        if simu.has_key('hrf'):
-            roi_simu['hrf'] = simu['hrf'][:, m[0]]
-        if simu.has_key('brf'):
-            roi_simu['brf'] = simu['brf'][:, m[0]]
-        if simu.has_key('prf'):
-            roi_simu['prf'] = simu['prf'][:, m[0]]
-        if simu.has_key('nrls'):
-            roi_simu['nrls'] = simu['nrls'][:, m[0]]
-        if simu.has_key('brls'):
-            roi_simu['brls'] = simu['brls'][:, m[0]]
-        if simu.has_key('prls'):
-            roi_simu['prls'] = simu['prls'][:, m[0]]
-        if simu.has_key('noise'):
-            roi_simu['noise'] = simu['noise'][:, m[0]]
-        if simu.has_key('drift'):
-            roi_simu['drift'] = simu['drift'][:, m[0]]
-        if simu.has_key('bold'):
-                roi_simu['bold'] = simu['bold'][:, m[0]]
-        if simu.has_key('stim_induced_signal'):
-                roi_simu['stim_induced_signal'] = simu['stim_induced_signal'][:, m[0]]
+        def duplicate(label):
+            if simu.has_key(label):
+                roi_simu[label] = simu[label]
 
-        if simu.has_key('primary_hrf'):
-            #TOCHECK: not ROI-specific?
-            roi_simu['primary_hrf'] = simu['primary_hrf']
-        if simu.has_key('var_subject_hrf'):
-            roi_simu['var_subject_hrf'] = simu['var_subject_hrf']
+        def extract_1D_masked(label):
+            if simu.has_key(label):
+                roi_simu[label] = simu[label][m[0]]
 
-        if simu.has_key('var_hrf_group'):
-            roi_simu['var_hrf_group'] = simu['var_hrf_group']
+        def extract_2D_masked(label):
+            if simu.has_key(label):
+                roi_simu[label] = simu[label][:, m[0]]
 
-        roi_simu['condition_defs'] = simu['condition_defs']
-        roi_simu['tr'] = simu['tr']
-        roi_simu['dt'] = simu['dt']
-
+        [extract_2D_masked(l) for l in ['labels', 'hrf', 'brf', 'prf', 'nrls',
+                                        'prls', 'brls', 'noise', 'drift',
+                                        'bold', 'stim_induced_signal',
+                                        'drift_coeffs', 'bold_stim_induced',
+                                        'perf_stim_induced',
+                                        'perf_baseline']]
+        #[extract_1D_masked(l) for l in ['perf_baseline']]
+        [duplicate(l) for l in ['perf_baseline_var', 'drift_var',
+                                'primary_hrf', 'var_subject_hrf',
+                                'var_hrf_group', 'condition_defs', 'tr', 'dt',
+                                'bold_mixt_params', 'perf_mixt_params']]
 
         simus.append(roi_simu)
     return simus

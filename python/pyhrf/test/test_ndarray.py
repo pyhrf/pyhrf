@@ -4,10 +4,12 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 import os.path as op
+import os
 
 from pyhrf.ndarray import *
 import shutil
 from pyhrf.tools import add_suffix
+import difflib
 
 debug = False
 
@@ -726,4 +728,197 @@ class xndarrayTest(unittest.TestCase):
         a_stacked = np.array([d1,d2])
         assert (c_stacked.data == a_stacked).all()
 
+
+    def test_tree_to_xndarray(self):
+        from pyhrf.ndarray import xndarray, tree_to_xndarray
+        from pyhrf.tools import set_leaf
+        d1 = {}
+        set_leaf(d1, ['1','2.1','3.1'], xndarray(np.array([1])))
+        set_leaf(d1, ['1','2.1','3.2'], xndarray(np.array([2])))
+        set_leaf(d1, ['1','2.2','3.1'], xndarray(np.array([3])))
+        set_leaf(d1, ['1','2.2','3.2'], xndarray(np.array([3.1])))
+        d2 = {}
+        set_leaf(d2, ['1','2.1','3.1'], xndarray(np.array([10])))
+        set_leaf(d2, ['1','2.1','3.2'], xndarray(np.array([11])))
+        set_leaf(d2, ['1','2.2','3.1'], xndarray(np.array([12])))
+        set_leaf(d2, ['1','2.2','3.2'], xndarray(np.array([13])))
+
+        d = {'d1':d1, 'd2':d2}
+        labels = ['case', 'p1', 'p2', 'p3']
+
+        c = tree_to_xndarray(d, labels)
+        self.assertEqual(c.data.shape, (2,1,2,2,1))
+
+        npt.assert_array_equal(c.axes_domains['case'], ['d1', 'd2'])
+        npt.assert_array_equal(c.axes_domains['p1'], ['1'])
+        npt.assert_array_equal(c.axes_domains['p2'], ['2.1', '2.2'])
+        npt.assert_array_equal(c.axes_domains['p3'], ['3.1', '3.2'])
+
+    def test_cartesian_eval(self):
+        """
+        Test the multiple evaluations of a function that returns
+        a xndarray, over the cartesian products of given arguments.
+        """
+
+        def foo(a, b, size, aname):
+            return xndarray(np.ones(size) * a + b, axes_names=[aname])
+
+        from pyhrf.tools import cartesian_apply
+        from pyhrf.tools.backports import OrderedDict
+
+        varying_args = OrderedDict([ ('a', [1,2]), ('b', [.5, 1.5]) ])
+        fixed_args = {'size' : 2, 'aname': 'my_axis'}
+
+        res = tree_to_xndarray(cartesian_apply(varying_args, foo, fixed_args))
+
+        self.assertEqual(res.data.shape, (2, 2, 2))
+        npt.assert_array_equal(res.data, np.array([[[1.5, 1.5],
+                                                    [2.5, 2.5]],
+                                                   [[2.5, 2.5],
+                                                    [3.5, 3.5]]]))
+    def test_unstack_2D(self):
+        c = xndarray(np.arange(6).reshape(2,3), axes_names=['a1','ia'],
+                     axes_domains={'a1':['out_dv1', 'out_dv2'],
+                                   'ia':['in_dv1', 'in_dv2', 'in_dv3']})
+        uc = c.unstack(['a1'], ['ia'])
+
+        self.assertEqual(uc.data.shape, (2,))
+        self.assertEqual(uc.data[0].data.shape, (3,))
+        self.assertEqual(len(uc.axes_domains), 1)
+        npt.assert_array_equal(uc.axes_domains['a1'], ['out_dv1', 'out_dv2'])
+
+    def test_unstack_empty_inner_axes(self):
+        size = 6
+        ad = ['out_dv%d'%i for i in range(size)]
+        c = xndarray(np.arange(size), axes_names=['a1'], axes_domains={'a1':ad})
+        uc = c.unstack(['a1'], [])
+
+        self.assertEqual(uc.data.shape, (size,))
+        self.assertEqual(len(uc.axes_domains), 1)
+        npt.assert_array_equal(uc.axes_domains['a1'], ad)
+
+
+class TestHtml(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp_dir = pyhrf.get_tmp_path()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+
+    def test_txt_1d_col_axes_only(self):
+        a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
+        html = a.to_html_table([], ['measure'], [])
+        self.assertIsInstance(html, str)
+        expected = '<table><tr><th colspan="2">measure</th></tr>' \
+                   '<tr><th colspan="1">mon</th>' \
+                   '<th colspan="1">tue</th></tr>' \
+                   '<tr><td>1</td><td>2</td></tr></table>'
+        self.assertEqual(html, expected)
+
+    def test_txt_1d_row_axes_only(self):
+        a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
+        html = a.to_html_table(['measure'], [], [])
+        self.assertIsInstance(html, str)
+        expected = '<table><tr><th rowspan="2">' \
+                               '<div class="rotate">measure</div></th>' \
+                               '<th rowspan="1">mon</th><td>1</td></tr>' \
+                               '<tr><th rowspan="1">tue</th><td>2</td></tr>' \
+                               '</table>'
+        self.assert_html_equal(html, expected)
+
+    def test_txt_tooltip(self):
+        a = xndarray([1, 2], ['measure'], {'measure' : ['mon', 'tue']})
+        html = a.to_html_table(['measure'], [], [], tooltip=True)
+        self.assertIsInstance(html, str)
+        expected = '<table><tr>'\
+                   '<th rowspan="2">'\
+                   '<div class="rotate">measure</div></th>' \
+                   '<th rowspan="1">mon</th>'\
+                   '<td title="measure=mon">1</td></tr>' \
+                   '<tr><th rowspan="1">tue</th>'\
+                   '<td title="measure=tue">2</td></tr>' \
+                   '</table>'
+        self.assert_html_equal(html, expected)
+
+
+    def test_plot(self):
+        sh = (2,3,4)
+        a = xndarray(np.arange(np.prod(sh)).reshape(sh),
+                     ['day', 'strength', 'position'],
+                     {'day' : ['mon', 'tue'],
+                      'strength':[0., .5, 1.2],
+                      'position':[0, 10, 20, 30]})
+
+        fig_dir = op.join(self.tmp_dir, 'figs')
+        os.makedirs(fig_dir)
+        html = a.to_html_table([], ['day'],['strength', 'position'],
+                               cell_format='plot', plot_style='image',
+                               rel_plot_dir='./figs', plot_dir=fig_dir,
+                               plot_args={'show_colorbar':True})
+
+
+        expected = '<table><tr><th colspan="2">day</th></tr>'\
+                          '<tr><th colspan="1">mon</th>'\
+                              '<th colspan="1">tue</th></tr>' \
+                          '<tr><td><img src="./figs/xarray_day_mon.png"></td>' \
+                              '<td><img src="./figs/xarray_day_tue.png"></td>' \
+                          '</tr></table>'
+        self.assert_html_equal(html, expected)
+
+    def assert_html_equal(self, html, expected):
+        try:
+            from BeautifulSoup import BeautifulSoup
+            html, expected = BeautifulSoup(html).prettify(), \
+                             BeautifulSoup(expected).prettify()
+        except ImportError:
+            html += '\n'
+            expected += '\n'
+        if html != expected:
+            raise Exception(' html is not as expected. Diff is following '\
+                            '(1st diff line: html, 2nd diff line: expected)\n%s' \
+                            %''.join(difflib.ndiff(html.splitlines(1),
+                                                   expected.splitlines(2))))
+
+
+    def test_table_header(self):
+        sh = (2,3,4)
+        a = xndarray(np.arange(np.prod(sh)).reshape(sh),
+                     ['day', 'strength', 'position'],
+                     {'day' : ['mon', 'tue'],
+                      'strength':[0., .5, 1.2],
+                      'position':[0, 10, 20, 30]})
+        rh, ch = a._html_table_headers(['position'], ['day', 'strength'])
+
+        expected = '<tr><th colspan="2"></th>' \
+                   '<th colspan="6">day</th>' \
+                   '</tr>' \
+                   '<tr>' \
+                   '<th colspan="2"></th>' \
+                   '<th colspan="3">mon</th>' \
+                   '<th colspan="3">tue</th>' \
+                   '</tr>' \
+                   '<tr>' \
+                   '<th colspan="2"></th>' \
+                   '<th colspan="6">strength</th>' \
+                   '</tr>' \
+                   '<tr>' \
+                   '<th colspan="2"></th>' \
+                   '<th colspan="1">0.0</th>' \
+                   '<th colspan="1">0.5</th>' \
+                   '<th colspan="1">1.2</th>' \
+                   '<th colspan="1">0.0</th>' \
+                   '<th colspan="1">0.5</th>' \
+                   '<th colspan="1">1.2</th>' \
+                   '</tr>'
+        self.assert_html_equal(''.join(ch), expected)
+
+        expected = '<tr><th rowspan="4">'\
+                       '<div class="rotate">position</div></th>' \
+                   '<th rowspan="1">0</th>' \
+                   '</tr>' \
+                   '<tr><th rowspan="1">10</th></tr>' \
+                   '<tr><th rowspan="1">20</th></tr>' \
+                   '<tr><th rowspan="1">30</th></tr>'
+        self.assert_html_equal(''.join([html_row(r) for r in rh]), expected)
 

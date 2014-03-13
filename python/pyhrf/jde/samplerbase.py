@@ -40,7 +40,7 @@ class GibbsSampler:
     def __init__(self, variables, nbIt, smplHistoryPace=-1,
                  obsHistoryPace=-1, nbSweeps=None,
                  callbackObj=None, randomSeed=None, globalObsHistoryPace=-1,
-                 check_ftval=None):
+                 check_ftval=None, output_fit=False):
         """
         Initialize a new GibbsSampler object.
         @param variables: contains all instances of type C{GibbsSamplerVariable}
@@ -79,7 +79,7 @@ class GibbsSampler:
 
         self.nbSweeps = nbSweeps
         self.nbIterations = nbIt
-
+        self.output_fit = output_fit
         self.smplHistoryPace = smplHistoryPace
         self.obsHistoryPace = obsHistoryPace
         self.globalObsHistoryPace = globalObsHistoryPace
@@ -418,62 +418,55 @@ class GibbsSampler:
                                      axes_names=['condition','time','P'],
                                      axes_domains=ad,
                                      value_label='value')
-        #if self.fit is not None:
-        try:
-            fit = self.computeFit()
-            if self.dataInput.varMBY.ndim == 2:
-                axes_names = ['time', 'voxel']
-            else: #multisession
-                axes_names = ['session', 'time', 'voxel']
-            bold = xndarray(self.dataInput.varMBY.astype(np.float32),
-                          axes_names=axes_names,
-                          axes_domains=axes_domains,
-                          value_label='BOLD')
+        if self.output_fit:
+            try:
+                fit = self.computeFit()
+                if self.dataInput.varMBY.ndim == 2:
+                    axes_names = ['time', 'voxel']
+                else: #multisession
+                    axes_names = ['session', 'time', 'voxel']
+                bold = xndarray(self.dataInput.varMBY.astype(np.float32),
+                              axes_names=axes_names,
+                              axes_domains=axes_domains,
+                              value_label='BOLD')
+    
+                #TODO: outputs of paradigm
+                # outputs of onsets, per condition:
+                # get binary sequence sampled at TR
+                # build a xndarray from it
+                # build time axis values
 
-            #TODO: outputs of paradigm
-            # outputs of onsets, per condition:
-            # get binary sequence sampled at TR
-            # build a xndarray from it
-            # build time axis values
-            if pyhrf.__usemode__ == pyhrf.DEVEL:
                 cfit = xndarray(fit.astype(np.float32),
                               axes_names=axes_names,
                               axes_domains=axes_domains,
                               value_label='BOLD')
                 #if self.dataInput.simulData is not None:
-
+    
                     #s = xndarray(self.dataInput.simulData.stimInduced,
                                #axes_names=axes_names,
                                #axes_domains=axes_domains,
                                #value_label='BOLD')
-
+    
                     #outputs['fit'] = stack_cuboids([s,cfit], 'type',
                                                   #['simu', 'fit'])
                 #else:
                 outputs['bold_fit'] = stack_cuboids([bold,cfit],
                                                     'stype', ['bold', 'fit'])
-
-            if 0 and pyhrf.__usemode__ == pyhrf.DEVEL:
-                #print 'stack fit, bold'
-                #outputs['fit'] = stack_cuboids([bold,cfit], 'type',
-                #['bold', 'fit'])
-
-                outputs['bold'] = bold
-                outputs['fit'] = cfit
+    
                 #e = np.sqrt((fit.astype(np.float32) - \
-                #                 self.dataInput.varMBY.astype(np.float32))**2)
+                #             self.dataInput.varMBY.astype(np.float32))**2)
                 #outputs['error'] = xndarray(e, axes_names=axes_names,
                 #                            axes_domains=axes_domains,
                 #                            value_label='Error')
                 #outputs['rmse'] = xndarray(e.mean(0), axes_names=['voxel'],
                 #                            value_label='Rmse')
-
-
-
-        except NotImplementedError :
-            print 'Compute fit not implemented !'
-            pass
-
+    
+    
+    
+            except NotImplementedError :
+                print 'Compute fit not implemented !'
+                pass
+    
         return outputs
 
     #def initGlobalObservablesOutputs(self, outputs, nbROI):
@@ -584,16 +577,27 @@ class GibbsSamplerVariable:
         """
         self.axes_domains = {} if axes_domains is None else axes_domains
         self.axes_names = axes_names
-        pyhrf.verbose(2, 'Init of GibbsSamplerVariable %s with axes: %s' \
+        pyhrf.verbose(3, 'Init of GibbsSamplerVariable %s with axes: %s' \
                           %(name, str(axes_names)))
         self.value_label = value_label
         self.useTrueValue = useTrueValue
         self.name = name
+
+        if valIni is not None and not isinstance(valIni, np.ndarray):
+            raise Exception('Init value of variable %s should be a numpy array '\
+                            '(if scalar variable then it should encapsulated in'\
+                            'an array)' %self.name)
+        if trueVal is not None and not isinstance(trueVal, np.ndarray):
+            raise Exception('true value of variable %s should be a numpy array '\
+                            '(if scalar variable then it should encapsulated in'\
+                            'an array)' %self.name)
+
         if self.useTrueValue:
             self.currentValue = trueVal
         else:
             self.currentValue = valIni # if None -> must be
                                        # generated later
+
 
         self.trueValue = trueVal #should only be defined with linkToData (?)
         self.sampleFlag = sampleFlag
@@ -962,14 +966,14 @@ class GibbsSamplerVariable:
             outputs[self.name+'_rel_err'] = xndarray(r['rel_error'],
                                                    axes_names=self.axes_names,
                                                    axes_domains=self.axes_domains)
-            #on = self.name+'_inaccuracies'
-            #an = r['is_accurate'][0]
-            #ad = {}
-            #if an is not None:
-                #ad = dict((a,self.axes_domains[a]) \
-                          #for a in an if self.axes_domains.has_key(a))
-            #outputs[on] = xndarray(np.bitwise_not(r['accuracy'][1]).astype(np.int8),
-                                 #axes_names=an, axes_domains=ad)
+            on = self.name+'_inaccuracies'
+            an = r['accuracy'][0]
+            ad = {}
+            if an is not None:
+                ad = dict((a,self.axes_domains[a]) \
+                          for a in an if self.axes_domains.has_key(a))
+            inacc = np.bitwise_not(r['accuracy'][1]).astype(np.int8)
+            outputs[on] = xndarray(inacc, axes_names=an, axes_domains=ad)
 
         return outputs
 
@@ -1065,14 +1069,14 @@ class GibbsSamplerVariable:
             elif self.sampleFlag:
                 fv = self.get_final_value()
                 tv = self.get_true_value()
-                rtol = 0.1
-                atol = 0.1
+                rtol = 0.1      # Relative tolerance value: 10%
+                atol = 0.1      # Absolute tolerance value. TODO: dependency to parameter
 
                 # report['true_value'] = tv
                 # report['final_value'] = fv
                 abs_error = np.abs(tv - fv)
                 report['abs_error'] = abs_error
-                rel_error = abs_error/np.maximum(np.abs(tv),np.abs(fv))
+                rel_error = abs_error/np.maximum(np.abs(tv), np.abs(fv))
                 report['rel_error'] = rel_error
 
                 report['accuracy'] = self.get_accuracy(abs_error, rel_error,
@@ -1100,6 +1104,9 @@ class GibbsSamplerVariable:
     def get_accuracy(self, abs_error, rel_error, fv, tv, atol, rtol):
         """ Return the accuray of the estimate *fv*, compared to the true
         value *tv*
+
+        Output:
+            axes_names (list of str), accuracy (numpy array of booleans)
         """
         # same criterion as np.allclose:
         acc = abs_error <= (atol + rtol * np.maximum(np.abs(tv),

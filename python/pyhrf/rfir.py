@@ -57,7 +57,7 @@ class RFIREstim(xmlio.XmlInitable):
                  stop_crit1=default_stop_crit1, stop_crit2=default_stop_crit2,
                  nb_its_max=5, nb_iterations=default_nb_its, nb_its_min=1,
                  average_bold=False, taum=0.01, lambda_reg=100., fixed_taum=False,
-                 discarded_scan_indexes=None):
+                 discarded_scan_indexes=None, output_fit=False):
 
         """
            'discarded_scan_indexes' : None if no subsampling done, else give position that were removed after temporal subsampling as a 2d numpy array
@@ -86,7 +86,8 @@ class RFIREstim(xmlio.XmlInitable):
         self.lambda_reg = lambda_reg
 
         self.pos_removed = discarded_scan_indexes or np.array(([0]))
-
+        self.output_fit = output_fit
+        
     def linkToData(self, data):
 
         self.M = data.nbConditions
@@ -667,8 +668,6 @@ class RFIREstim(xmlio.XmlInitable):
         if self.avg_bold:
             pvals = np.repeat(self.Pvalues, self.nbVoxels, axis=1)
 
-
-
         #outputs['pvalue'] = xndarray(pvals.astype(np.float32),
                                    #axes_names=['condition','voxel'],
                                    #axes_domains={'condition':self.condition_names})
@@ -698,12 +697,12 @@ class RFIREstim(xmlio.XmlInitable):
             rfe = np.repeat(rfe, self.nbVoxels, axis=2)
 
         ch = xndarray(rfe.astype(float32),
-                    axes_names=['condition','time','voxel'],
-                    axes_domains={'condition':self.condition_names,
-                                  'time':hrf_time_axis})
+                      axes_names=['condition','time','voxel'],
+                      axes_domains={'condition':self.condition_names,
+                                    'time':hrf_time_axis})
 
         ch_errors = xndarray(self.StdValEvaluated.astype(float32),
-                           axes_names=['condition','time','voxel'])
+                             axes_names=['condition','time','voxel'])
         outputs['ehrf_error'] = ch_errors
 
         # c = stack_cuboids([ch, ch_errors], axis='error',
@@ -721,28 +720,37 @@ class RFIREstim(xmlio.XmlInitable):
 
         ad = {'condition':self.condition_names}
         outputs['ehrf_norm'] = xndarray((rfe**2).sum(1)**.5,
-                                      axes_names=['condition','voxel'],
-                                      axes_domains=ad)
+                                        axes_names=['condition','voxel'],
+                                        axes_domains=ad)
 
 
         se = self.SignalEvaluated
         if self.avg_bold:
             se = np.repeat(se, self.nbVoxels, axis=1)
 
-        cfit = xndarray(se.astype(float32),
-                      axes_names=['time','voxel'])
-        bold = self.bold
-        if self.avg_bold:
-            bold = np.repeat(bold, self.nbVoxels, axis=1)
+        if self.output_fit:
+            cfit = xndarray(se.astype(float32),
+                            axes_names=['time','voxel'])
+            bold = self.bold
+            if self.avg_bold:
+                bold = np.repeat(bold, self.nbVoxels, axis=1)
 
-        cbold = xndarray(self.bold, axes_names=['time','voxel'])
+            cbold = xndarray(self.bold.astype(np.float32),
+                             axes_names=['time','voxel'])
 
-        outputs['fit'] = stack_cuboids([cfit, cbold], axis="type",
-                                       domain=['fit','bold'])
+            outputs['fit'] = stack_cuboids([cfit, cbold], axis="type",
+                                           domain=['fit','bold'])
+
+            fit_error = sqrt((self.SignalEvaluated-self.bold)**2).astype(float32)
+            if self.avg_bold:
+                fit_error = np.repeat(fit_error, self.nbVoxels, axis=1)
+                outputs['fit_error'] = xndarray(fit_error,
+                                                axes_names=['time','voxel'])
 
         #save matrix X
-        outputs['matX'] = xndarray(self.X[0].astype(float32), axes_names=['cond', 'time','P'],
-                                     value_label='value')
+        outputs['matX'] = xndarray(self.X[0].astype(float32),
+                                   axes_names=['cond', 'time','P'],
+                                   value_label='value')
 
         #print 'self.P[0].transpose().shape:', self.P[0].transpose().shape
         #print 'self.bold.shape:', self.bold.shape
@@ -753,14 +761,10 @@ class RFIREstim(xmlio.XmlInitable):
             #fu = np.repeat(fu, self.nbVoxels, axis=1)
         #outputs['fit_undrift'] = xndarray(fu, axes_names=['time','voxel'])
 
-        fit_error = sqrt((self.SignalEvaluated-self.bold)**2).astype(float32)
-        if self.avg_bold:
-            fit_error = np.repeat(fit_error, self.nbVoxels, axis=1)
-        outputs['fit_error'] = xndarray(fit_error, axes_names=['time','voxel'])
 
 
         outputs['drift'] = xndarray(dot(self.P[0],self.l[0]).astype(float32),
-                                  axes_names=['time','voxel'])
+                                    axes_names=['time','voxel'])
 
         rmse = sqrt((self.SignalEvaluated-self.bold)**2).mean(0).astype(float32)
         if self.avg_bold:

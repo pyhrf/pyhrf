@@ -1,6 +1,6 @@
 import pyhrf
 import numpy as np
-from numpy.testing import assert_array_equal, assert_almost_equal
+from numpy.testing import assert_almost_equal
 from samplerbase import GibbsSampler, GibbsSamplerVariable
 
 from pyhrf import xmlio
@@ -9,290 +9,12 @@ from pyhrf.ndarray import xndarray, stack_cuboids
 from pyhrf.jde.models import WN_BiG_Drift_BOLDSamplerInput, GSDefaultCallbackHandler
 
 from pyhrf.boldsynth.hrf import genGaussianSmoothHRF, getCanoHRF
+from pyhrf.boldsynth.scenarios import build_ctrl_tag_matrix
 from pyhrf.jde.intensivecalc import asl_compute_y_tilde
 from pyhrf.jde.intensivecalc import sample_potts
 
 def b():
     raise Exception()
-
-class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
-
-    def __init__(self, val_ini=None, do_sampling=True,
-                 use_true_value=False):
-
-        xmlio.XmlInitable.__init__(self)
-        GibbsSamplerVariable.__init__(self, 'noise_var', valIni=val_ini,
-                                      sampleFlag=do_sampling,
-                                      useTrueValue=use_true_value,
-                                      axes_names=['voxel'],
-                                      value_label='PM Noise Var')
-
-    def linkToData(self, dataInput):
-        self.dataInput = dataInput
-        self.nbVoxels = self.dataInput.nbVoxels
-        self.ny = self.dataInput.ny
-
-        # Do some allocations :
-
-        if self.dataInput.simulData is not None:
-            assert isinstance(self.dataInput.simulData[0], dict)
-            sd = dataInput.simulData[0]
-            if sd.has_key('noise'):
-                # self.trueValue = np.array([sd['v_gnoise']])
-                # pyhrf.verbose(3, 'True noise variance = %1.3f' \
-                #               %self.trueValue)
-
-                self.trueValue = sd['noise'].var(0)
-
-        if self.trueValue is not None and self.trueValue.size==1:
-            self.trueValue = self.trueValue * np.ones(self.nbVoxels)
-
-
-    def checkAndSetInitValue(self, variables):
-
-        if self.useTrueValue:
-            if self.trueValue is not None:
-                pyhrf.verbose(3, 'Use true noise variance value ...')
-                self.currentValue = self.trueValue[:]
-            else:
-                raise Exception('True noise variance have to be used but '\
-                                'none defined.')
-
-        if self.currentValue is None :
-            self.currentValue = 0.1 * self.dataInput.varData
-
-    def compute_y_tilde(self):
-        pyhrf.verbose(4, 'NoiseVarianceSampler.compute_y_tilde ...')
-
-        sumaXh = self.samplerEngine.get_variable('brl').sumBXResp
-        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
-        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
-
-        y = self.dataInput.varMBY
-
-        return y - sumaXh - sumcXg - Pl - wa
-
-    def sampleNextInternal(self, variables):
-        y_tilde = self.compute_y_tilde()
-
-        beta = (y_tilde * y_tilde).sum(0)/2
-
-        #gammaSamples = np.random.gamma(0.5*(self.ny - self.dataInput.colP +1)-1, 1,
-        #                            self.nbVoxels)
-
-        gammaSamples = np.random.gamma((self.ny - 1.)/2, 1, self.nbVoxels)
-
-        np.divide(beta, gammaSamples, self.currentValue)
-
-
-
-class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
-
-    def __init__(self, val_ini=np.array([1.0]), do_sampling=True,
-                 use_true_value=False):
-        xmlio.XmlInitable.__init__(self)
-        GibbsSamplerVariable.__init__(self,'drift_var', valIni=val_ini,
-                                      useTrueValue=use_true_value,
-                                      sampleFlag=do_sampling)
-
-    def linkToData(self, dataInput):
-        self.dataInput = dataInput
-        self.nbVoxels = self.dataInput.nbVoxels
-
-        if dataInput.simulData is not None:
-            if isinstance(dataInput.simulData, list): #multisession
-                self.trueValue = np.array([dataInput.simulData[0]['drift_var']])
-            elif isinstance(dataInput.simulData, dict): #one session (old case)
-                self.trueValue = np.array([dataInput.simulData['drift_var']])
-
-    def checkAndSetInitValue(self, variables):
-
-        if self.useTrueValue:
-            if self.trueValue is None:
-                raise Exception('Needed a true value for %s init but '\
-                                    'None defined' %self.name)
-            else:
-                self.currentValue = self.trueValue.astype(np.float64)
-
-
-    def sampleNextInternal(self, variables):
-
-        smpldrift = self.samplerEngine.get_variable('drift_coeff')
-#        print 'shape dimDrift...', smpldrift.dimDrift
-#        print 'norm Drift', smpldrift.norm
-        alpha = .5 * (smpldrift.dimDrift * self.nbVoxels - 1)
-        beta = 2.0 / smpldrift.norm
-        pyhrf.verbose(4, 'eta ~ Ga(%1.3f,%1.3f)'%(alpha,beta))
-        self.currentValue[0] = 1.0/np.random.gamma(alpha,beta)
-
-        if 1:
-            beta = 1/beta
-            if self.trueValue is not None:
-                pyhrf.verbose(4, 'true var drift : %f' %self.trueValue)
-            pyhrf.verbose(4, 'm_theo=%f, v_theo=%f' \
-                          %(beta/(alpha-1), beta**2/((alpha-1)**2 * (alpha-2))))
-            samples = 1.0/np.random.gamma(alpha,1/beta,1000)
-            pyhrf.verbose(4, 'm_empir=%f, v_empir=%f' \
-                          %(samples.mean(), samples.var()))
-
-            pyhrf.verbose(4, 'current sample: %f' %self.currentValue[0])
-
-
-class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
-
-    def __init__(self, val_ini=None, do_sampling=True,
-                 use_true_value=False):
-        xmlio.XmlInitable.__init__(self)
-        GibbsSamplerVariable.__init__(self,'drift_coeff', valIni=val_ini,
-                                      useTrueValue=use_true_value,
-                                      axes_names=['lfd_order','voxel'],
-                                      sampleFlag=do_sampling)
-
-        self.final_signal = None
-        self.true_value_signal = None
-
-
-    def linkToData(self, dataInput):
-        self.dataInput = dataInput
-        self.nbVoxels = self.dataInput.nbVoxels
-        self.ny = self.dataInput.ny
-        self.P = self.dataInput.lfdMat[0]
-        self.dimDrift = self.P.shape[1]
-
-        self.y_bar = np.zeros((self.ny, self.nbVoxels), dtype=np.float64)
-        self.ones_Q_J = np.ones((self.dimDrift, self.nbVoxels))
-
-        if dataInput.simulData is not None:
-            if isinstance(dataInput.simulData, list): #multisession
-                self.trueValue = dataInput.simulData[0]['drift_coeffs']
-            elif isinstance(dataInput.simulData, dict): #one session (old case)
-                self.trueValue = dataInput.simulData['drift_coeffs']
-
-    def checkAndSetInitValue(self, variables):
-
-        if self.useTrueValue:
-            if self.trueValue is None:
-                raise Exception('Needed a true value for %s init but '\
-                                    'None defined' %self.name)
-            else:
-                self.currentValue = self.trueValue.astype(np.float64)
-
-        if self.currentValue is None:
-
-            #self.currentValue = np.random.randn(self.dimDrift,
-            #                                    self.nbVoxels).astype(np.float64)
-            self.currentValue = np.dot(self.P.T, self.dataInput.varMBY)
-
-        self.Pl = np.dot(self.P, self.currentValue)
-        self.updateNorm()
-
-    def compute_y_tilde(self):
-
-        sumaXh = self.samplerEngine.get_variable('brl').sumBXResp
-        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
-
-        y = self.dataInput.varMBY
-
-        return y - sumaXh - sumcXg - wa
-
-
-    def sampleNextInternal(self, variables):
-
-        ytilde = self.compute_y_tilde()
-
-        v_l = self.samplerEngine.get_variable('drift_var').currentValue
-        v_b = self.samplerEngine.get_variable('noise_var').currentValue
-
-        pyhrf.verbose(5, 'Noise vars :' )
-        pyhrf.verbose.printNdarray(5, v_b)
-
-        for i in xrange(self.nbVoxels):
-
-            v_lj = v_b[i] * v_l / (v_b[i] + v_l)
-            mu_lj = v_lj/v_b[i] * np.dot(self.P.transpose(), ytilde[:,i])
-            pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f mu_lj=' \
-                          %(i,v_lj,v_lj**.5), mu_lj)
-
-            self.currentValue[:,i] = (np.random.randn(self.dimDrift) * \
-                                      v_lj**.5) + mu_lj
-
-            pyhrf.verbose(5, 'v_l : %f' %v_l)
-
-            #if i == 15:
-            #    raise Exception()
-        pyhrf.verbose(5, 'drift params :')
-        pyhrf.verbose.printNdarray(5, self.currentValue)
-
-        if 0:
-            inv_vars_l = (1/v_b + 1/v_l) * self.ones_Q_J
-            mu_l = 1/inv_vars_l * np.dot(self.P.transpose(), ytilde)
-
-            pyhrf.verbose(5, 'vars_l :')
-            pyhrf.verbose.printNdarray(5, 1/inv_vars_l)
-
-            pyhrf.verbose(5, 'mu_l :')
-            pyhrf.verbose.printNdarray(5, mu_l)
-
-            cur_val = np.random.normal(mu_l, 1/inv_vars_l)
-
-            pyhrf.verbose(5, 'drift params (alt) :')
-            pyhrf.verbose.printNdarray(5, cur_val)
-
-            #assert np.allclose(cur_val, self.currentValue)
-
-        self.updateNorm()
-        self.Pl = np.dot(self.P, self.currentValue)
-
-    def updateNorm(self):
-
-        self.norm = (self.currentValue * self.currentValue).sum()
-
-        if self.trueValue is not None:
-            pyhrf.verbose(4, 'cur drift norm: %f' %self.norm)
-            pyhrf.verbose(4, 'true drift norm:' %(self.trueValue * \
-                                                  self.trueValue).sum())
-
-
-    def get_final_value(self):
-        if self.final_signal is None:
-            self.final_signal = np.dot(self.P, self.finalValue)
-
-        return self.final_signal
-
-    def get_true_value(self):
-        if self.true_value_signal is None:
-            self.true_value_signal = np.dot(self.P, self.trueValue)
-
-        return self.true_value_signal
-
-
-    def get_accuracy(self, abs_error, rel_error, fv, tv, atol, rtol):
-        tol = atol
-        tv = self.get_true_value()
-        fv = self.get_final_value()
-        err = (((fv - tv)**2).sum(0) / (tv**2).sum(0))**.5
-        #pyhrf.verbose(2, 'Drift estimation error wrt ground truth:\n%s' \
-        #              %str(err))
-        return ['voxel'], err < tol
-
-
-    def getOutputs(self):
-        outputs = GibbsSamplerVariable.getOutputs(self)
-        drift_signal = np.dot(self.P, self.finalValue)
-        an = ['time','voxel']
-        c = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
-
-        if self.trueValue is not None:
-            tv = self.get_true_value()
-            c_true = xndarray(tv, axes_names=an)
-            c = stack_cuboids([c, c_true], axis='type', domain=['estim', 'true'],
-                              axis_pos='last')
-
-        outputs['drift_signal_pm'] = c
-
-        return outputs
 
 def compute_StS_StY(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
     """ yaj and ajak_vb are only used to store intermediate quantities, they're
@@ -304,17 +26,76 @@ def compute_StS_StY(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
     varDeltaY = np.zeros((nb_col_X), dtype=float )
 
     for j in xrange(nb_conditions):
-        np.divide(ybar, v_b, yaj)
-        yaj *= rls[j,:]
-        varDeltaY +=  np.dot(mx[j,:,:].T, yaj.sum(1))
+        np.divide(ybar, v_b, yaj)                       # yj / vb
+        yaj *= rls[j,:]                                 # aj*yj / vb
+        varDeltaY += np.dot(mx[j,:,:].T, yaj.sum(1))    # X^t*sumj(aj*yj)/vb = StY
 
         for k in xrange(nb_conditions):
-            np.divide(rlrl[j,k,:], v_b, ajak_vb)
+            np.divide(rlrl[j,k,:], v_b, ajak_vb)        # sumj(aj*sumk(ak))/vb
             pyhrf.verbose(6, 'ajak/rb :')
             pyhrf.verbose.printNdarray(6, ajak_vb)
-            varDeltaS += ajak_vb.sum() * mxtx[j,k,:,:]
+            varDeltaS += ajak_vb.sum() * mxtx[j,k,:,:]  # X^tX*sumj(aj*sumk(ak))/vb = StS
 
-        return (varDeltaS, varDeltaY)
+    return (varDeltaS, varDeltaY)
+
+
+def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mwx, mxtwx, mwxtwx,
+                                  ybar, rlrl_bold, rlrl_perf, brlprl, omega,
+                                  yj, ajak_vb):
+    """ yj, ajak_vb and cjck_vb are only used to store intermediate quantities,
+    they're not inputs.
+    """
+    nb_col_X = mx.shape[2]
+    nb_conditions = mxtx.shape[0]
+    varDeltaS = np.zeros((nb_col_X,nb_col_X), dtype=float )
+    varDeltaY = np.zeros((nb_col_X), dtype=float )
+    varDeltaY_bold = np.zeros((nb_col_X), dtype=float )
+    varDeltaY_perf = np.zeros((nb_col_X), dtype=float )
+    varDeltaS_bold = np.zeros((nb_col_X,nb_col_X), dtype=float )
+    varDeltaS_perf = np.zeros((nb_col_X,nb_col_X), dtype=float )
+    varDeltaS_bp = np.zeros((nb_col_X,nb_col_X), dtype=float )
+    cjck_vb = ajak_vb
+    ajck_vb = ajak_vb
+
+    for j in xrange(nb_conditions):
+        np.divide(ybar, v_b, yj)                            # yj / vb
+        yaj = brls[j,:]*yj                                  # aj*yj / vb
+        varDeltaY_bold +=  np.dot(mx[j,:,:].T, yaj.sum(1))  # X^t*sumj(aj*yj)/vb
+        ycj = prls[j,:]*yj                                  # cj*yj / vb
+        varDeltaY_perf += np.dot(mwx[j,:,:].T, ycj.sum(1))  # (WX)^t*sumj(cj*yj)/vb
+
+        for k in xrange(nb_conditions):
+            np.divide(rlrl_bold[j,k,:], v_b, ajak_vb)       # sumj(aj*sumk(ak))/vb
+            varDeltaS_bold += ajak_vb.sum() * mxtx[j,k,:,:] # sumj(aj*sumk(ak))*X^tX/vb
+
+            np.divide(rlrl_perf[j,k,:], v_b, cjck_vb)       # sumj(cj*sumk(ck))/vb
+            varDeltaS_perf += cjck_vb.sum()*mwxtwx[j,k,:,:] # sumj(cj*sumk(ck))*(WX)^t(WX)/vb
+
+            np.divide(brlprl[j,k,:], v_b, ajck_vb)          # sumj(aj*sumk(ck))/vb
+            varDeltaS_bp += ajck_vb.sum() * mxtwx[j,k,:,:]  # sumj(aj*sumk(ck))*X^tWX/vb
+
+    varDeltaS_perf = np.dot(omega.transpose(), np.dot(varDeltaS_perf, omega))
+    # Omega^t * sumj(cj*sumk(ck)) * (WX)^t(WX) * Omega / vb
+    varDeltaS_bp = np.dot(varDeltaS_bp, omega)
+    # sumj(aj*sumk(ck)) * X^t WX * Omega / vb
+
+    varDeltaS = varDeltaS_bold + varDeltaS_perf + 2*varDeltaS_bp
+    # StS = (sumj(aj*sumk(ak))*XtX + Omega^t*sumj(cj*sumk(ck))*(WX)^t(WX)*Omega
+    #       + sumj(aj*sumk(ck))*X^t WX*Omega + (sumj(aj*sumk(ck))*X^t WX*Omega).T) / vb
+
+    varDeltaY = varDeltaY_bold + np.dot(omega.T, varDeltaY_perf)
+    # StY = (X^t * sumj(aj*yj) + Omega^t * X^t * W^t * sumj(cj*yj)) / vb
+
+    return (varDeltaS, varDeltaY)
+
+
+def compute_bRpR(brl, prl, nbConditions, nbVoxels):
+    # aa[m,n,:] == aa[n,m,:] -> nb ops can be /2
+    rr = np.zeros((nbConditions, nbConditions, nbVoxels), dtype=float)
+    for j in xrange(nbConditions):
+        for k in xrange(nbConditions):
+            np.multiply(brl[j,:], prl[k,:], rr[j,k,:])
+    return rr
 
 
 class ResponseSampler(GibbsSamplerVariable):
@@ -322,10 +103,9 @@ class ResponseSampler(GibbsSamplerVariable):
     Generic parent class to perfusion response & BOLD response samplers
     """
 
-    def __init__(self, name, response_level_name, variance_name, smooth_order=2,
+    def __init__(self, name, response_level_name, variance_name, prior_type, smooth_order=2,
                  zero_constraint=True, duration=25., normalise=1., val_ini=None,
-                 do_sampling=True,
-                 use_true_value=False):
+                 do_sampling=True, use_true_value=False):
 
         self.response_level_name = response_level_name
         self.var_name = variance_name
@@ -341,6 +121,7 @@ class ResponseSampler(GibbsSamplerVariable):
         self.duration = duration
         self.varR = None
         self.derivOrder = smooth_order
+        self.prior_type = prior_type
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -354,17 +135,20 @@ class ResponseSampler(GibbsSamplerVariable):
 
         #print dataInput.simulData
         if dataInput.simulData is not None:
-            assert isinstance(dataInput.simulData[0], dict)
-            #1st voxel:
-            self.trueValue = dataInput.simulData[0][self.name][:,0]
+            if self.name=='truebrf':
+                self.trueValue = dataInput.simulData[0]['brf'][:,0]
+            else:
+                assert isinstance(dataInput.simulData[0], dict)
+                #1st voxel:
+                self.trueValue = dataInput.simulData[0][self.name][:,0]
 
         self.yBj = np.zeros((self.ny,self.nbVoxels), dtype=float)
         self.BjBk_vb =  np.zeros((self.nbVoxels), dtype=float)
 
         self.ytilde = np.zeros((self.ny,self.nbVoxels), dtype=float)
 
-        # self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
-        #                             axes_names=['time', 'voxel'])
+        self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
+                                    axes_names=['time', 'voxel'])
 
     def checkAndSetInitValue(self, variables):
 
@@ -372,6 +156,10 @@ class ResponseSampler(GibbsSamplerVariable):
                                              self.hrfLength,
                                              self.eventdt, 1.,
                                              order=self.derivOrder)
+
+        if 'not_regularized' in self.prior_type:
+            self.varR = np.eye(self.varR.shape[0])
+
         hrfValIni = None
         if self.useTrueValue :
             if self.trueValue is not None:
@@ -424,8 +212,7 @@ class ResponseSampler(GibbsSamplerVariable):
 
 
     def calcXResp(self, resp, stackX=None):
-        if stackX is None:
-            stackX = self.get_stackX()
+        stackX = stackX or self.get_stackX()
         stackXResp = np.dot(stackX, resp)
         return np.reshape(stackXResp, (self.nbConditions,self.ny)).transpose()
 
@@ -454,35 +241,7 @@ class ResponseSampler(GibbsSamplerVariable):
         raise NotImplementedError()
 
     def sampleNextInternal(self, variables):
-        rl_sampler = self.samplerEngine.get_variable(self.response_level_name)
-        rl = rl_sampler.currentValue
-        rlrl = rl_sampler.rr
-
-        noise_var = self.samplerEngine.get_variable('noise_var').currentValue
-
-        mx = self.get_mat_X()
-        mxtx = self.get_mat_XtX()
-
-        self.ytilde[:] = self.computeYTilde()
-
-        StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde, rlrl,
-                                   self.yBj, self.BjBk_vb)
-
-        v_resp = self.samplerEngine.get_variable(self.var_name).currentValue
-
-        varInvSigma = StS + self.nbVoxels * self.varR / v_resp
-        mean_h = np.linalg.solve(varInvSigma, StY)
-        resp = np.random.multivariate_normal(mean_h,np.linalg.inv(varInvSigma))
-        if self.normalise:
-            norm = (resp**2).sum()**.5
-            resp /= norm
-            #rl_sampler.currentValue *= norm
-        self.currentValue = resp
-
-        self.updateXResp()
-        self.updateNorm()
-
-        rl_sampler.computeVarYTildeOpt()
+        raise NotImplementedError
 
     def setFinalValue(self):
 
@@ -514,13 +273,27 @@ class ResponseSampler(GibbsSamplerVariable):
         pyhrf.verbose.printNdarray(4, self.finalValue)
 
 
-class BOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
+    def getOutputs(self):
+
+        outputs = GibbsSamplerVariable.getOutputs(self)
+        if self.trueValue is not None:
+            err = ((self.finalValue - self.trueValue)**2).sum()**.5
+            err = xndarray([err], axes_names=['err'])
+            outputs[self.name + '_norm_error'] = err
+
+        return outputs
+
+
+
+class PhysioTrueBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
-                 use_true_value=False):
+                 use_true_value=False, prior_type = 'regularized'):
+
         xmlio.XmlInitable.__init__(self)
-        ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', smooth_order,
+        ResponseSampler.__init__(self, 'truebrf', '', 'truebrf_var', prior_type ,
+                                 smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)
 
@@ -533,30 +306,175 @@ class BOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
     def get_mat_XtX(self):
         return self.dataInput.matXtX
 
-    def computeYTilde(self):
-        """ y - \sum cWXg - Pl - wa """
+    def sampleNextInternal(self, variables):
+        """
+        Sample TRUE BRF
+        """
+        R_resp = self.varR
 
-        sumcXg = self.samplerEngine.get_variable('prl').sumBXResp
-        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
-        y = self.dataInput.varMBY
+        omega = self.get_variable('prf').omega_value
+        prf = self.get_variable('prf').currentValue
+        brf = self.get_variable('brf').currentValue
+        sigma_h_inv = self.get_variable('brf').varR
+        sigma_g_inv = self.get_variable('prf').varR
+        v_mu = self.get_variable('truebrf_var').currentValue
+        v_brf = self.get_variable('brf_var').currentValue
+        v_prf = self.get_variable('prf_var').currentValue
 
-        return y - sumcXg - Pl - wa
+        varInvSigma = R_resp / v_mu + sigma_h_inv / v_brf + \
+                      np.dot(np.dot(omega.T, sigma_g_inv), omega) / v_prf
+
+        mean_mu = np.linalg.solve(varInvSigma, np.dot(sigma_h_inv, brf)/v_brf + \
+                        np.dot(np.dot(omega.T, sigma_g_inv), prf) / v_prf )
+
+        resp = np.random.multivariate_normal( mean_mu, np.linalg.inv(varInvSigma))
 
 
-class PerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
+        #resp = brf #HACK
+        
+        if self.normalise:
+            norm = (resp**2).sum()**.5
+            resp /= norm
+
+        self.currentValue[:] = resp
+
+        self.updateXResp()
+        self.updateNorm()
+
+
+class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
                  normalise=1., val_ini=None, do_sampling=True,
-                 use_true_value=False, diff_res=True):
+                 use_true_value=False, prior_type = 'not_regularized'):
+
+        xmlio.XmlInitable.__init__(self)
+        ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', prior_type, smooth_order,
+                                 zero_constraint, duration, normalise, val_ini,
+                                 do_sampling, use_true_value)
+
+    def get_stackX(self):
+        return self.dataInput.stackX
+
+    def get_mat_X(self):
+        return self.dataInput.varX
+
+    def get_mat_XtX(self):
+        return self.dataInput.matXtX
+
+    def samplingWarmUp(self, v):
+        self.new_factor_mean = np.zeros_like(self.currentValue)
+        self.track_sampled_quantity(self.new_factor_mean, self.name + '_new_factor_mean',
+                                    axes_names=['time'])
+
+
+    def computeYTilde(self):
+        """ y - \sum cWXg - Pl - wa """
+
+        sumcXg = self.get_variable('prl').sumBXResp
+        drift_sampler = self.get_variable('drift_coeff')
+        Pl = drift_sampler.Pl
+        bl_sampler = self.get_variable('perf_baseline')
+        wa = bl_sampler.wa
+        y = self.dataInput.varMBY
+
+        ytilde = y - sumcXg - Pl - wa
+
+        if 0 and self.dataInput.simulData is not None: #hack
+            sd = self.dataInput.simulData[0]
+            osf = int(sd['tr'] / sd['dt'])
+            brl_sampler = self.get_variable('brl')
+            prl_sampler = self.get_variable('prl')
+            prf_sampler = self.get_variable('prf')
+
+            if not prl_sampler.sampleFlag and not prf_sampler.sampleFlag and\
+                    prl_sampler.useTrueValue and prf_sampler.useTrueValue:
+                perf = np.dot(self.dataInput.W, sd['perf_stim_induced'][0:-1:osf])
+                assert_almost_equal(sumcXg, perf)
+
+            if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
+                assert_almost_equal(Pl, sd['drift'])
+
+            if not bl_sampler.sampleFlag and bl_sampler.useTrueValue:
+                assert_almost_equal(wa, np.dot(self.dataInput.W,
+                                               sd['perf_baseline']))
+
+            if not brl_sampler.sampleFlag and brl_sampler.useTrueValue and \
+                    not drift_sampler.sampleFlag and drift_sampler.useTrueValue and\
+                    not prf_sampler.sampleFlag and prf_sampler.useTrueValue and\
+                    not prl_sampler.sampleFlag and prl_sampler.useTrueValue and\
+                    not bl_sampler.sampleFlag and bl_sampler.useTrueValue:
+                assert_almost_equal(ytilde, sd['bold_stim_induced'][0:-1:osf] +\
+                                        sd['noise'])
+        return ytilde
+
+    def sampleNextInternal(self, variables):
         """
-        *diff_res*: if True then partial residuals (ytilde values) are differenced
+        Sample BRF
+
+        changes to mean:
+        changes to var:
+        """
+        rl_sampler = self.get_variable(self.response_level_name)
+        rl = rl_sampler.currentValue
+        rlrl = rl_sampler.rr
+
+        noise_var = self.get_variable('noise_var').currentValue
+
+        mx = self.get_mat_X()
+        mxtx = self.get_mat_XtX()
+
+        self.ytilde[:] = self.computeYTilde()
+
+        mu_brf = self.get_variable('truebrf').currentValue
+        sigma_h_inv = self.varR
+        v_brf = self.get_variable('brf_var').currentValue
+
+        StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde,
+                                rlrl, self.yBj, self.BjBk_vb)
+
+        new_factor_mean = np.dot(sigma_h_inv, mu_brf) / v_brf
+        new_factor_var = sigma_h_inv / v_brf
+
+        varInvSigma = StS + new_factor_var
+
+        mean_h = np.linalg.solve(varInvSigma, StY + new_factor_mean)
+
+        resp = np.random.multivariate_normal(mean_h,np.linalg.inv(varInvSigma))
+
+        if self.normalise:
+            norm = (resp**2).sum()**.5
+            resp /= norm
+            #rl_sampler.currentValue *= norm
+
+        self.currentValue[:] = resp
+
+        self.updateXResp()
+        self.updateNorm()
+
+        rl_sampler.computeVarYTildeOpt()
+
+
+class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
+
+    def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
+                 normalise=1., val_ini=None, do_sampling=True,
+                 use_true_value=False, diff_res=True, prior_type = 'not_regularized'):
+        """
+        *diff_res*: if True then residuals (ytilde values) are differenced
         so that sampling is the same as for BRF.
         It avoids bad tail estimation, because of bad condionning of WtXtXW ?
+
+        *prior_type*:
+            - 'physio_stochastic_regularized'
+            - 'physio_stochastic_not_regularized'
+            - 'physio_deterministic'
+            - 'basic_regularized'
+
         """
         xmlio.XmlInitable.__init__(self)
         self.diff_res = diff_res
-        ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', smooth_order,
+        ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', prior_type, smooth_order,
                                  zero_constraint, duration, normalise, val_ini,
                                  do_sampling, use_true_value)
 
@@ -575,6 +493,18 @@ class PerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         else:
             return self.dataInput.matXtX
 
+    def samplingWarmUp(self, variables):
+
+        from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
+        from pyhrf.sandbox.physio import linear_rf_operator
+
+        hrf_length = self.currentValue.shape[0]
+
+        self.omega_operator =  linear_rf_operator(hrf_length, phy_params, self.dt,
+                                                  calculating_brf=False)
+        self.omega_value = self.omega_operator
+
+
     def computeYTilde(self):
         """ y - \sum aXh - Pl - wa """
 
@@ -582,46 +512,497 @@ class PerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
         brl_sampler = self.get_variable('brl')
         sumaXh = brl_sampler.sumBXResp
 
-        drift_sampler = self.samplerEngine.get_variable('drift_coeff')
+        drift_sampler = self.get_variable('drift_coeff')
         Pl = drift_sampler.Pl
-        perf_baseline_sampler = self.samplerEngine.get_variable('perf_baseline')
+        perf_baseline_sampler = self.get_variable('perf_baseline')
         wa = perf_baseline_sampler.wa
         y = self.dataInput.varMBY
 
         res = y - sumaXh - Pl - wa
 
-        if self.dataInput.simulData is not None:
+        if 0 and self.dataInput.simulData is not None: #hack
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
             if not brl_sampler.sampleFlag and not brf_sampler.sampleFlag and\
               brl_sampler.useTrueValue and brf_sampler.useTrueValue:
-                pyhrf.verbose(6, 'check sum_m a_j^m X^m h = '\
-                              'true bold stim induced component')
                 assert_almost_equal(sumaXh, sd['bold_stim_induced'][0:-1:osf])
 
             if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
-                pyhrf.verbose(6, 'check Pl = true drift')
                 assert_almost_equal(Pl, sd['drift'])
-
             if not perf_baseline_sampler.sampleFlag and \
               perf_baseline_sampler.useTrueValue:
-                pyhrf.verbose(6, 'check wa = true perf baseline')
                 assert_almost_equal(wa, np.dot(self.dataInput.W,
                                                sd['perf_baseline']))
+
 
             if not brl_sampler.sampleFlag and not brf_sampler.sampleFlag and\
               brl_sampler.useTrueValue and brf_sampler.useTrueValue and \
               not drift_sampler.sampleFlag and drift_sampler.useTrueValue and\
               not perf_baseline_sampler.sampleFlag and \
               perf_baseline_sampler.useTrueValue:
-                pyhrf.verbose(6, 'check residuals = true perf sig + noise')
+
                 perf = np.dot(self.dataInput.W, sd['perf_stim_induced'][0:-1:osf])
                 assert_almost_equal(res, perf + sd['noise'])
+
+
 
         if not self.diff_res:
             return res
         else:
-            return np.dot(self.dataInput.W, res)
+            #return np.dot(self.dataInput.W, res)
+            return self.dataInput.w[:, np.newaxis] * res #much faster
+
+
+    def sampleNextInternal(self, variables):
+        """
+        Sample PRF with physio prior
+
+        changes to mean: add a factor of Omega h Sigma_g^-1 v_g^-1
+        """
+        rl_sampler = self.get_variable(self.response_level_name)
+        rl = rl_sampler.currentValue
+        rlrl = rl_sampler.rr
+
+        noise_var = self.get_variable('noise_var').currentValue
+
+        mx = self.get_mat_X()
+        mxtx = self.get_mat_XtX()
+
+        self.ytilde[:] = self.computeYTilde()
+
+        omega = self.get_variable('prf').omega_value
+        mu_brf = self.get_variable('truebrf').currentValue
+        sigma_g_inv = self.varR
+        v_prf = self.get_variable('prf_var').currentValue
+
+        StS, StY = compute_StS_StY(rl, noise_var, mx, mxtx, self.ytilde,
+                                   rlrl, self.yBj, self.BjBk_vb)
+
+        new_factor_mean = np.dot(sigma_g_inv, np.dot(omega, mu_brf)) / v_prf
+        new_factor_var = sigma_g_inv / v_prf
+
+        varInvSigma = StS + new_factor_var
+
+        mean_g = np.linalg.solve(varInvSigma, StY + new_factor_mean)
+
+        resp = np.random.multivariate_normal(mean_g,np.linalg.inv(varInvSigma))
+
+        if self.normalise:
+            norm = (resp**2).sum()**.5
+            resp /= norm
+            #rl_sampler.currentValue *= norm
+        self.currentValue[:] = resp
+
+        self.updateXResp()
+        self.updateNorm()
+
+        rl_sampler.computeVarYTildeOpt()
+
+
+
+class PhysioTrueBOLDResponseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
+
+    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
+                 use_true_value=False):
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'truebrf_var', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      value_label='Var True BRF')
+
+    def linkToData(self, dataInput):
+        self.dataInput = dataInput
+        self.nbVoxels = self.dataInput.nbVoxels
+        if dataInput.simulData is not None:
+            assert isinstance(dataInput.simulData[0], dict)
+            if dataInput.simulData[0].has_key(self.name):
+                self.trueValue = np.array([dataInput.simulData[0][self.name]])
+
+    def checkAndSetInitValue(self, v):
+        if self.useTrueValue:
+            if self.trueValue is None:
+                raise Exception('Needed a true value for %s init but '\
+                                    'None defined' %ResponseVarianceSampler)
+            else:
+                self.currentValue = self.trueValue.astype(np.float64)
+
+    def sampleNextInternal(self, v):
+        """
+        Sample variance of BRF
+        """
+        truebrf = self.get_variable('truebrf').currentValue
+        R = self.get_variable('brf').varR
+
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
+        #alpha = (len(resp) - 1)/2.
+        #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
+
+        beta = np.dot(np.dot(truebrf.T, R), truebrf)/2.
+
+        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
+
+
+class PhysioBOLDResponseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
+
+    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
+                 use_true_value=False):
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'brf_var', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      value_label='Var BRF')
+
+    def linkToData(self, dataInput):
+        self.dataInput = dataInput
+        self.nbVoxels = self.dataInput.nbVoxels
+        if dataInput.simulData is not None:
+            assert isinstance(dataInput.simulData[0], dict)
+            if dataInput.simulData[0].has_key(self.name):
+                self.trueValue = np.array([dataInput.simulData[0][self.name]])
+
+    def checkAndSetInitValue(self, v):
+        if self.useTrueValue:
+            if self.trueValue is None:
+                raise Exception('Needed a true value for %s init but '\
+                                    'None defined' %ResponseVarianceSampler)
+            else:
+                self.currentValue = self.trueValue.astype(np.float64)
+
+    def sampleNextInternal(self, v):
+        """
+        Sample variance of BRF
+        """
+        brf = self.get_variable('brf').currentValue
+        truebrf = self.get_variable('truebrf').currentValue
+        aux = brf - truebrf
+
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
+        #alpha = (len(resp) - 1)/2.
+        #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
+
+        beta = np.dot(aux.T, aux)/2.
+
+        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
+
+
+class PhysioPerfResponseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
+
+    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
+                 use_true_value=False):
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'prf_var', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      value_label='Var PRF')
+
+    def linkToData(self, dataInput):
+        self.dataInput = dataInput
+        self.nbVoxels = self.dataInput.nbVoxels
+        if dataInput.simulData is not None:
+            assert isinstance(dataInput.simulData[0], dict)
+            if dataInput.simulData[0].has_key(self.name):
+                self.trueValue = np.array([dataInput.simulData[0][self.name]])
+
+    def checkAndSetInitValue(self, v):
+        if self.useTrueValue:
+            if self.trueValue is None:
+                raise Exception('Needed a true value for %s init but '\
+                                    'None defined' %ResponseVarianceSampler)
+            else:
+                self.currentValue = self.trueValue.astype(np.float64)
+
+    def sampleNextInternal(self, v):
+        """
+        Sample variance of PRF
+        """
+        prf = self.get_variable('brf').currentValue
+        truebrf = self.get_variable('truebrf').currentValue
+        omega = self.get_variable('prf').omega_value
+
+        aux = prf - np.dot(omega, truebrf)
+
+        alpha = (len(resp) * self.nbVoxels - 1)/2.
+        #alpha = (len(resp) - 1)/2.
+        #HACK! self.nbVoxels = size(parcel)  --> remove maybe?
+
+        beta = np.dot(aux.T, aux)/2.
+
+        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
+
+
+
+class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
+
+    def __init__(self, val_ini=None, do_sampling=True,
+                 use_true_value=False):
+
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'noise_var', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
+                                      axes_names=['voxel'],
+                                      value_label='PM Noise Var')
+
+    def linkToData(self, dataInput):
+        self.dataInput = dataInput
+        self.nbVoxels = self.dataInput.nbVoxels
+        self.ny = self.dataInput.ny
+
+        # Do some allocations :
+
+        if self.dataInput.simulData is not None:
+            assert isinstance(self.dataInput.simulData[0], dict)
+            sd = dataInput.simulData[0]
+            if sd.has_key('noise'):
+                # self.trueValue = np.array([sd['v_gnoise']])
+                # pyhrf.verbose(3, 'True noise variance = %1.3f' \
+                #               %self.trueValue)
+
+                self.trueValue = sd['noise'].var(0)
+
+        if self.trueValue is not None and self.trueValue.size==1:
+            self.trueValue = self.trueValue * np.ones(self.nbVoxels)
+
+
+    def checkAndSetInitValue(self, variables):
+
+        if self.useTrueValue:
+            if self.trueValue is not None:
+                pyhrf.verbose(3, 'Use true noise variance value ...')
+                self.currentValue = self.trueValue[:]
+            else:
+                raise Exception('True noise variance have to be used but '\
+                                'none defined.')
+
+        if self.currentValue is None :
+            self.currentValue = 0.1 * self.dataInput.varData
+
+    def compute_y_tilde(self):
+        pyhrf.verbose(4, 'NoiseVarianceSampler.compute_y_tilde ...')
+
+        sumaXh = self.get_variable('brl').sumBXResp
+        sumcXg = self.get_variable('prl').sumBXResp
+        Pl = self.get_variable('drift_coeff').Pl
+        wa = self.get_variable('perf_baseline').wa
+
+        y = self.dataInput.varMBY
+
+        return y - sumaXh - sumcXg - Pl - wa
+
+    def sampleNextInternal(self, variables):
+        y_tilde = self.compute_y_tilde()
+
+        alpha = (self.ny - 1.)/2.
+        beta = (y_tilde * y_tilde).sum(0)/2.
+
+        gammaSamples = np.random.gamma(alpha, 1./beta)
+        self.currentValue[:] = 1.0/gammaSamples
+
+
+class DriftVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
+
+    def __init__(self, val_ini=np.array([1.0]), do_sampling=True,
+                 use_true_value=False):
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self,'drift_var', valIni=val_ini,
+                                      useTrueValue=use_true_value,
+                                      sampleFlag=do_sampling)
+
+    def linkToData(self, dataInput):
+        self.dataInput = dataInput
+        self.nbVoxels = self.dataInput.nbVoxels
+
+        if dataInput.simulData is not None:
+            if isinstance(dataInput.simulData, list): #multisession
+                self.trueValue = np.array([dataInput.simulData[0]['drift_var']])
+            elif isinstance(dataInput.simulData, dict): #one session (old case)
+                self.trueValue = np.array([dataInput.simulData['drift_var']])
+
+    def checkAndSetInitValue(self, variables):
+
+        if self.useTrueValue:
+            if self.trueValue is None:
+                raise Exception('Needed a true value for %s init but '\
+                                    'None defined' %self.name)
+            else:
+                self.currentValue = self.trueValue.astype(np.float64)
+
+
+    def sampleNextInternal(self, variables):
+
+        smpldrift = self.get_variable('drift_coeff')
+#        print 'shape dimDrift...', smpldrift.dimDrift
+#        print 'norm Drift', smpldrift.norm
+        alpha = .5 * (smpldrift.dimDrift * self.nbVoxels - 1)
+        beta = 2.0 / smpldrift.norm
+        pyhrf.verbose(4, 'eta ~ Ga(%1.3f,%1.3f)'%(alpha,beta))
+        self.currentValue[0] = 1.0/np.random.gamma(alpha,beta)
+
+        if 0:
+            beta = 1/beta
+            if self.trueValue is not None:
+                pyhrf.verbose(4, 'true var drift : %f' %self.trueValue)
+            pyhrf.verbose(4, 'm_theo=%f, v_theo=%f' \
+                          %(beta/(alpha-1), beta**2/((alpha-1)**2 * (alpha-2))))
+            samples = 1.0/np.random.gamma(alpha,1/beta,1000)
+            pyhrf.verbose(4, 'm_empir=%f, v_empir=%f' \
+                          %(samples.mean(), samples.var()))
+
+            pyhrf.verbose(4, 'current sample: %f' %self.currentValue[0])
+
+
+class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
+
+    def __init__(self, val_ini=None, do_sampling=True,
+                 use_true_value=False):
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self,'drift_coeff', valIni=val_ini,
+                                      useTrueValue=use_true_value,
+                                      axes_names=['lfd_order','voxel'],
+                                      sampleFlag=do_sampling)
+
+    def linkToData(self, dataInput):
+        self.dataInput = dataInput
+        self.nbVoxels = self.dataInput.nbVoxels
+        self.ny = self.dataInput.ny
+        self.P = self.dataInput.lfdMat[0]
+        self.dimDrift = self.P.shape[1]
+
+        self.y_bar = np.zeros((self.ny, self.nbVoxels), dtype=np.float64)
+        self.ones_Q_J = np.ones((self.dimDrift, self.nbVoxels))
+
+        if dataInput.simulData is not None:
+            if isinstance(dataInput.simulData, list):   # multisession
+                self.trueValue = dataInput.simulData[0]['drift_coeffs']
+            elif isinstance(dataInput.simulData, dict): # one session (old case)
+                self.trueValue = dataInput.simulData['drift_coeffs']
+
+    def checkAndSetInitValue(self, variables):
+
+        if self.useTrueValue:
+            if self.trueValue is None:
+                raise Exception('Needed a true value for %s init but '\
+                                    'None defined' %self.name)
+            else:
+                self.currentValue = self.trueValue.astype(np.float64)
+
+        if self.currentValue is None:
+
+            #self.currentValue = np.random.randn(self.dimDrift,
+            #                                    self.nbVoxels).astype(np.float64)
+            self.currentValue = np.dot(self.P.T, self.dataInput.varMBY)
+            # Projection of data y on P.T
+
+        self.Pl = np.dot(self.P, self.currentValue)
+        self.updateNorm()
+
+    def samplingWarmUp(self, v):
+        self.ytilde = np.zeros((self.ny,self.nbVoxels), dtype=float)
+        self.track_sampled_quantity(self.ytilde, self.name + '_ytilde',
+                                    axes_names=['time', 'voxel'])
+
+
+    def compute_y_tilde(self):
+
+        sumaXh = self.get_variable('brl').sumBXResp
+        sumcXg = self.get_variable('prl').sumBXResp
+        wa = self.get_variable('perf_baseline').wa
+
+        y = self.dataInput.varMBY
+
+        return y - sumaXh - sumcXg - wa
+
+
+    def sampleNextInternal(self, variables):
+
+        self.ytilde[:] = self.compute_y_tilde()
+
+        v_l = self.get_variable('drift_var').currentValue
+        v_b = self.get_variable('noise_var').currentValue
+
+        pyhrf.verbose(5, 'Noise vars :' )
+        pyhrf.verbose.printNdarray(5, v_b)
+
+        #PtP = np.dot(self.P.transpose(),self.P)
+        #I_F = np.eye((self.P.shape[1]))
+        #assert_almost_equal( PtP, I_F)
+
+        rnd = np.random.randn(self.dimDrift, self.nbVoxels)
+        pty = np.dot(self.P.T, self.ytilde)
+
+        # for i in xrange(self.nbVoxels):
+
+        #     v_lj = v_b[i] * v_l / (v_b[i] + v_l)
+        #     #S_lj = v_b[i] * v_l / (v_b[i] + v_l) * I_F
+        #     #S_lj2 = v_b[i] * v_l * np.linalg.inv(v_b[i] * I_F + v_l * PtP)
+        #     mu_lj =  v_lj * pty[:,i] / v_b[i]
+        #     #mu_lj1 = np.dot(S_lj, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+        #     #mu_lj2 = np.dot(S_lj2, np.dot(self.P.transpose(), self.ytilde[:,i])) / v_b[i]
+
+        #     if pyhrf.verbose >= 5:
+        #         pyhrf.verbose(5, 'ivox=%d, v_lj=%f, std_lj=%f' \
+        #                       %(i,v_lj,v_lj**.5))
+        #         pyhrf.verbose(5, 'mu_lj:')
+        #         pyhrf.verbose.printNdarray(5, mu_lj)
+
+        #     self.currentValue[:,i] = (rnd[:,i] * v_lj**.5) + mu_lj
+        #     #print 'res1 = ',(np.random.randn(self.dimDrift) * v_lj**.5) + mu_lj
+        #     #print 'res2 = ',np.random.multivariate_normal(mu_lj1, S_lj)
+        #     #print 'res3 = ',np.random.multivariate_normal(mu_lj2, S_lj2)
+        #     #self.currentValue[:,i] = np.random.multivariate_normal(mu_lj1, S_lj)
+
+        #     pyhrf.verbose(5, 'v_l : %f' %v_l)
+
+        v_lj = v_b * v_l / (v_b + v_l)
+        mu_lj =  v_lj * pty / v_b
+        self.currentValue[:] = (rnd * v_lj**.5) + mu_lj
+
+        pyhrf.verbose(5, 'drift params :')
+        pyhrf.verbose.printNdarray(5, self.currentValue)
+
+        if 0: # some tests
+            inv_vars_l = (1/v_b + 1/v_l) * self.ones_Q_J
+            mu_l = 1/inv_vars_l * np.dot(self.P.transpose(), self.ytilde)
+
+            pyhrf.verbose(5, 'vars_l :')
+            pyhrf.verbose.printNdarray(5, 1/inv_vars_l)
+
+            pyhrf.verbose(5, 'mu_l :')
+            pyhrf.verbose.printNdarray(5, mu_l)
+
+            cur_val = np.random.normal(mu_l, 1/inv_vars_l)
+
+            pyhrf.verbose(5, 'drift params (alt) :')
+            pyhrf.verbose.printNdarray(5, cur_val)
+
+            #assert np.allclose(cur_val, self.currentValue)
+
+        self.updateNorm()
+        self.Pl = np.dot(self.P, self.currentValue)
+
+    def updateNorm(self):
+
+        self.norm = (self.currentValue * self.currentValue).sum()
+
+        if self.trueValue is not None and pyhrf.verbose.verbosity >= 4:
+            pyhrf.verbose(4, 'cur drift norm: %f' %self.norm)
+            pyhrf.verbose(4, 'true drift norm:' %(self.trueValue * \
+                                                  self.trueValue).sum())
+
+    def getOutputs(self):
+        outputs = GibbsSamplerVariable.getOutputs(self)
+        drift_signal = np.dot(self.P, self.finalValue)
+
+        an = ['time','voxel']
+        a = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
+        if self.trueValue is not None:
+            ta = xndarray(np.dot(self.P, self.trueValue),
+                          axes_names=an, value_label='Delta ASL')
+            a = stack_cuboids([a, ta], 'type', ['estim', 'true'])
+
+        outputs['drift_signal_pm'] = a
+        return outputs
+
 
 
 class ResponseLevelSampler(GibbsSamplerVariable):
@@ -681,8 +1062,8 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         """
         """
 
-        self.response_sampler = self.samplerEngine.get_variable(self.response_name)
-        self.mixture_sampler = self.samplerEngine.get_variable(self.mixture_name)
+        self.response_sampler = self.get_variable(self.response_name)
+        self.mixture_sampler = self.get_variable(self.mixture_name)
 
 
         self.meanApost = np.zeros((self.nbConditions, self.nbVoxels), dtype=float)
@@ -699,8 +1080,8 @@ class ResponseLevelSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        labels = self.samplerEngine.get_variable('label').currentValue
-        v_b = self.samplerEngine.get_variable('noise_var').currentValue
+        labels = self.get_variable('label').currentValue
+        v_b = self.get_variable('noise_var').currentValue
 
         Xresp = self.response_sampler.varXResp
 
@@ -770,7 +1151,6 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         update_perf should only be used at init of variable values.
         """
 
-
         pyhrf.verbose(4, ' BOLDResp.computeVarYTildeOpt(update_perf=%s) ...' \
                       %str(update_perf))
 
@@ -778,51 +1158,45 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         Xh = brf_sampler.varXResp
         sumaXh = self.sumBXResp
 
-        prl_sampler = self.samplerEngine.get_variable('prl')
+        prl_sampler = self.get_variable('prl')
         prls = prl_sampler.currentValue
         sumcXg = prl_sampler.sumBXResp
-        prf_sampler = self.samplerEngine.get_variable('prf')
+        prf_sampler = self.get_variable('prf')
         WXg = prf_sampler.varXResp
 
-
         compute_bold = 1
-
         if update_perf:
             compute_perf = 1
         else:
             compute_perf = 0
-
         asl_compute_y_tilde(Xh, WXg, self.currentValue, prls,
                             self.dataInput.varMBY, self.varYtilde,
                             sumaXh, sumcXg, compute_bold, compute_perf)
-
         if update_perf:
             ytilde_perf = prl_sampler.varYtilde
             asl_compute_y_tilde(Xh, WXg, self.currentValue, prls,
                                 self.dataInput.varMBY, ytilde_perf,
                                 sumaXh, sumcXg, 0, 0)
 
-
         if self.dataInput.simulData is not None:
+            # Some tests
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
             if not self.sampleFlag and not brf_sampler.sampleFlag and\
               self.useTrueValue and brf_sampler.useTrueValue:
                 assert_almost_equal(sumaXh, sd['bold_stim_induced'][0:-1:osf])
             if not prl_sampler.sampleFlag and not prf_sampler.sampleFlag and\
-              prl_sampler.useTrueValue and not prf_sampler.useTrueValue:
+              prl_sampler.useTrueValue and prf_sampler.useTrueValue:
                 perf = np.dot(self.dataInput.W, sd['perf_stim_induced'][0:-1:osf])
                 assert_almost_equal(sumcXg, perf)
 
         #print 'sumaXh = ', self.sumaXh
         #print 'varYtilde = ', self.varYtilde
-
-
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde.shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde)
 
-        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
+        Pl = self.get_variable('drift_coeff').Pl
+        wa = self.get_variable('perf_baseline').wa
 
         return self.varYtilde - Pl - wa
 
@@ -878,25 +1252,24 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
         pyhrf.verbose(4, ' PerfRespLevel.computeVarYTildeOpt() ...')
 
-        brf_sampler = self.samplerEngine.get_variable('brf')
+        brf_sampler = self.get_variable('brf')
         Xh = brf_sampler.varXResp
-        brl_sampler = self.samplerEngine.get_variable('brl')
+        brl_sampler = self.get_variable('brl')
         sumaXh = brl_sampler.sumBXResp
         brls = brl_sampler.currentValue
 
-        prf_sampler = self.samplerEngine.get_variable('prf')
+        prf_sampler = self.get_variable('prf')
         WXg = prf_sampler.varXResp
         sumcXg = self.sumBXResp
 
         compute_bold = 0
         compute_perf = 1
-
         asl_compute_y_tilde(Xh, WXg, brls, self.currentValue,
                             self.dataInput.varMBY, self.varYtilde,
                             sumaXh, sumcXg, compute_bold, compute_perf)
 
-
         if self.dataInput.simulData is not None:
+            # Some tests
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
             if not brl_sampler.sampleFlag and not brf_sampler.sampleFlag and\
@@ -907,78 +1280,22 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
                 perf = np.dot(self.dataInput.W, sd['perf_stim_induced'][0:-1:osf])
                 assert_almost_equal(sumcXg, perf)
 
-
         #print 'sumaXh = ', self.sumaXh
         #print 'varYtilde = ', self.varYtilde
-
         pyhrf.verbose(5,'varYtilde %s' %str(self.varYtilde.shape))
         pyhrf.verbose.printNdarray(5, self.varYtilde)
 
-        Pl = self.samplerEngine.get_variable('drift_coeff').Pl
-        wa = self.samplerEngine.get_variable('perf_baseline').wa
+        if np.isnan(self.varYtilde).any():
+            raise Exception('Nan values in ytilde of prf')
+
+        Pl = self.get_variable('drift_coeff').Pl
+        wa = self.get_variable('perf_baseline').wa
 
         return self.varYtilde - Pl - wa
 
 
 
 
-class ResponseVarianceSampler(GibbsSamplerVariable):
-
-    def __init__(self, name, response_name,
-                 val_ini=np.array([0.001]), do_sampling=True,
-                 use_true_value=False):
-        self.response_name = response_name
-        GibbsSamplerVariable.__init__(self, name, valIni=val_ini,
-                                      sampleFlag=do_sampling,
-                                      useTrueValue=use_true_value,
-                                      value_label='Var ' + self.response_name)
-
-    def linkToData(self, dataInput):
-        self.dataInput = dataInput
-        self.nbVoxels = self.dataInput.nbVoxels
-        if dataInput.simulData is not None:
-            assert isinstance(dataInput.simulData[0], dict)
-            if dataInput.simulData[0].has_key(self.name):
-                self.trueValue = np.array([dataInput.simulData[0][self.name]])
-
-    def checkAndSetInitValue(self, v):
-        if self.useTrueValue:
-            if self.trueValue is None:
-                raise Exception('Needed a true value for %s init but '\
-                                    'None defined' %ResponseVarianceSampler)
-            else:
-                self.currentValue = self.trueValue.astype(np.float64)
-
-
-
-    def sampleNextInternal(self, v):
-        resp_sampler = self.samplerEngine.get_variable(self.response_name)
-        R = resp_sampler.varR
-        resp = resp_sampler.currentValue
-
-        alpha = (len(resp) * self.nbVoxels - 1)/2
-        beta = np.dot(np.dot(resp.T, R), resp)/2
-
-        self.currentValue[0] = 1/np.random.gamma(alpha, 1/beta)
-
-class BOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
-
-    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
-                 use_true_value=False):
-        xmlio.XmlInitable.__init__(self)
-
-        ResponseVarianceSampler.__init__(self, 'brf_var', 'brf',
-                                         val_ini, do_sampling, use_true_value)
-
-
-class PerfResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
-
-    def __init__(self, val_ini=np.array([0.001]), do_sampling=True,
-                 use_true_value=False):
-        xmlio.XmlInitable.__init__(self)
-
-        ResponseVarianceSampler.__init__(self, 'prf_var', 'prf',
-                                         val_ini, do_sampling, use_true_value)
 
 class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
@@ -1060,8 +1377,8 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
                                            self.nbVoxels), dtype=np.float64)
 
     def compute_ext_field(self):
-        bold_mixtp_sampler = self.samplerEngine.get_variable('bold_mixt_params')
-        asl_mixtp_sampler = self.samplerEngine.get_variable('perf_mixt_params')
+        bold_mixtp_sampler = self.get_variable('bold_mixt_params')
+        asl_mixtp_sampler = self.get_variable('perf_mixt_params')
 
         v = bold_mixtp_sampler.get_current_vars()
         rho = asl_mixtp_sampler.get_current_vars()
@@ -1069,12 +1386,13 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         mu = bold_mixtp_sampler.get_current_means()
         eta = asl_mixtp_sampler.get_current_means()
 
-        a = self.samplerEngine.get_variable('brl').currentValue
-        c = self.samplerEngine.get_variable('prl').currentValue
+        a = self.get_variable('brl').currentValue
+        c = self.get_variable('prl').currentValue
 
         for k in xrange(self.nbClasses):
             for j in xrange(self.nbConditions):
-                e = .5 * (-np.log2(v[k,j] * rho[k,j]) - \
+                # WARNING!! log base changed from 2 to e
+                e = .5 * (-np.log(v[k,j] * rho[k,j]) - \
                           (a[j,:] - mu[k,j])**2 / v[k,j]  - \
                           (c[j,:] - eta[k,j])**2 / rho[k,j])
                 self.current_ext_field[k,j,:] = e
@@ -1135,8 +1453,7 @@ class MixtureParamsSampler(GibbsSamplerVariable):
             assert isinstance(dataInput.simulData[0], dict)
             cdefs = self.dataInput.simulData[0]['condition_defs']
             if hasattr(cdefs[0], 'bold_m_act'):
-                tmca,tvca,tvci = \
-                  self.get_true_values_from_simulation_cdefs(cdefs)
+                tmca,tvca,tvci = self.get_true_values_from_simulation_cdefs(cdefs)
                 self.trueValue = np.zeros((self.NB_PARAMS, self.nbConditions),
                                           dtype=float)
                 self.trueValue[self.I_MEAN_CA] = tmca
@@ -1256,8 +1573,8 @@ class MixtureParamsSampler(GibbsSamplerVariable):
 
     def sampleNextInternal(self, variables):
 
-        rl_sampler = self.samplerEngine.get_variable(self.response_level_name)
-        label_sampler = self.samplerEngine.get_variable('label')
+        rl_sampler = self.get_variable(self.response_level_name)
+        label_sampler = self.get_variable('label')
 
         cardCA = label_sampler.cardClass[self.L_CA,:]
         cardCI = label_sampler.cardClass[self.L_CI,:]
@@ -1391,13 +1708,13 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
     def compute_residuals(self):
 
-        brf_sampler = self.samplerEngine.get_variable('brf')
-        prf_sampler = self.samplerEngine.get_variable('prf')
+        brf_sampler = self.get_variable('brf')
+        prf_sampler = self.get_variable('prf')
 
-        prl_sampler = self.samplerEngine.get_variable('prl')
-        brl_sampler = self.samplerEngine.get_variable('brl')
+        prl_sampler = self.get_variable('prl')
+        brl_sampler = self.get_variable('brl')
 
-        drift_sampler = self.samplerEngine.get_variable('drift_coeff')
+        drift_sampler = self.get_variable('drift_coeff')
 
         sumcXg = prl_sampler.sumBXResp
         sumaXh = brl_sampler.sumBXResp
@@ -1428,19 +1745,33 @@ class PerfBaselineSampler(GibbsSamplerVariable, xmlio.XmlInitable):
     def sampleNextInternal(self, v):
 
         v_alpha = self.get_variable('perf_baseline_var').currentValue
-        w = np.diag(self.dataInput.W)
+        w = self.dataInput.w
 
         residuals = self.compute_residuals()
-        v_b = self.samplerEngine.get_variable('noise_var').currentValue
+        v_b = self.get_variable('noise_var').currentValue
 
-        for i in xrange(self.nbVoxels):
-            m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
-                      ( self.ny + v_b[i] / v_alpha)
-            v_apost = ( v_alpha * v_b[i] ) / ( self.ny * v_alpha + v_b[i])
+        rnd = np.random.randn(self.nbVoxels)
 
-            a = np.random.randn() * v_apost**.5 + m_apost
-            self.currentValue[i] = a
-            self.wa[:,i] = self.w * a
+        # for i in xrange(self.nbVoxels):
+        #     #m_apost = ( np.dot(w.T, residuals[:,i]) ) /  \
+        #     #          ( self.ny + v_b[i] / v_alpha)
+        #     m_apost = ( np.dot(w.T, residuals[:,i]) * v_alpha) /  \
+        #               ( self.ny * v_alpha + v_b[i])
+        #     v_apost = ( v_alpha * v_b[i] ) / ( self.ny * v_alpha + v_b[i])
+
+        #     a = rnd[i] * v_apost**.5 + m_apost
+        #     self.currentValue[i] = a
+        #     self.wa[:,i] = self.w * a
+
+        m_apost = (( w[:,np.newaxis] * residuals).sum(0) * v_alpha) /  \
+                  ( self.ny * v_alpha + v_b)
+        v_apost = ( v_alpha * v_b ) / ( self.ny * v_alpha + v_b)
+        a = rnd * v_apost**.5 + m_apost
+        self.currentValue[:] = a
+        self.wa[:] = w[:,np.newaxis] * a
+
+
+
 
 class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
@@ -1475,15 +1806,19 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             self.currentValue = np.array([(self.dataInput.varMBY * \
               self.dataInput.w[:,np.newaxis]).mean(0).var()])
 
+        print_theoretical = True
 
     def sampleNextInternal(self, v):
 
-        alpha = self.samplerEngine.get_variable('perf_baseline').currentValue
-
+        alpha = self.get_variable('perf_baseline').currentValue
         a = (self.nbVoxels - 1) / 2.
-        b = (alpha**2).sum() / 2
+        b = (alpha * alpha).sum() / 2.
+        #print 'alpha_mean next', np.mean(alpha)
+        #print 'alpha_var next', np.var(alpha)
+        #print 'theoretical IG(', a, ',', b, ' = ', b/(a-1)
+        self.currentValue[0] = 1. / np.random.gamma(a, 1./b)
+        #print 'v_alpha = ', 1. / np.random.gamma(a, 1./b)
 
-        self.currentValue[0] = 1 / np.random.gamma(a, 1/b)
 
 
 class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
@@ -1491,13 +1826,12 @@ class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
     def makePrecalculations(self):
         WN_BiG_Drift_BOLDSamplerInput.makePrecalculations(self)
 
-        self.w = np.ones(self.ny) * -1
-        self.w[::2] = 1
-        #self.w[::2] = -1/2.
-        self.W = np.diag(self.w)
+        self.W = build_ctrl_tag_matrix((self.ny,))
+        self.w = np.diag(self.W)
 
         self.WX = np.zeros_like(self.varX)
         self.WXtWX = np.zeros_like(self.matXtX)
+        self.XtWX = np.zeros_like(self.matXtX)
         self.stackWX = np.zeros_like(self.stackX)
 
         for j in xrange(self.nbConditions):
@@ -1508,15 +1842,17 @@ class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
             for k in xrange(self.nbConditions):
                 self.WXtWX[j,k,:,:] = np.dot(self.WX[j,:,:].transpose(),
                                              self.WX[k,:,:] )
-
+                self.XtWX[j,k,:,:] = np.dot(self.varX[j,:,:].transpose(),
+                                             self.WX[k,:,:] )
 
 
     def cleanPrecalculations(self):
         WN_BiG_Drift_BOLDSamplerInput.cleanPrecalculations(self)
         del self.WXtWX
+        #del self.XtWX
 
 
-class ASLSampler(xmlio.XmlInitable, GibbsSampler):
+class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
     inputClass = WN_BiG_ASLSamplerInput
 
@@ -1524,8 +1860,7 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'bold_response_levels',
-                            'brf', 'brf_var', 'prf', 'prf_var']
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
     def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1., glob_obs_hist_pace=-1,
@@ -1534,8 +1869,12 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
                  bold_response_levels=BOLDResponseLevelSampler(),
                  perf_response_levels=PerfResponseLevelSampler(),
                  labels=LabelSampler(), noise_var=NoiseVarianceSampler(),
-                 brf=BOLDResponseSampler(), brf_var=BOLDResponseVarianceSampler(),
-                 prf=PerfResponseSampler(), prf_var=PerfResponseVarianceSampler(),
+                 truebrf=PhysioTrueBOLDResponseSampler(),
+                 truebrf_var=PhysioTrueBOLDResponseVarianceSampler(),
+                 brf=PhysioBOLDResponseSampler(),
+                 brf_var=PhysioBOLDResponseVarianceSampler(),
+                 prf=PhysioPerfResponseSampler(),
+                 prf_var=PhysioPerfResponseVarianceSampler(),
                  bold_mixt_params=BOLDMixtureSampler(),
                  perf_mixt_params=PerfMixtureSampler(),
                  drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
@@ -1543,7 +1882,7 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
                  perf_baseline_var=PerfBaselineVarianceSampler(),
                  check_final_value=None):
 
-        variables = [noise_var, brf, brf_var, prf, prf_var,
+        variables = [noise_var, truebrf, truebrf_var, brf, brf_var, prf, prf_var,
                      drift_var, drift, perf_response_levels,
                      bold_response_levels, perf_baseline, perf_baseline_var,
                      bold_mixt_params, perf_mixt_params, labels]
@@ -1572,18 +1911,17 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
         #pyhrf.verbose(2,'obsHistPace: %d'%obsHistPace)
 
         callbackObj = GSDefaultCallbackHandler()
-        self.cmp_ftval = False
+        self.cmp_ftval = False #TODO: remove this, check final value has been
+                               # factored in GibbsSamplerVariable
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
                               obsHistPace, nbSweeps,
                               callbackObj,
                               globalObsHistoryPace=globalObsHistPace,
                               check_ftval=check_ftval)
 
-
-
     def finalizeSampling(self):
-
         if self.cmp_ftval:
+
             msg = []
             for v in self.variables:
 
@@ -1595,7 +1933,8 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
                     # tol = .7
                     # if v.name == 'drift_coeff':
                     #     delta = np.abs(np.dot(v.P,
-                    #                           v.finalValue - v.trueValue)).mean()
+                    #                           v.finalValue - \
+                    #                           v.trueValue)).mean()
                     #     crit = detla > tol
                     # else:
                     #     delta = np.abs(v.finalValue - v.trueValue).mean()
@@ -1752,128 +2091,23 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
                   'condition':self.dataInput.cNames}
 
             c_paradigm = xndarray(p_adjusted,
-                                  axes_names=['condition', 'time', 'voxel'],
-                                  axes_domains=ad)
+                                axes_names=['condition', 'time', 'voxel'],
+                                axes_domains=ad)
             #stack everything
 
             outputs['fits'] = stack_cuboids([signal, fit, fitted_perf,
-                                                      fitted_bold,
-                                                      c_paradigm.sum('condition'),
-                                                      fitted_perf_baseline],
-                                                      'stype',
-                                                      ['signal','fit','perf',
-                                                       'bold','paradigm',
-                                                       'perf_baseline'])
-
+                                             fitted_bold,
+                                             c_paradigm.sum('condition'),
+                                             fitted_perf_baseline], 'stype',
+                                             ['signal','fit','perf',
+                                              'bold','paradigm',
+                                              'perf_baseline'])
         return outputs
 
-from pyhrf.boldsynth.scenarios import *
-
-def simulate_asl(output_dir=None, noise_scenario='high_snr',
-                 spatial_size='tiny'):
-    from pyhrf import Condition
-    from pyhrf.tools import Pipeline
-
-    drift_var = 10.
-
-    dt = .5
-    dsf = 2 #down sampling factor
-
-    if spatial_size == 'tiny':
-        lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
-    elif spatial_size == 'random_small':
-        lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
-    else:
-        lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
-
-    if noise_scenario == 'high_snr':
-        v_noise = 0.05
-        conditions = [
-            Condition(name='audio', perf_m_act=10., perf_v_act=.1, perf_v_inact=.2,
-                      bold_m_act=15., bold_v_act=.1, bold_v_inact=.2,
-                      label_map=lmap1),
-            Condition(name='video', perf_m_act=11., perf_v_act=.11, perf_v_inact=.21,
-                      bold_m_act=14., bold_v_act=.11, bold_v_inact=.21,
-                      label_map=lmap2),
-            Condition(name='damier', perf_m_act=12.,
-                      perf_v_act=.12, perf_v_inact=.22,
-                      bold_m_act=20., bold_v_act=.12, bold_v_inact=.22,
-                      label_map=lmap3),
-                      ]
-    else: #low_snr
-        v_noise = 2.
-        conditions = [
-            Condition(name='audio', perf_m_act=1.6, perf_v_act=.3,
-                      perf_v_inact=.3,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
-                      label_map=lmap1),
-            Condition(name='video', perf_m_act=1.6, perf_v_act=.3,
-                      perf_v_inact=.3,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
-                      label_map=lmap2),
-                      ]
-
-    simulation_steps = {
-        'dt' : dt,
-        'dsf' : dsf,
-        'tr' : dt * dsf,
-        'condition_defs' : conditions,
-        # Paradigm
-        'paradigm' : create_localizer_paradigm_avd,
-        'rastered_paradigm' : rasterize_paradigm,
-        # Labels
-        'labels_vol' : create_labels_vol,
-        'labels' : flatten_labels_vol,
-        'nb_voxels': lambda labels: labels.shape[1],
-        # Brls
-        'brls' : create_time_invariant_gaussian_brls,
-        # Prls
-        'prls' : create_time_invariant_gaussian_prls,
-        # BRF
-        'primary_brf' : create_canonical_hrf,
-        'brf' : duplicate_brf,
-        # PRF
-        'primary_prf' : create_prf, #canonical HRF for testing
-        'prf' : duplicate_prf,
-        # Perf baseline
-        'perf_baseline' : create_perf_baseline,
-        'perf_baseline_mean' : 0.,
-        'perf_baseline_var': .4,
-        # Stim induced
-        'bold_stim_induced' : create_bold_stim_induced_signal,
-        'perf_stim_induced' : create_perf_stim_induced_signal,
-        # Noise
-        'v_gnoise' : v_noise,
-        'noise' : create_gaussian_noise_asl,
-        # Drift
-        'drift_order' : 4,
-        'drift_var' : drift_var,
-        'drift_coeffs':create_drift_coeffs_asl,
-        'drift' : create_polynomial_drift_from_coeffs_asl,
-        # Bold # maybe rename as ASL (should be handled afterwards ...
-        'ctrl_tag_mat' : build_ctrl_tag_matrix,
-        'asl_shape' : calc_asl_shape,
-        'bold' : create_asl_from_stim_induced,
-        }
-    simu_graph = Pipeline(simulation_steps)
-
-    # Compute everything
-    simu_graph.resolve()
-    simulation = simu_graph.get_values()
-
-    if output_dir is not None:
-        simu_graph.save_graph_plot(op.join(output_dir, 'simulation_graph.png'))
-
-        simulation_save_vol_outputs(simulation, output_dir)
-
-        # f = open(op.join(output_dir, 'simulation.pck'), 'w')
-        # cPickle.dump(simulation, f)
-        # f.close()
-
-    return simulation
 
 import pyhrf.jde.models
-pyhrf.jde.models.allModels['ASL0'] = {'class' : ASLSampler,
-    'doc' : 'BOLD and perfusion component, BiGaussian on stationary '\
-    'response levels, iid white noise, explicit drift'
+pyhrf.jde.models.allModels['ASL_PHYSIO_HIERARCHICAL'] = {'class' : ASLPhysioSampler,
+    'doc' : 'BOLD and perfusion component, physiological prior on responses,'
+    'BiGaussian prior on stationary response levels, iid white noise, '\
+    'explicit drift'
     }

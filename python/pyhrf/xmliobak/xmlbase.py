@@ -400,7 +400,8 @@ class TypedXMLHandler:
           and rootNode.hasAttribute('pythonXMLHandlerClass'):
             modulesName = rootNode.getAttribute('pythonXMLHandlerModule')
 ##            print 'modulesName :', modulesName
-            module = eval('__import__("'+modulesName+'", fromlist=[""])')
+            modulesName = modulesName.replace('xmlio.', 'xmliobak.')
+            module = eval('__import__("' + modulesName + '", fromlist=[""])')
 ##            print 'module : ', module
             className = rootNode.getAttribute('pythonXMLHandlerClass')
             xmlHandler = eval('module.'+className+'()')

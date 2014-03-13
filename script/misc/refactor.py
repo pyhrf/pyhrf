@@ -37,14 +37,15 @@ rexpAll = re.compile(".*")
 fn_match = rexpAll.match
 
 if 1:
-    for root, dirs, files in os.walk(binFolder):
-    #for root, dirs, files in os.walk(pyhrfRoot):
-        for f in filter(fn_match, files):
-            if '.svn' not in root and '.git' not in root and \
-              f not in exclude:
-                fn = join(root, f)
-                replaceInFile("setVerbosity",
-                              "set_verbosity",
-                              fn, dry=False) #dry=True --> launch sciprt but
-                                             # do nothing
+    for base_folder, fn_match in [(pythonRoot, rexpPy.match),
+                                  (binFolder, rexpAll.match)]:
+        for root, dirs, files in os.walk(base_folder):
+            for f in filter(fn_match, files):
+                if '.svn' not in root and '.git' not in root and \
+                  f not in exclude:
+                    fn = join(root, f)
+                    replaceInFile("tree_xndarray",
+                                  "tree_to_xndarray",
+                                  fn, dry=False) #dry=True --> launch sciprt but
+                                                 # do nothing
 

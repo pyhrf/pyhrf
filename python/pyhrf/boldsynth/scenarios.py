@@ -833,7 +833,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     else:
         raise Exception('Dunno where to get mask')
 
-    pyhrf.verbose(1,'Vol mask of shape %s' %str(mask_vol.shape))
+    pyhrf.verbose(3,'Vol mask of shape %s' %str(mask_vol.shape))
 
     fn_mask = add_prefix(op.join(output_dir, 'mask.nii'), prefix)
     write_volume(mask_vol.astype(np.int32), fn_mask, vol_meta)
@@ -848,7 +848,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     if simulation.has_key('hrf'):
         from pyhrf.ndarray import MRI3Daxes
         fn_hrf = add_prefix(op.join(output_dir, 'hrf.nii'), prefix)
-        pyhrf.verbose(1,'hrf flat shape %s' %str(simulation['hrf'].shape))
+        pyhrf.verbose(3,'hrf flat shape %s' %str(simulation['hrf'].shape))
         if simulation['hrf'].ndim == 1:
             hrf = (np.ones(mask_vol.size) * simulation['hrf'][:,np.newaxis])
         else:
@@ -868,7 +868,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     if simulation.has_key('brf'):
         from pyhrf.ndarray import MRI3Daxes
         fn_brf = add_prefix(op.join(output_dir, 'brf.nii'), prefix)
-        pyhrf.verbose(1,'brf flat shape %s' %str(simulation['brf'].shape))
+        pyhrf.verbose(3,'brf flat shape %s' %str(simulation['brf'].shape))
         brfs_vol = expand_array_in_mask(simulation['brf'], mask_vol, flat_axis=1)
         dt = simulation['dt']
         cbrfs = xndarray(brfs_vol, axes_names=['time',]+MRI3Daxes,
@@ -879,7 +879,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     if simulation.has_key('prf'):
         from pyhrf.ndarray import MRI3Daxes
         fn_brf = add_prefix(op.join(output_dir, 'prf.nii'), prefix)
-        pyhrf.verbose(1,'prf flat shape %s' %str(simulation['prf'].shape))
+        pyhrf.verbose(3,'prf flat shape %s' %str(simulation['prf'].shape))
         brfs_vol = expand_array_in_mask(simulation['prf'], mask_vol, flat_axis=1)
         dt = simulation['dt']
         cbrfs = xndarray(brfs_vol, axes_names=['time',]+MRI3Daxes,
@@ -890,7 +890,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
     if simulation.has_key('drift'):
         fn_drift = add_prefix(op.join(output_dir, 'drift.nii'), prefix)
-        pyhrf.verbose(1,'drift flat shape %s' %str(simulation['drift'].shape))
+        pyhrf.verbose(3,'drift flat shape %s' %str(simulation['drift'].shape))
         drift_vol = expand_array_in_mask(simulation['drift'], mask_vol,
                                          flat_axis=1)
         #write_volume(drift_vol, fn_drift, vol_meta)
@@ -898,7 +898,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
     if simulation.has_key('drift_coeffs'):
         fn_drift = add_prefix(op.join(output_dir, 'drift_coeffs.nii'), prefix)
-        pyhrf.verbose(1,'drift flat shape %s' %str(simulation['drift_coeffs'].shape))
+        pyhrf.verbose(3,'drift flat shape %s' %str(simulation['drift_coeffs'].shape))
         drift_vol = expand_array_in_mask(simulation['drift'], mask_vol,
                                          flat_axis=1)
         #write_volume(drift_vol, fn_drift, vol_meta)
@@ -907,7 +907,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
     if simulation.has_key('noise'):
         fn_noise = add_prefix(op.join(output_dir, 'noise.nii'), prefix)
-        pyhrf.verbose(1,'noise flat shape %s' %str(simulation['noise'].shape))
+        pyhrf.verbose(3,'noise flat shape %s' %str(simulation['noise'].shape))
         noise_vol = expand_array_in_mask(simulation['noise'], mask_vol,
                                          flat_axis=1)
         write_volume(np.rollaxis(noise_vol,0,4), fn_noise, vol_meta)
@@ -919,7 +919,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
 
     if simulation.has_key('noise_var'):
         fn_noise_var = add_prefix(op.join(output_dir, 'noise_var.nii'), prefix)
-        pyhrf.verbose(1,'noise_var flat shape %s' \
+        pyhrf.verbose(3,'noise_var flat shape %s' \
                       %str(simulation['noise_var'].shape))
         noise_var_vol = expand_array_in_mask(simulation['noise_var'], mask_vol)
         write_volume(noise_var_vol, fn_noise_var, vol_meta)
@@ -929,7 +929,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     if simulation.has_key('stim_induced_signal'):
         fn_stim_induced = add_prefix(op.join(output_dir, 'stim_induced.nii'),
                                      prefix)
-        pyhrf.verbose(1,'stim_induced flat shape %s' \
+        pyhrf.verbose(3,'stim_induced flat shape %s' \
                           %str(simulation['stim_induced_signal'].shape))
         stim_induced_vol = expand_array_in_mask(simulation['stim_induced_signal'],
                                            mask_vol, flat_axis=1)
@@ -938,7 +938,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     if simulation.has_key('perf_stim_induced'):
         fn_stim_induced = add_prefix(op.join(output_dir, 'perf_stim_induced.nii'),
                                      prefix)
-        pyhrf.verbose(1,'asl_stim_induced flat shape %s' \
+        pyhrf.verbose(3,'asl_stim_induced flat shape %s' \
                           %str(simulation['perf_stim_induced'].shape))
         stim_induced_vol = expand_array_in_mask(simulation['perf_stim_induced'],
                                                 mask_vol, flat_axis=1)
@@ -947,7 +947,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
         fn_stim_induced = add_prefix(op.join(output_dir,
                                              'perf_stim_induced_ct.nii'),
                                      prefix)
-        pyhrf.verbose(1,'asl_stim_induced flat shape %s' \
+        pyhrf.verbose(3,'asl_stim_induced flat shape %s' \
                           %str(simulation['perf_stim_induced'].shape))
 
         dsf = simulation['dsf']
@@ -967,7 +967,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     if simulation.has_key('bold_stim_induced'):
         fn_stim_induced = add_prefix(op.join(output_dir, 'bold_stim_induced.nii'),
                                      prefix)
-        pyhrf.verbose(1,'asl_stim_induced flat shape %s' \
+        pyhrf.verbose(3,'asl_stim_induced flat shape %s' \
                           %str(simulation['bold_stim_induced'].shape))
         stim_induced_vol = expand_array_in_mask(simulation['bold_stim_induced'],
                                                 mask_vol, flat_axis=1)
@@ -1042,7 +1042,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
     def save_time_series(k):
         if simulation.has_key(k):
             fn_stim_induced = add_prefix(op.join(output_dir, k+'.nii'), prefix)
-            pyhrf.verbose(1,'%s flat shape %s' %(k,str(simulation[k].shape)))
+            pyhrf.verbose(3,'%s flat shape %s' %(k,str(simulation[k].shape)))
             vol = expand_array_in_mask(simulation[k], mask_vol, flat_axis=1)
             write_volume(np.rollaxis(vol,0,4), fn_stim_induced)
     save_time_series('flow_induction')
@@ -1066,7 +1066,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
         hrfgroup = simulation['hrf_group']
         nb_vox = mask_vol.size
         fn_hrf = add_prefix(op.join(output_dir, 'hrf_group.nii'), prefix)
-        pyhrf.verbose(1,'hrf group shape %s' %str(simulation['hrf_group'].shape))
+        pyhrf.verbose(3,'hrf group shape %s' %str(simulation['hrf_group'].shape))
         hrfGd = duplicate_hrf(nb_vox, hrfgroup)
         hrfs_vol = expand_array_in_mask(hrfGd, mask_vol, flat_axis=1)
         dt = simulation['dt']

@@ -2146,10 +2146,10 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         if self.computeContrastsFlag:
 
-            pyhrf.verbose(3,'self.outputConVars:')
-            pyhrf.verbose.printNdarray(3, self.outputConVars)
+            # pyhrf.verbose(3,'self.outputConVars:')
+            # pyhrf.verbose.printNdarray(3, self.outputConVars)
 
-            cons = np.array(self.contrasts.values())
+            cons = np.array(self.contrasts.values()).astype(np.float32)
             con_names = self.contrasts.keys()
             con_doms = axes_domains={'contrast':con_names}
             outputs['nrl_contrasts'] = xndarray(cons,
@@ -2158,6 +2158,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                                               value_label='contrast')
 
             con_vars = np.array([self.contrastsVar[c] for c in con_names])
+            con_vars = con_vars.astype(np.float32)
             outputs['nrl_contrasts_var'] = xndarray(con_vars,
                                                   axes_names=['contrast','voxel'],
                                                   axes_domains=con_doms,
@@ -3152,10 +3153,10 @@ class BiGaussMixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                                               axes_domains=ad)
 
 
-            mixtp_mapped = np.tile(mixtp, (self.nbVox, 1, 1, 1))
+            mixtp_mapped = np.tile(mixtp, (self.nbVox,1,1,1)).astype(np.float32)
             outputs['pm_'+self.name+'_mapped'] = xndarray(mixtp_mapped,
-                                                        axes_names=['voxel']+an,
-                                                        axes_domains=ad)
+                                                          axes_names=['voxel']+an,
+                                                          axes_domains=ad)
 
             region_is_active = self.finalValue[self.I_MEAN_CA,:].max() > \
                 self.activ_thresh

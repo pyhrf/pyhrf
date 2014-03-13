@@ -167,8 +167,7 @@ def make_parcellation_from_files(betaFiles, maskFile, outFile, nparcels,
     betaFiles = sorted(betaFiles)
     for b in betaFiles:
         if not op.exists(b):
-            print 'Error, file %s not found' %b
-            return
+            raise Exception('Error, file %s not found' %b)
 
     pyhrf.verbose(1, 'Mask image: ' + op.basename(maskFile))
     pyhrf.verbose(1, 'Betas: ' + op.basename(betaFiles[0]) + ' ... ' + \

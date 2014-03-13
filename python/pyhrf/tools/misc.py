@@ -38,6 +38,25 @@ except ImportError:
             for prod in result:
                 yield tuple(prod)
 
+class PickleableStaticMethod(object):
+    def __init__(self, fn, cls=None):
+        self.cls = cls
+        self.fn = fn
+        self.__name__ = fn.__name__
+
+    def __call__(self, *args, **kwargs):
+        if self.cls is None:
+            return self.fn(*args, **kwargs)
+        else:
+            return self.fn(self.cls, *args, **kwargs)
+    def __get__(self, obj, cls):
+        return PickleableStaticMethod(self.fn, cls)
+    def __getstate__(self):
+        return (self.cls, self.fn.__name__)
+    def __setstate__(self, state):
+        self.cls, name = state
+        self.fn = getattr(self.cls, name).fn
+
 
 def is_importable(module_name, func_name=None):
     """ Return True if given *module_name* (str) is importable """
@@ -244,13 +263,13 @@ def cartesian_combine_args(varying_args, fixed_args=None):
     """
     Construst the cartesian product of varying_args and append fixed_args to it.
 
-    'varying_args': Specify the arguments which are varying as a dict mapping
+    'varying_args': Specify varying arguments as a dict mapping
                     arg names to iterables of arg values.
                     e.g:
                       { 'my_arg1' : ['a','b','c'],
                         'my_arg2' : [2, 5, 10],
                       }
-    'fixed_args' : Specify the argument which remain constant as a dict mapping
+    'fixed_args' : Specify constant arguments as a dict mapping
                    arg names to arg values
                    e.g:
                      { 'my_arg3' : ['fixed_value'] }
@@ -294,10 +313,54 @@ def icartesian_combine_args(varying_args, fixed_args=None):
                 for vp in iproduct(*varying_args.values()))
 
 
-def cartesian_apply(varying_args, func, fixed_args=None):
+def cartesian_apply(varying_args, func, fixed_args=None, nb_parallel_procs=1,
+                    joblib_verbose=0):
+    """
+    Apply function *func* iteratively on the cartesian product of *varying_args*
+    with fixed args *fixed_args*. Produce a tree (nested dicts) mapping arg values    to the corresponding evaluation of function *func*
 
-    args_iter = icartesian_combine_args(varying_args, fixed_args)
-    return [func(**kwargs) for kwargs in args_iter]
+    Arg:
+        - varying_args (OrderedDict): a dictionnary mapping argument names to
+                                      a list of values. The Orderdict is
+                                      used to keep track of argument order in
+                                      the result.
+                                      WARNING: all argument values must be
+                                               hashable
+        - func (function): the function to be applied on the cartesian product
+                           of given arguments
+        - fixed_args (dict): arguments that are fixed
+                             (do not enter cartesian product)
+
+    Return:
+        nested dicts (tree) where each node is an argument value from varying
+        args and each leaf is the result of the evaluation of the function.
+        The order to the tree levels corresponds the order in the input
+        OrderedDict of varying arguments.
+
+    Example:
+    >>> from pyhrf.tools import cartesian_apply
+    >>> from pyhrf.tools.backports import OrderedDict
+    >>> def foo(a,b,c): return a + b + c
+    >>> v_args = OrderedDict( [('a',[0,1]), ('b',[1,2])] )
+    >>> fixed_args = {'c': 3}
+    >>> cartesian_apply(v_args, foo, fixed_args)
+    { 0 : { 1:4, 2:5}, 1 : { 1:5, 2:6} }
+    """
+    from pyhrf.tools.backports import OrderedDict
+    assert isinstance(varying_args, OrderedDict)
+
+    if nb_parallel_procs == 1:
+        args_iter = icartesian_combine_args(varying_args, fixed_args)
+        return tree([ ([kwargs[a] for a in varying_args.keys()], func(**kwargs)) \
+                      for kwargs in args_iter])
+    else:
+        from joblib import Parallel, delayed
+        p = Parallel(n_jobs=nb_parallel_procs, verbose=joblib_verbose)
+        args = cartesian_combine_args(varying_args, fixed_args)
+        results = p(delayed(func)(**kwargs) for kwargs in args)
+        return tree([ ([kwargs[a] for a in varying_args.keys()], r) \
+                      for kwargs, r in zip(args, results)])
+
 
 
 def format_duration(dt):
@@ -354,26 +417,6 @@ def cartesian_eval(func, varargs, fixedargs=None):
         #print 'p.values:', [p[k] for k in varargs.iterkeys()]
         set_leaf(resultTree, [p[k] for k in varargs.iterkeys()], func(**fargs))
     return varargs.keys(), resultTree
-
-
-class PickleableStaticMethod(object):
-    def __init__(self, fn, cls=None):
-        self.cls = cls
-        self.fn = fn
-        self.__name__ = fn.__name__
-        
-    def __call__(self, *args, **kwargs):
-        if self.cls is None:
-            return self.fn(*args, **kwargs)
-        else:
-            return self.fn(self.cls, *args, **kwargs)
-    def __get__(self, obj, cls):
-        return PickleableStaticMethod(self.fn, cls)
-    def __getstate__(self):
-        return (self.cls, self.fn.__name__)
-    def __setstate__(self, state):
-        self.cls, name = state
-        self.fn = getattr(self.cls, name).fn
 
 
 
@@ -1301,6 +1344,12 @@ def treeBranches(tree, branch=None):
         yield branch
 
 
+def tree(branched_leaves):
+    d = {}
+    for branch, leaf in branched_leaves:
+        set_leaf(d, branch, leaf)
+    return d
+
 def treeBranchesClasses(tree, branch=None):
     #print "tree", tree
     #print "branch", branch
@@ -1948,4 +1997,57 @@ def PPMcalculus_jde(threshold_value, apost_mean_activ_fn, apost_var_activ_fn,  \
     return PPM.data, PPMinv.data, Pval.data
 
 
+## HTML formating ##
+
+def html_row(s):
+    return '<tr>%s</tr>' %s
+
+def html_table(s, border=None):
+    if border is None:
+        return '<table>%s</table>' %s
+    else:
+        return '<table border="%d">%s</table>' %(border, s)
+
+
+def attrs_to_string(attrs):
+    attrs = attrs or {}
+    sattrs = ''
+    if len(attrs) > 0:
+        sattrs = ' '+' '.join(['%s="%s"' %(k,v) for k,v in attrs.items()])
+    return sattrs
+
+def html_img(fn, attrs=None):
+    return '<img src="%s"%s>' %(fn,attrs_to_string(attrs))
+
+def html_cell(s, cell_type='d', attrs=None):
+    return '<t%s%s>%s</t%s>' %(cell_type, attrs_to_string(attrs), s, cell_type)
+
+def html_div(s, attrs=None):
+    return '<div%s>%s</div>' %(attrs_to_string(attrs), s)
+
+def html_list_to_row(l, cell_types, attrs):
+    if not isinstance(attrs, (list, tuple)):
+        attrs  = [attrs] * len(l)
+    else:
+        assert len(attrs) == len(l)
+
+    if not isinstance(cell_types, (list, tuple)):
+        cell_types  = [cell_types] * len(l)
+    else:
+        assert len(cell_types) == len(l)
+
+    return html_row(''.join([html_cell(e, t, a) \
+                             for e,t,a in zip(l,cell_types,attrs)]))
+
+def html_doc(s):
+    return '<!DOCTYPE html><html>' + s + '</html>'
+
+def html_head(s):
+    return '<head>' + s + '</head>'
+
+def html_style(s):
+    return '<style>' + s + '</style>'
+
+def html_body(s):
+    return '<body>' + s + '</body>'
 

@@ -342,8 +342,7 @@ def plot_gaussian_mixture(values, props=None, color='k', lw=1.75):
 
 
 def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
-                      show_axis_labels=True,
-                      show_legend=False, axes=None):
+                      show_axis_labels=True, show_legend=False, axes=None):
     """
     Plot a cuboid (ndims <= 2) as curve(s).
     If the input is 1D: one single curve.
@@ -362,6 +361,9 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
     Return:
         None
     """
+    def protect_latex_str(s):
+        return s.replace('_','\_')
+        
     axes = axes or plt.gca()
     colors = colors or {}
     plot_kwargs = plot_kwargs or {}
@@ -379,7 +381,9 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
             col = colors.get(val, None)
             if col is not None:
                 pkwargs['color'] = col
-            pkwargs['label'] = legend_prefix + str(val)
+            pkwargs['label'] = protect_latex_str(legend_prefix + \
+                                                 c.axes_names[0] + \
+                                                 '=' + str(val))
             plot_cub_as_curve(sub_c, plot_kwargs=pkwargs, axes=axes,
                               show_axis_labels=False)
         if show_legend:
@@ -391,10 +395,10 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
 
     if show_axis_labels:
         if c.get_ndims() == 1:
-            axes.set_xlabel(c.axes_names[0])
+            axes.set_xlabel(protect_latex_str(c.axes_names[0]))
         else:
-            axes.set_xlabel(c.axes_names[1])
-        axes.set_ylabel(c.value_label)
+            axes.set_xlabel(protect_latex_str(c.axes_names[1]))
+        axes.set_ylabel(protect_latex_str(c.value_label))
 
 def set_int_tick_labels(axis, labels, fontsize=None, rotation=None):
     """

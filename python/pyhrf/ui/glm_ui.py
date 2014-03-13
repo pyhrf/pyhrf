@@ -11,7 +11,7 @@ try:
     from collections import OrderedDict
 except ImportError:
     from pyhrf.backport import OrderedDict
-from pyhrf.ndarray import xndarray, tree_to_cuboid, stack_cuboids
+from pyhrf.ndarray import xndarray, tree_to_xndarray, stack_cuboids
 
 from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.glm import glm_nipy
@@ -31,11 +31,13 @@ class GLMAnalyser(FMRIAnalyser):
                  hrf_model='Canonical', drift_model='Cosine', hfcut=128.,
                  residuals_model='spherical',fit_method='ols',
                  outputPrefix='glm_', rescale_results=False,
-                 rescale_factor_file=None, fir_delays=[0]):
+                 rescale_factor_file=None, fir_delays=[0],
+                 output_fit=False):
 
         xmlio.XmlInitable.__init__(self)
         FMRIAnalyser.__init__(self, outputPrefix)
 
+        self.output_fit = output_fit
         self.hrf_model = hrf_model
         self.drift_model = drift_model
         self.fir_delays = fir_delays
@@ -88,30 +90,33 @@ class GLMAnalyser(FMRIAnalyser):
                                               'regressor':dm.names})
         outputs['design_matrix'] = cdesign_matrix
 
-        axes_names = ['time', 'voxel']
-        axes_domains = {'time' : np.arange(ns)*tr}
-        bold = xndarray(fdata.bold.astype(np.float32),
-                      axes_names=axes_names,
-                      axes_domains=axes_domains,
-                      value_label='BOLD')
+        if self.output_fit:
+            axes_names = ['time', 'voxel']
+            axes_domains = {'time' : np.arange(ns)*tr}
+            bold = xndarray(fdata.bold.astype(np.float32),
+                          axes_names=axes_names,
+                          axes_domains=axes_domains,
+                          value_label='BOLD')
 
-        fit = np.dot(dm.matrix, glm.beta)
-        cfit = xndarray(fit, axes_names=['time','voxel'],
-                      axes_domains={'time':np.arange(ns)*tr})
+            fit = np.dot(dm.matrix, glm.beta)
+            cfit = xndarray(fit, axes_names=['time','voxel'],
+                          axes_domains={'time':np.arange(ns)*tr})
 
-        outputs['bold_fit'] = stack_cuboids([bold,cfit], 'stype', ['bold', 'fit'])
-
-
-        nb_cond = fdata.nbConditions
-        fit_cond = np.dot(dm.matrix[:,:nb_cond], glm.beta[:nb_cond,:])
-        fit_cond -= fit_cond.mean(0)
-        fit_cond += fdata.bold.mean(0)
-
-        outputs['fit_cond'] = xndarray(fit_cond, axes_names=['time','voxel'],
-                                     axes_domains={'time':np.arange(ns)*tr})
+            outputs['bold_fit'] = stack_cuboids([bold,cfit], 'stype',
+                                                ['bold', 'fit'])
 
 
-        outputs['s2'] = xndarray(glm.s2, axes_names=['voxel'])
+            nb_cond = fdata.nbConditions
+            fit_cond = np.dot(dm.matrix[:,:nb_cond], glm.beta[:nb_cond,:])
+            fit_cond -= fit_cond.mean(0)
+            fit_cond += fdata.bold.mean(0)
+
+            outputs['fit_cond'] = xndarray(fit_cond, axes_names=['time','voxel'],
+                                           axes_domains={'time':np.arange(ns)*tr})
+
+
+        s2 = np.atleast_1d(glm.s2)
+        outputs['s2'] = xndarray(s2, axes_names=['voxel'])
 
 
         if 0:
@@ -132,7 +137,7 @@ class GLMAnalyser(FMRIAnalyser):
                     fir[delay][cond] = xndarray(glm.beta[ib], axes_names=['voxel'])
 
             if self.hrf_model == 'FIR':
-                chrf = tree_to_cuboid(fir, ['time', 'condition'])
+                chrf = tree_to_xndarray(fir, ['time', 'condition'])
                 outputs['hrf'] = chrf
                 outputs['hrf_norm'] = (chrf**2).sum('time')**.5
 
