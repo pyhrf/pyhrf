@@ -1673,9 +1673,14 @@ class xndarray:
                     try:
                         cuboid_info = from_xml(ext_content)
                     except DeprecatedXMLFormatException, e:
-                        from pyhrf.xmliobak import from_xml as from_xml_bak
-                        cuboid_info = from_xml_bak(ext_content)
                         has_deprecated_xml_header = True
+                        try:
+                            from pyhrf.xmliobak import from_xml as from_xml_bak
+                            cuboid_info = from_xml_bak(ext_content)
+                        except:
+                            # Can't load xml -> ignore it
+                            #TODO: warn?
+                            cuboid_info = {}
                     except Exception, e:
                         raise IOError('Extension for xndarray meta info can not '
                                       'be read from "comment" extension. '
