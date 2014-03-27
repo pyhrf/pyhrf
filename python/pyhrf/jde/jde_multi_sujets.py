@@ -2561,7 +2561,9 @@ class BOLDGibbs_Multi_SubjSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_iterations', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_iterations', 'response_levels', 
+                            'hrf_subj', 'hrf_var_subj', 'hrf_group',
+                            'hrf_var_group']
 
 
     parametersComments = {

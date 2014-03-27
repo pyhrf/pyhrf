@@ -2614,7 +2614,8 @@ class BOLDGibbs_Multi_SessSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_its', 'response_levels_sess', 
+                            'response_levels_mean', 'hrf', 'hrf_var']
 
     parametersComments = {
         'smpl_hist_pace': 'To save the samples at each iteration\n'\

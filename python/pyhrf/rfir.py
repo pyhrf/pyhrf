@@ -1107,6 +1107,8 @@ def rfir(func_data, fir_duration=42, fir_dt=.6, nb_its_max=100,
     rfir_estimator.linkToData(func_data)
     rfir_estimator.run()
     outputs = rfir_estimator.getOutputs()
-
-    return {'fir':outputs["ehrf"], 'fir_error':outputs["ehrf_error"],
-            'fit':outputs["fit"], 'drift':outputs["drift"]}
+    to_return = {'fir':outputs["ehrf"], 'fir_error':outputs["ehrf_error"],
+                 'drift':outputs["drift"]}
+    if outputs.has_key('fit'):
+        to_return['fit'] = outputs['fits']
+    return to_return

@@ -24,7 +24,7 @@ class RFIRTest(unittest.TestCase):
         outputs = rfir(fdata, nb_its_max=2)
 
         assert isinstance(outputs, dict)
-        for k in ["fir", "fir_error", "fit", "drift"]:
+        for k in ["fir", "fir_error", "drift"]:
             assert outputs.has_key(k)
 
         #TODO: test shape consistency
