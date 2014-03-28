@@ -26,7 +26,7 @@ before_install:
     - travis_retry sudo apt-get install $PY-nipy $PY-sympy --no-install-recommends
     - travis_retry sudo apt-get install $PY-joblib $PY-sklearn
 install:
-    - python setup.py install --prefix=~/.local
+    - python setup.py install --user
     - if [ ! -z "$COVERAGE" ]; then pip install --user -v coveralls; fi
 script:
     - export PATH=$HOME/.local/bin:$PATH
