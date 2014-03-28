@@ -1,11 +1,7 @@
-
-
 from __future__ import with_statement
 import os.path as op
 import os
 from ConfigParser import RawConfigParser, ConfigParser
-
-from pkg_resources import Requirement, resource_filename
 
 class ConfigurationError(Exception):
     pass
@@ -142,35 +138,7 @@ defaults = {
 section_order = ['global', 'parallel-LAN', 'parallel-local', 'parallel-cluster',
                  'treatment-default']
 
-## Manage default parameters
-
-# Get configuration file in package
-req = Requirement.parse('pyhrf')
-fn = op.join('pyhrf', 'configuration.cfg')
-cfgFn = resource_filename(req, fn)
-
-if not op.exists(cfgFn):
-    write_configuration(defaults, cfgFn, section_order)
-
-# Get the actual configuration parameters
-try:
-    cfg = load_configuration(cfgFn, defaults)
-except (ConfigurationError, IOError):
-    write_configuration(defaults, cfgFn, section_order)
-
-# If there are new default parameters, 
-# update package config file accordingly
-for section in defaults.iterkeys():
-    if not cfg.has_key(section):
-        cfg[section] = defaults[section]
-    else:
-        default_keys = defaults[section].keys()
-        unknownLabels = set(default_keys).difference(cfg[section].keys())
-        if len(unknownLabels) > 0:
-            for l in unknownLabels:
-                cfg[section][l] = defaults[section][l]
-write_configuration(cfg, cfgFn, section_order)
-
+cfg = defaults.copy()
 
 ## Manage user-defined parameters
 ## in ~/.pyhrf/config.cfg
@@ -193,7 +161,3 @@ else:
             for l in unknownLabels:
                 cfg[section][l] = defaults[section][l]
             write_configuration(cfg, user_cfg_fn, section_order)
-
-
-#print 'usemode:'
-#print cfg['global']['use_mode']
