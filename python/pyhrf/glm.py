@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import os
 import os.path as op
 import numpy as np
 import glob
 
 import pyhrf
+from pyhrf import FmriData
 from pyhrf.ndarray import expand_array_in_mask
 from pyhrf.tools.io import read_volume, write_volume
 from pyhrf.ndarray import xndarray
@@ -59,10 +57,11 @@ def glm_nipy(fmri_data, contrasts=None, hrf_model='Canonical',
         (glm instance, design matrix, dict of contrasts of objects)
 
     Examples:
+    >>> from pyhrf.core import FmriData
+    >>> from pyhrf.glm import glm_nipy
     >>> g,dmtx,con = glm_nipy(FmriData.from_vol_ui())
-
     >>> g,dmtx,con = glm_nipy(FmriData.from_vol_ui(), \
-    contrasts={'A-V':'audio-video'})
+                              contrasts={'A-V':'audio-video'})
     """
 
     paradigm = fmri_data.paradigm.to_nipy_paradigm()
@@ -184,7 +183,7 @@ def glm_nipy(fmri_data, contrasts=None, hrf_model='Canonical',
     #return Proba
 
 
-from pyhrf import FmriData
+
 
 def glm_nipy_from_files(bold_file, tr,  paradigm_csv_file, output_dir,
                         mask_file, session=0, contrasts=None,

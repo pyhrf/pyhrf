@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
-
 """
 This module provides classes and functions to handle multi-dimensionnal numpy
 array (ndarray) objects and extend them with some semantics (axes labels and
 axes domains). See xndarray class.
 (TODO: make xndarray inherit numpy.ndarray?)
 """
-
-
-# -*- coding: utf-8 -*-
 import os.path as op
 import numpy as np
 import pprint

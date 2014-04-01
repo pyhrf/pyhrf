@@ -289,8 +289,8 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,hrf,NitMax = -1, hrf = None):
     Norm = numpy.zeros((J),dtype=float)
     while (( (ni < 15) or (Crit_sigmaH[-1] > 5e-3) or (Crit_H[-1] > 5e-3) or (Crit_Z[-1] > 5e-3))) \
 	    and (ni < NitMax):
-	print "------------------------------ Iteration nÂ° " + str(ni+1) + " ------------------------------"
-	pyhrf.verbose(2,"------------------------------ Iteration nÂ° " + str(ni+1) + " ------------------------------")
+	print "------------------------------ Iteration n° " + str(ni+1) + " ------------------------------"
+	pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
 	pyhrf.verbose(3, "E A step ...")
 	Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone)
 	pyhrf.verbose(3,"E H step ...")

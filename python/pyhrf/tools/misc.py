@@ -120,7 +120,7 @@ def add_prefix(fn, prefix):
     """ Add a prefix at the beginning of a file name.
 
     >>> add_prefix('./my_file.txt', 'my_prefix_')
-    './my_prefix_.txt'
+    './my_prefix_my_file.txt'
     """
 
     if prefix is None:
@@ -276,22 +276,20 @@ def cartesian_combine_args(varying_args, fixed_args=None):
 
     Example:
     >>> from pyhrf.tools import cartesian_combine_args
-    >>> vargs = {
-            'my_arg1' : ['a','b','c'],
-            'my_arg2' : [2, 5, 10],
-            }
+    >>> vargs = {'my_arg1' : ['a','b','c'],'my_arg2' : [2, 5, 10],}
     >>> fargs = { 'my_arg3' : 'fixed_value' }
-
-    >>> cartesian_combine_args(vargs, fargs)
-    [{'my_arg1': 'a', 'my_arg2': 2, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'b', 'my_arg2': 2, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'c', 'my_arg2': 2, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'a', 'my_arg2': 5, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'b', 'my_arg2': 5, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'c', 'my_arg2': 5, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'a', 'my_arg2': 10, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'b', 'my_arg2': 10, 'my_arg3': 'fixed_value'},
-    {'my_arg1': 'c', 'my_arg2': 10, 'my_arg3': 'fixed_value'}]
+    >>> res = cartesian_combine_args(vargs, fargs)
+    >>> res == \
+        [{'my_arg1': 'a', 'my_arg2': 2, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'b', 'my_arg2': 2, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'c', 'my_arg2': 2, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'a', 'my_arg2': 5, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'b', 'my_arg2': 5, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'c', 'my_arg2': 5, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'a', 'my_arg2': 10, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'b', 'my_arg2': 10, 'my_arg3': 'fixed_value'},
+    ...  {'my_arg1': 'c', 'my_arg2': 10, 'my_arg3': 'fixed_value'}]
+    True
     """
 
     if fixed_args is None:
@@ -343,8 +341,9 @@ def cartesian_apply(varying_args, func, fixed_args=None, nb_parallel_procs=1,
     >>> def foo(a,b,c): return a + b + c
     >>> v_args = OrderedDict( [('a',[0,1]), ('b',[1,2])] )
     >>> fixed_args = {'c': 3}
-    >>> cartesian_apply(v_args, foo, fixed_args)
-    { 0 : { 1:4, 2:5}, 1 : { 1:5, 2:6} }
+    >>> cartesian_apply(v_args, foo, fixed_args) == \
+        { 0 : { 1:4, 2:5}, 1 : { 1:5, 2:6} }
+    True
     """
     from pyhrf.tools.backports import OrderedDict
     assert isinstance(varying_args, OrderedDict)

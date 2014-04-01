@@ -1,21 +1,5 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
-import re
-import os.path as op
-import os
-import sys
-import warnings
-import traceback, StringIO
 import numpy as np
-#from glob import glob
-
-import pyhrf
-from pyhrf import xmlio, FmriData
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
-from pyhrf.ndarray import MRI3Daxes
-
 from pyhrf.ndarray import xndarray
 
 from pyhrf.ui.analyser_ui import FMRIAnalyser

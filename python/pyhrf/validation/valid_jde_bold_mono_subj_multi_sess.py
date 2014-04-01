@@ -1,5 +1,10 @@
+import os
+import os.path as op
+import numpy as np
+import unittest
 
-
+import pyhrf
+from pyhrf.core import merge_fmri_sessions
 
 class MultiSessTest(unittest.TestCase):
     #@debug_on()

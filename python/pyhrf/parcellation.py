@@ -883,58 +883,6 @@ def parcellation_for_jde(fmri_data, avg_parcel_size=250, output_dir=None,
     return parcellation, parcellation_file
 
 
-
-
-def parcellation_hemodynamics(fmri_data, feature_extraction_method,
-                              parcellation_method, nb_clusters):
-    """
-    Perform a hemodynamic-driven parcellation on masked fMRI data
-
-    Args:
-        - fmri_data (pyhrf.core.FmriData): input fMRI data
-        - feature_extraction_method (str): one of
-          'glm_hderiv', 'glm_hdisp' ...
-        - parcellation_method (str): one of
-          'spatial_ward', 'spatial_ward_uncertainty', ...
-
-    Return:
-         parcellation array (numpy array of integers) of the same shape
-         as fmri_data.roiMask
-
-    Examples
-    >>> fd = pyhrf.core.FmriData.from_simu_ui()
-    >>> parcellation_hemodynamics(fd, 'glm_hdisp', nb_clusters=2)
-    array([[[1], [1]], [[2], [2]]]) #dummy result #TOCHECK
-    """
-
-    roi_ids = np.unique(fmri_data.roi_ids_in_mask)
-    if len(roi_ids) == 0:
-        # glm
-        #TODO
-        features, uncertainty = feature_extraction(fmri_data,
-                                                   feature_extraction_method)
-
-        # parcellation process
-        if parcellation_method == 'spatial_ward':
-            parcellation = spatial_ward(features) #TODO
-        else:
-            parcellation = spatial_ward_with_uncertainty(features) #TODO
-
-    else: #parcellate each ROI separately
-        nb_voxels_all = fmri_data.nb_voxels_in_mask
-        parcellation = np.zeros(fmri_data.nb_voxels_all, dtype=int)
-        for rfd in fmri_data.roi_split():
-            # multiply nb_clusters by the fraction of the roi size
-            nb_clusters_roi = round(nb_clusters * rfd.nb_voxels_in_mask /   \
-                                    nb_voxels_all)
-            p_roi = parcellation_hemodynamics(rfd, feature_extraction_method,
-                                              parcellation_method,
-                                              nb_clusters_roi)
-            parcellation += p_roi + parcellation.max()
-
-    return expand_array_in_mask(parcellation, fmri_data.roiMask)
-
-
 def make_parcellation_cubed_blobs_from_file(parcellation_file, output_path,
                                             roi_ids=None, bg_parcel=0,
                                             skip_existing=False):
