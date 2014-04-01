@@ -9,7 +9,7 @@ from pyhrf.boldsynth.pottsfield.pottsfield_c import genPottsField
 from pyhrf.graph import *
 from pyhrf.stats.random import *
 from pyhrf.boldsynth.scenarios import *
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 
 class Mapper1DTest(unittest.TestCase):
 

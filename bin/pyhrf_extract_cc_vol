@@ -8,7 +8,7 @@ import numpy as np
 import pyhrf
 from pyhrf.tools import add_suffix
 from pyhrf.tools.io import write_volume, read_volume
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.graph import kerMask3D_6n, split_mask_into_cc_iter
 
 minArgs = 1

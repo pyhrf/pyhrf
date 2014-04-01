@@ -6,7 +6,7 @@ from optparse import OptionParser
 import pyhrf
 from pyhrf import xmlio, FMRISessionVolumicData, FMRISessionSurfacicData, \
     FMRISessionSimulationData
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.ui.glm_ui import GLMAnalyser
 from pyhrf.ui.treatment import *
 from pyhrf.paradigm import *

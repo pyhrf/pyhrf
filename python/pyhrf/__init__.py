@@ -24,6 +24,5 @@ for pname,pval in configuration.cfg['global'].iteritems():
 import _verbose
 verbose = _verbose.Verbose(verbosity=cfg['global']['verbosity'])
 
-
 from core import *
 

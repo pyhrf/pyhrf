@@ -7,7 +7,7 @@ from time import time
 
 import numpy as np
 import pyhrf
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.tools.io import read_volume, write_volume
 
 from pyhrf.ndarray import expand_array_in_mask

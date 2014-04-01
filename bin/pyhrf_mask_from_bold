@@ -4,7 +4,7 @@ import os.path as op
 from optparse import OptionParser
 import numpy as np
 import pyhrf
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.tools import non_existent_file
 from pyhrf.tools.io import readImageWithPynifti, writeImageWithPynifti
 

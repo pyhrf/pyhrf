@@ -5,7 +5,7 @@ import os.path as op
 from optparse import OptionParser
 import numpy as np
 import pyhrf
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.tools.io import read_volume, write_volume
 from pyhrf.parcellation import parcellation_ward_spatial
 from pyhrf.graph import graph_from_lattice, kerMask2D_4n, kerMask3D_6n,\

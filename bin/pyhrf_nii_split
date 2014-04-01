@@ -7,7 +7,7 @@ from optparse import OptionParser
 
 
 import pyhrf
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.ndarray import xndarray
 from pyhrf.tools import add_suffix
 

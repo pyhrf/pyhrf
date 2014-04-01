@@ -6,7 +6,7 @@ import matplotlib
 
 import pyhrf
 from pyhrf.validation import *
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 
 from pyhrf.validation import config
 
