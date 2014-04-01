@@ -21,9 +21,8 @@ numpy.seterr(cfg['global']['numpy_floating_point_error'])
 for pname,pval in configuration.cfg['global'].iteritems():
     setattr(configuration,pname,pval)
 
-import verbose as _verb
-from verbose import verboseLevels
-verbose = _verb.Verbose(verbosity=cfg['global']['verbosity'])
+import _verbose
+verbose = _verbose.Verbose(verbosity=cfg['global']['verbosity'])
 
 
 from core import *
