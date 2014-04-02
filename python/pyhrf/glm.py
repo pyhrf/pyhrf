@@ -16,8 +16,7 @@ import tempfile
 import shutil
 #from nipy.labs import compute_mask_files
 
-from nibabel import load, save, Nifti1Image
-import nipy.labs.glm
+from nipy.labs.glm import glm
 from nipy.modalities.fmri import design_matrix as dm
 try:
     from nipy.modalities.fmri.experimental_paradigm import \
@@ -90,7 +89,7 @@ def glm_nipy(fmri_data, contrasts=None, hrf_model='Canonical',
     # plt.savefig(op.join(output_dir, 'design_matrix.png'))
 
     # GLM fit
-    my_glm = nipy.labs.glm.glm.glm()
+    my_glm = glm.glm()
     pyhrf.verbose(2, 'Fit GLM - method: %s, residual model: %s' \
                       %(fit_method,residuals_model))
     my_glm.fit(Y.T, design_matrix.matrix, method=fit_method,

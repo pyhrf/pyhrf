@@ -22,6 +22,7 @@ for pname,pval in configuration.cfg['global'].iteritems():
     setattr(configuration,pname,pval)
 
 import _verbose
+from _verbose import verboseLevels
 verbose = _verbose.Verbose(verbosity=cfg['global']['verbosity'])
 
 from core import *

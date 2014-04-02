@@ -1,4 +1,4 @@
-import ndview
+from pyhrf.viewer import qt3 as ndview
 import os, sys, cPickle
 
 import unittest

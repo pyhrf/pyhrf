@@ -1,4 +1,3 @@
-
 import os
 import unittest
 import numpy as _np
@@ -80,9 +79,10 @@ class PottsTest(unittest.TestCase):
             mU[ib], vU[ib] = montecarlo(pottsGen, nrjCalc, nbit=5)
 
 
-        import matplotlib as plt
-        plt.plot(betas, mU,'b-')
-        plt.errorbar(betas, mU, vU**.5,fmt=None,ecolor='b')
+        if 0:
+            import matplotlib.pyplot as plt
+            plt.plot(betas, mU,'b-')
+            plt.errorbar(betas, mU, vU**.5,fmt=None,ecolor='b')
 
         for ib, b in enumerate(betas):
             #print 'MC for beta ', b
