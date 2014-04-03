@@ -115,7 +115,11 @@ if options.anatomy_file is not None:
 else:
     canat = None
 
+import matplotlib
+matplotlib.use('cairo')
+
 import matplotlib.pyplot as plt
+
 from pyhrf.ndarray import MRI3Daxes
 from pyhrf.plot import plot_func_slice, autocrop, fig_orientations
 tag = options.output_tag
