@@ -252,7 +252,9 @@ Package options are stored in $HOME/.pyhrf/config.cfg, which is created after th
                                         ; Soma-workflow is required.
                                         ; Authentification by ssh keys must be 
                                         ; configured
-                                        
+                                        ; -> eg copy content of ~/.ssh/id_rsa.pub (local machine) 
+                                        ;    at the end of ~/.ssh/authorized_keys (remote machine)
+                                         
     server_id = None                    ; ID of the soma-workflow-engine server 
     server = None                       ; hostname or IP adress of the server
     user = None                         ; user name to log in the server
