@@ -4,11 +4,8 @@
 # -*- coding: utf-8 -*-
 from scipy.linalg import toeplitz,norm,inv
 import numpy
-from matplotlib import pyplot
 import time
 import scipy
-from pylab import *
-from pylab import normal,inv
 from pyhrf.paradigm import restarize_events
 import csv
 #from pyhrf import *

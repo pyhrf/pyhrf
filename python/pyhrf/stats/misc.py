@@ -387,8 +387,6 @@ def cpt_ppm_g_norm(mean, variance, gamma=0.):
 #     return ppm
 
 
-#from matplotlib.mlab import detrend_mean
-
 def acorr(x, maxlags=10, scale='var'):
     #print 'acorr ..., input x:', x.shape
     n = x.shape[0]

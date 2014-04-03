@@ -1,6 +1,4 @@
-
 import unittest
-import pyhrf
 import os
 import numpy as np
 import shutil
@@ -10,6 +8,7 @@ import shutil
 import matplotlib
 matplotlib.use('cairo')
 
+import pyhrf
 from pyhrf.plot import plot_cub_as_curve, plot_cub_as_image
 
 import matplotlib.pyplot as plt

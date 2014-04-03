@@ -11,8 +11,8 @@ import pprint
 from pkg_resources import parse_version
 
 import pyhrf
-import pyhrf.plot as pplot
-import matplotlib.pyplot as plt
+
+
 from pyhrf.tools import treeBranches, rescale_values, has_ext, tree_items, \
      html_cell, html_list_to_row, html_row, html_table, html_img, html_div
 
@@ -403,6 +403,9 @@ class xndarray:
         Return:
             html code (str)
         """
+        import matplotlib.pyplot as plt
+        import pyhrf.plot as pplot
+
         plot_dir = plot_dir or pyhrf.get_tmp_path()
 
         outer_axes = row_axes + col_axes

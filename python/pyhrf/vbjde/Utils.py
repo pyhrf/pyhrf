@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-
-
-
 """For the Utils documentation
 
 """
@@ -12,6 +6,7 @@ try:
     from pywt import dwt,idwt,dwt2,idwt2
 except ImportError:
     pass
+
 #from scipy.spatial import *
 import os.path as op
 from scipy.linalg import toeplitz,norm,inv
@@ -19,15 +14,7 @@ import numpy
 from pyhrf.ndarray import xndarray
 import time
 import scipy
-#######################
-from pylab import *
-from matplotlib import pyplot
-import matplotlib.pyplot as plt
-import matplotlib as m
-import random
-#import matplotlib
-#######################
-from pylab import normal,inv,sqrt
+
 from pyhrf.paradigm import restarize_events
 #from nifti import NiftiImage
 import csv
@@ -43,7 +30,6 @@ import numpy as np
 import scipy as sp
 import scipy.sparse
 from pyhrf.tools import format_duration
-import matplotlib
 
 try:
     from collections import OrderedDict
@@ -167,6 +153,7 @@ def polyFit(signal, tr, order,p):
     invptppt = numpy.dot(invptp, p.transpose())
     l = numpy.dot(invptppt,signal)
     return l
+
 from numpy.matlib import *
 def PolyMat( Nscans , paramLFD , tr):
     '''Build polynomial basis'''
@@ -1135,7 +1122,6 @@ def maximization_mu_sigma_ParsiMod(Mu,Sigma,q_Z,m_A,K,M,Sigma_A,p_Wtilde,J):
 
     return Mu , Sigma
 
-import pylab as py
 def gradient_mu1(q_Z_Mk,p_Wtilde_Mk,Mu_Mk,Sigma_Mk,m_A_M,tau1,tau2,J):
 
     A = 0.0
@@ -2943,9 +2929,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                     Sigma_A *= Norm**2
             # Plotting HRF
             if PLOT and ni >= 0:
-                figure(M+1)
-                plot(m_H)
-                hold(True)
+                import matplotlib.pyplot as plt
+                plt.figure(M+1)
+                plt.plot(m_H)
+                plt.hold(True)
         else:
             if TrueHrfFlag:
                 TrueVal, head = read_volume(HrfFilename)
@@ -3079,9 +3066,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
               Sigma_A *= Norm**2
       # Plotting HRF        
       if PLOT and ni >= 0:
-        figure(M+1)
-        plot(m_H)
-        hold(True)
+          import matplotlib.pyplot as plt
+          plt.figure(M+1)
+          plt.plot(m_H)
+          plt.hold(True)
     
     else:
         if TrueHrfFlag:
@@ -3211,9 +3199,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                         Sigma_A *= Norm**2
                 # Plotting HRF        
                 if PLOT and ni >= 0:
-                    figure(M+1)
-                    plot(m_H)
-                    hold(True)
+                    import matplotlib.pyplot as plt
+                    plt.figure(M+1)
+                    plt.plot(m_H)
+                    plt.hold(True)
             
             else:
                 if TrueHrfFlag:
@@ -3348,62 +3337,64 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             #SUM_q_Z_array[m,i] = SUM_q_Z[m][ni-1]
             #mu1_array[m,i] = mu1[m][ni-1]
 
-    font = {'size'   : 15}
-    matplotlib.rc('font', **font)
     
     if PLOT:
-        savefig('./HRF_Iter_CompMod.png')
-        hold(False)
-        figure(2)
+        import matplotlib.pyplot as plt
+        import matplotlib
+        font = {'size'   : 15}
+        matplotlib.rc('font', **font)
+        plt.savefig('./HRF_Iter_CompMod.png')
+        plt.hold(False)
+        plt.figure(2)
         #plot(cA[1:-1],'r')
         #hold(True)
         #plot(cH[1:-1],'b')
         #hold(True)
         #plot(cZ[1:-1],'k')
         #hold(True)
-        plot(cAH[1:-1],'lightblue')
-        hold(True)
-        plot(cFE[1:-1],'m')
-        hold(False)
-        #legend( ('CA','CH', 'CZ', 'CAH', 'CFE') )
-        legend( ('CAH', 'CFE') )
-        grid(True)
-        savefig('./Crit_CompMod.png')
-        figure(3)
-        plot(FreeEnergyArray)
-        grid(True)
-        savefig('./FreeEnergy_CompMod.png')
+        plt.plot(cAH[1:-1],'lightblue')
+        plt.hold(True)
+        plt.plot(cFE[1:-1],'m')
+        plt.hold(False)
+        #plt.legend( ('CA','CH', 'CZ', 'CAH', 'CFE') )
+        plt.legend( ('CAH', 'CFE') )
+        plt.grid(True)
+        plt.savefig('./Crit_CompMod.png')
+        plt.figure(3)
+        plt.plot(FreeEnergyArray)
+        plt.grid(True)
+        plt.savefig('./FreeEnergy_CompMod.png')
 
-        figure(4)
+        plt.figure(4)
         for m in xrange(M):
-            plot(SUM_q_Z_array[m])
-            hold(True)
-        hold(False)
-        #legend( ('m=0','m=1', 'm=2', 'm=3') )
-        #legend( ('m=0','m=1') ) 
-        savefig('./Sum_q_Z_Iter_CompMod.png')
+            plt.plot(SUM_q_Z_array[m])
+            plt.hold(True)
+        plt.hold(False)
+        #plt.legend( ('m=0','m=1', 'm=2', 'm=3') )
+        #plt.legend( ('m=0','m=1') ) 
+        plt.savefig('./Sum_q_Z_Iter_CompMod.png')
         
-        figure(5)
+        plt.figure(5)
         for m in xrange(M):
-            plot(mu1_array[m])
-            hold(True)
-        hold(False)
-        #legend( ('m=0','m=1', 'm=2', 'm=3') ) 
-        #legend( ('m=0','m=1') ) 
-        savefig('./mu1_Iter_CompMod.png')
+            plt.plot(mu1_array[m])
+            plt.hold(True)
+        plt.hold(False)
+        #plt.legend( ('m=0','m=1', 'm=2', 'm=3') ) 
+        #plt.legend( ('m=0','m=1') ) 
+        plt.savefig('./mu1_Iter_CompMod.png')
         
-        figure(6)
-        plot(h_norm_array)
-        savefig('./HRF_Norm_CompMod.png')
+        plt.figure(6)
+        plt.plot(h_norm_array)
+        plt.savefig('./HRF_Norm_CompMod.png')
         
         Data_save = xndarray(h_norm_array, ['Iteration'])
         Data_save.save('./HRF_Norm_Comp.nii')
         
         
     #for m in xrange(M):
-        #figure(4+m)
-        #plot(test_mu1[m])
-        #savefig('./mu1_CompMod_Cond_%s.png' %m)
+        #plt.figure(4+m)
+        #plt.plot(test_mu1[m])
+        #plt.savefig('./mu1_CompMod_Cond_%s.png' %m)
          
 
     CompTime = t2 - t1
@@ -3666,14 +3657,14 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
         q_Q1[:,:] = q_Q[:,:]
 
         Pmask = classify(q_Q)
-	#figure(10)
-	#imshow(reshape(Pmask,(20,20)))
-	#colorbar() 
-	#figure(11)
-	#imshow(reshape(q_Q[0,:],(20,20)))
-	#colorbar() 
+	#plt.figure(10)
+	#plt.imshow(reshape(Pmask,(20,20)))
+	#plt.colorbar() 
+	#plt.figure(11)
+	#plt.imshow(reshape(q_Q[0,:],(20,20)))
+	#plt.colorbar() 
 	
-	#draw()
+	#plt.draw()
 	
         for i in range(0,I):
             HRFDict[i] = maximization_h_k_prior(m_H,q_Q[i,:],HRFDictCovar[i],RR/v_h)
@@ -3769,7 +3760,6 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     # ----------- activation class --------------#
     # --------- Parcellisation class ------------#
     q_Q = numpy.zeros((I,J),dtype=numpy.float64)
-    import os.path as op
     from scipy.misc import fromimage
     import Image
     dataDir = '/home/chaari/Logiciels/pyhrf/pyhrf-free/trunk/python/pyhrf/datafiles/'
@@ -3932,60 +3922,61 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
         dice = sp.spatial.distance.pdist(DVect,'dice')
         DIf = abs(Par00 - reshape(Par_im,(J)))
         pourcentage_error = 100.0 * len( argwhere(DIf >0) ) / J
-        figure(5).clf()
-        figure(5)
-        subplot(1,2,2)
-        imshow(Par_im,interpolation='nearest')
-        xlabel('error = %.4f ' %pourcentage_error + "%")
-        title('Estimated Parcel mask')
-        colorbar()
-        subplot(1,2,1)
-        imshow(reshape(Par00,(l,l)),interpolation='nearest')
-        xlabel('DICE= %.4f' %dice)
+        
+        plt.figure(5).clf()
+        plt.figure(5)
+        plt.subplot(1,2,2)
+        plt.imshow(Par_im,interpolation='nearest')
+        plt.xlabel('error = %.4f ' %pourcentage_error + "%")
+        plt.title('Estimated Parcel mask')
+        plt.colorbar()
+        plt.subplot(1,2,1)
+        plt.imshow(reshape(Par00,(l,l)),interpolation='nearest')
+        plt.xlabel('DICE= %.4f' %dice)
 
-        #imshow(Par0,interpolation='nearest')
-        title('Reference Parcel mask')
-        colorbar()
-        draw()
+        #plt.imshow(Par0,interpolation='nearest')
+        plt.title('Reference Parcel mask')
+        plt.colorbar()
+        plt.draw()
         for i in range(0,I):
             z1 = q_Q[i,:]
             z2 = reshape(z1,(l,l))
-            figure(3)
-            subplot(1,I,1+i)
-            imshow(z2,interpolation='nearest')
-            title('Parcel ' + str(i))
-            colorbar()
-            hold(False)
-        figure(7).clf()
+            plt.figure(3)
+            plt.subplot(1,I,1+i)
+            plt.imshow(z2,interpolation='nearest')
+            plt.title('Parcel ' + str(i))
+            plt.colorbar()
+            plt.hold(False)
+        plt.figure(7).clf()
         for m in range(0,M):
             hh = HRFDict[i]#mean_HRF(m_H,q_Q[i,:])
             z1 = m_A[:,m]
             z2 = reshape(z1,(l,l))
-            figure(7)
-            subplot(M,M,1 + m)
-            imshow(z2,interpolation='nearest')
-            #imshow(z2*norm(hh),interpolation='nearest')
-            title("Est: m = " + str(m))
-            colorbar()
+            plt.figure(7)
+            plt.subplot(M,M,1 + m)
+            plt.imshow(z2,interpolation='nearest')
+            #plt.imshow(z2*norm(hh),interpolation='nearest')
+            plt.title("Est: m = " + str(m))
+            plt.colorbar()
 
             z1 = m_A[:,m]
             z2 = reshape(NRL0[m,:],(l,l))
-            figure(7)
-            subplot(M,M,1 + m + 2)
-            imshow(z2,interpolation='nearest')
-            title("Ref: m = " + str(m))
-            colorbar()
-            #hold(False)
+            plt.figure(7)
+            plt.subplot(M,M,1 + m + 2)
+            plt.imshow(z2,interpolation='nearest')
+            plt.title("Ref: m = " + str(m))
+            plt.colorbar()
+            #plt.hold(False)
             for k in range(0,K):
                 z1 = q_Z[m,k,:]
                 z2 = reshape(z1,(l,l))
-                figure(6)
-                subplot(M,K,1 + m*K + k)
-                imshow(z2,interpolation='nearest')
-                title("m = " + str(m) +"k = " + str(k))
-                colorbar()
-                hold(False)
-        draw()
+                plt.figure(6)
+                plt.subplot(M,K,1 + m*K + k)
+                plt.imshow(z2,interpolation='nearest')
+                plt.title("m = " + str(m) +"k = " + str(k))
+                plt.colorbar()
+                plt.hold(False)
+        plt.draw()
         R = RR
         R2 = RR
         print v_h
@@ -4014,23 +4005,23 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
             hh2 = maximization_h_k_prior(m_H,q_Q[i,:],HRFDictCovar[i],R2/v_h)
             #hh2 = hh
             #hh = HRFDict[i]
-            figure(2)
-            subplot(1,I,1+i)
-            #plot(hh)
-            plot(hh/(norm(hh)+eps))
-            grid(True)
-            hold(True)
-            plot(hh2/(norm(hh2)+eps),'r')
-            grid(True)
-            hold(True)
-            plot(HRFDict0[i],'k')
-            hold(True)
-            plot(numpy.array(m_h),'y')
-            legend(("Est","Est Prior","Ref","Init"))
-            title('mse c1 = %.11f' %compute_MSE(hh/(norm(hh)),HRFDict0[i]) )
-            xlabel('parcel %d' %i)
-            #xlabel('mse c2 = %.11f' %compute_MSE(hh,HRFDict0[1]))
-            hold(False)
+            plt.figure(2)
+            plt.subplot(1,I,1+i)
+            #plt.plot(hh)
+            plt.plot(hh/(norm(hh)+eps))
+            plt.grid(True)
+            plt.hold(True)
+            plt.plot(hh2/(norm(hh2)+eps),'r')
+            plt.grid(True)
+            plt.hold(True)
+            plt.plot(HRFDict0[i],'k')
+            plt.hold(True)
+            plt.plot(numpy.array(m_h),'y')
+            plt.legend(("Est","Est Prior","Ref","Init"))
+            plt.title('mse c1 = %.11f' %compute_MSE(hh/(norm(hh)),HRFDict0[i]) )
+            plt.xlabel('parcel %d' %i)
+            #plt.xlabel('mse c2 = %.11f' %compute_MSE(hh,HRFDict0[1]))
+            plt.hold(False)
 
 
             #figure(12)
@@ -16284,20 +16275,21 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
         sigma_epsilone = maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M)
         #if ( (ni+1)% 1) == 0:
         if PLOT:
+            from matplotlib import pyplot
             m_Htmp = m_H / norm(m_H)
             hrftmp = hrf / norm(hrf)
             snrH = 20*numpy.log(1 / norm(m_Htmp - hrftmp))
             #print snrH
             pyplot.clf()
-            figure(1)
-            plot(m_H/norm(m_H),'r')
-            hold(True)
-            plot(hrf/norm(hrf),'b')
-            legend( ('Est','Ref') )
-            title(str(snrH))
-            hold(False)
-            draw()
-            show()
+            pyplot.figure(1)
+            pyplot.plot(m_H/norm(m_H),'r')
+            pyplot.hold(True)
+            pyplot.plot(hrf/norm(hrf),'b')
+            pyplot.legend( ('Est','Ref') )
+            pyplot.title(str(snrH))
+            pyplot.hold(False)
+            pyplot.draw()
+            pyplot.show()
             #figure(2)
             #plot(Hist_sigmaH)
             #title(str(sigmaH))

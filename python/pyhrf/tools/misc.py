@@ -20,10 +20,6 @@ import re
 
 from collections import defaultdict
 import pyhrf
-try:
-    from joblib.memory import MemorizedFunc
-except ImportError:
-    class MemorizedFunc: pass #Dummy class
 
 try:
     from itertools import product as iproduct
@@ -975,7 +971,13 @@ class Pipeline:
 ##        self.hasChanged(fifo)
 
 
+    
     def get_func(self, f):
+        try:
+            from joblib.memory import MemorizedFunc
+        except ImportError:
+            class MemorizedFunc: pass #Dummy class
+    
         if isinstance(f, MemorizedFunc):
             return f.func
         elif inspect.isfunction(f):
@@ -1122,15 +1124,6 @@ def resampleToGrid(x, y, xgrid):
         #    print ' -> yg[ig]=%f' %yg[ig]
         #else:
         #    yg[ig] = y[i]
-
-##     import matplotlib.pyplot as plt
-##     print "x :"
-##     print x
-##     print 'y :'
-##     print y
-##     plt.plot(x,y,'o-')
-##     plt.plot(xgrid,yg,'x-')
-##     plt.show()
 
     return yg
 

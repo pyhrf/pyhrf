@@ -31,9 +31,10 @@ def mesh_contour(coords, triangles, labels):
 
 def mesh_contour_with_files(input_mesh, input_labels, output_mesh=None,
                             output_labels=None):
-    from gifti import loadImage, saveImage, GiftiDataArray, GiftiImage
-    from gifti import GiftiImage_fromarray, GiftiImage_fromTriangles
-    from gifti import GiftiIntentCode, GiftiEncoding
+    """ TODO: use nibabel here """
+    #from gifti import loadImage, saveImage, GiftiDataArray, GiftiImage
+    #from gifti import GiftiImage_fromarray, GiftiImage_fromTriangles
+    #from gifti import GiftiIntentCode, GiftiEncoding
 
     labels = loadImage(input_labels).arrays[0].data.astype(int)
     cor, triangles = loadImage(input_mesh).arrays

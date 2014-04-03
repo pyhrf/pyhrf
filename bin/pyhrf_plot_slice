@@ -3,6 +3,10 @@ import os, sys, string
 import os.path as op
 from optparse import OptionParser
 import numpy as np
+
+import matplotlib
+matplotlib.use('cairo')
+
 import pyhrf
 from pyhrf._verbose import dictToString
 from pyhrf.tools.io import read_volume, write_volume
@@ -114,9 +118,6 @@ if options.anatomy_file is not None:
     canat = xndarray.load(options.anatomy_file)
 else:
     canat = None
-
-import matplotlib
-matplotlib.use('cairo')
 
 import matplotlib.pyplot as plt
 

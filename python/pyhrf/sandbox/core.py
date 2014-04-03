@@ -528,7 +528,7 @@ class TreatmentUI(Initable):
 
         elif parallel == 'LAN':
 
-            import grid
+            from pyhrf import grid
             cfg_parallel = pyhrf.cfg['parallel-LAN']
             remoteUser = cfg_parallel['user']
 
