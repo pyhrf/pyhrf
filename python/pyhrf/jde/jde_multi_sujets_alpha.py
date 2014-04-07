@@ -12,7 +12,6 @@ from numpy.testing import assert_almost_equal #assert_array_equal,
 
 from pyhrf.jde.noise import NoiseVariance_Drift_Sampler
 #from pyhrf.jde.beta import BetaSampler
-from pyhrf.xmlio.xmlnumpy import NumpyXMLHandler
 from pyhrf.jde.samplerbase import GSDefaultCallbackHandler
 from pyhrf import xmlio
 from pyhrf.graph import graph_nb_cliques
@@ -35,32 +34,18 @@ def b():
 # Noise Sampler #
 ##################################################
 class NoiseVariance_Drift_MultiSubj_Sampler(NoiseVariance_Drift_Sampler):
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
 
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
         parametersToShow = []
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-            xmlLabel=None, xmlComment=None):
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False):
         """
         #TODO : comment
         """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-        xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self, 'noise_var', valIni=valIni,
-                                        useTrueValue=useTrueVal,
-                                        sampleFlag=sampleFlag,
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'noise_var', valIni=val_ini,
+                                        useTrueValue=use_true_value,
+                                        sampleFlag=do_sampling,
                                         axes_names=['subject','voxel'],
                                         value_label='PM Noise Var')
 
@@ -85,8 +70,6 @@ class NoiseVariance_Drift_MultiSubj_Sampler(NoiseVariance_Drift_Sampler):
             self.currentValue = 0.5 * self.dataInput.varData
         
     def sampleNextInternal(self, variables):
-        smplHRF = self.samplerEngine.get_variable('hrf')
-        varXh = smplHRF.varXh
         snrl = self.samplerEngine.get_variable('nrl')
         matPl =  self.samplerEngine.get_variable('drift').matPl
         
@@ -106,7 +89,7 @@ class NoiseVariance_Drift_MultiSubj_Sampler(NoiseVariance_Drift_Sampler):
 ##################################################
 # Drift Sampler and var drift sampler #
 ##################################################
-class Drift_MultiSubj_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class Drift_MultiSubj_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
     Gibbs sampler of the parameters modelling the low frequency drift in
     the fMRI time course, in the case of white noise.
@@ -122,18 +105,13 @@ class Drift_MultiSubj_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
         P_SAMPLE_FLAG : True,
         P_USE_TRUE_VALUE : False,
         }
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                        xmlLabel=None, xmlComment=None):
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False):
 
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+        xmlio.XmlInitable.__init__(self)
         an = ['subject','order','voxel']
-        GibbsSamplerVariable.__init__(self, 'drift', valIni=valIni,
-                                      sampleFlag=sampleFlag, axes_names=an,
-                                      useTrueValue=useTrueVal,
+        GibbsSamplerVariable.__init__(self, 'drift', valIni=val_ini,
+                                      sampleFlag=do_sampling, axes_names=an,
+                                      useTrueValue=use_true_value,
                                       value_label='PM LFD')
 
         self.final_signal = None
@@ -262,37 +240,21 @@ class Drift_MultiSubj_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 
 
 
-class ETASampler_MultiSubj(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class ETASampler_MultiSubj(xmlio.XmlInitable, GibbsSamplerVariable):
     """
         Gibbs sampler of the variance of the Inverse Gamma prior used to
         regularise the estimation of the low frequency drift embedded
         in the fMRI time course
     """
 
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False):
 
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+        xmlio.XmlInitable.__init__(self)
         an = ['subject']
-        GibbsSamplerVariable.__init__(self,'driftVar', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      axes_names=an,
-                                      sampleFlag=sampleFlag)
+        GibbsSamplerVariable.__init__(self,'driftVar', valIni=val_ini,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an, sampleFlag=do_sampling)
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -431,106 +393,71 @@ def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox, hgroup, 
 ######################
 ## HRF by subject #
 ######################
-class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
+class HRF_Sampler(xmlio.XmlInitable, GibbsSamplerVariable) :
     """
     HRF sampler for multisession model
     """
 
-    # parameter labels definitions :
-    P_ZERO_CONSTR = 'zeroConstraint'
-    P_DURATION = 'duration'
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    P_NORMALISE = 'normalise'
-    P_DERIV_ORDER = 'derivOrder'
-    P_OUTPUT_PMHRF = 'writeHrfOutput'
-    P_COVAR_HACK = 'hackCovarApost'
-    P_PRIOR_TYPE = 'priorType'
-    P_VOXELWISE_OUTPUTS = 'voxelwiseOutputs'
-    P_COMPUTE_AH_ONLINE = 'compute_ah_online'
-    P_REGULARIZE = 'regularize_hrf'
-    P_ONLY_HRFS_SUBJ     = 'model_subjects_only'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_DURATION : 25,
-        P_ZERO_CONSTR : True,
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_NORMALISE : 1., # By default, scale is not sampled
-                          #-> do not normalise h but normalise hPM
-        P_DERIV_ORDER : 2,
-        P_OUTPUT_PMHRF : True,
-        P_COVAR_HACK : False,
-        P_PRIOR_TYPE : 'voxelwiseIID',
-        P_VOXELWISE_OUTPUTS : False,
-        P_COMPUTE_AH_ONLINE : False,
-        P_REGULARIZE : True,
-        P_ONLY_HRFS_SUBJ : False,
-        }
-
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_DURATION, P_ZERO_CONSTR, P_SAMPLE_FLAG,
-                            P_OUTPUT_PMHRF,] #P_USE_TRUE_VALUE,
+        parametersToShow = ['duration', 'zero_constraint', 'do_sampling',
+                            'output_hrf_pm',]
 
 
 
     parametersComments = {
-        P_DURATION : 'HRF length in seconds',
-        P_ZERO_CONSTR : 'If True: impose first and last value = 0.\n'\
+        'duration' : 'HRF length in seconds',
+        'zero_constraint' : 'If True: impose first and last value = 0.\n'\
                         'If False: no constraint.',
-        P_SAMPLE_FLAG : 'Flag for the HRF estimation (True or False).\n'\
+        'do_sampling' : 'Flag for the HRF estimation (True or False).\n'\
                         'If set to False then the HRF is fixed to a canonical '\
                         'form.',
-        P_PRIOR_TYPE : 'Type of prior:\n - "singleHRF": one HRF modelled '\
+        'prior_type' : 'Type of prior:\n - "singleHRF": one HRF modelled '\
             'for the whole parcel ~N(0,v_h*R).\n' \
             ' - "voxelwiseIID": one HRF per voxel, '\
             'all HRFs are iid ~N(0,v_h*R).',
-        P_COVAR_HACK : 'Divide the term coming from the likelihood by the nb '\
+        'hack_covar_apost' : 'Divide the term coming from the likelihood by the nb '\
             'of voxels\n when computing the posterior covariance. The aim is '\
             ' to balance\n the contribution coming from the prior with that '\
             ' coming from the likelihood.\n Note: this hack is only taken into '\
-            ' account when "singleHRf" is used for "%s"' %P_PRIOR_TYPE,
-        P_NORMALISE : 'If 1. : Normalise samples of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
+            ' account when "singleHRf" is used for "prior_type"',
+        'normalise' : 'If 1. : Normalise samples of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
                       'If 0. : Normalise posterior means of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
                       'else : Do not normalise.'
 
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False,
+                 duration=25., zero_constraint=True, normalise=1., derivOrder=2,
+                 output_hrf_pm=True, hack_covar_apost=False, 
+                 prior_type='voxelwiseIID', compute_ah_online=False, 
+                 regularize_hrf=True, model_subjects_only=False, 
+                 voxelwise_outputs=False):
         """
         #TODO : comment
         """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
+        xmlio.XmlInitable.__init__(self)
 
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        self.only_hrf_subj = self.parameters[self.P_ONLY_HRFS_SUBJ]
-        self.regularise = self.parameters[self.P_REGULARIZE]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        self.compute_ah_online = self.parameters[self.P_COMPUTE_AH_ONLINE]
+        self.only_hrf_subj = model_subjects_only
+        self.regularise = regularize_hrf
+        self.compute_ah_online = compute_ah_online
 
-        GibbsSamplerVariable.__init__(self, 'hrf', valIni=valIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=useTrueVal,
+        GibbsSamplerVariable.__init__(self, 'hrf', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
                                       axes_names=['subject','time'],
                                       value_label='delta BOLD')
 
-        self.duration = self.parameters[self.P_DURATION]
-        self.zc = self.parameters[self.P_ZERO_CONSTR]
-        self.normalise = self.parameters[self.P_NORMALISE]
+        self.duration = duration
+        self.zc = zero_constraint
+        self.normalise = normalise
 
-        self.derivOrder = self.parameters[self.P_DERIV_ORDER]
+        self.derivOrder = derivOrder
         self.varR = None
-        self.outputHrf = self.parameters[self.P_OUTPUT_PMHRF]
-        self.covarHack = self.parameters[self.P_COVAR_HACK]
-        self.priorType = self.parameters[self.P_PRIOR_TYPE]
+        self.outputHrf = output_hrf_pm
+        self.covarHack = hack_covar_apost
+        self.priorType = prior_type
         self.signErrorDetected = None
-        self.voxelwise_outputs = self.parameters[self.P_VOXELWISE_OUTPUTS]
+        self.voxelwise_outputs = voxelwise_outputs
 
     def linkToData(self, dataInput):
 
@@ -954,8 +881,8 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
         #     for j in xrange(self.nbConditions):
         #         ah[s,:,:,j] = np.repeat(hrfs[s],self.nbVox).reshape(hrfs[s].shape[0],self.nbVox) * \
         #             nrls[j,:]
-        # ad = self.axes_domains.copy()
-        # ad['condition'] = self.dataInput.cNames
+        ad = self.axes_domains.copy()
+        ad['condition'] = self.dataInput.cNames
         # outputs['ah'] = xndarray(ah, axes_names=['subject', 'time','voxel','condition'],
         #                        axes_domains=ad,
         #                        value_label='Delta BOLD')
@@ -1045,33 +972,19 @@ class HRF_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 ##################################################
 # Alpha for hrf group Sampler #
 ##################################################
-class Alpha_hgroup_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
+class Alpha_hgroup_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
         parametersToShow = []
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-            xmlLabel=None, xmlComment=None):
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False):
         """
         #TODO : comment
         """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-        xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self, 'alpha_hs', valIni=valIni,
-                                        useTrueValue=useTrueVal,
-                                        sampleFlag=sampleFlag,
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'alpha_hs', valIni=val_ini,
+                                        useTrueValue=use_true_value,
+                                        sampleFlag=do_sampling,
                                         axes_names=['subject'],
                                         value_label='PM Noise Var')
 
@@ -1133,37 +1046,19 @@ class Alpha_hgroup_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 ################################################
 ### Variance of alpha ##########################
 ################################################
-class AlphaVar_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
+class AlphaVar_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
         Gibbs sampler of the variance of the Inverse Gamma prior used to
         regularise the estimation of the low frequency drift embedded
         in the fMRI time course
     """
 
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        }
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-
-        #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False):
+        xmlio.XmlInitable.__init__(self)
         an = ['subject']
-        GibbsSamplerVariable.__init__(self,'alpha_var', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      axes_names=an,
-                                      sampleFlag=sampleFlag)
+        GibbsSamplerVariable.__init__(self,'alpha_var', valIni=val_ini,
+                                      useTrueValue=use_true_value,
+                                      axes_names=an, sampleFlag=do_sampling)
 
     def linkToData(self, dataInput):
         self.alpha_hs = self.samplerEngine.get_variable('alpha_hs')
@@ -1211,49 +1106,23 @@ class AlphaVar_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 ########################################
 # Variance of HRF subject ##############
 ########################################
-class HRFVarianceSubjectSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
-    """
-    #TODO : comment
-    """
-
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_PR_MEAN = 'priorMean'
-    P_PR_VAR = 'priorVar'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    #P_HYPER_PRIOR = 'Jeffrey' #'Proper'
+class HRFVarianceSubjectSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
 
     if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters = {
-            P_VAL_INI : np.array([0.15]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.001,
-            P_PR_VAR : 10.,#1000
-            P_USE_TRUE_VALUE : False,
-            }
-
+        VAL_INI = 0.15
+        PR_MEAN = 0.001
+        PR_VAR = 10. #1000
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters = {
-            P_VAL_INI : np.array([0.05]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.001,
-            P_PR_VAR : 10.,
-            P_USE_TRUE_VALUE : False,
-            }
+        VAL_INI = 0.05
+        PR_MEAN = 0.001
+        PR_VAR = 10.
 
-    parametersToShow = [P_VAL_INI, P_SAMPLE_FLAG, P_PR_MEAN, P_PR_VAR, P_USE_TRUE_VALUE]
+    def __init__(self, val_ini=np.array([VAL_INI]), do_sampling=False, 
+                 use_true_value=False, pr_mean=PR_MEAN, pr_var=PR_VAR):
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-
-        #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        m = self.parameters[self.P_PR_MEAN]
-        v = self.parameters[self.P_PR_VAR]
+        xmlio.XmlInitable.__init__(self)
+        m = pr_mean
+        v = pr_var
         #a=m**2/v +2 , b=m**3/v + m
         if 0:
             self.alpha0 = m**2/v
@@ -1262,9 +1131,10 @@ class HRFVarianceSubjectSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable)
             self.alpha0 = 2.
             self.beta0 = 0.
 
-        GibbsSamplerVariable.__init__(self,'hrf_subj_var', valIni=valIni,
-                                      axes_names=['subject'],
-                                      sampleFlag=sampleFlag, useTrueValue=useTrueVal)
+        GibbsSamplerVariable.__init__(self,'hrf_subj_var', valIni=val_ini,
+                                      axes_names=['subject'], 
+                                      sampleFlag=do_sampling, 
+                                      useTrueValue=use_true_value)
 
 
     def linkToData(self, dataInput):
@@ -1353,117 +1223,79 @@ class HRFVarianceSubjectSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable)
 ######################
 ## HRF by subject #
 ######################
-class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
+class HRF_Group_Sampler(xmlio.XmlInitable, GibbsSamplerVariable) :
     """
     HRF sampler for multisubjects model
     """
 
-    # parameter labels definitions :
-    P_ZERO_CONSTR = 'zeroConstraint'
-    P_DURATION = 'duration'
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    P_NORMALISE = 'normalise'
-    P_DERIV_ORDER = 'derivOrder'
-    P_OUTPUT_PMHRF = 'writeHrfOutput'
-    P_COVAR_HACK = 'hackCovarApost'
-    P_PRIOR_TYPE = 'priorType'
-    P_VOXELWISE_OUTPUTS = 'voxelwiseOutputs'
-    P_COMPUTE_AH_ONLINE = 'compute_ah_online'
-    P_ONLY_HRFS_SUBJ     = 'model_subjects_only'
-    P_REGULARIZE_SUBJ_HRFS = 'regularize_hrf'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_DURATION : 25,
-        P_ZERO_CONSTR : True,
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_NORMALISE : 1., # By default, scale is not sampled
-                          #-> do not normalise h but normalise hPM
-        P_DERIV_ORDER : 2,
-        P_OUTPUT_PMHRF : True,
-        P_COVAR_HACK : False,
-        P_PRIOR_TYPE : 'voxelwiseIID',
-        P_VOXELWISE_OUTPUTS : False,
-        P_COMPUTE_AH_ONLINE : False,
-        P_ONLY_HRFS_SUBJ : False,
-        P_REGULARIZE_SUBJ_HRFS : False,
-        }
-
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_DURATION, P_ZERO_CONSTR, P_SAMPLE_FLAG,
-                            P_OUTPUT_PMHRF,] #P_USE_TRUE_VALUE,
-
+        parametersToShow = ['duration', 'zero_constraint', 'do_sampling',
+                            'output_hrf_pm',] #P_USE_TRUE_VALUE,
 
 
     parametersComments = {
-        P_DURATION : 'HRF length in seconds',
-        P_ZERO_CONSTR : 'If True: impose first and last value = 0.\n'\
+        'duration' : 'HRF length in seconds',
+        'zero_constraint' : 'If True: impose first and last value = 0.\n'\
                         'If False: no constraint.',
-        P_SAMPLE_FLAG : 'Flag for the HRF estimation (True or False).\n'\
+        'do_sampling' : 'Flag for the HRF estimation (True or False).\n'\
                         'If set to False then the HRF is fixed to a canonical '\
                         'form.',
-        P_PRIOR_TYPE : 'Type of prior:\n - "singleHRF": one HRF modelled '\
+        'prior_type' : 'Type of prior:\n - "singleHRF": one HRF modelled '\
             'for the whole parcel ~N(0,v_h*R).\n' \
             ' - "voxelwiseIID": one HRF per voxel, '\
             'all HRFs are iid ~N(0,v_h*R).',
-        P_COVAR_HACK : 'Divide the term coming from the likelihood by the nb '\
+        'hack_covar_apost' : 'Divide the term coming from the likelihood by the nb '\
             'of voxels\n when computing the posterior covariance. The aim is '\
             ' to balance\n the contribution coming from the prior with that '\
             ' coming from the likelihood.\n Note: this hack is only taken into '\
-            ' account when "singleHRf" is used for "%s"' %P_PRIOR_TYPE,
-        P_NORMALISE : 'If 1. : Normalise samples of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
+            ' account when "singleHRf" is used for "prior_type"',
+        'normalise' : 'If 1. : Normalise samples of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
                       'If 0. : Normalise posterior means of Hrf, NRLs and Mixture Parameters when they are sampled.\n'\
                       'else : Do not normalise.',
-        P_ONLY_HRFS_SUBJ : 'If 1: Put hrf group at zero and only estimate hrf by subjects.'\
+        'model_subjects_only' : 'If 1: Put hrf group at zero and only estimate hrf by subjects.'\
                            'If 0: Perform group hemodynamic estimation, hrf group sampled',
                                         
 
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False,
+                 duration=25., zero_constraint=True, normalise=1., derivOrder=2,
+                 output_hrf_pm=True, hack_covar_apost=False, 
+                 prior_type='voxelwiseIID', compute_ah_online=False, 
+                 regularize_hrf=True, model_subjects_only=False, 
+                 voxelwise_outputs=False):
 
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
+        xmlio.XmlInitable.__init__(self)
 
-        self.regularise_subj_hrfs = self.parameters[self.P_REGULARIZE_SUBJ_HRFS]
-        self.ValIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        self.compute_ah_online = self.parameters[self.P_COMPUTE_AH_ONLINE]
+        self.regularise_subj_hrfs = regularize_hrf
+        self.compute_ah_online = compute_ah_online
 
-        if self.parameters[self.P_ONLY_HRFS_SUBJ]:
-            sampleFlag = False
-            useTrueVal = False
-            self.ValIni=np.zeros((43)) #case of 43 coeff for the hrf HACK
+        
+        if model_subjects_only:
+            do_sampling = False
+            use_true_value = False
+            val_ini = np.zeros((43)) #case of 43 coeff for the hrf HACK
             if self.ValIni==None:
-                raise Exception('Needed an initial value at zeros for group hrf but '\
-                                            'None defined')
+                raise Exception('Needed an initial value at zeros for group '
+                                'hrf but None defined')
 
-        GibbsSamplerVariable.__init__(self, 'hrf_group', valIni=self.ValIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=useTrueVal,
+        GibbsSamplerVariable.__init__(self, 'hrf_group', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
                                       axes_names=['time'],
                                       value_label='delta BOLD')
 
-        self.duration = self.parameters[self.P_DURATION]
-        self.zc = self.parameters[self.P_ZERO_CONSTR]
-        self.normalise = self.parameters[self.P_NORMALISE]
+        self.duration = duration
+        self.zc = zero_constraint
+        self.normalise = normalise
 
-        self.derivOrder = self.parameters[self.P_DERIV_ORDER]
+        self.derivOrder = derivOrder
         self.varR = None
-        self.outputHrf = self.parameters[self.P_OUTPUT_PMHRF]
-        self.covarHack = self.parameters[self.P_COVAR_HACK]
-        self.priorType = self.parameters[self.P_PRIOR_TYPE]
+        self.outputHrf = output_hrf_pm
+        self.covarHack = hack_covar_apost
+        self.priorType = prior_type
         self.signErrorDetected = None
-        self.voxelwise_outputs = self.parameters[self.P_VOXELWISE_OUTPUTS]
+        self.voxelwise_outputs = voxelwise_outputs
 
     def linkToData(self, dataInput):
 
@@ -1618,8 +1450,8 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
                 varInvSigma_h = self.varR*1/rh + np.eye(self.varR.shape[0])*s1alph_on_rh.sum(0)
                 #if hrf subject NOT regularized
             
-        h_on_rh = np.zeros((hrf_subj.shape))
-        h_on_rhxalph = np.zeros((hrf_subj.shape))
+        # h_on_rh = np.zeros((hrf_subj.shape))
+        # h_on_rhxalph = np.zeros((hrf_subj.shape))
         
         #mean_h = np.linalg.solve(varInvSigma_h, np.dot(self.varR,h_on_rh.sum(0)))
         #print 'hrhalp:', h_on_rhxalph
@@ -1794,44 +1626,28 @@ class HRF_Group_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 ###########################################
 ## Variance of Group HRF Sampler ##########
 ###########################################
-class RHGroupSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
+class RHGroupSampler(xmlio.XmlInitable, GibbsSamplerVariable) :
     """
     #TODO : comment
     """
 
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_PR_MEAN = 'priorMean'
-    P_PR_VAR = 'priorVar'
-    #P_HYPER_PRIOR = 'Jeffrey' #'Proper'
-
     if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters = {
-            P_VAL_INI : np.array([0.15]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.001,
-            P_PR_VAR : 10.,#1000
-            }
-
+        VAL_INI = 0.15
+        PR_MEAN = 0.001
+        PR_VAR = 10. #1000
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters = {
-            P_VAL_INI : np.array([0.05]),
-            P_SAMPLE_FLAG : False,
-            P_PR_MEAN : 0.001,
-            P_PR_VAR : 10.,
-            }
+        VAL_INI = 0.05
+        PR_MEAN = 0.001
+        PR_VAR = 10.
 
-    parametersToShow = [P_VAL_INI, P_SAMPLE_FLAG, P_PR_MEAN, P_PR_VAR]
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, val_ini=np.array([VAL_INI]), do_sampling=False, 
+                 use_true_value=False, pr_mean=PR_MEAN, pr_var=PR_VAR):
 
         #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler, xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        m = self.parameters[self.P_PR_MEAN]
-        v = self.parameters[self.P_PR_VAR]
+        xmlio.XmlInitable.__init__(self)
+        m = pr_mean
+        v = pr_var
         #a=m**2/v +2 , b=m**3/v + m
         if 0:
             self.alpha0 = m**2/v
@@ -1840,8 +1656,9 @@ class RHGroupSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
             self.alpha0 = 2.
             self.beta0 = 0.
 
-        GibbsSamplerVariable.__init__(self,'var_hrf_group', valIni=valIni,
-                                      sampleFlag=sampleFlag)
+        GibbsSamplerVariable.__init__(self,'var_hrf_group', valIni=val_ini,
+                                      sampleFlag=do_sampling, 
+                                      useTrueValue=use_true_value)
 
 
     def linkToData(self, dataInput):
@@ -1910,7 +1727,7 @@ class RHGroupSampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable) :
 ############################################
 # Labels Sampler #
 ############################################
-class LabelSampler(GibbsSamplerVariable):
+class LabelSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     L_CI = 0
     L_CA = 1
@@ -1920,7 +1737,7 @@ class LabelSampler(GibbsSamplerVariable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-
+        xmlio.XmlInitable.__init__(self)
         an = ['subject', 'condition', 'voxel']
         GibbsSamplerVariable.__init__(self, 'label', valIni=val_ini,
                                       sampleFlag=do_sampling,
@@ -2033,34 +1850,14 @@ class LabelSampler(GibbsSamplerVariable):
 ############################################
 #### Variance of subject's NRLS (not used now)##
 ############################################
-class Variance_GaussianNRL_Multi_Subj(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
-    '''
-    '''
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
+class Variance_GaussianNRL_Multi_Subj(xmlio.XmlInitable, GibbsSamplerVariable):
 
-    defaultParameters = {
-        P_USE_TRUE_VALUE : False,
-        P_VAL_INI : np.array([1.]),
-        P_SAMPLE_FLAG : False, #By default, beta>0 -> SMM
-        }
-
-    if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_USE_TRUE_VALUE]
-
-
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
-        GibbsSamplerVariable.__init__(self, 'variance_nrls_by_subject', valIni=valIni,
-                                            useTrueValue=useTrueVal,
-                                            sampleFlag=sampleFlag)
+    def __init__(self, val_ini=np.array([1.]), do_sampling=True, 
+                 use_true_value=False):
+        xmlio.XmlInitable.__init__(self)
+        GibbsSamplerVariable.__init__(self, 'variance_nrls_by_subject', 
+                                      valIni=val_ini, useTrueValue=use_true_value,
+                                      sampleFlag=do_sampling)
 
 
     def linkToData(self, dataInput):
@@ -2115,28 +1912,7 @@ class Variance_GaussianNRL_Multi_Subj(xmlio.XMLParamDrivenClass, GibbsSamplerVar
 ####################################################
 ## NRLs sampler #
 ####################################################
-class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
-    # parameters specifications :
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_VAL_INI = 'initialValue'
-    P_USE_TRUE_VALUE = 'useTrueNrls'
-    P_OUTPUT_NRL = 'writeResponsesOutput'
-
-    # parameters definitions and default values :
-    defaultParameters = {
-        P_SAMPLE_FLAG : True,
-        P_VAL_INI : None,
-        P_USE_TRUE_VALUE : False, #False,
-        P_OUTPUT_NRL : True,
-        }
-
-    if pyhrf.__usemode__ == pyhrf.DEVEL:
-        parametersToShow = [P_SAMPLE_FLAG, P_VAL_INI, P_USE_TRUE_VALUE,
-                            P_OUTPUT_NRL
-                            ]
-
-    elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = [P_OUTPUT_NRL]
+class NRLs_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     # other class attributes
     L_CI = 0
@@ -2147,20 +1923,14 @@ class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
     FALSE_POS = 2
     FALSE_NEG = 3
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False):
 
-        #TODO : comment
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+        xmlio.XmlInitable.__init__(self)
         an = ['subject', 'condition', 'voxel']
         #TODO: adapt to account for different nb of voxels across subjects
-        GibbsSamplerVariable.__init__(self, 'nrl', valIni=valIni,
-                                      sampleFlag=sampleFlag,
-                                      useTrueValue=useTrueVal,
+        GibbsSamplerVariable.__init__(self, 'nrl', valIni=val_ini,
+                                      sampleFlag=do_sampling,
+                                      useTrueValue=use_true_value,
                                       axes_names=an,
                                       value_label='nrls')
 
@@ -2316,7 +2086,7 @@ class NRLs_Sampler(xmlio.XMLParamDrivenClass, GibbsSamplerVariable):
 ##################################################
 # Gaussian parameteres Sampler #
 ##################################################
-class MixtureParamsSampler(GibbsSamplerVariable):
+class MixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     I_MEAN_CA = 0
     I_VAR_CA = 1
@@ -2329,7 +2099,7 @@ class MixtureParamsSampler(GibbsSamplerVariable):
 
     def __init__(self, val_ini=None, do_sampling=True,
                  use_true_value=False):
-
+        xmlio.XmlInitable.__init__(self)
         an = ['subject', 'component','condition']
         ad = {'component' : self.PARAMS_NAMES}
 
@@ -2512,59 +2282,13 @@ class MixtureParamsSampler(GibbsSamplerVariable):
 
 
 # Not used !!-> version where labels are sampled within NRLs
-class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
-                                  GibbsSamplerVariable):
-    """
-    #TODO : comment
-
-    """
+class BiGaussMixtureParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     I_MEAN_CA = 0
     I_VAR_CA = 1
     I_VAR_CI = 2
     NB_PARAMS = 3
     PARAMS_NAMES = ['Mean_Activ', 'Var_Activ', 'Var_Inactiv']
-
-    P_VAL_INI = 'initialValue'
-    P_SAMPLE_FLAG = 'sampleFlag'
-    P_USE_TRUE_VALUE = 'useTrueValue'
-    #P_ACT_MEAN_TRUE_VALUE = 'ActMeanTrueValue'
-    #P_ACT_VAR_TRUE_VALUE = 'ActVarTrueValue'
-    #P_INACT_VAR_TRUE_VALUE = 'InactVarTrueValue'
-
-    P_MEAN_CA_PR_MEAN = 'meanCAPrMean'
-    P_MEAN_CA_PR_VAR = 'meanCAPrVar'
-
-    P_VAR_CI_PR_ALPHA = 'varCIPrAlpha'
-    P_VAR_CI_PR_BETA = 'varCIPrBeta'
-
-    P_VAR_CA_PR_ALPHA = 'varCAPrAlpha'
-    P_VAR_CA_PR_BETA = 'varCAPrBeta'
-
-    P_HYPER_PRIOR = 'hyperPriorType'
-
-    P_ACTIV_THRESH = 'mean_activation_threshold'
-
-    #"peaked" priors
-    defaultParameters = {
-        P_VAL_INI : None,
-        P_SAMPLE_FLAG : True,
-        P_USE_TRUE_VALUE : False,
-        P_HYPER_PRIOR : 'Jeffrey',
-        #P_HYPER_PRIOR : 'proper',
-        P_MEAN_CA_PR_MEAN : 5.,
-        P_MEAN_CA_PR_VAR : 20.0,
-        P_VAR_CI_PR_ALPHA : 2.04,
-        P_VAR_CI_PR_BETA : 2.08,
-        P_VAR_CA_PR_ALPHA : 2.01,
-        P_VAR_CA_PR_BETA : .5,
-        P_ACTIV_THRESH : 4.,
-        #P_ACT_MEAN_TRUE_VALUE : { 'audio': 0.0, 'video': 0.0 },
-        #P_ACT_VAR_TRUE_VALUE : { 'audio': 1.0, 'video': 1.0 },
-        #P_INACT_VAR_TRUE_VALUE : { 'audio': 1.0, 'video': 1.0 },
-        }
-
-
 
     ##"flat" priors
     #defaultParameters = {
@@ -2587,23 +2311,13 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
     # m=b/(a-1) , v=b**2/((a-1)**2*(a-2)
     # a=m**2/v +2 , b=m**3/v + m
 
-    if pyhrf.__usemode__ == pyhrf.ENDUSER:
-        parametersToShow = []
-
 
     L_CA = NRLs_Sampler.L_CA
     L_CI = NRLs_Sampler.L_CI
 
-    parametersToShow = [ P_VAL_INI, P_SAMPLE_FLAG, P_ACTIV_THRESH,
-                         P_USE_TRUE_VALUE,
-                         #P_ACT_MEAN_TRUE_VALUE, P_ACT_VAR_TRUE_VALUE, P_INACT_VAR_TRUE_VALUE,
-                         P_HYPER_PRIOR,
-                         P_MEAN_CA_PR_MEAN, P_MEAN_CA_PR_VAR, P_VAR_CI_PR_ALPHA,
-                         P_VAR_CI_PR_BETA, P_VAR_CA_PR_ALPHA, P_VAR_CA_PR_BETA]
-
     parametersComments = {
-        P_HYPER_PRIOR : "Either 'proper' or 'Jeffrey'",
-        P_ACTIV_THRESH : "Threshold for the max activ mean above which the "\
+        'prior_type' : "Either 'proper' or 'Jeffrey'",
+        'mean_activation_threshold' : "Threshold for the max activ mean above which the "\
             "region is considered activating",
         #P_ACT_MEAN_TRUE_VALUE : \
             #"Define the simulated values of activated class means."\
@@ -2616,25 +2330,21 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
             #"It is taken into account when mixture parameters are not sampled.",
         }
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
-        """
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        sampleFlag = self.parameters[self.P_SAMPLE_FLAG]
-        valIni = self.parameters[self.P_VAL_INI]
-        useTrueVal = self.parameters[self.P_USE_TRUE_VALUE]
+    def __init__(self, val_ini=None, do_sampling=True, use_true_value=False,
+                 prior_type='Jeffrey', var_ci_pr_alpha=2.04, var_ci_pr_beta=2.08,
+                 var_ca_pr_alpha=2.01, var_ca_pr_beta=.5,
+                 mean_ca_pr_mean=5., mean_ca_pr_var=20., 
+                 mean_activation_threshold=4.):
+        xmlio.XmlInitable.__init__(self)
 
         # get values for priors :
-        self.varCIPrAlpha = self.parameters[self.P_VAR_CI_PR_ALPHA]
-        self.varCIPrBeta = self.parameters[self.P_VAR_CI_PR_BETA]
-        self.varCAPrAlpha = self.parameters[self.P_VAR_CA_PR_ALPHA]
-        self.varCAPrBeta = self.parameters[self.P_VAR_CA_PR_BETA]
+        self.varCIPrAlpha = var_ci_pr_alpha
+        self.varCIPrBeta = var_ci_pr_beta
+        self.varCAPrAlpha = var_ca_pr_alpha
+        self.varCAPrBeta = var_ca_pr_beta
 
-        self.meanCAPrMean = self.parameters[self.P_MEAN_CA_PR_MEAN]
-        self.meanCAPrVar = self.parameters[self.P_MEAN_CA_PR_VAR]
+        self.meanCAPrMean = mean_ca_pr_mean
+        self.meanCAPrVar = mean_ca_pr_var
 
         #self.ActMeanTrueValue = self.parameters[self.P_ACT_MEAN_TRUE_VALUE]
         #self.ActVarTrueValue = self.parameters[self.P_ACT_VAR_TRUE_VALUE]
@@ -2642,15 +2352,15 @@ class BiGaussMixtureParamsSampler(xmlio.XMLParamDrivenClass,
 
         an = ['component','condition']
         ad = {'component' : self.PARAMS_NAMES}
-        GibbsSamplerVariable.__init__(self, 'mixt_params', valIni=valIni,
-                                      useTrueValue=useTrueVal,
-                                      sampleFlag=sampleFlag, axes_names=an,
+        GibbsSamplerVariable.__init__(self, 'mixt_params', valIni=val_ini,
+                                      useTrueValue=use_true_value,
+                                      sampleFlag=do_sampling, axes_names=an,
                                       axes_domains=ad)
 
-        php = self.parameters[self.P_HYPER_PRIOR]
+        php = prior_type
         self.hyperPriorFlag = False if php=='Jeffrey' else True
 
-        self.activ_thresh = self.parameters[self.P_ACTIV_THRESH]
+        self.activ_thresh = mean_activation_threshold
 
     def linkToData(self, dataInput):
         self.dataInput =  dataInput
@@ -3418,125 +3128,41 @@ class BOLDSampler_MultiSujInput :
         #self.cleanPrecalculations()
 
 
-class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
-
-    #TODO : comment
-
-    # Indices and labels of each variable registered in sampler :
-    P_NRLS_SUBJ = 'responseLevels_by_subject'
-
-    P_NOISE_VAR_SUBJ = 'noiseVariance'
-
-    P_DRIFT = 'drift'
-
-    P_ETA = 'driftVar'
-
-    P_MIXT_PARAM_NRLS = 'mixtureParameters_for_responseLevels_by_subject'
-
-    P_BETA = 'beta'
-
-    P_LABELS = 'label'
-
-    P_HRF_GROUP = 'HRF_group'
-
-    P_RH_GROUP = 'HRFVariance_group'
-
-    P_HRF_SUBJ = 'HRF_subject'
-
-    P_RH_SUBJ = 'HRFVariance_subject'
-    
-    P_ALPHA_SUBJ = 'alpha_subject'
-    
-    P_ALPHA_VAR_SUBJ = 'alpha_var_subject'
+class BOLDGibbs_Multi_SubjSampler(xmlio.XmlInitable, GibbsSampler):
 
     inputClass = BOLDSampler_MultiSujInput
 
-    #### Sampling HRF at the end
-    variablesToSample = [ P_MIXT_PARAM_NRLS, P_NRLS_SUBJ, P_LABELS,
-                          P_HRF_GROUP, P_RH_GROUP, P_HRF_SUBJ, P_RH_SUBJ,
-                          P_DRIFT, P_ETA, P_NOISE_VAR_SUBJ, P_ALPHA_SUBJ, P_ALPHA_VAR_SUBJ]
-
-    P_NB_ITERATIONS = 'nbIterations'
-    P_OBS_HIST_PACE = 'observablesHistoryPaceSave'
-    P_GLOB_OBS_HIST_PACE = 'globalObservablesHistoryPaceSave'
-    P_SMPL_HIST_PACE = 'samplesHistoryPaceSave'
-    P_NB_SWEEPS = 'nbSweeps'
-    P_CALLBACK = 'callBackHandler'
-    P_RANDOM_SEED = 'numpyRandomSeed'
-    P_STOP_THRESHOLD = 'stop_criterion_threshold'
-    P_CRIT_DIFF_FROM_START = 'crit_diff_from_start'
-    P_CHECK_FINAL_VALUE = 'check_final_value_close_to_true'
-
-    defaultParameters = {
-        P_OBS_HIST_PACE : -1.,
-        P_GLOB_OBS_HIST_PACE : -1,
-        P_SMPL_HIST_PACE : -1.,
-        P_NB_SWEEPS : .3,
-        P_RANDOM_SEED : 193843200,
-        P_CALLBACK : GSDefaultCallbackHandler(),
-        P_NRLS_SUBJ : NRLs_Sampler(),
-        #P_BETA : BetaSampler(),
-        P_DRIFT : Drift_MultiSubj_Sampler(),
-        P_ETA : ETASampler_MultiSubj(), #drift variance
-        P_NOISE_VAR_SUBJ : NoiseVariance_Drift_MultiSubj_Sampler(),
-        P_HRF_SUBJ : HRF_Sampler(),
-        P_RH_SUBJ : HRFVarianceSubjectSampler(),
-        P_HRF_GROUP : HRF_Group_Sampler(),
-        P_RH_GROUP : RHGroupSampler(),
-        P_MIXT_PARAM_NRLS : MixtureParamsSampler(),
-        P_LABELS : LabelSampler(),
-        P_ALPHA_SUBJ : Alpha_hgroup_Sampler(),
-        P_ALPHA_VAR_SUBJ : AlphaVar_Sampler(),
-        P_STOP_THRESHOLD : -1,
-        P_CRIT_DIFF_FROM_START : False, #False,
-        P_CHECK_FINAL_VALUE : None,
-        }
-
     if pyhrf.__usemode__ == pyhrf.DEVEL:
-        defaultParameters[P_NB_ITERATIONS] = 3
-        parametersToShow = [P_NB_ITERATIONS, P_SMPL_HIST_PACE, P_OBS_HIST_PACE,
-                            P_GLOB_OBS_HIST_PACE,
-                            P_NB_SWEEPS,
-                            P_RANDOM_SEED,
-                            P_CALLBACK, P_NRLS_SUBJ, P_NOISE_VAR_SUBJ,
-                            P_HRF_SUBJ, P_HRF_GROUP, P_RH_SUBJ,
-                            P_RH_GROUP, P_DRIFT, P_ETA,
-                            P_MIXT_PARAM_NRLS, P_LABELS,
-                            P_STOP_THRESHOLD, P_CRIT_DIFF_FROM_START]
-
+        default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
-        defaultParameters[P_NB_ITERATIONS] = 3000
-        # parametersToShow = [P_NB_ITERATIONS, P_NRLS_SUBJ, P_LABELS,
-        #                     P_HRF, P_RH_SUBJ, P_RANDOM_SEED]
+        default_nb_its = 3000
 
-    parametersComments = {
-        P_SMPL_HIST_PACE: 'To save the samples at each iteration\n'\
-            'If x<0: no save\n ' \
-            'If 0<x<1: define the fraction of iterations for which samples are saved\n'\
-            'If x>=1: define the step in iterations number between backup copies.\n'\
-            'If x=1: save samples at each iteration.',
-        P_OBS_HIST_PACE: 'See comment for samplesHistoryPaceSave.'
-        }
+    def __init__(self, nb_iterations=default_nb_its,
+                 obs_hist_pace=-1., glob_obs_hist_pace=-1,
+                 smpl_hist_pace=-1., burnin=.3,
+                 callback=GSDefaultCallbackHandler(),
+                 bold_response_levels_subj=NRLs_Sampler(),
+                 labels=LabelSampler(), 
+                 noise_var=NoiseVariance_Drift_MultiSubj_Sampler(),
+                 hrf_subj=HRF_Sampler(), hrf_subj_var=HRFVarianceSubjectSampler(),
+                 hrf_group=HRF_Group_Sampler(), hrf_group_var=RHGroupSampler(),
+                 mixt_params=MixtureParamsSampler(),
+                 drift=Drift_MultiSubj_Sampler(), 
+                 drift_var=ETASampler_MultiSubj(),
+                 alpha=Alpha_hgroup_Sampler(),
+                 alpha_var=AlphaVar_Sampler(),
+                 check_final_value=None):
 
-    def __init__(self, parameters=None, xmlHandler=NumpyXMLHandler(),
-                 xmlLabel=None, xmlComment=None):
-        """
-        #TODO : comment
+        xmlio.XmlInitable.__init__(self)
+        variables = [bold_response_levels_subj, labels, noise_var, hrf_subj, 
+                     hrf_group, hrf_group_var, mixt_params, drift, drift_var,
+                     alpha, alpha_var]
 
-        """
-
-        xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           xmlLabel, xmlComment)
-        variables = [self.parameters[vLab] for vLab in self.variablesToSample]
-        #print self.variablesToSample
-        #for vLab in self.variablesToSample:
-             #print vLab
-
-        nbIt = self.parameters[self.P_NB_ITERATIONS]
-        obsHistPace = self.parameters[self.P_OBS_HIST_PACE]
-        globalObsHistPace = self.parameters[self.P_GLOB_OBS_HIST_PACE]
-        smplHistPace = self.parameters[self.P_SMPL_HIST_PACE]
-        nbSweeps = self.parameters[self.P_NB_SWEEPS]
+        nbIt = nb_iterations
+        obsHistPace = obs_hist_pace
+        globalObsHistPace = glob_obs_hist_pace
+        smplHistPace = smpl_hist_pace
+        nbSweeps = burnin
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1,int(round(nbIt * obsHistPace)))
@@ -3550,38 +3176,17 @@ class BOLDGibbs_Multi_SubjSampler(xmlio.XMLParamDrivenClass, GibbsSampler):
         if nbSweeps > 0. and nbSweeps < 1.:
             nbSweeps = int(round(nbIt * nbSweeps))
 
+        callbackObj = callback
 
-        self.stop_threshold = self.parameters[self.P_STOP_THRESHOLD]
-        self.crit_diff_from_start = self.parameters[self.P_CRIT_DIFF_FROM_START]
-        seed = self.parameters[self.P_RANDOM_SEED]
-        self.full_crit_diff_trajectory = defaultdict(list)
-        self.full_crit_diff_trajectory_timing = []
-        self.crit_diff0 = {}
-        # if self.crit_diff_from_start:
-        #     callbackObj = CallbackCritDiff()
-        # else:
-        callbackObj = GSDefaultCallbackHandler()
-
-        check_ftval = self.parameters[self.P_CHECK_FINAL_VALUE]
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
-                              obsHistPace, nbSweeps,
-                              callbackObj, randomSeed=seed,
+                              obsHistPace, nbSweeps, callbackObj,
                               globalObsHistoryPace=globalObsHistPace,
-                              check_ftval=check_ftval)
+                              check_ftval=check_final_value)
 
 
 
     def stop_criterion(self, it):
-        #return False
-        if it < self.nbSweeps+1 or self.stop_threshold < 0.:
-            return False
-        epsilon = self.stop_threshold
-        diffs = np.array([d for d in self.crit_diff.values() ])
-        pyhrf.verbose(3, "Stop criterion (it=%d):" %it)
-        for k,v in self.crit_diff.iteritems():
-            pyhrf.verbose(3, " - %s : %f < %f -> %s" \
-                              %(k,v,epsilon,str(v<epsilon)))
-        return (diffs < epsilon).all()
+        return False
 
     def compute_crit_diff(self, old_vals, means=None):
         crit_diff = {}
@@ -3946,14 +3551,13 @@ Vnoise = [0.2, 0.5, 0.4, 0.8, 0.6,
 2.1, 2.5, 3.1, 2.75, 7.3] #by subject
 VAlph = 0.6
 
-
 def simulate_subjects(output_dir, snr_scenario='high_snr', spatial_size='tiny', \
                       hrf_group=create_canonical_hrf(dt=0.6), nbSubj=10, vars_hrfs=Vhrfs,\
                       vars_noise=Vnoise, alpha_var=VAlph):
     '''
-    Simulate daata for multiple subjects (5 subjects by default)
+    Simulate data for multiple subjects (5 subjects by default)
     '''
-    from pyhrf import Condition
+
     drift_coeff_var = 1.
     drift_amplitude = 10.
 
@@ -3963,9 +3567,9 @@ def simulate_subjects(output_dir, snr_scenario='high_snr', spatial_size='tiny', 
         #lmap1, lmap2, lmap3 = 'pacman', 'cat2', 'house_sun'
 
     if spatial_size == 'tiny':
-        lmap1 = 'tiny_1'
+        lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
     else:
-        lmap1 = 'pacman'
+        lmap1, lmap2, lmap3 = 'pacman', 'ghost', 'house_sun'
 
     if snr_scenario == 'low_snr': #low snr
         vars_hrfs = [.06, .04, 0.09, 0.2, 0.015]

@@ -3808,9 +3808,9 @@ class BetaSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             nbv, nbc = self.nbVox, self.nbConditions
             repeatedBeta = np.repeat(self.mean, nbv).reshape(nbc, nbv)
             outputs['pm_beta_mapped'] = xndarray(repeatedBeta,
-                                               axes_names=axes_names,
-                                               axes_domains=axes_domains,
-                                               value_label="pm Beta")
+                                                 axes_names=axes_names,
+                                                 axes_domains=axes_domains,
+                                                 value_label="pm Beta")
 
             if self.sampleFlag:
                 if self.pBeta is not None and len(self.pBeta[0])>0:
