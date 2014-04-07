@@ -1,8 +1,6 @@
 import unittest
 import numpy as np
 
-import pyhrf
-
 if 1:
     from core_test import *
     from boldsynthTest import *
@@ -27,6 +25,9 @@ if 1:
     from test_xml import *
 
 from test_ndarray import *
+
+
+import pyhrf
 
 if pyhrf.__usemode__ == pyhrf.DEVEL:
     from test_sandbox import *

@@ -3,10 +3,6 @@ import os
 import numpy as np
 import shutil
 
-# Use Cairo as non-interactive backend -> avoid import of tk which might not be 
-# available, eg on travis
-import matplotlib
-matplotlib.use('cairo')
 
 import pyhrf
 from pyhrf.plot import plot_cub_as_curve, plot_cub_as_image
