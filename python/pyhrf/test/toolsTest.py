@@ -1,5 +1,3 @@
-
-
 # -*- coding: utf-8 -*-
 import unittest, os
 import numpy as np
@@ -10,7 +8,7 @@ import shutil
 from pyhrf.tools import *
 import pyhrf.tools as mtools
 import time
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 import pyhrf
 
 import numpy.testing as npt

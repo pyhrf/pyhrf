@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 """
 Module to handle graphs.
 Base structures :
@@ -11,7 +8,7 @@ Base structures :
 import numpy as np
 
 import pyhrf
-from pyhrf.tools import cartesian, crop_array
+from pyhrf.tools import cartesian
 from pyhrf.boldsynth.spatialconfig import lattice_indexes
 from pyhrf.boldsynth.spatialconfig import mask_to_coords
 

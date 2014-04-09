@@ -1,12 +1,11 @@
-
 import unittest
-import pyhrf
 import os
 import numpy as np
-import os.path as op
 import shutil
-from pyhrf.tools import add_suffix
-from pyhrf.plot import plot_func_slice, plot_cub_as_curve, plot_cub_as_image
+
+
+import pyhrf
+from pyhrf.plot import plot_cub_as_curve, plot_cub_as_image
 
 import matplotlib.pyplot as plt
 

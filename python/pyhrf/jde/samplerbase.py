@@ -426,9 +426,9 @@ class GibbsSampler:
                 else: #multisession
                     axes_names = ['session', 'time', 'voxel']
                 bold = xndarray(self.dataInput.varMBY.astype(np.float32),
-                              axes_names=axes_names,
-                              axes_domains=axes_domains,
-                              value_label='BOLD')
+                                axes_names=axes_names,
+                                axes_domains=axes_domains,
+                                value_label='BOLD')
     
                 #TODO: outputs of paradigm
                 # outputs of onsets, per condition:

@@ -6,8 +6,6 @@ from pyhrf.graph import graph_from_lattice
 from pyhrf.tools import add_prefix
 
 
-
-
 def b():
     """ for debug """
     raise Exception()
@@ -29,7 +27,10 @@ import warnings
 
 from scipy import sparse
 from scipy.cluster import hierarchy
-from scipy.maxentropy import logsumexp
+try:
+    from scipy.maxentropy import logsumexp
+except ImportError:
+    from scipy.misc import logsumexp
 
 from sklearn.base import BaseEstimator, ClusterMixin
 from scipy.sparse import cs_graph_components
@@ -1582,12 +1583,7 @@ def parcellation_hemodynamics(fmri_data, feature_extraction_method,
          parcellation array (numpy array of integers) with flatten
          spatial axes
 
-    Examples
-    >>> fd = pyhrf.core.FmriData.from_simu_ui()
-    >>> parcellation_hemodynamics(fd, 'glm_hdisp', nb_clusters=2)
-    array([[[1], [1]], [[2], [2]]]) #dummy result #TOCHECK
-
-    TODO!!!
+    Examples #TODO
     """
     fmri_data.build_graphs() #ensures that graphs are built
     roi_ids = np.unique(fmri_data.roi_ids_in_mask)

@@ -265,7 +265,7 @@ class TreatmentCommandTest(unittest.TestCase):
         cfg_file = op.join(self.tmp_dir, DEFAULT_CFG_FILE)
         pyhrf.verbose(1,'Trying model: %s, datatype: %s' \
                           %(modelLabel, datatype))
-        cmd = 'pyhrf_jde_buildcfg -l %s -d %s -o %s -v %d' \
+        cmd = 'pyhrf_jde_buildcfg -l %s -d %s -o %s -v %d -n 3' \
             %(modelLabel, datatype, cfg_file, pyhrf.verbose.verbosity)
         if os.system(cmd) != 0 :
             raise Exception('"' + cmd + '" did not execute correctly')
@@ -278,7 +278,7 @@ class TreatmentCommandTest(unittest.TestCase):
         # if pyhrf.__usemode__ == 'enduser':
         #     self.makeQuickJDE(cfg_file)
         self.makeQuietOutputs(cfg_file)
-        cmd = 'pyhrf_jde_estim -s -c %s' %cfg_file
+        cmd = 'pyhrf_jde_estim -s -c %s -v %d' %(cfg_file,pyhrf.verbose.verbosity)
         if os.system(cmd) != 0 :
             raise Exception('Model %s, datatype %s - "%s" did not execute correctly' \
                                 %(modelLabel, datatype, cmd))
@@ -302,6 +302,7 @@ class TreatmentCommandTest(unittest.TestCase):
 
 
     def testHrfEstim(self):
+        pyhrf.verbose.set_verbosity(0)
         from pyhrf.ui.rfir_ui import DEFAULT_CFG_FILE
         cfg_file = op.join(self.tmp_dir, DEFAULT_CFG_FILE)
         cmd = 'pyhrf_rfir_buildcfg -o %s -n 3' %cfg_file

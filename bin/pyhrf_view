@@ -4,7 +4,7 @@ import sys
 from optparse import OptionParser
 
 import pyhrf
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 
 from PyQt4 import QtGui
 from pyhrf.viewer.viewer_main_window import ViewerMainWindow

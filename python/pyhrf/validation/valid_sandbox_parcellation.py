@@ -26,8 +26,6 @@ from pyhrf.parcellation import parcellation_dist
 #  anatomist cortex_occipital_* hrf_territory
 #  anatomist cortex_occipital_*
 
-def my_func_to_test(p, output_path):
-    return p
 
 
 class StatTest(unittest.TestCase):
@@ -568,12 +566,6 @@ class FeatureExtractionTest(unittest.TestCase):
             pyhrf.verbose(1, 'clean tmp path')
             shutil.rmtree(self.tmp_path)
 
-    def test_new_obj(self):
-        # a unit test
-        result = my_func_to_test(self.my_param, output_path=self.tmp_path)
-        assert result == "OK"
-
-
     def test_generate_features(self):
         pyhrf.verbose.set_verbosity(0)
         p = np.array([1,1,1,1,1,2,2,2,2,2], dtype=int)
@@ -844,11 +836,6 @@ class ParcellationTest(unittest.TestCase):
         if self.clean_tmp:
             pyhrf.verbose(1, 'clean tmp path')
             shutil.rmtree(self.tmp_path)
-
-    def test_new_obj(self):
-        # a unit test
-        result = my_func_to_test(self.my_param, output_path=self.tmp_path)
-        assert result == "OK"
 
 
     def test_spatialward_against_ward_sk(self):

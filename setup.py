@@ -35,6 +35,15 @@ def checkPyhrf():
         return False
     return True
 
+def check_pyqt3():
+    return False
+    try:
+        import qt
+    except ImportError,e :
+        print e
+        return False
+    return True
+
 dependCheckers = {}
 
 dependFlags = dependCheck(dependCheckers)
@@ -62,15 +71,24 @@ except ImportError:
     print 'Numpy should be installed prior to pyhrf installation'
     sys.exit(1)
 
+excluded_packages = []
+if not check_pyqt3():
+    excluded_packages.append('pyhrf.viewer.qt3*')
+
+# disable some setuptools' magic that prevents exclusion of submodule
+from setuptools.command import sdist
+del sdist.finders[:]
+
 setup(
     name="pyhrf", author='Thomas VINCENT, Philippe CIUCIU, Solveig BADILLO',
     author_email='thomas.tv.vincent@gmail.com',
     version='0.3',
     setup_requires=['numpy>=1.0'],
-    install_requires=['nibabel', 'nipy','matplotlib>=0.90.1','scipy>=0.7','numpy>=1.0'],
+    install_requires=['nibabel', 'nipy','matplotlib>=0.90.1','scipy>=0.7',
+                      'numpy>=1.0'],
     dependency_links = [],
     package_dir = {'' : 'python'},
-    packages=find_packages('python'),
+    packages=find_packages('python', exclude=excluded_packages),
     include_package_data=True,
     include_dirs = [np.get_include()],
     package_data={'pyhrf':['datafiles/*']},

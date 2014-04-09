@@ -3,8 +3,9 @@ import os, sys, string
 import os.path as op
 from optparse import OptionParser
 import numpy as np
+
 import pyhrf
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.tools.io import read_volume, write_volume
 from pyhrf.tools import add_suffix
 from pyhrf.ndarray import xndarray
@@ -116,6 +117,7 @@ else:
     canat = None
 
 import matplotlib.pyplot as plt
+
 from pyhrf.ndarray import MRI3Daxes
 from pyhrf.plot import plot_func_slice, autocrop, fig_orientations
 tag = options.output_tag

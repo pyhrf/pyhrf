@@ -4,7 +4,7 @@ import os, sys, string
 from optparse import OptionParser
 
 from pyhrf import xmlio
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.ui.treatment import run_pyhrf_cmd_treatment
 from pyhrf.ui.rfir_ui import DEFAULT_CFG_FILE
 

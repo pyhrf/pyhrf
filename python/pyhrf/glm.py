@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import os
 import os.path as op
 import numpy as np
 import glob
 
 import pyhrf
+from pyhrf import FmriData
 from pyhrf.ndarray import expand_array_in_mask
 from pyhrf.tools.io import read_volume, write_volume
 from pyhrf.ndarray import xndarray
@@ -18,8 +16,7 @@ import tempfile
 import shutil
 #from nipy.labs import compute_mask_files
 
-from nibabel import load, save, Nifti1Image
-import nipy.labs.glm
+from nipy.labs.glm import glm
 from nipy.modalities.fmri import design_matrix as dm
 try:
     from nipy.modalities.fmri.experimental_paradigm import \
@@ -59,10 +56,11 @@ def glm_nipy(fmri_data, contrasts=None, hrf_model='Canonical',
         (glm instance, design matrix, dict of contrasts of objects)
 
     Examples:
+    >>> from pyhrf.core import FmriData
+    >>> from pyhrf.glm import glm_nipy
     >>> g,dmtx,con = glm_nipy(FmriData.from_vol_ui())
-
     >>> g,dmtx,con = glm_nipy(FmriData.from_vol_ui(), \
-    contrasts={'A-V':'audio-video'})
+                              contrasts={'A-V':'audio-video'})
     """
 
     paradigm = fmri_data.paradigm.to_nipy_paradigm()
@@ -91,7 +89,7 @@ def glm_nipy(fmri_data, contrasts=None, hrf_model='Canonical',
     # plt.savefig(op.join(output_dir, 'design_matrix.png'))
 
     # GLM fit
-    my_glm = nipy.labs.glm.glm.glm()
+    my_glm = glm.glm()
     pyhrf.verbose(2, 'Fit GLM - method: %s, residual model: %s' \
                       %(fit_method,residuals_model))
     my_glm.fit(Y.T, design_matrix.matrix, method=fit_method,
@@ -184,7 +182,7 @@ def glm_nipy(fmri_data, contrasts=None, hrf_model='Canonical',
     #return Proba
 
 
-from pyhrf import FmriData
+
 
 def glm_nipy_from_files(bold_file, tr,  paradigm_csv_file, output_dir,
                         mask_file, session=0, contrasts=None,
@@ -227,7 +225,7 @@ def glm_nipy_from_files(bold_file, tr,  paradigm_csv_file, output_dir,
 
         #normalized variance of betas
         beta_vars[bname] = sp.diag(g.nvbeta)[ib] #variance: diag of cov matrix
-        sig2 = g.s2 #ResMS
+        #sig2 = g.s2 #ResMS
         var_cond = sp.diag(g.nvbeta)[ib]*g.s2 #variance for all voxels, condition ib
         beta_vars_voxels[bname] = var_cond
         #beta_var_fn = op.join(output_dir, 'var_beta_%s.nii' %bname)
@@ -259,8 +257,6 @@ def glm_nipy_from_files(bold_file, tr,  paradigm_csv_file, output_dir,
     #TODO: FIR stuffs
     return beta_files, beta_values, beta_vars_voxels, dof#, con_files, pval_files
 
-
-
     # Paradigm
 
     # Fix bug in nipy/modalities/fmri/experimental_paradigm.py
@@ -271,319 +267,6 @@ def glm_nipy_from_files(bold_file, tr,  paradigm_csv_file, output_dir,
     #          if len(row) > 4:
     # -            amplitude.append(row[4])
     # +            amplitude.append(float(row[4]))
-
-if 0:
-    paradigm = load_paradigm_from_csv_file(paradigm_csv_file,
-                                           session=str(session))
-    if paradigm is None:
-        raise Exception('Failed to load paradigm data from %s (session=%d)' \
-                            %(paradigm_csv_file, session))
-    pyhrf.verbose(1, 'Loaded paradigm: condition=%s, nb events=%d'
-                  %(str(list(set(paradigm.con_id))),paradigm.n_events))
-
-    assert op.exists(mask_file)
-    # # Functional mask
-    # if not op.exists(mask_file):
-    #     pyhrf.verbose(1, 'Mask file does not exist. Computing mask from '\
-    #                       'BOLD data')
-    #     compute_mask_files(data_path, mask_file, False, 0.4, 0.9)
-    #     mask_array = compute_mask_files(bold_file, mask_file,
-    #                                     False, 0.4, 0.9)
-
-    mask_array = load(mask_file).get_data()
-    m = np.where(mask_array > 0)
-    pyhrf.verbose(1, 'Mask: shape=%s, nb vox in mask=%d'
-                  %(str(mask_array.shape), mask_array.sum()))
-
-    # BOLD data
-    fmri_image = load(bold_file)
-    #pyhrf.verbose(1, 'BOLD shape : %s' %str(fmri_image.get_shape()))
-    Y = fmri_image.get_data()[m[0],m[1],m[2],:]
-    n_scans = Y.shape[1]
-    pyhrf.verbose(1, 'Loaded BOLD: nvox=%d, nscans=%d' %Y.shape)
-
-    # Design matrix
-    frametimes = np.linspace(0, (n_scans-1)*tr, n_scans)
-    design_matrix = dm.make_dmtx(frametimes, paradigm,
-                                 hrf_model=hrf_model,
-                                 drift_model=drift_model, hfcut=hfcut,
-                                 fir_delays=fir_delays)
-    ns, nr = design_matrix.matrix.shape
-    pyhrf.verbose(2, 'Design matrix built with %d regressors:' %nr)
-    for rn in design_matrix.names:
-        pyhrf.verbose(2, '    - %s' %rn)
-
-
-    cdesign_matrix = xndarray(design_matrix.matrix,
-                            axes_names=['time','regressor'],
-                            axes_domains={'time':np.arange(ns)*tr,
-                                          'regressor':design_matrix.names})
-
-    cdesign_matrix.save(op.join(output_dir, 'design_matrix.nii'))
-    import cPickle
-    f = open(op.join(output_dir, 'design_matrix.pck'), 'w')
-    cPickle.dump(design_matrix, f)
-    f.close()
-
-    # import matplotlib.plt as mp
-    # design_matrix.show()
-    # mp.show()
-
-    # ax = design_matrix.show()
-    # ax.set_position([.05, .25, .9, .65])
-    # ax.set_title('Design matrix')
-    # plt.savefig(op.join(output_dir, 'design_matrix.png'))
-    # design_matrix.save(...)
-
-    # GLM fit
-    my_glm = nipy.labs.glm.glm()
-    pyhrf.verbose(1, 'Fit GLM - method: %s, residual model: %s' \
-                      %(fit_method,residuals_model))
-    glm = my_glm.fit(Y.T, design_matrix.matrix, method=fit_method,
-                     model=residuals_model)
-
-    # Beta outputs
-    beta_files = []
-    affine = fmri_image.get_affine()
-    for ib, bname in enumerate(design_matrix.names):
-        beta_vol = expand_array_in_mask(my_glm.beta[ib], mask_array)
-        beta_image = Nifti1Image(beta_vol, affine)
-        beta_file = op.join(output_dir, 'beta_%s.nii' %bname)
-        save(beta_image, beta_file)
-        beta_files.append(beta_file)
-
-
-    from nipy.modalities.fmri.hemodynamic_models import _regressor_names
-    from pyhrf.ndarray import MRI3Daxes
-    if hrf_model == 'FIR':
-        drnames = design_matrix.names
-        nvox = mask_array.sum()
-        print 'nvox:', nvox
-        for cn in set(paradigm.con_id):
-            fir_rnames = _regressor_names(cn, 'FIR', fir_delays)
-            #lfir = len(fir_rnames)
-            beta_fir = np.array([my_glm.beta[drnames.index(n)] \
-                                     for n in fir_rnames])
-
-            norm_fir = (beta_fir**2).sum(axis=0)**.5
-
-            print 'np.diff(beta_fir,0):', np.diff(beta_fir,0).shape
-            print 'np.zeros(1, nvox):', np.zeros((1, nvox)).shape
-            beta_fir_diff1 = np.concatenate((np.zeros((1, nvox)),
-                                             np.diff(beta_fir,axis=0)))
-
-            beta_fir_diff2 = np.concatenate((np.zeros((1, nvox)),
-                                             np.diff(beta_fir_diff1,axis=0)))
-
-            print 'beta_fir:', beta_fir.shape
-            print 'beta_fir_diff1:', beta_fir_diff1.shape
-            print 'beta_fir_diff2:', beta_fir_diff2.shape
-            beta_fir_d = np.array([beta_fir, beta_fir_diff1,
-                                   beta_fir_diff2])
-            cbeta_fir = xndarray(beta_fir_d,
-                               axes_names=['diff', 'time', 'voxel'],
-                               axes_domains={'time':np.array(fir_delays)*tr,
-                                             'diff':['d0','d1','d2']})
-            cbeta_fir = cbeta_fir.expand(mask_array, 'voxel', MRI3Daxes)
-            cbeta_fir.save(op.join(output_dir, 'FIR_%s.nii' %cn))
-
-            norm_fir_d = (beta_fir_d**2).sum(axis=1)**.5
-            cnorm_fir_d = xndarray(norm_fir_d,
-                                 axes_names=['diff', 'voxel'],
-                                 axes_domains={'diff':['d0','d1','d2']})
-            cnorm_fir_d = cnorm_fir_d.expand(mask_array, 'voxel', MRI3Daxes)
-            cnorm_fir_d.save(op.join(output_dir, 'FIR_norm_%s.nii' %cn))
-
-            fn = op.join(output_dir, 'FIR_norm_01_%s.nii' %cn)
-            cnorm_fir_d.sub_cuboid(diff='d0').rescale_values().save(fn)
-
-            ttp = beta_fir.argmax(0)
-            cttp = xndarray(ttp, axes_names=['voxel'])
-            cttp = cttp.expand(mask_array, 'voxel', MRI3Daxes)
-            cttp.save(op.join(output_dir, 'TTP_%s.nii' %cn))
-
-            cttp.rescale_values().save(op.join(output_dir, \
-                                                   'FIR_TTP_01_%s.nii' %cn))
-
-            def array_summary(a):
-                return '%s -- %1.3f (%1.3f) [%1.3f %1.3f]' \
-                    %(str(a.shape), a.mean(), a.std(), a.min(), a.max())
-
-            print 'norm_fir: %s' %array_summary(norm_fir)
-            print 'beta_fir:', array_summary(beta_fir)
-            print 'beta_fir/norm_fir:', array_summary(beta_fir/norm_fir)
-            nrj = np.sum(np.diff(np.diff(beta_fir/norm_fir,0),0)**2, 0)**.5
-            print 'nrj:', array_summary(nrj)
-            cnrj = xndarray(nrj, axes_names=['voxel'])
-            cnrj = cnrj.expand(mask_array, 'voxel', MRI3Daxes)
-            cnrj.save(op.join(output_dir, 'fir_nrj_%s.nii' %cn))
-
-    cresiduals = xndarray(my_glm.s2, axes_names=['voxel'],
-                        meta_data=(affine, fmri_image.get_header()))
-    fn = op.join(output_dir, 'residuals.nii')
-    cresiduals.expand(mask_array, 'voxel', MRI3Daxes).save(fn)
-
-
-    pyhrf.verbose(1, 'Saved %d beta files in %s' \
-                      %(len(beta_files),output_dir))
-
-    return beta_files, beta_vars
-
-    # import numpy as np
-    # import os.path as op
-    # import matplotlib.pyplot as plt
-    # import tempfile
-
-    # #from nipy.labs import compute_mask_files
-    # from nibabel import load, save, Nifti1Image
-    # #import get_data_light
-    # import nipy.labs.glm
-    # import nipy.labs.utils.design_matrix as dm
-    # from nipy.labs.viz import plot_map, cm
-
-    # data_path = op.join(output_path, 'bold.nii')
-    # paradigm_file = op.join(output_path, 'paradigm.csv')
-
-    # tr = 1.
-    # n_scans = bold.shape[0]
-    # frametimes = np.linspace(0, (n_scans-1)*tr, n_scans)
-    # conditions = [c.name for c in condition_defs]
-
-    # # confounds
-    # hrf_model = 'Canonical' #'Canonical With Derivative'
-    # drift_model = "Blank" #"Cosine"
-    # hfcut = 0
-
-    # # write directory
-    # swd = op.join(output_path, 'GLM_nipy')
-    # if not op.exists(swd): os.makedirs(swd)
-
-    # print 'Computation will be performed in temporary directory: %s' % swd
-
-    # ########################################
-    # # Design matrix
-    # ########################################
-
-    # print 'Loading design matrix...'
-    # paradigm = load_paradigm_from_csv_file(paradigm_file, session=0)
-
-    # design_matrix = dm.DesignMatrix(frametimes, paradigm, hrf_model=hrf_model,
-    #                                 drift_model=drift_model, hfcut=hfcut)
-
-    # ax = design_matrix.show()
-    # ax.set_position([.05, .25, .9, .65])
-    # ax.set_title('Design matrix')
-    # plt.savefig(op.join(swd, 'design_matrix.png'))
-    # # design_matrix.save(...)
-
-    # ########################################
-    # # Mask the data
-    # ########################################
-
-    # #print 'Computing a brain mask...'
-    # #mask_path = op.join(swd, 'mask.nii')
-    # #mask_array = compute_mask_files( data_path, mask_path, False, 0.4, 0.9)
-    # #mask_array = np.ones(tuple(reversed(bscan.shape)),dtype=int)
-    # mask_array = np.ones_like(simulation_items['labels_vol'][0])
-
-    # ########################################
-    # # Perform a GLM analysis
-    # ########################################
-
-    # print 'Fitting a GLM (this takes time)...'
-    # #fmri_image = load(data_path)
-    # #m = np.where(mask_array)
-    # #Y = fmri_image.get_data()[m[0],m[1],m[2],:]
-    # model = "spherical" #"ar1"
-    # method = "ols" #"kalman"
-    # my_glm = nipy.labs.glm.glm()
-    # glm = my_glm.fit(bold, design_matrix.matrix,
-    #                  method=method, model=model)
-
-
-    # #########################################
-    # # Beta outputs
-    # #########################################
-
-    # for ib, bname in enumerate(design_matrix.names):
-    #     writeImageWithPynifti(expand_array_in_mask(my_glm.beta[ib], mask_array),
-    #                           op.join(swd, 'beta_%s.nii' %bname))
-
-    # #########################################
-    # # Specify the contrasts
-    # #########################################
-
-    # # simplest ones
-    # contrasts = {}
-    # contrast_id = conditions
-    # for i in range(len(conditions)):
-    #     contrasts['%s' % conditions[i]]= np.eye(len(design_matrix.names))[2*i]
-
-
-    # #########################################
-    # # Estimate the contrasts
-    # #########################################
-
-    # print 'Computing contrasts...'
-    # for index, contrast_id in enumerate(contrasts):
-    #     print '  Contrast % 2i out of %i: %s' % (index+1,
-    #                                              len(contrasts), contrast_id)
-    #     lcontrast = my_glm.contrast(contrasts[contrast_id])
-    #     #
-    #     contrast_path = op.join(swd, '%s_z_map.nii'% contrast_id)
-    #     write_array = mask_array.astype(np.float)
-    #     write_array[np.where(mask_array)] = lcontrast.zscore()
-    #     #contrast_image = Nifti1Image(write_array) #, fmri_image.get_affine() )
-    #     #save(contrast_image, contrast_path)
-    #     writeImageWithPynifti(write_array, contrast_path)
-    #     #affine = fmri_image.get_affine()
-
-
-    #     # vmax = max(-write_array.min(), write_array.max())
-    #     # plot_map(write_array, affine,
-    #     #          cmap=cm.cold_hot,
-    #     #          vmin=-vmax,
-    #     #          vmax=vmax,
-    #     #          anat=None,
-    #     #          figure=10,
-    #     #          threshold=2.5)
-    #     # plt.savefig(op.join(swd, '%s_z_map.png' % contrast_id))
-    #     # plt.clf()
-
-
-
-    # #########################################
-    # # End
-    # #########################################
-
-    # print "All the  results were witten in %s" %swd
-
-    # # plot_map(write_array, affine,
-    # #                 cmap=cm.cold_hot,
-    # #                 vmin=-vmax,
-    # #                 vmax=vmax,
-    # #                 anat=None,
-    # #                 figure=10,
-    # #                 threshold=3)
-
-    # """
-    # plot_map(write_array, affine,
-    #                 cmap=cm.cold_hot,
-    #                 vmin=-vmax,
-    #                 vmax=vmax,
-    #                 anat=None,
-    #                 figure=10,
-    #                 threshold=3, do3d=True)
-
-    # from nipy.labs import viz3d
-    # viz3d.plot_map_3d(write_array, affine,
-    #                 cmap=cm.cold_hot,
-    #                 vmin=-vmax,
-    #                 vmax=vmax,
-    #                 anat=None,
-    #                 threshold=3)
-    # """
-    # #plt.show()
 
 
 if pyhrf.cfg['global']['spm_path'] is not None:

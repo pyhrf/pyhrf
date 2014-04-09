@@ -1,7 +1,5 @@
 import os
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 from pyhrf.tools import rebin
 
 fig_orientations = {
@@ -12,6 +10,7 @@ fig_orientations = {
 
 
 def mix_cmap(img1, cmap1, img2, cmap2, norm1=None, norm2=None, blend_r=.5):
+    import matplotlib.pyplot as plt
 
     assert img1.shape == img2.shape
     if norm1 is None:
@@ -42,7 +41,6 @@ def mix_cmap(img1, cmap1, img2, cmap2, norm1=None, norm2=None, blend_r=.5):
     return mixed_cols
 
 
-
 def plot_func_slice(func_slice_data, anatomy=None, parcellation=None,
                     parcel_col='white',
                     parcels_line_width=2.5, func_cmap=None,
@@ -50,6 +48,8 @@ def plot_func_slice(func_slice_data, anatomy=None, parcellation=None,
                     highlighted_parcels_col=None,
                     highlighted_parcels_line_width=2.5,
                     resolution=None, crop_extension=None, blend=.5):
+
+    import matplotlib.pyplot as plt
 
     if highlighted_parcels_col is None:
         highlighted_parcels_col = {}
@@ -147,6 +147,8 @@ def plot_anat_parcel_func_fusion(anat, func, parcel, parcel_col='white',
                                  highlighted_parcels_col=None,
                                  highlighted_parcels_line_width=1.5):
 
+    import matplotlib.pyplot as plt
+
     if highlighted_parcels_col is None:
         highlighted_parcels_col = {}
 
@@ -238,6 +240,8 @@ def flip(img_fn, direction='horizontal'):
 
 
 def plot_palette(cmap, norm=None, fontsize=None):
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
 
     if norm is None:
         norm = plt.Normalize()
@@ -256,6 +260,7 @@ def set_ticks_fontsize(fontsize, colbar=None):
     If colorbar (Colorbar instance) is provided then change the fontsize of its
     tick labels as well.
     """
+    import matplotlib.pyplot as plt
 
     yticklabels = plt.getp(plt.gca(), 'yticklabels')
     plt.setp(yticklabels, 'color', 'k', fontsize=fontsize)
@@ -271,6 +276,7 @@ def set_xticklabels(labels, positions=None, rotation=None):
     """ Set ticks labels of the xaxis in the current figure to *labels*
     If positions is provided then enforce tick position.
     """
+    import matplotlib.pyplot as plt
 
     if positions is None:
         positions,_ = plt.xticks()
@@ -292,6 +298,7 @@ def plot_spm_mip(img_fn, mip_fn):
 
 import scipy.stats
 def plot_gaussian_pdf(bins, m, v, prop=None, plotArgs={}):
+    import matplotlib.pyplot as plt
 
     prop = prop or 1.
     if v > 1e-2:
@@ -311,6 +318,8 @@ def plot_gaussian_mixture(values, props=None, color='k', lw=1.75):
     """
     axes of values : (component,class)
     """
+    import matplotlib.pyplot as plt
+
     if props is None:
         props = np.array([.5, .5])
     xMin = (values[0,:] - 5*values[1,:]**.5).min()
@@ -361,6 +370,8 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
     Return:
         None
     """
+    import matplotlib.pyplot as plt
+
     def protect_latex_str(s):
         return s.replace('_','\_')
         
@@ -426,6 +437,8 @@ def set_int_tick_labels(axis, labels, fontsize=None, rotation=None):
 def plot_cub_as_image(c, cmap=None, norm=None, show_axes=True,
                       show_axis_labels=True, show_tick_labels=True,
                       show_colorbar=False, axes=None):
+    import matplotlib.pyplot as plt
+
     axes = axes or plt.gca()
     data = c.data
     if data.ndim == 1:

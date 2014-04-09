@@ -17,7 +17,7 @@ class TrajectoryTest(unittest.TestCase):
 
         for i in xrange(nb_its):
             v *= 2
-            t.increment(i)
+            t.record(i)
 
         assert_array_equal(t.get_last(), np.array([1, 2]) * 2**nb_its)
         self.assertEqual(t.saved_iterations, [-1] + range(start,nb_its))
@@ -33,7 +33,7 @@ class TrajectoryTest(unittest.TestCase):
 
         for i in xrange(nb_its):
             v *= 2
-            t.increment(i)
+            t.record(i)
 
         assert_array_equal(t.get_last(), np.array([1, 2]) * 2**nb_its)
         self.assertEqual(t.saved_iterations, range(start,nb_its))

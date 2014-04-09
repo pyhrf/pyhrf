@@ -10,7 +10,7 @@ except ImportError :
 
 import pyhrf
 from pyhrf import xmlio
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 import pyhrf.viewer.qt3 as ndview
 
 from pyhrf.tools.io import read_volume, MRI3Daxes, MRI4Daxes

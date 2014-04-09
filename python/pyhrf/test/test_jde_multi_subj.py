@@ -3,19 +3,14 @@ import os
 import os.path as op
 import unittest
 import numpy as np
-from matplotlib import pyplot as plt
-
 from pyhrf.jde.jde_multi_sujets import BOLDGibbs_Multi_SubjSampler as BMSS
 from pyhrf.jde.jde_multi_sujets import simulate_single_subject
 from pyhrf.jde import jde_multi_sujets as jms
 
 import pyhrf
-from pyhrf.ndarray import xndarray
 from pyhrf.ui.jde import JDEMCMCAnalyser
 from pyhrf.ui.treatment import FMRITreatment
 import shutil
-
-from pyhrf.jde.samplerbase import GibbsSamplerVariable
 
 from copy import deepcopy
 

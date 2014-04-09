@@ -5,7 +5,7 @@ import stat
 import sys
 import pyhrf
 from optparse import OptionParser
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf import get_src_path
 import fnmatch
 

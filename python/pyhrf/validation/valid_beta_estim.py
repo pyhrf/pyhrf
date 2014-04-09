@@ -1,5 +1,3 @@
-
-
 # -*- coding: utf-8 -*-
 import os, sys
 import unittest
@@ -8,7 +6,6 @@ import numpy as np
 from pyhrf.jde.beta import *
 from pyhrf.boldsynth.field import genPotts #, count_homo_cliques
 from pyhrf.graph import *
-from pyhrf.boldsynth.boldmodel import getSimulOutputs
 from pyhrf.boldsynth.scenarios import *
 
 from pyhrf.tools import cached_eval
@@ -16,12 +13,8 @@ from pyhrf.tools import cached_eval
 from pyhrf.validation import config
 from pyhrf.validation.config import figfn
 
-
 from pyhrf.boldsynth.pottsfield.swendsenwang import *
-
-import ndview
 from pyhrf.ndarray import stack_cuboids
-
 
 def dist(x,y):
     return ((x-y)**2).sum()**.5
@@ -37,8 +30,8 @@ def beta_estim_obs_field_mc(graph, nbClasses, beta, gridLnz, mcit=1,
         labels = cached_eval(genPotts, (graph, beta, nbClasses), 
                              save=cachePotts, new=(not cachePotts))
         print 'labels:',labels
-        betaEstim = beta_estim_obs_field(graph, labels, gridLnz,
-                                         method='ML')
+        betaEstim, _ = beta_estim_obs_field(graph, labels, gridLnz,
+                                            method='ML')
         #betaEstim, pb = beta_estim_obs_field(graph, labels, gridLnz,
         #                                     method='MAP')
         print ' -mc- be=%f' %betaEstim
@@ -69,19 +62,19 @@ def test_beta_estim_obs_fields(graphs, betas, nbLabels, pfmethod, mcit=1):
     if pfmethod == 'ES':
         for ig, g in enumerate(graphs):
             grid = cached_eval(Cpt_Vec_Estim_lnZ_Graph_fast3, (g,nbLabels),
-                               path=config.cacheDir, prefix=pyhrf.tmpPrefix)
+                               path=config.cacheDir, prefix='pyhrf_')
             gridLnz[ig] = (grid[0][:-1], grid[1][:-1])    
     elif pfmethod == 'PS':
         for ig, g in enumerate(graphs):
             gridLnz[ig] = cached_eval(Cpt_Vec_Estim_lnZ_Graph, (g,nbLabels),
                                       path=config.cacheDir, new=False,
-                                      prefix=pyhrf.tmpPrefix)
+                                      prefix='pyhrf_')
     elif pfmethod == 'ONSAGER':
         for ig, g in enumerate(graphs):
             betaGrid = cached_eval(Cpt_Vec_Estim_lnZ_Graph,([[]],nbLabels),
                                    path=config.cacheDir)[1]
             lpf = cached_eval(logpf_ising_onsager, (len(g),betaGrid),
-                              path=config.cacheDir, prefix=pyhrf.tmpPrefix)
+                              path=config.cacheDir, prefix='pyhrf_')
             gridLnz[ig] = (lpf, betaGrid)
     else:
         print 'unknown pf method!'
@@ -357,21 +350,21 @@ class ObsField2DTest(unittest.TestCase):
         mBePS, stdBePS, stdBeMCPS = cached_eval(test_beta_estim_obs_fields,
                                                 ([g], betas, nbc, 'PS',
                                                  mcit), path=config.cacheDir,
-                                                prefix=pyhrf.tmpPrefix,
+                                                prefix='pyhrf_',
                                                 new=False)
         
         # Extrapolation scheme:
         mBeES, stdBeES, stdBeMCES = cached_eval(test_beta_estim_obs_fields,
                                                 ([g], betas, nbc, 'ES',
                                                  mcit), path=config.cacheDir,
-                                                prefix=pyhrf.tmpPrefix,
+                                                prefix='pyhrf_',
                                                 new=False)
 
         # Onsager:
         #mBeON, stdBeON, stdBeMCON = cached_eval(test_beta_estim_obs_fields,
         #                                        ([g], betas, nbc, 'ONSAGER',
         #                                         mcit), path=config.cacheDir,
-        #                                        prefix=pyhrf.tmpPrefix,
+        #                                        prefix='pyhrf_',
         #                                        new=True)
         
         if self.plot:
@@ -398,8 +391,6 @@ class ObsField2DTest(unittest.TestCase):
 
     def MC_comp_pfmethods_ML_3C(self, shape):
 
-        newEval = config.updateCache
-        
         mask = np.ones(shape, dtype=int) #full mask
         g = graph_from_lattice(mask, kerMask=kerMask2D_4n, toroidal=True)
 
@@ -418,21 +409,21 @@ class ObsField2DTest(unittest.TestCase):
         mBePS, stdBePS, stdBeMCPS = cached_eval(test_beta_estim_obs_fields,
                                                 ([g], betas, nbc, 'PS',
                                                  mcit), path=config.cacheDir,
-                                                prefix=pyhrf.tmpPrefix,
+                                                prefix='pyhrf_',
                                                 new=False)
         
         # Extrapolation scheme:
         mBeES, stdBeES, stdBeMCES = cached_eval(test_beta_estim_obs_fields,
                                                 ([g], betas, nbc, 'ES',
                                                  mcit), path=config.cacheDir,
-                                                prefix=pyhrf.tmpPrefix,
+                                                prefix='pyhrf_',
                                                 new=False)
 
         # Onsager:
         #mBeON, stdBeON, stdBeMCON = cached_eval(test_beta_estim_obs_fields,
         #                                        ([g], betas, nbc, 'ONSAGER',
         #                                         mcit), path=config.cacheDir,
-        #                                        prefix=pyhrf.tmpPrefix,
+        #                                        prefix='pyhrf_',
         #                                        new=True)
         
         if self.plot:
@@ -455,120 +446,14 @@ class ObsField2DTest(unittest.TestCase):
             
             plt.figure()
             grid = cached_eval(Cpt_Vec_Estim_lnZ_Graph_fast3, (g,nbc),
-                               path=config.cacheDir, prefix=pyhrf.tmpPrefix)
+                               path=config.cacheDir, prefix='pyhrf_')
             lnzES, betas = (grid[0][:-1], grid[1][:-1])    
             lnzPS, betas = cached_eval(Cpt_Vec_Estim_lnZ_Graph, (g,nbc),
                                        path=config.cacheDir, new=False,
-                                       prefix=pyhrf.tmpPrefix)
+                                       prefix='pyhrf_')
 
             plt.plot(betas, lnzES, 'r', label='ES')
             plt.plot(betas, lnzPS, 'b', label='PS')
             fn = 'comp_PF_3class_PS_ES_%dx%d' %shape 
             figFn = os.path.join(self.outDir, figfn(fn))
             plt.savefig(figFn)
-
-from pyhrf.ui.jde import runEstimationBetaEstim, runEstimationSupervised
-from ndview.gui.mplwidget import cmstring_to_mpl_cmap
-
-class HiddenField2DTest(unittest.TestCase):
-    """ Test estimation of beta with a hidden 2D field (ie LTI BOLD model, 
-    SMM on NRLs)
-    """
-
-    def test_beta_estim_jde_mcmc(self):
-
-        nbCond = 2
-
-        betaMax = 1.2
-        dBeta = .1
-        betas = np.arange(0, betaMax, dBeta)
-
-        height = 20
-        width = 20
-        graph = graph_from_lattice(np.ones((height,width),dtype=int),
-                                   kerMask2D_4n)
-
-        gridLnZ = cached_eval(Cpt_Vec_Estim_lnZ_Graph, (graph, 2))
-        
-        nbIt = 3
-
-        bolds = []
-        outputs = []
-        for beta in betas:
-            labels = [genPotts(graph, beta).reshape((height,width))
-                      for i in range(nbCond)]
-            b = simulate_bold_from_labels(labels)
-            bolds.append(b)
-
-            p = {'data':b.to_fmri_data(np.ones((height,width),dtype=int)), 
-                 'nbIterations':nbIt,
-                 'betaSimu':beta, 
-                 #'noiseVarSimu':noiseVar,
-                 'gridLnZ':gridLnZ}
-            #outs = cached_eval(runEstimationBetaEstim, (p,))
-            #outputs.append(outs)
-            
-
-        #view_results(bolds, outputs, betas)
-        scm = "0;0;0.333333;1;0.651282;0;1;1#" \
-            "0;0;0.333333;1;0.661538;0;1;0#"   \
-            "0;0;0.333333;1;0.664103;1;1;0"
-        cm = cmstring_to_mpl_cmap(scm)
-        import plt
-        for output, beta in zip(outputs,betas):
-            lmap = output['pm_Labels_marked'].data[0,:,:,0]
-            plt.figure()
-            img = plt.matshow(lmap, cmap=cm)
-            img.get_axes().set_axis_off()
-            sbeta = ('%1.2f'%beta).replace('.','_')
-            plt.savefig('./hidden_field_pm_labels_marked_'+sbeta)
-            #plt.show()
-
-
-    # def test_beta_estim_jde_vem(self):
-
-    #     nbCond = 2
-
-    #     betaMax = 1.2
-    #     dBeta = .1
-    #     betas = np.arange(0, betaMax, dBeta)
-
-    #     height = 20
-    #     width = 20
-    #     graph = graph_from_lattice(np.ones((height,width),dtype=int),
-    #                                kerMask2D_4n)
-
-    #     gridLnZ = cached_eval(Cpt_Vec_Estim_lnZ_Graph, (graph, 2))
-        
-    #     bolds = []
-    #     outputs = []
-    #     for beta in betas:
-    #         labels = [genPotts(graph, beta).reshape((height,width))
-    #                   for i in range(nbCond)]
-    #         b = simulate_bold_from_labels(labels)
-    #         bolds.append(b)
-
-    #         #outs = run_estimation_jde_vem(...) #TODO
-    #         #outs = cached_eval(runEstimationBetaEstim, (p,))
-    #         outputs.append(outs)
-            
-
-
-
-
-from pyhrf.tools import stack_trees
-
-def view_results(bolds, estimOutputs, betas):
-
-    outputSimu = stack_trees(map(getSimulOutputs, bolds))
-    for n,o in outputSimu.iteritems():
-        outputSimu[n] = stack_cuboids(o, 'betaSimu', betas)
-    views = dict(zip(outputSimu.keys(), map(xndarrayView,outputSimu.values())))
-    
-
-    outputEstim = stack_trees(estimOutputs)
-    for n,o in outputEstim.iteritems():
-        outputEstim[n] = stack_cuboids(o, 'betaSimu', betas)
-    views.update(dict(zip(outputEstim.keys(), 
-                          map(xndarrayView,outputEstim.values()))))
-    ndview.multiView(views)

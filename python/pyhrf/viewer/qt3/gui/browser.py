@@ -63,9 +63,6 @@ image1_data = \
     "\xeb\x7d\x01\x4b\x4c\x12\x73\xed\x64\xdd\x8f\x00" \
     "\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
 
-
-
-
 class AxisSlicer(QWidget):
 
     def __init__(self, axisName, axisDomain, parent = None, name = None, fl = 0):

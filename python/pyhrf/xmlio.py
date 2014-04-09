@@ -231,7 +231,7 @@ class Initable(object):
                     sdtype = node.get_attribute('dtype')
                     if sdtype.isdigit(): sdtype = int(sdtype)
                     sh = node.get_attribute('shape')
-                    if pyhrf.verbose.verbosity > 2:
+                    if pyhrf.verbose.verbosity >= 6:
                         print 'node:'
                         print node.log()
                     if node.childCount() > 0:

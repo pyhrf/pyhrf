@@ -35,7 +35,7 @@ from pyhrf import xmlio, DEFAULT_ONSETS, DEFAULT_STIM_DURATIONS, \
     REALISTIC_REAL_DATA_BOLD_VOL_FILE, REALISTIC_REAL_DATA_MASK_VOL_FILE, \
     DEFAULT_PARADIGM_CSV
 
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.tools import unstack_trees #stack_trees
 #from pyhrf.tools.io import *
 #from pyhrf.tools.io._zip import *

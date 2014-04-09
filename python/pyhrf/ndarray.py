@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
-
 """
 This module provides classes and functions to handle multi-dimensionnal numpy
 array (ndarray) objects and extend them with some semantics (axes labels and
 axes domains). See xndarray class.
 (TODO: make xndarray inherit numpy.ndarray?)
 """
-
-
-# -*- coding: utf-8 -*-
 import os.path as op
 import numpy as np
 import pprint
 from pkg_resources import parse_version
 
 import pyhrf
-import pyhrf.plot as pplot
-import matplotlib.pyplot as plt
+
+
 from pyhrf.tools import treeBranches, rescale_values, has_ext, tree_items, \
      html_cell, html_list_to_row, html_row, html_table, html_img, html_div
 
@@ -194,12 +190,13 @@ class xndarray:
 
         example:
         >>> from pyhrf.ndarray import xndarray
-        >>> c = xndarray(np.random.randn(10,2), axes_names=['x','y'],
+        >>> c = xndarray(np.random.randn(10,2), axes_names=['x','y'], \
                        axes_domains={'y' : ['plop','plip']})
         >>> c.get_domain('y')
-        ['plop', 'plip']
+        array(['plop', 'plip'], 
+              dtype='|S4')
         >>> c.get_domain('x') #default domain made of slice indexes
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         """
         if axis_id in self.axes_domains:
             return self.axes_domains[axis_id]
@@ -305,9 +302,9 @@ class xndarray:
         s = ''
         s += '* shape : %s\n' %str(self.data.shape)
         s += '* dtype : %s\n' %str(self.data.dtype)
-        s += '* orientation: %s \n' %str(self.axes_names)
+        s += '* orientation: %s\n' %str(self.axes_names)
         s += '* value label: %s\n' %self.value_label
-        s += '* axes domains: \n'
+        s += '* axes domains:\n'
         for dname in self.axes_names:
             dvalues = self.axes_domains[dname]
             if isinstance(dvalues, np.ndarray) and \
@@ -327,8 +324,8 @@ class xndarray:
 
         #sdomain = pprint.pformat(self.axes_domains)
         #s += '\n'.join([ '  '+s for s in sdomain.split('\n')])
-
-        return s
+                
+        return s.rstrip('\n')
 
 
     def _html_table_headers(self, row_axes, col_axes):
@@ -407,6 +404,9 @@ class xndarray:
         Return:
             html code (str)
         """
+        import matplotlib.pyplot as plt
+        import pyhrf.plot as pplot
+
         plot_dir = plot_dir or pyhrf.get_tmp_path()
 
         outer_axes = row_axes + col_axes
@@ -743,36 +743,33 @@ class xndarray:
         Example:
         >>> import numpy as np
         >>> from pyhrf.ndarray import xndarray
-        >>> c_flat = xndarray(np.arange(2*6).reshape(2,6), ['condition', 'voxel'],
-                           {'condition' : ['audio','video']})
-        >>> print 'c_flat:'
+        >>> c_flat = xndarray(np.arange(2*6).reshape(2,6).astype(np.int64), \
+                              ['condition', 'voxel'], \
+                              {'condition' : ['audio','video']})
         >>> print c_flat.descrip()
+        * shape : (2, 6)
+        * dtype : int64
+        * orientation: ['condition', 'voxel']
+        * value label: value
+        * axes domains:
+          'condition': array(['audio', 'video'], 
+              dtype='|S5')
+          'voxel': arange(0,5,1)
         >>> mask = np.zeros((4,4,4), dtype=int)
         >>> mask[:3,:2,0] = 1
         >>> c_expanded = c_flat.expand(mask, 'voxel', ['x','y','z'])
-        >>> print 'c_expanded:'
         >>> print c_expanded.descrip()
-
-        c_flat:
-        * shape : (2, 5)
-        * axes names: ['condition', 'voxel']
-        * value label: value
-        * axes domains:
-        {'condition': array(['audio', 'video'],
-              dtype='|S5'),
-         'voxel': array([0, 1, 2, 3, 4])}
-
-        c_expanded:
         * shape : (2, 4, 4, 4)
-        * axes names: ['condition', 'x', 'y', 'z']
+        * dtype : int64
+        * orientation: ['condition', 'x', 'y', 'z']
         * value label: value
         * axes domains:
-        {'condition': array(['audio', 'video'],
-              dtype='|S5'),
-         'x': array([0, 1, 2, 3]),
-         'y': array([0, 1, 2, 3]),
-         'z': array([0, 1, 2, 3])}
-                 """
+          'condition': array(['audio', 'video'], 
+              dtype='|S5')
+          'x': arange(0,3,1)
+          'y': arange(0,3,1)
+          'z': arange(0,3,1)
+        """
         if pyhrf.verbose.verbosity > 5:
             pyhrf.verbose(6, 'expand ... '\
                           'mask: %s -> region size=%d, ' \
@@ -944,12 +941,11 @@ class xndarray:
         Example:
         >>> from pyhrf.ndarray import xndarray
         >>> import numpy as np
-        >>> c = xndarray(np.arange(4).reshape(2,2), axes_names=['a1','ia'],
-                         axes_domains={'a1':['out_dv1', 'out_dv2'],
+        >>> c = xndarray(np.arange(4).reshape(2,2), axes_names=['a1','ia'], \
+                         axes_domains={'a1':['out_dv1', 'out_dv2'], \
                                        'ia':['in_dv1', 'in_dv2']})
-        >>> c.unstack(['a1'], ['ia'])
-        axes: ['a1'], array([axes: ['ia'], array([0, 1]),
-                             axes: ['ia'], array([2, 3])], dtype=object)
+        >>> c.unstack(['a1'], ['ia']) 
+        axes: ['a1'], array([axes: ['ia'], array([0, 1]), axes: ['ia'], array([2, 3])], dtype=object)
         """
 
         def _unstack(xa, ans):
@@ -976,12 +972,11 @@ class xndarray:
         Example:
         >>> from pyhrf.ndarray import xndarray
         >>> import numpy as np
-        >>> c = xndarray(np.arange(4).reshape(2,2), axes_names=['a1','ia'],
-                         axes_domains={'a1':['out_dv1', 'out_dv2'],
+        >>> c = xndarray(np.arange(4).reshape(2,2), axes_names=['a1','ia'], \
+                         axes_domains={'a1':['out_dv1', 'out_dv2'], \
                                        'ia':['in_dv1', 'in_dv2']})
         >>> c.to_tree(['a1'], ['ia'])
-        OrderedDict([('out_dv1', axes: ['ia'], array([0, 1])),
-                     ('out_dv2', axes: ['ia'], array([2, 3]))])
+        OrderedDict([('out_dv1', axes: ['ia'], array([0, 1])), ('out_dv2', axes: ['ia'], array([2, 3]))])
         """
         def _to_tree(xa, ans):
             if len(ans) != len(leaf_axes):
@@ -1729,35 +1724,28 @@ def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
     >>> import numpy as np
     >>> from pyhrf.ndarray import xndarray, stack_cuboids
     >>> c1 = xndarray(np.arange(4*3).reshape(4,3), ['x','y'])
-    >>> print 'c1:\n', c1.descrip()
+    >>> c1
+    axes: ['x', 'y'], array([[ 0,  1,  2],
+           [ 3,  4,  5],
+           [ 6,  7,  8],
+           [ 9, 10, 11]])
     >>> c2 = xndarray(np.arange(4*3).reshape(4,3)*2, ['x','y'])
-    >>> print 'c2:\n', c2.descrip()
+    >>> c2
+    axes: ['x', 'y'], array([[ 0,  2,  4],
+           [ 6,  8, 10],
+           [12, 14, 16],
+           [18, 20, 22]])
     >>> c_stacked = stack_cuboids([c1,c2], 'stack_axis', ['c1','c2'])
-    >>> print 'c_stacked:\n', c_stacked.descrip()
-
-    c1:
-    * shape : (4, 3)
-    * axes names: ['x', 'y']
-    * value label: value
-    * axes domains:
-    {'x': array([0, 1]), 'y': array([0, 1, 2])}
-
-    c2:
-    * shape : (4, 3)
-    * axes names: ['x', 'y']
-    * value label: value
-    * axes domains:
-    {'x': array([0, 1]), 'y': array([0, 1, 2])}
-
-    c_stacked:
+    >>> print c_stacked.descrip()
     * shape : (2, 4, 3)
-    * axes names: ['stack_axis', 'x', 'y']
+    * dtype : int64
+    * orientation: ['stack_axis', 'x', 'y']
     * value label: value
     * axes domains:
-    {'stack_axis': array(['c1', 'c2'],
-          dtype='|S2'),
-     'x': array([0, 1]),
-     'y': array([0, 1, 2])}
+      'stack_axis': array(['c1', 'c2'], 
+          dtype='|S2')
+      'x': arange(0,3,1)
+      'y': arange(0,2,1)
 
 
     TODO: enable broadcasting (?)
@@ -1806,21 +1794,20 @@ def expand_array_in_mask(flat_data, mask, flat_axis=0, dest=None, m=None):
 
     Example 1
     >>> a = np.array([1,2,3])
-    >>> m = np.array([[0,1,0],
-                      [0,1,1]] )
+    >>> m = np.array([[0,1,0], [0,1,1]] )
     >>> expand_array_in_mask(a,m)
-    array([[0,1,0],
-           [0,2,3]])
+    array([[0, 1, 0],
+           [0, 2, 3]])
 
     Example 2
     >>> a = np.array([[1,2,3],[4,5,6]])
-    >>> m = np.array([[0,1,0],
-                      [0,1,1]] )
+    >>> m = np.array([[0,1,0], [0,1,1]] )
     >>> expand_array_in_mask(a,m,flat_axis=1)
-    array([ [[0,1,0],
-             [0,2,3]],
-            [[0,4,0],
-             [0,5,6]] ])
+    array([[[0, 1, 0],
+            [0, 2, 3]],
+    <BLANKLINE>
+           [[0, 4, 0],
+            [0, 5, 6]]])
 
     """
     flat_sh = flat_data.shape
@@ -1893,19 +1880,19 @@ def tree_to_xndarray(tree, level_labels=None):
 
     Example:
     >>> from pyhrf.ndarray import xndarray, tree_to_xndarray
-    >>> d = { 1 : { .1 : xndarray([1,2], axes_names=['inner_axis']),
-                    .2 : xndarray([3,4], axes_names=['inner_axis']),
-                  },
-              2 : { .1 : xndarray([1,2], axes_names=['inner_axis']),
-                    .2 : xndarray([3,4], axes_names=['inner_axis']),
-                  }
-            }
+    >>> d = { 1 : { .1 : xndarray([1,2], axes_names=['inner_axis']), \
+                    .2 : xndarray([3,4], axes_names=['inner_axis']), \
+                  },                                                 \
+              2 : { .1 : xndarray([1,2], axes_names=['inner_axis']), \
+                    .2 : xndarray([3,4], axes_names=['inner_axis']), \
+                  }                                                  \
+            }                                                        
     >>> tree_to_xndarray(d, ['level_1', 'level_2'])
-    axes: ['level_1', 'level_2', 'inner_axis']
-    array([[[1, 2],
-           [2, 4]],
-          [[1, 2],
-           [2, 4]]])
+    axes: ['level_1', 'level_2', 'inner_axis'], array([[[1, 2],
+            [3, 4]],
+    <BLANKLINE>
+           [[1, 2],
+            [3, 4]]])
     """
     tree_depth = len(treeBranches(tree).next())
     level_labels = level_labels or ['axis_%d'%i for i in xrange(tree_depth)]

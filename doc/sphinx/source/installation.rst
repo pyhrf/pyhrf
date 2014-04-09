@@ -251,8 +251,13 @@ Package options are stored in $HOME/.pyhrf/config.cfg, which is created after th
     [parallel-cluster]                  ; Distributed computation on a cluster.
                                         ; Soma-workflow is required.
                                         ; Authentification by ssh keys must be 
-                                        ; configured
-                                        
+                                        ; configured in both ways (remote <-> local)
+                                        ; -> eg copy content of ~/.ssh/id_rsa.pub (local machine) 
+                                        ;    at the end of ~/.ssh/authorized_keys (remote machine)
+                                        ;    Also do the converse:
+                                        ;    copy content of ~/.ssh/id_rsa.pub (remote machine) 
+                                        ;    at the end of ~/.ssh/authorized_keys (local machine)
+                                         
     server_id = None                    ; ID of the soma-workflow-engine server 
     server = None                       ; hostname or IP adress of the server
     user = None                         ; user name to log in the server

@@ -411,7 +411,7 @@ cfunc = "import sys;import cPickle;p=cPickle.load(open(sys.argv[1]));"\
     "fout.close();"
 
 
-def remote_map(func, largs=None, lkwargs=None, mode='local'):
+def remote_map(func, largs=None, lkwargs=None, mode='serial'):
     """
     Execute a function in parallel on a list of arguments.
 
@@ -446,12 +446,11 @@ def remote_map(func, largs=None, lkwargs=None, mode='local'):
          RemoteException if any remote task has failed
 
     Example:
-    from pyhrf.parallel import remote_map
-    def foo(a, b=2):
+    >>> from pyhrf.parallel import remote_map
+    >>> def foo(a, b=2): \
         return a + b
-
-    remote_map(foo, [(2,),(3,)], [{'b':5}, {'b':7}])
-    >>> [7, 10]
+    >>> remote_map(foo, [(2,),(3,)], [{'b':5}, {'b':7}])
+    [7, 10]
     """
     if largs is None:
         if lkwargs is not None:
@@ -561,11 +560,3 @@ def remote_map(func, largs=None, lkwargs=None, mode='local'):
                     raise RemoteException('Task %d failed'%i, o)
             results.append(o)
         return results
-
-
-
-def test_func1(number, key_param='plip'):
-    return number + 3 + len(key_param)
-
-def test_func2(**p):
-    return len(p)

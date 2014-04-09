@@ -4,7 +4,7 @@
 # -*- coding: utf-8 -*-
 import pyhrf
 import numpy as np
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 from pyhrf.tools import apply_to_leaves
 from pyhrf.tools import stack_trees, unstack_trees, PickleableStaticMethod
 from pyhrf.tools.io.spmio import load_paradigm_from_mat

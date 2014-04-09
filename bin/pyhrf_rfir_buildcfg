@@ -4,7 +4,7 @@ import os, sys, string
 from optparse import OptionParser
 
 from pyhrf import xmlio
-from pyhrf.verbose import dictToString
+from pyhrf._verbose import dictToString
 #from pyhrf.analyse.jdetectestim.models import availableModels, defaultModel
 
 from pyhrf.ui.treatment import *

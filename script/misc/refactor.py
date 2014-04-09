@@ -44,8 +44,8 @@ if 1:
                 if '.svn' not in root and '.git' not in root and \
                   f not in exclude:
                     fn = join(root, f)
-                    replaceInFile("tree_xndarray",
-                                  "tree_to_xndarray",
+                    replaceInFile("from pyhrf.verbose import",
+                                  "from pyhrf._verbose import",
                                   fn, dry=False) #dry=True --> launch sciprt but
                                                  # do nothing
 
