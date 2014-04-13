@@ -16,6 +16,116 @@ import shutil
 
 from pyhrf.tools.io import *
 
+class RxCopyTest(unittest.TestCase):
+
+    def setUp(self,):
+        self.tmp_dir = pyhrf.get_tmp_path()
+
+    def tearDown(self):
+       shutil.rmtree(self.tmp_dir)
+
+    def _create_tmp_files(self, fns):
+        for fn in [op.join(self.tmp_dir,fn) for fn in fns]:
+            d = op.dirname(fn)
+            if not op.exists(d):
+                os.makedirs(d)
+            open(fn, 'a').close()
+
+    def assert_file_exists(self, fn):
+        if not op.exists(fn):
+            raise Exception('File %s does not exist' %fn)
+
+    def test_basic(self):
+        self._create_tmp_files([op.join('./raw_data', f) \
+                                for f in ['AC0832_anat.nii', 'AC0832_asl.nii', 
+                                          'AC0832_bold.nii', 'PK0612_asl.nii',
+                                          'PK0612_bold.nii', 'dummy.nii']])
+        src = '(?P<subject>[A-Z]{2}[0-9]{4})_(?P<modality>[a-zA-Z]+).nii'
+        src_folder = op.join(self.tmp_dir, 'raw_data')
+        dest_folder = (self.tmp_dir, 'export', '{subject}', '{modality}')
+        dest_basename = 'data.nii'
+        rx_copy(src, src_folder, dest_basename, dest_folder)
+
+        for fn in [op.join(self.tmp_dir, 'export', f) \
+                       for f in ['AC0832/bold/data.nii',
+                                 'AC0832/anat/data.nii',
+                                 'AC0832/asl/data.nii', 
+                                 'PK0612/bold/data.nii', 
+                                 'PK0612/asl/data.nii']]:
+            self.assert_file_exists(fn)
+
+    def test_advanced(self):
+        self._create_tmp_files([op.join('./raw_data', f) \
+                                for f in ['ASL mt_TG_PASL_s004a001.nii', 
+                                          'ASL mt_TG_PASL_s008a001.nii', 
+                                          'ASL mt_PK_PASL_s064a001.nii', 
+                                          'ASL mt_PK_PASL_s003a001.nii']])
+        src = 'ASL mt_(?P<subject>[A-Z]{2})_(?P<modality>[a-zA-Z]+)_'\
+              's(?P<session>[0-9]{3})a[0-9]{3}.nii'
+        src_folder = op.join(self.tmp_dir, 'raw_data')
+        dest_folder = (self.tmp_dir, 'export', '{subject}', '{modality}')
+        dest_basename = 'ASL_session_{session}.nii'
+        rx_copy(src, src_folder, dest_basename, dest_folder)
+
+        for fn in [op.join(self.tmp_dir, 'export', f) \
+                       for f in ['TG/PASL/ASL_session_004.nii',
+                                 'TG/PASL/ASL_session_008.nii',
+                                 'PK/PASL/ASL_session_064.nii', 
+                                 'PK/PASL/ASL_session_003.nii']]:
+            self.assert_file_exists(fn)
+        
+
+    def test_missing_tags_dest_folder(self):
+        self._create_tmp_files(['AK98_T1_s01.nii'])
+        src_folder = self.tmp_dir
+        src = '(?P<subject>[A-Z]{2}[0-9]{2})_(?P<modality>[a-zA-Z0-9]+)'
+        dest_folder = (self.tmp_dir, 'export', '{study}', '{modality}', 
+                       '{session}')
+        dest_basename = '{subject}.nii'
+        self.assertRaisesRegexp(MissingTagError, 
+                                "Tags in dest_folder not defined in src: "\
+                                "study, session",  rx_copy, 
+                                src, src_folder, dest_basename, dest_folder)
+
+    def test_missing_tags_dest_basename(self):
+        self._create_tmp_files(['AK98_T1_s01.nii'])
+        src_folder = self.tmp_dir
+        src = '[A-Z]{2}[0-9]{2}_(?P<modality>[a-zA-Z0-9]+)'
+        dest_folder = (self.tmp_dir, 'export', '{modality}')
+        dest_basename = '{subject}_{session}.nii'
+        self.assertRaisesRegexp(MissingTagError, 
+                                "Tags in dest_basename not defined in src: "\
+                                "(subject, session)|(session, subject)",  
+                                rx_copy, src, src_folder, 
+                                dest_basename, dest_folder)
+
+    def test_dry(self):
+        self._create_tmp_files(['AK98_T1_s01.nii'])
+        src_folder = self.tmp_dir
+        src = '[A-Z]{2}[0-9]{2}_(?P<modality>[a-zA-Z0-9]+)'
+        dest_folder = (self.tmp_dir, 'export', '{modality}')
+        dest_basename = 'data.nii'
+        rx_copy(src, src_folder, dest_basename, dest_folder, dry=True)
+        fn = op.join(self.tmp_dir, 'export', 'T1', 'data.nii')
+        if op.exists(fn):
+            raise Exception('File %s should not exist' %fn)
+
+
+    def test_duplicates_targets(self):
+        self._create_tmp_files(['AK98_T1_s01.nii', 'AK98_T1_s02.nii'])
+        src_folder = self.tmp_dir
+        src = '[A-Z]{2}[0-9]{2}_(?P<modality>[a-zA-Z0-9]+).*nii'
+        dest_folder = (self.tmp_dir, 'export', '{modality}')
+        dest_basename = 'data.nii'
+        error_msg = r'Copy is not injective, the following copy ' \
+                    'operations have the same destination:\n'   \
+                    '.*AK98_T1_s01\.nii\n.*AK98_T1_s02\.nii\n'      \
+                    '-> .*export/T1/data.nii'
+        self.assertRaisesRegexp(DuplicateTargetError, error_msg,
+                                rx_copy, src, src_folder, 
+                                dest_basename, dest_folder)
+
+
 
 class NiftiTest(unittest.TestCase):
 

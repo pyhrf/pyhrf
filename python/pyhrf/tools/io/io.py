@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import string
 import numpy as np
-import pyhrf
-import os
-import os.path as op
+from itertools import chain
+from collections import defaultdict
+import re
 import pprint
 import csv
 import tempfile
-from collections import defaultdict
+import os
+import os.path as op
+import shutil
 
 from nibabel import gifti
 import nibabel
+
+import pyhrf
+
 
 from pyhrf.graph import graph_from_mesh, sub_graph, graph_is_sane
 from pyhrf.ndarray import xndarray, MRI3Daxes, MRI4Daxes, TIME_AXIS
@@ -24,6 +26,105 @@ VOL_NII_EXTENSION = 'nii'
 TEXTURE_EXTENSION = 'gii'
 
 from _zip import *
+
+
+def find_duplicates(l):
+    """ Find the index of duplicate elements in the given list. 
+    Complexity is O(n*log(d)) where d is the number of unique duplicate 
+    elements.
+
+    Args:
+        - l (list): the list where to search for duplicates
+        
+    Return: groups of indexes corresponding to duplicated element:
+            -> list of list of elements
+
+    Example:
+    >>> find_duplicates([1,1,2,1,4,5,7,2])
+    [[0, 1, 3], [2, 7]]
+    """
+    duplicates = defaultdict(list)
+    for i,e in enumerate(l):
+        duplicates[e].append(i)
+    return [dups for dups in duplicates.values() if len(dups)>1]
+
+class MissingTagError(Exception): pass
+
+class DuplicateTargetError(Exception): pass
+
+def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
+            tag_translations=None):
+    """
+    Copy all file names matching the regexp *src* in folder *src_folder* to
+    targets defined by format strings.
+    The association between source and target file names must be injective.
+    If several file names matched by *src* are associated with the same target,
+    an exception will be raised.
+    
+    Args:
+        - src (str): regular expression matching file names in the given folder
+                     *src_folder* where group names are mapped to
+                     format argument names in *dest_folder* and *dest_basename*
+        - src_folder (str): path where to search for files matched by *src*
+        - dest_basename (str): format string with named arguments 
+                               (eg 'file_{mytag}_{mytag2}.txt') used to form
+                               target file basenames where named arguments are
+                               substituted with group values caught by *src*.
+        - dest_folder (list of str): 
+                      list of format strings with named arguments, 
+                      eg ('folder_{mytag}','folder_{mytag2}'),  to be joined 
+                      to form target directories.
+                      Named arguments are substituted with group values 
+                      extracted by *src*.
+        - dry (bool): if True then do not perform any copy
+
+    Return: None
+    """
+    # check consistency between src group names and dest items:
+    src_tags = set(re.compile(src).groupindex.keys())
+
+    re_named_args = re.compile('\{(.*?)\}')
+    folder_dtags = set(chain(*[re_named_args.findall(d) \
+                                       for d in dest_folder]))
+    bn_dest_tags = set(re_named_args.findall(dest_basename))
+                
+    if not folder_dtags.issubset(src_tags):
+        raise MissingTagError('Tags in dest_folder not defined in src: %s'\
+                              %', '.join(folder_dtags.difference(src_tags)))
+    if not bn_dest_tags.issubset(src_tags):
+        raise MissingTagError('Tags in dest_basename not defined in src: %s'\
+                              %', '.join(bn_dest_tags.difference(src_tags)))
+
+    # resolve file names
+    input_files, output_files = [], []
+    re_src = re.compile(src)
+    for input_fn in os.listdir(src_folder):
+        ri = re_src.match(input_fn)
+        if ri is not None:
+            input_files.append(op.join(src_folder, input_fn))
+            subs = ri.groupdict()
+            output_files.append(op.join(*([df.format(**subs) \
+                                         for df in dest_folder] + \
+                                        [dest_basename.format(**subs)])))
+            assert isinstance(output_files[-1], str)
+
+    # check injectivity:
+    duplicate_indexes = find_duplicates(output_files)
+    if len(duplicate_indexes) > 0:
+        sduplicates = '\n'.join(*[['\n'.join(input_files[i] for i in dups) +  \
+                                  '\n' + '-> ' + output_files[dups[0]] +'\n'] \
+                                 for dups in duplicate_indexes])
+        raise DuplicateTargetError('Copy is not injective, the following copy'\
+                                   ' operations have the same destination:\n'\
+                                   '%s' %sduplicates) 
+    if not dry: # do the copy
+        for ifn, ofn in zip(input_files, output_files):
+            # Create sub directories if not existing:
+            output_item_dir = op.dirname(ofn)
+            if not op.exists(output_item_dir):
+                os.makedirs(output_item_dir)
+            shutil.copy(ifn, ofn)
+    return
 
 
 def read_volume(fileName, remove_nans=True):
@@ -939,4 +1040,6 @@ def crop_data_file(data_fn, mask_fn, output_data_fn):
         h[1].extensions.pop()
 
     write_volume(cropped_data, output_data_fn, h)
+
+
 
