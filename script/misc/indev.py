@@ -1,5 +1,7 @@
 # Launch all unit tests and doc test in this script with code coverage:
 # nosetests indev.py --with-coverage --cover-html --with-doctest --cover-package indev --cover-branches --cover-erase -v
+# Generate automatic code doc with sphinx (in folder pyhrf/doc/sphinx):
+# sphinx-apidoc -o ./source/autodoc/ ../../python/ ../../python/ ../../python/pyhrf.egg-info/ -f
 """
 """
 import os
