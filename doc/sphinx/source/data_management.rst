@@ -22,12 +22,13 @@ To do so, the function :py:meth:`pyhrf.tools.io.rx_copy` copies files with patte
       group names in the source regexp.
 
 Example:
-In folder ./raw_data, I have:
-AC0832_anat.nii
-AC0832_asl.nii
-AC0832_bold.nii
-PK0612_asl.nii
-PK0612_bold.nii
+Folder ./raw_data contains the following files::
+
+  AC0832_anat.nii
+  AC0832_asl.nii
+  AC0832_bold.nii
+  PK0612_asl.nii
+  PK0612_bold.nii
 
 I want to export these files into the following directory structure:
 ./export/<subject>/<modality>/data.nii
@@ -35,21 +36,24 @@ where <subject> and <modality> have to be replaced by chunks extracted
 from the input files
 
 To do so, define a regexp to catch useful chunks (or tags) in input files and
-also format strings that will be used to create target file names::
+also format strings that will be used to create target file names:
+
+.. code-block:: python
+
+       # regexp to capture values of subject and modality:
+       src = '(?P<subject>[A-Z]{2}[0-9]{4}_(?P<modality>[a-zA-Z]+).nii'
+       # definition of targets:
+       src_folder = './raw_data/'
+       dest_folder = ('./export', '{subject}', '{modality}')
+       dest_basename = 'data.nii'
+       # do the thing:
+       rx_copy(src, src_folder, dest_basename, dest_folder):
     
-    # regep to capture values of subject and modality:
-    src = '(?P<subject>[A-Z]{2}[0-9]{4}_(?P<modality>[a-zA-Z]+).nii'
-    # definition of targets:
-    src_folder = './raw_data/'
-    dest_folder = ('./export', '{subject}', '{modality}')
-    dest_basename = 'data.nii'
-    # do the thing:
-    rx_copy(src, src_folder, dest_basename, dest_folder):
-    
-Should result in:
-./export/AC0832/bold/data.nii
-./export/AC0832/anat/data.nii
-./export/AC0832/asl/data.nii 
-./export/PK0612/bold/data.nii 
-./export/PK0612/asl/data.nii 
+Should result in the following copied files::
+
+  ./export/AC0832/bold/data.nii
+  ./export/AC0832/anat/data.nii
+  ./export/AC0832/asl/data.nii 
+  ./export/PK0612/bold/data.nii 
+  ./export/PK0612/asl/data.nii 
    
