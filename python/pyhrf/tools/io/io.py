@@ -53,7 +53,7 @@ class MissingTagError(Exception): pass
 class DuplicateTargetError(Exception): pass
 
 def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
-            tag_translations=None):
+            replacements=None):
     """
     Copy all file names matching the regexp *src* in folder *src_folder* to
     targets defined by format strings.
@@ -77,9 +77,15 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
                       Named arguments are substituted with group values 
                       extracted by *src*.
         - dry (bool): if True then do not perform any copy
-
+        - replacements (list of tuple of str): 
+                      list of replacements, ie [(old,new), (old,new), ...],
+                      to be applied to target file names by calling the function 
+                      string.replace(old,new) on them
+                    
     Return: None
     """
+    replacements = replacements or []
+
     # check consistency between src group names and dest items:
     src_tags = set(re.compile(src).groupindex.keys())
 
@@ -103,10 +109,11 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
         if ri is not None:
             input_files.append(op.join(src_folder, input_fn))
             subs = ri.groupdict()
-            output_files.append(op.join(*([df.format(**subs) \
-                                         for df in dest_folder] + \
-                                        [dest_basename.format(**subs)])))
-            assert isinstance(output_files[-1], str)
+            output_file = op.join(*([df.format(**subs) for df in dest_folder] + \
+                                    [dest_basename.format(**subs)]))
+            for old, new in replacements:
+                output_file = output_file.replace(old, new)
+            output_files.append(output_file)
 
     # check injectivity:
     duplicate_indexes = find_duplicates(output_files)
@@ -117,6 +124,12 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
         raise DuplicateTargetError('Copy is not injective, the following copy'\
                                    ' operations have the same destination:\n'\
                                    '%s' %sduplicates) 
+
+    if pyhrf.verbose.verbosity > 3:
+        msg = '\n'.join(['\n-> '.join((ifn, ofn)) \
+                        for ifn,ofn in zip(input_files, output_files)])
+        pyhrf.verbose(3, msg)
+
     if not dry: # do the copy
         for ifn, ofn in zip(input_files, output_files):
             # Create sub directories if not existing:

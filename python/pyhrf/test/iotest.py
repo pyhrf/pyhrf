@@ -125,6 +125,26 @@ class RxCopyTest(unittest.TestCase):
                                 rx_copy, src, src_folder, 
                                 dest_basename, dest_folder)
 
+    def test_replacement(self):
+        self._create_tmp_files([op.join('./raw_data', f) \
+                                for f in ['ASL mt_TG_PASL_s004a001.nii', 
+                                          'ASL mt_TG_T1_s008a001.nii', 
+                                          'ASL mt_PK_PASL_s064a001.nii', 
+                                          'ASL mt_PK_T1_s003a001.nii']])
+        src = 'ASL mt_(?P<subject>[A-Z]{2})_(?P<modality>[a-zA-Z0-9]+)_'\
+              's(?P<session>[0-9]{3})a[0-9]{3}.nii'
+        src_folder = op.join(self.tmp_dir, 'raw_data')
+        dest_folder = (self.tmp_dir, 'export', '{subject}', '{modality}')
+        dest_basename = '{modality}_session_{session}.nii'
+        rx_copy(src, src_folder, dest_basename, dest_folder,
+                replacements=[('T1','anat'),('PASL','aslf')])
+        for fn in [op.join(self.tmp_dir, 'export', f) \
+                       for f in ['TG/aslf/aslf_session_004.nii',
+                                 'TG/anat/anat_session_008.nii',
+                                 'PK/aslf/aslf_session_064.nii', 
+                                 'PK/anat/anat_session_003.nii']]:
+            self.assert_file_exists(fn)
+        
 
 
 class NiftiTest(unittest.TestCase):
