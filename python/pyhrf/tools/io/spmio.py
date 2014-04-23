@@ -8,6 +8,11 @@ try:
 except:
     from scipy.io.matlab import loadmat
 
+def load_regnames(spmMatFile):
+    d = loadmat(spmMatFile)
+    spm = d['SPM']
+    return [s[0] for s in spm['xX'][0,0]['name'][0,0][0]]
+
 def loadOnsets(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']

@@ -31,9 +31,11 @@ class RxCopyTest(unittest.TestCase):
                 os.makedirs(d)
             open(fn, 'a').close()
 
-    def assert_file_exists(self, fn):
-        if not op.exists(fn):
-            raise Exception('File %s does not exist' %fn)
+    def assert_file_exists(self, fn, test_exists=True):
+        if test_exists and not op.exists(fn):
+                raise Exception('File %s does not exist' %fn)
+        elif not test_exists and op.exists(fn):
+            raise Exception('File %s exists' %fn)
 
     def test_basic(self):
         self._create_tmp_files([op.join('./raw_data', f) \
@@ -144,7 +146,35 @@ class RxCopyTest(unittest.TestCase):
                                  'PK/aslf/aslf_session_064.nii', 
                                  'PK/anat/anat_session_003.nii']]:
             self.assert_file_exists(fn)
+
+
+    def test_callback(self):
+        def filter_odd_session(s,d):
+            if (int(d[-5]) % 2) != 0:
+                return None
+            else:
+                return d
+
+        self._create_tmp_files([op.join('./raw_data', f) \
+                                for f in ['ASL mt_TG_PASL_s004a001.nii', 
+                                          'ASL mt_TG_T1_s008a001.nii', 
+                                          'ASL mt_PK_PASL_s064a001.nii', 
+                                          'ASL mt_PK_T1_s003a001.nii']])
+        src = 'ASL mt_(?P<subject>[A-Z]{2})_(?P<modality>[a-zA-Z0-9]+)_'\
+              's(?P<session>[0-9]{3})a[0-9]{3}.nii'
+        src_folder = op.join(self.tmp_dir, 'raw_data')
+        dest_folder = (self.tmp_dir, 'export', '{subject}', '{modality}')
+        dest_basename = '{modality}_session_{session}.nii'
+        rx_copy(src, src_folder, dest_basename, dest_folder,
+                replacements=[('T1','anat'),('PASL','aslf')],
+                callback=filter_odd_session)
+        for fn in [op.join(self.tmp_dir, 'export', f) \
+                       for f in ['TG/aslf/aslf_session_004.nii',
+                                 'TG/anat/anat_session_008.nii',
+                                 'PK/aslf/aslf_session_064.nii']]:
+            self.assert_file_exists(fn)
         
+        self.assert_file_exists('PK/anat/anat_session_003.nii', False)
 
 
 class NiftiTest(unittest.TestCase):
@@ -451,6 +481,24 @@ class SPMIOTest(unittest.TestCase):
 
     def setUp(self):
         pass
+
+    def _test_load_regnames(self, spm_ver):
+        spm_file = op.join(pyhrf.get_tmp_path(), 'SPM.mat')
+        gunzip(pyhrf.get_data_file_name('SPM_v%d.mat.gz' %spm_ver),
+               outFileName=spm_file)
+        expected = ['Sn(1) audio*bf(1)', 'Sn(1) video*bf(1)', 
+                    'Sn(2) audio*bf(1)', 'Sn(2) video*bf(1)',
+                    'Sn(1) constant', 'Sn(2) constant']
+        self.assertEqual(spmio.load_regnames(spm_file), expected)
+        
+    def test_load_regnames_SPM8(self):
+        self._test_load_regnames(8)
+
+    def test_load_regnames_SPM5(self):
+        self._test_load_regnames(5)
+
+    def test_load_regnames_SPM12(self):
+        self._test_load_regnames(12)
 
     # def test_set_contrasts(self):
 
