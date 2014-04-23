@@ -53,7 +53,7 @@ class MissingTagError(Exception): pass
 class DuplicateTargetError(Exception): pass
 
 def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
-            replacements=None):
+            replacements=None, callback=None):
     """
     Copy all file names matching the regexp *src* in folder *src_folder* to
     targets defined by format strings.
@@ -81,11 +81,16 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
                       list of replacements, ie [(old,new), (old,new), ...],
                       to be applied to target file names by calling the function 
                       string.replace(old,new) on them
-                    
+        - callback (func): callback function called on final filenames to
+                           modify target name or filter a copy operation.
+                           -> callback(src_fn, dest_fn)
+                              Return: None | str
+                                      If None then no copy is performed
+                                      If str then it replaces the target filename
     Return: None
     """
     replacements = replacements or []
-
+    callback = callback or (lambda x,y: y)
     # check consistency between src group names and dest items:
     src_tags = set(re.compile(src).groupindex.keys())
 
@@ -107,13 +112,16 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
     for input_fn in os.listdir(src_folder):
         ri = re_src.match(input_fn)
         if ri is not None:
-            input_files.append(op.join(src_folder, input_fn))
+            input_fn = op.join(src_folder, input_fn)
             subs = ri.groupdict()
             output_file = op.join(*([df.format(**subs) for df in dest_folder] + \
                                     [dest_basename.format(**subs)]))
             for old, new in replacements:
                 output_file = output_file.replace(old, new)
-            output_files.append(output_file)
+            output_file = callback(input_fn, output_file)
+            if output_file is not None:
+                input_files.append(input_fn)
+                output_files.append(output_file)
 
     # check injectivity:
     duplicate_indexes = find_duplicates(output_files)
@@ -415,6 +423,7 @@ def sub_sample_vol(image_file, dest_file, dsf, interpolation='continuous',
 def concat3DVols(files, output):
     """ Concatenate 3D volumes given by a list a file to 4D volume (output)
     """
+    img4D = None
     for i,f in enumerate(files):
         img, meta_data = read_volume(f)
         img = img.squeeze() #remove dim of length=1
@@ -424,9 +433,12 @@ def concat3DVols(files, output):
             pyhrf.verbose(1, "Volume size: %s, type: %s" \
                               %(str(img.shape), str(img.dtype)))
             img4D = np.zeros(img.shape + (len(files),), img.dtype)
-            print 'img4D.shape:', img4D.shape
+            #print 'img4D.shape:', img4D.shape
         img4D[:,:,:,i] = img
-    write_volume(img4D, output, meta_data=meta_data)
+    if img4D is not None:
+        write_volume(img4D, output, meta_data=meta_data)
+    else:
+        raise Exception('No 4D output produced from files: %s'%str(files)) 
 
 
 def split_ext_safe(fn):
