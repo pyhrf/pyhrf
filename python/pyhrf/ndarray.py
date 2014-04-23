@@ -23,6 +23,9 @@ MRI3Daxes = ['sagittal','coronal','axial']
 MRI4Daxes = MRI3Daxes + ['time']
 TIME_AXIS = 3
 
+class ArrayMappingError(Exception):
+    pass
+
 class xndarray:
     """ Handles a multidimensional numpy array with axes that are labeled
     and mapped to domain values.
@@ -732,6 +735,31 @@ class xndarray:
         return self.expand(cmask.data, axis, cmask.axes_names,
                            cmask.axes_domains, dest=dest)
 
+    def map_onto(self, xmapping):
+        """
+        Reshape the array by mapping the axis corresponding to 
+        xmapping.value_label onto the shape of xmapping.
+        """
+        mapped_axis = xmapping.value_label
+        if not self.has_axis(mapped_axis):
+            raise ArrayMappingError('Value label "%s" of xmapping not found '\
+                                        'in array axes (%s)' \
+                                        %(mapped_axis,
+                                          ', '.join(self.axes_names)))
+
+        if not set(xmapping.data.flat).issuperset(self.get_domain(mapped_axis)):
+            raise ArrayMappingError('Domain of axis "%s" to be mapped is not a '
+                                    'subset of values in the mapping array.'\
+                                     %mapped_axis)
+        dest = None
+        for mval in self.get_domain(mapped_axis):
+            sub_a = self.sub_cuboid(**{mapped_axis:mval})
+            sub_mapping = self.xndarray_like(xmapping, data=xmapping.data==mval)
+            rsub_a = sub_a.repeat(sub_mapping.sum(), '__mapped_axis__')
+            dest = rsub_a.cexpand(sub_mapping, '__mapped_axis__', dest=dest)
+        return dest
+
+
     def expand(self, mask, axis, target_axes=None,
                target_domains=None, dest=None, do_checks=True, m=None):
         """ Create a new xndarray instance (or store into an existing 'dest'
@@ -778,8 +806,6 @@ class xndarray:
                             str(target_axes), str(target_domains)))
 
         if do_checks:
-
-
             if  not ((mask.min() == 0 and mask.max() == 1) or \
                      (mask.min() == 1 and mask.max() == 1) or
                      (mask.min() == 0 and mask.max() == 0)):
@@ -801,13 +827,12 @@ class xndarray:
 
         pyhrf.verbose(6, 'target_axes: %s' %str(target_axes))
 
-
         if do_checks and len(target_axes) != 1 and \
                 len(set(target_axes).intersection(self.axes_names)) != 0:
             # if len(target_axes) == 1 & target_axes[0] already in current axes
             #    -> OK, axis is mapped to itself.
-            raise Exception('Error while expanding xndarray, intersection btw '\
-                                'targer axes (%s) and current axes (%s) is ' \
+            raise Exception('Error while expanding xndarray, intersection btwn'\
+                                ' targer axes (%s) and current axes (%s) is ' \
                                 'not empty.' \
                                 %(str(target_axes),str(self.axes_names)))
 
@@ -844,7 +869,40 @@ class xndarray:
         #                         for i in xrange(len(new_axes))])
 
         return xndarray(new_data, new_axes, new_domains, self.value_label,
-                      meta_data=self.meta_data)
+                        meta_data=self.meta_data)
+
+
+    def map_onto(self, xmapping):
+        """
+        Reshape the array by mapping the axis corresponding to 
+        xmapping.value_label onto the shape of xmapping.
+        Args:
+            - xmapping (xndarray): array whose attribute value_label
+                                   matches an axis of the current array
+        
+        Return:
+            - a new array (xndarray) where values from the current array
+              have been mapped according to xmapping
+        """
+        mapped_axis = xmapping.value_label
+        if not self.has_axis(mapped_axis):
+            raise ArrayMappingError('Value label "%s" of xmapping not found '\
+                                        'in array axes (%s)' \
+                                        %(mapped_axis,
+                                          ', '.join(self.axes_names)))
+
+        if not set(xmapping.data.flat).issuperset(self.get_domain(mapped_axis)):
+            raise ArrayMappingError('Domain of axis "%s" to be mapped is not a '
+                                    'subset of values in the mapping array.'\
+                                     %mapped_axis)
+        dest = None
+        for mval in self.get_domain(mapped_axis):
+            sub_a = self.sub_cuboid(**{mapped_axis:mval})
+            sub_mapping = self.xndarray_like(xmapping, data=xmapping.data==mval)
+            rsub_a = sub_a.repeat(sub_mapping.sum(), '__mapped_axis__')
+            dest = rsub_a.cexpand(sub_mapping, '__mapped_axis__', dest=dest)
+        return dest
+
 
     def flatten(self, mask, axes, new_axis):
         """ flatten cudoid.
