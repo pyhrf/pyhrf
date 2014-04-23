@@ -733,9 +733,10 @@ class FmriData(XmlInitable):
     def from_vol_files(self, mask_file=DEFAULT_MASK_VOL_FILE,
                        paradigm_csv_file=DEFAULT_PARADIGM_CSV,
                        bold_files=[DEFAULT_BOLD_VOL_FILE],
-                       tr=DEFAULT_BOLD_VOL_TR,
-                       background_label=None):
-        paradigm = Paradigm.from_csv(paradigm_csv_file)
+                       tr=DEFAULT_BOLD_VOL_TR, background_label=None, 
+                       paradigm_csv_delim=' '):
+        paradigm = Paradigm.from_csv(paradigm_csv_file, 
+                                     delim=paradigm_csv_delim)
         durations = paradigm.stimDurations
         onsets = paradigm.stimOnsets
 
@@ -755,7 +756,8 @@ class FmriData(XmlInitable):
         fd.set_init(FmriData.from_vol_files, mask_file=mask_file,
                     paradigm_csv_file=paradigm_csv_file,
                     bold_files=bold_files, tr=tr,
-                    background_label=background_label)
+                    background_label=background_label,
+                    paradigm_csv_delim=paradigm_csv_delim)
         return fd
 
     @PickleableStaticMethod
@@ -1248,7 +1250,7 @@ class FmriData(XmlInitable):
                       bold_roi.min(), bold_roi.max())
         return s
 
-    def __str__(self):
+    def __repr__(self):
         """
         Return a readable string representation of the object.
         Ensures that if 2 objects are instanciated with the same parameters
@@ -1267,5 +1269,3 @@ class FmriData(XmlInitable):
         #TODO: make proper 'readable' __repr__ function for BoldModel object
         r += ')'
         return r
-
-
