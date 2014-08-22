@@ -599,7 +599,7 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     elif spatial_size == 'random_small':
         lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
     else:
-        lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
+        lmap1, lmap2, lmap3 = 'ghost', 'icassp13', 'house_sun'
 
     if noise_scenario == 'high_snr':
         v_noise = v_noise or 0.05
