@@ -35,9 +35,8 @@ Site content:
        introduction.rst
        installation.rst
        manual.rst
+       autodoc/pyhrf.rst
 
-..     code_documentation.rst
-    
 ..       
     Indices and tables
     ==================
