@@ -284,7 +284,7 @@ class UiNodeTest(unittest.TestCase):
 
 import pyhrf.sandbox.core as xcore
 from pyhrf.ndarray import xndarray
-from pyhrf.tools.io import load_paradigm_from_csv
+from pyhrf.tools._io import load_paradigm_from_csv
 from numpy.testing import assert_almost_equal
 
 class CoreTest(unittest.TestCase):

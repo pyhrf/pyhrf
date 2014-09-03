@@ -864,9 +864,9 @@ class HRF_Sampler(GibbsSamplerVariable) :
         ## Correct hrf*nrl scale ambiguity :
 
         self.finalValueScaleCorr = self.finalValue/self.getScaleFactor()
-        self.error = np.zeros(self.hrfLength, dtype=float)
         if 0 and self.sampleFlag: #TODO adapt for multi subject
             # store errors:
+            self.error = np.zeros(self.hrfLength, dtype=float)        
             rh = self.samplerEngine.get_variable('hrf_var').finalValue
 
             rb = self.samplerEngine.get_variable('noise_var').finalValue

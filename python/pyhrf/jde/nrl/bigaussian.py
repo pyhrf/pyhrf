@@ -32,7 +32,7 @@ from pyhrf.stats import compute_roc_labels_scikit, threshold_labels, \
 
 from scipy.integrate import quad
 
-from pyhrf.tools.io import read_volume
+from pyhrf.tools._io import read_volume
 
 #class NrlChecker:
     #def __init__(self):

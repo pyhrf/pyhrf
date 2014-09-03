@@ -163,7 +163,7 @@ class FmriData(): #Initable?
 
 
 from pyhrf import get_data_file_name
-from pyhrf.tools.io import read_mesh
+from pyhrf.tools._io import read_mesh
 from pyhrf.graph import graph_from_mesh
 DEFAULT_DATA_TYPE = 'volume'
 DEFAULT_MASK = get_data_file_name('subj0_parcellation.nii.gz')

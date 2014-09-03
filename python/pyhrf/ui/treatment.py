@@ -19,8 +19,8 @@ import itertools
 from optparse import OptionParser
 import cProfile
 from pyhrf.tools import format_duration
-from pyhrf.tools.io import remote_copy, load_paradigm_from_csv
-from pyhrf.tools.io.spmio import load_paradigm_from_mat
+from pyhrf.tools._io import remote_copy, load_paradigm_from_csv
+from pyhrf.tools._io.spmio import load_paradigm_from_mat
 import tempfile
 
 import pyhrf
@@ -37,8 +37,8 @@ from pyhrf import xmlio, DEFAULT_ONSETS, DEFAULT_STIM_DURATIONS, \
 
 from pyhrf._verbose import dictToString
 from pyhrf.tools import unstack_trees #stack_trees
-#from pyhrf.tools.io import *
-#from pyhrf.tools.io._zip import *
+#from pyhrf.tools._io import *
+#from pyhrf.tools._io._zip import *
 from pyhrf.ui.jde import JDEMCMCAnalyser
 
 # Setup default parameters for a treatment:

@@ -10,7 +10,7 @@ import subprocess
 from tempfile import mkdtemp
 
 import pyhrf
-from pyhrf.tools.io import remote_copy
+from pyhrf.tools._io import remote_copy
 from pyhrf import xmlio
 try:
     from soma_workflow.client import Job, FileTransfer

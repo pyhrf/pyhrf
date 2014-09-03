@@ -351,7 +351,8 @@ def plot_gaussian_mixture(values, props=None, color='k', lw=1.75):
 
 
 def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
-                      show_axis_labels=True, show_legend=False, axes=None):
+                      show_axis_labels=True, show_legend=False, axes=None,
+                      axis_label_fontsize=12):
     """
     Plot a cuboid (ndims <= 2) as curve(s).
     If the input is 1D: one single curve.
@@ -406,10 +407,13 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
 
     if show_axis_labels:
         if c.get_ndims() == 1:
-            axes.set_xlabel(protect_latex_str(c.axes_names[0]))
+            axes.set_xlabel(protect_latex_str(c.axes_names[0]), 
+                            fontsize=axis_label_fontsize)
         else:
-            axes.set_xlabel(protect_latex_str(c.axes_names[1]))
-        axes.set_ylabel(protect_latex_str(c.value_label))
+            axes.set_xlabel(protect_latex_str(c.axes_names[1]),
+                            fontsize=axis_label_fontsize)
+        axes.set_ylabel(protect_latex_str(c.value_label),
+                        fontsize=axis_label_fontsize)
 
 def set_int_tick_labels(axis, labels, fontsize=None, rotation=None):
     """

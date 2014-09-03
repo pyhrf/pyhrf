@@ -13,7 +13,7 @@ from pyhrf.jde.beta import BetaSampler
 from pyhrf.jde.nrl.bigaussian import NRLSampler #, NRLSamplerWithRelVar
 from pyhrf.jde.models import BOLDGibbsSampler
 from pyhrf.xmlio import XmlInitable
-from pyhrf.tools.io import read_volume
+from pyhrf.tools._io import read_volume
 #from pyhrf.parcellation import parcellation_for_jde
 
 DEFAULT_CFG_FILE = 'detectestim.xml'

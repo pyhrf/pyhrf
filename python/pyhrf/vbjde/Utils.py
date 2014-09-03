@@ -24,7 +24,7 @@ import pyhrf
 #import UtilsModule
 import UtilsC
 from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
-from pyhrf.tools.io import read_volume,write_volume
+from pyhrf.tools._io import read_volume,write_volume
 from pyhrf.boldsynth.hrf import genBezierHRF
 import numpy as np
 import scipy as sp

@@ -2,20 +2,18 @@
 
 
 # -*- coding: utf-8 -*-
-import os, sys
+import os
 import os.path as op
 import string
 import cPickle
 import tempfile
 
-import numpy as _np
+import numpy as np
 from pkg_resources import Requirement, resource_filename, resource_listdir
 import pyhrf
 from pyhrf.ndarray import MRI3Daxes, MRI4Daxes, expand_array_in_mask, TIME_AXIS
 from nipy.labs import compute_mask_files
 from pyhrf.tools import stack_trees, distance
-from pyhrf.tools.io import read_volume, discard_bad_data, write_volume, \
-    read_mesh, read_texture, write_texture
 from pyhrf.graph import parcels_to_graphs, kerMask3D_6n, \
     graph_from_mesh, graph_is_sane, sub_graph
 
@@ -111,7 +109,7 @@ class Condition(AttrClass): pass
 from pyhrf.tools import PickleableStaticMethod
 
 ## PARADIGM STUFFS ##
-from paradigm import *
+from paradigm import Paradigm
 
 try:
     from collections import OrderedDict
@@ -124,10 +122,10 @@ DEFAULT_SIMULATION_FILE = get_data_file_name('simu.pck')
 # session-specific onsets here, so onset arrays are not encapsulated
 # in lists over all sessions
 DEFAULT_ONSETS = OrderedDict(
-    [('audio' , _np.array([ 15.,20.7,29.7,35.4,44.7,48.,83.4,89.7,108.,
+    [('audio' , np.array([ 15.,20.7,29.7,35.4,44.7,48.,83.4,89.7,108.,
                             119.4, 135., 137.7, 146.7, 173.7, 191.7, 236.7,
                             251.7, 284.4, 293.4, 296.7])),
-     ('video' , _np.array([ 0., 2.4, 8.7,33.,39.,41.7, 56.4, 59.7, 75., 96.,
+     ('video' , np.array([ 0., 2.4, 8.7,33.,39.,41.7, 56.4, 59.7, 75., 96.,
                             122.7, 125.4, 131.4, 140.4, 149.4, 153., 156., 159.,
                            164.4, 167.7, 176.7, 188.4, 195., 198., 201., 203.7,
                             207., 210., 218.7, 221.4, 224.7, 234., 246., 248.4,
@@ -136,8 +134,8 @@ DEFAULT_ONSETS = OrderedDict(
     )
 
 DEFAULT_STIM_DURATIONS = OrderedDict(
-    [('audio', _np.array([])),
-     ('video', _np.array([]))
+    [('audio', np.array([])),
+     ('video', np.array([]))
      ]
     )
 
@@ -245,6 +243,8 @@ class FMRISessionSimulationData(XmlInitable):
 
 def load_vol_bold_and_mask(bold_files, mask_file):
 
+    from pyhrf.tools._io import read_volume, discard_bad_data
+
     # Handle mask
     if not op.exists(mask_file):
         pyhrf.verbose(1,'Mask file %s does not exist. Mask is '\
@@ -275,6 +275,8 @@ def load_vol_bold_and_mask(bold_files, mask_file):
     pyhrf.verbose(1,'Mask has shape %s' %str(mask.shape))
     pyhrf.verbose(1,'Mask min value: %d' %mask.min())
     pyhrf.verbose(1,'Mask max value: %d' %mask.max())
+    pyhrf.verbose(1,'Mask has %d parcels' %len(np.unique(mask)))
+
     mshape = mask.shape
     if mask.min() == -1:
         mask += 1
@@ -317,6 +319,7 @@ def load_vol_bold_and_mask(bold_files, mask_file):
 
 
 def load_surf_bold_mask(bold_files, mesh_file, mask_file=None):
+    from pyhrf.tools._io import read_mesh, read_texture, discard_bad_data
 
     pyhrf.verbose(1, 'Load mesh: ' + mesh_file)
     coords,triangles,coord_sys = read_mesh(mesh_file)
@@ -396,6 +399,7 @@ def merge_fmri_sessions(fmri_data_sets):
     fmri_data_sets: list of FmriData objects.
     Each FmriData object is assumed to contain only one session
     """
+    from pyhrf.tools import apply_to_leaves
 
     all_onsets = stack_trees([fd.paradigm.stimOnsets for fd in fmri_data_sets])
     all_onsets = apply_to_leaves(all_onsets, lambda l: [e[0] for e in l])
@@ -593,7 +597,8 @@ class FmriData(XmlInitable):
     def __init__(self, onsets, bold, tr, sessionsScans, roiMask, graphs=None,
                  stimDurations=None, meta_obj=None, simulation=None,
                  backgroundLabel=0, data_files=None, data_type=None,
-                 edge_lengths=None, mask_loaded_from_file=False):
+                 edge_lengths=None, mask_loaded_from_file=False,
+                 extra_data=None):
 
         #pyhrf.verbose.set_verbosity(5)
         pyhrf.verbose(3, 'Creation of FmriData object ...')
@@ -606,10 +611,13 @@ class FmriData(XmlInitable):
 
         sessionsDurations = [len(ss)*tr for ss in sessionsScans]
         #print 'onsets!:', onsets
-        self.paradigm = Paradigm(onsets, sessionsDurations, stimDurations)
+        self.paradigm = Paradigm(onsets, sessionsDurations, 
+                                 stimDurations)
 
         self.tr = tr
         self.sessionsScans = sessionsScans
+
+        self.extra_data = extra_data or {}
 
         # if backgroundLabel is None:
         #     roi_ids = np.unique(roiMask.flat)
@@ -701,6 +709,11 @@ class FmriData(XmlInitable):
         if data_files is None: data_files = []
         self.data_files = data_files
 
+    def get_extra_data(self, label, default):
+        return self.extra_data.get(label, default)
+    
+    def set_extra_data(self, label, value):
+        self.extra_data[label] = value
 
     def get_condition_names(self):
         return self.paradigm.stimOnsets.keys()
@@ -979,6 +992,8 @@ class FmriData(XmlInitable):
 
     @classmethod
     def from_simulation_dict(self, simulation, mask=None):
+        from pyhrf.tools._io import read_volume
+
         bold = simulation['bold']
         if isinstance(bold, xndarray):
             bold = bold.reorient(['time','voxel'])
@@ -1034,6 +1049,7 @@ class FmriData(XmlInitable):
 
         Return: tuple of file names in this order: (paradigm, bold, mask)
         """
+        from pyhrf.tools._io import write_volume, write_texture
         paradigm_file = op.join(output_dir,'paradigm.csv')
         self.paradigm.save_csv(paradigm_file)
         if self.data_type == 'volume':
@@ -1149,7 +1165,7 @@ class FmriData(XmlInitable):
     def discard_rois(self, roi_ids):
         roiMask = self.roiMask
         for roi_id in roi_ids:
-            mroi = np.where(roiMask==roiId)
+            mroi = np.where(roiMask==roi_id)
             roiMask[mroi] = self.backgroundLabel
         self.store_mask_sparse(roiMask)
         if self.graphs is not None:

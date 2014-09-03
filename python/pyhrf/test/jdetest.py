@@ -20,8 +20,6 @@ from pyhrf.jde.models import simulate_bold
 from pyhrf.jde.noise import NoiseVarianceSampler
 
 import pyhrf.sandbox.physio as phym
-from pyhrf import tools
-
 
 class JDETest(unittest.TestCase):
 
@@ -38,7 +36,7 @@ class JDETest(unittest.TestCase):
         self.parcelFile = pyhrf.get_data_file_name(pf)
         self.tr = 2.4
         self.dt = .6
-        self.onsets = pyhrf.onsets_loc_av
+        self.onsets = pyhrf.paradigm.onsets_loc_av
         #self.durations = pyhrf.durations_loc_av
         self.durations = None
         self.nbIt = 3
@@ -304,7 +302,7 @@ if 0:
 
 
 
-from pyhrf.tools.io import read_volume
+from pyhrf.tools._io import read_volume
 from pyhrf.graph import parcels_to_graphs, kerMask3D_6n
 from pyhrf.jde.beta import Cpt_Vec_Estim_lnZ_Graph, Cpt_Vec_Estim_lnZ_Graph_fast3
 

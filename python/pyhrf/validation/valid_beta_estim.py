@@ -213,7 +213,7 @@ class ObsField2DTest(unittest.TestCase):
         
         # grab surfacic data:
         from pyhrf.graph import graph_from_mesh, sub_graph, graph_is_sane
-        from pyhrf.tools.io.tio import Texture
+        from pyhrf.tools._io.tio import Texture
         from soma import aims
         print 'import done'
         roiId = 20

@@ -6,7 +6,7 @@ import numpy as np
 from pyhrf.graph import graph_from_mesh, bfs_set_label, bfs_sub_graph
 from pyhrf.tools import add_suffix, non_existent_file
 import pyhrf
-from pyhrf.tools.io import read_texture, write_texture, read_spatial_resolution,\
+from pyhrf.tools._io import read_texture, write_texture, read_spatial_resolution,\
     read_volume, write_volume
 import tempfile
 
@@ -75,7 +75,7 @@ def extract_sub_mesh_with_files(input_mesh, center_node, radius,
                                 output_mesh=None):
     from nibabel import gifti
     from nibabel.gifti import GiftiImage, GiftiDataArray
-    from pyhrf.tools.io import read_mesh
+    from pyhrf.tools._io import read_mesh
     cor, tri, coord_sys = read_mesh(input_mesh)
     sub_cor, sub_tri = extract_sub_mesh(cor, tri, center_node, radius)
     

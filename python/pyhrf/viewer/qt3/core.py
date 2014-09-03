@@ -413,7 +413,7 @@ class xndarray:
         #print 'after roll - self.data:', self.data.shape
         
     def is_nii_writable(self):
-        from pyhrf.tools.io import MRI3Daxes
+        from pyhrf.tools._io import MRI3Daxes
         return set(MRI3Daxes).issubset(self.axesNames)
 
     def save(self, filename):
@@ -426,8 +426,8 @@ class xndarray:
         """
         base, ext = splitext(filename)
         if ext == '.nii':
-            from pyhrf.tools.io import writexndarrayToNiftii
-            from pyhrf.tools.io import MRI3Daxes
+            from pyhrf.tools._io import writexndarrayToNiftii
+            from pyhrf.tools._io import MRI3Daxes
             return writexndarrayToNiftii(self, filename)            
         elif ext == '.csv':
             #print 'dumping an array of shape %s to csv' %(str(self.data.shape))

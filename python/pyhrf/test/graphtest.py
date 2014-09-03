@@ -11,7 +11,7 @@ import numpy as _np
 from pyhrf.graph import *
 from pyhrf.boldsynth.spatialconfig import lattice_indexes
 
-from pyhrf.tools.io import read_volume, write_volume
+from pyhrf.tools._io import read_volume, write_volume
 
 class GraphTest(unittest.TestCase):
 

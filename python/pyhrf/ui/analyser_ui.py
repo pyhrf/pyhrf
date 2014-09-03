@@ -15,7 +15,7 @@ from pyhrf import xmlio, FmriData, FmriGroupData
 from pyhrf.ndarray import MRI3Daxes
 
 from pyhrf.tools import stack_trees, add_prefix
-from pyhrf.tools.io import read_volume, read_texture
+from pyhrf.tools._io import read_volume, read_texture
 
 from pyhrf.ndarray import stack_cuboids
 

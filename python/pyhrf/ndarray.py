@@ -54,7 +54,8 @@ class xndarray:
                 if None: then axes_names = [\"dim0\", \"dim1\", ...]
             - axes_domains (dictof <str>:<numpy array>):
                 domains associated to axes.
-                If a domain is not specified then it defaults to range(size(axis))
+                If a domain is not specified then it defaults to 
+                range(size(axis))
 
 
         Return: a xndarray instance
@@ -1240,7 +1241,7 @@ class xndarray:
             return  header['pixdim'][1:4][MRI3Daxes.index(axis)]
         else:
             raise Exception('xndarray does not have any meta data to get' \
-                                'voxel size')
+                            'voxel size')
 
     def get_dshape(self):
         """
@@ -1394,8 +1395,6 @@ class xndarray:
                 return m
             else:
                 return xndarray(m, an, ad, self.value_label, self.meta_data)
-            return xndarray(self.data.min(axis=ia), an, ad,
-                          self.value_label, self.meta_data)
 
 
     def max(self, axis=None):
@@ -1417,9 +1416,6 @@ class xndarray:
                 return m
             else:
                 return xndarray(m, an, ad, self.value_label, self.meta_data)
-            return xndarray(self.data.min(axis=ia), an, ad,
-                          self.value_label, self.meta_data)
-
 
 
     def ptp(self, axis=None):
@@ -1654,7 +1650,7 @@ class xndarray:
         #     h5file.createArray(root, "array", self.data)
         #     h5file.close()
         elif has_ext(file_name, 'gii'):
-            from pyhrf.tools.io import write_texture
+            from pyhrf.tools._io import write_texture
             pyhrf.verbose(4, 'Save Gifti image (dim=%d) ...' \
                               %(c_to_save.get_ndims()))
             pyhrf.verbose(4, 'axes names: %s' %str(c_to_save.axes_names))
@@ -1684,7 +1680,6 @@ class xndarray:
                                   meta_data=c_to_save.get_extra_info(fmt='xml'))
         else:
             raise Exception('Unsupported file format (ext: "%s")' %ext)
-
 
 
     @staticmethod
@@ -1753,7 +1748,7 @@ class xndarray:
             return a
         elif ext == '.gii' or \
                 (ext == '.gz' and op.splitext(file_name[:-3])[1] == '.gii'):
-            from pyhrf.tools.io import read_texture
+            from pyhrf.tools._io import read_texture
             data, gii = read_texture(file_name)
             md = gii.get_metadata().get_metadata()
             # print 'meta data loaded from gii:'

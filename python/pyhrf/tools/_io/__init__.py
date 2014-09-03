@@ -1,4 +1,4 @@
 
 
 import spmio
-from io import *
+from _io import *

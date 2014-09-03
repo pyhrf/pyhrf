@@ -7,7 +7,7 @@ from optparse import OptionParser
 
 import pyhrf
 from pyhrf._verbose import dictToString
-from pyhrf.tools.io.spmio import load_paradigm_from_mat, load_contrasts, \
+from pyhrf.tools._io.spmio import load_paradigm_from_mat, load_contrasts, \
     load_regnames
 
 usage = 'usage: %%prog [options] SPM.MAT '

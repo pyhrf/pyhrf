@@ -8,7 +8,7 @@ import numpy as np
 
 import pyhrf
 from pyhrf._verbose import dictToString
-from pyhrf.tools.io.spmio import get_contrasts, loadmat
+from pyhrf.tools._io.spmio import get_contrasts, loadmat
 from pyhrf.ndarray import xndarray
 usage = 'usage: %%prog [options] SPM.MAT '
 

@@ -15,7 +15,7 @@ from pyhrf.vbjde.Utils import Main_vbjde_Extension_ParsiMod_C_RVM,classify,Main_
 
 #from pyhrf.vbjde.Utils import Main_vbjde, Main_vbjde_Fast, Main_vbjde_Extension,Main_vbjde_Extension_NoDrifts
 from scipy.linalg import norm
-from pyhrf.tools.io import read_volume
+from pyhrf.tools._io import read_volume
 import pyhrf
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration

@@ -758,13 +758,14 @@ class GibbsSamplerVariable:
         self.cumul3 += (self.currentValue - self.mean)**2
         pyhrf.verbose(6, 'Cumul3:')
         pyhrf.verbose.printNdarray(6, self.cumul3)
-        self.error = self.cumul3 / self.nbItObservables
-
+        
         pyhrf.verbose(6, 'Mean')
         pyhrf.verbose.printNdarray(6, self.mean)
 
         if self.nbItObservables < 2:
             self.error = np.zeros_like(self.cumul3) + 1e-6
+        else:
+            self.error = self.cumul3 / self.nbItObservables
 
         tol = 1e-10
         neg_close_to_zero = np.where(np.bitwise_and(self.error<0,
