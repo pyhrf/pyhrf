@@ -742,13 +742,8 @@ class GibbsSamplerVariable:
         pyhrf.verbose(6, 'CurrentValue:')
         pyhrf.verbose.printNdarray(6, self.currentValue)
 
-        #if self.name=='nrl_by_session':
-            #print 'currVal:', self.currentValue[2,2,15]
 
         self.cumul += self.currentValue
-        #if self.name=='nrl_by_session':
-            #print 'self.cumul:', self.cumul[2,2,15]
-
         #self.cumul2 += self.currentValue**2
 
         pyhrf.verbose(6, 'Cumul:')
@@ -759,7 +754,7 @@ class GibbsSamplerVariable:
         #self.error = self.cumul2 / self.nbItObservables - \
             #self.mean**2
 
-      # Another Computing of error to avoid negative value when cumul is < 1
+        # Another Computing of error to avoid negative value when cumul is < 1
         self.cumul3 += (self.currentValue - self.mean)**2
         pyhrf.verbose(6, 'Cumul3:')
         pyhrf.verbose.printNdarray(6, self.cumul3)
@@ -775,11 +770,6 @@ class GibbsSamplerVariable:
         neg_close_to_zero = np.where(np.bitwise_and(self.error<0,
                                                     np.abs(self.error)<tol))
         self.error[neg_close_to_zero] = tol
-        #if len(neg_close_to_zero[0])>0:
-            #self.error[neg_close_to_zero] = tol
-        #else:
-            #self.error = np.array((0))
-        #print 'Case where error is empty and thus put to 0...hack...'
 
         pyhrf.verbose(6, 'Error:')
         pyhrf.verbose.printNdarray(6, self.error)
@@ -919,7 +909,7 @@ class GibbsSamplerVariable:
         else:
             err = None
 
-        c = xndarray(self.get_final_value(),
+        c = xndarray(self.get_final_value().astype(np.float32),
                    axes_names=self.axes_names,
                    axes_domains=self.axes_domains,
                    value_label=self.value_label)
@@ -944,13 +934,14 @@ class GibbsSamplerVariable:
 
         outputs[self.name+'_pm'] = c
 
-        if 0 and ((err is not None) or ((err.size==1) and (err!=0))):
-            c_err = xndarray(np.array(err), axes_names=self.axes_names,
-                           axes_domains=self.axes_domains,
-                           value_label=self.value_label)
+        if ((err is not None) or ((err.size==1) and (err!=0))):
+            c_err = xndarray(self.error.astype(np.float32), 
+                             axes_names=self.axes_names,
+                             axes_domains=self.axes_domains,
+                             value_label=self.value_label)
             # c = stack_cuboids([c,c_err], axis='error', domain=['value','std'],
             #                   axis_pos='last')
-            outputs[self.name+'_pm_std'] = c_err
+            outputs[self.name+'_mcmc_var'] = c_err
 
 
         if hasattr(self, 'tracked_quantities'):
