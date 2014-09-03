@@ -22,6 +22,19 @@ import pyhrf
 
 rx_py_identifier = '[^\d\W]\w*'
 
+class Class:
+    """
+    #TODO: comment
+    """
+    
+def func(self):
+    """
+    #TODO: comment
+    #TODO: test
+    #TODO: implement
+    """
+
+
 class Test(unittest.TestCase):
 
     def setUp(self,):
