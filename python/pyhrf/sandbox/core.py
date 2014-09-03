@@ -14,7 +14,7 @@ from pyhrf.sandbox.design_and_ui import Initable
 
 from pyhrf.tools import PickleableStaticMethod, stack_trees, unstack_trees, \
      format_duration
-import pyhrf.tools.io as pio
+import pyhrf.tools._io as pio
 
 
 from pyhrf.paradigm import Paradigm, builtin_paradigms
