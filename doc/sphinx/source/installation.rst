@@ -36,6 +36,7 @@ Dependencies are:
     - `scipy <http://www.scipy.org/install.html>`_ >= 0.7
     - `matplotlib <http://matplotlib.org/users/installing.html>`_ 
     - `nibabel <http://nipy.sourceforge.net/nibabel/>`_
+    - `sympy <http://sympy.sourceforge.net>`_ (required by nipy)
     - `nipy <http://nipy.sourceforge.net/nipy/stable/users/installation.html>`_
     - a C compiler 
 
@@ -45,17 +46,38 @@ Optional dependencies:
     - soma-workflow (remote distributed computation)
     - scikit-learn (clustering)
     - sphinx (to generate documentation)
+    - pygraphviz (for optimized graph operations and outputs)
+    - munkres (parcellation operation)
 
 Linux-based
 ***********
 
-It is advised to install python (with development headers) and all above-mentioned dependencies through distribution tools such as apt-get or urpmi. Eg, for a Debian-based linux::
+It is advised to install python (with development headers) and all above-mentioned dependencies through distribution tools such as apt-get, urpmi or yum. Eg, for a Debian-based linux::
 
     sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-nibabel python-nipy
 
 Optional dependencies::
 
-    sudo apt-get install python2.7-qt4 python-scikits-learn python-joblib
+    sudo apt-get install python-qt4 python-scikits-learn python-joblib
+
+Fedora
+******
+
+Main dependecies, as root::
+  
+  # yum install python-devel numpy scipy python-matplotlib python-pip
+
+These dependencies are not available as system packages, they have to be installed
+by hand ::
+
+  $ pip install --user nibabel sympy nipy
+
+Optional dependencies::
+
+  # yum install PyQt4 python-matplotlib-qt4 graphviz-python # as root
+  
+  $ pip install --user joblib sphinx scikit-learn soma-workflow 
+
 
 MAC OS X
 ********
@@ -134,7 +156,6 @@ Python packages installed by the system might not compatible with the setuptools
 
 
 Optional dependency
-
 
  $ easy_install --prefix=~/.local python-graph-core
 
@@ -229,9 +250,6 @@ Add /local/installation/path/lib/pythonXX/site-packages/ to the PYTHONPATH envir
 
     export PATH=$PATH:/local/installation/path/bin/
     export PYTHONPATH=$PYTHONPATH:/local/installation/path/lib/pythonXX/site-packages/
-
-
-
 
 **Configuration**
 #################
