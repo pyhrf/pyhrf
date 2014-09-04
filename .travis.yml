@@ -17,15 +17,18 @@
 # ";"s
 language: python
 python:
-    - 2.7   
+    - 2.7
 matrix:
     include:
         - python: 2.7
           env:
             - COVERAGE=--with-coverage
+virtualenv:
+    system_site_packages: true
+
 before_install:
-    - travis_retry sudo apt-get install python-qt4
     - sudo apt-get install -qq libatlas-dev libatlas-base-dev gfortran libpng-dev
+    - sudo apt-get install -qq python-qt4
     - pip install --no-index -f http://wheels2.astropy.org -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
     - pip install sympy
     - pip install nibabel
