@@ -51,9 +51,6 @@ install:
     - python setup.py install
 # command to run tests, e.g. python setup.py test
 script:
-    # Change into an innocuous directory and find tests from installation
-    - export NOSETESTS=$(which nosetests)
-    - if [ "${COVERAGE}" == "--with-coverage" ]; then cp ../.coveragerc .; fi
-    - eval $NOSETESTS $COVERAGE -v pyhrf $DOCTESTS -s
+    - nosetests $COVERAGE -v pyhrf $DOCTESTS -s
 after_success:
     - if [ "${COVERAGE}" == "--with-coverage" ]; then coveralls; fi
