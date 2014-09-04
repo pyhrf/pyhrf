@@ -17,14 +17,13 @@
 # ";"s
 language: python
 python:
-    - 2.5
     - 2.6
     - 2.7   
 matrix:
     include:
         - python: 2.7
-    env:
-        - COVERAGE=--with-coverage
+        env:
+            - COVERAGE=--with-coverage
 before_install:
     - travis_retry sudo apt-get install python-qt4
     - sudo apt-get install -qq libatlas-dev libatlas-base-dev gfortran libpng-dev
@@ -43,7 +42,7 @@ before_install:
 # command to install dependencies
 # e.g. pip install -r requirements.txt # --use-mirrors
 install:
-    - python setup.py install --user
+    - python setup.py install
 # command to run tests, e.g. python setup.py test
 script:
     # Change into an innocuous directory and find tests from installation
