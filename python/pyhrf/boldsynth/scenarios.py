@@ -167,7 +167,7 @@ def load_drawn_labels(name):
         raise Exception('Unknown label map %s (%s)' %(name,fn))
 
     from scipy.misc import fromimage
-    import Image
+    from PIL import Image
     labels = fromimage(Image.open(fn))
     return labels[np.newaxis,:,:]
 
@@ -357,7 +357,7 @@ def load_hrf_territories(nb_hrf_territories=0, hrf_territories_name=None):
                                       %nb_hrf_territories)
     assert op.exists(fn)
     from scipy.misc import fromimage
-    import Image
+    from PIL import Image
     territories = fromimage(Image.open(fn))
     territories = territories[np.newaxis,:,:]
     t=territories[np.where(np.ones_like(territories))]

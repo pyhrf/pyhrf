@@ -3761,7 +3761,7 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     # --------- Parcellisation class ------------#
     q_Q = numpy.zeros((I,J),dtype=numpy.float64)
     from scipy.misc import fromimage
-    import Image
+    from PIL import Image
     dataDir = '/home/chaari/Logiciels/pyhrf/pyhrf-free/trunk/python/pyhrf/datafiles/'
     fn = op.join(dataDir,'simu_par20_3p_0b.png')# simu_par20_3p   simu_labels_carre1.png
     label = fromimage(Image.open(fn))
@@ -4437,7 +4437,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     ###q_Q0 = q_Q.copy()
     #import os.path as op
     #from scipy.misc import fromimage
-    #import Image
+    #from PIL import Image
     #dataDir = '/home/chaari/Logiciels/pyhrf/pyhrf-free/trunk/python/pyhrf/datafiles/'
     #fn = op.join(dataDir,'simu_par20.png')#simu_labels_carre1.png
     ##Pmask = fromimage(Image.open(fn)) + 1
