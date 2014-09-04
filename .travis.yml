@@ -28,7 +28,7 @@ virtualenv:
 
 before_install:
     - sudo apt-get install -qq libatlas-dev libatlas-base-dev gfortran libpng-dev
-    - sudo apt-get install -qq python-qt4 python-pillow
+    - sudo apt-get install -qq python-qt4 
     - pip install --no-index -f http://wheels2.astropy.org -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
     - pip install sympy
     - pip install nibabel
@@ -36,6 +36,7 @@ before_install:
     - pip install joblib
     - pip install scikit-learn
     - pip install munkres
+    - pip install Pillow
     - if [ "${COVERAGE}" == "--with-coverage" ]; then
         pip install coverage;
         pip install coveralls;
