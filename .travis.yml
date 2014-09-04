@@ -8,32 +8,48 @@
 # and it is impractical to build them.  We do not use anaconda to get closer
 # to real Debian-based deployments and test against releases present in Debian
 # and NeuroDebian
-language: erlang
-env:
- global:
-    - PY=python PYSUF='' DOCTESTS=--with-doctest
-    # - PYTHON=python3 PYSUF=3 : python3-numpy not currently available
- matrix:
-    - PYTHON=$PY
-    - COVERAGE="coverage run --rcfile=.travis_coveragerc" DOCTESTS=--with-doctest
+
+# vim ft=yaml
+# Multiple lines can be made a single "virtual line" because of the way that
+# Travis munges each line before executing it to print out the exit status.
+# It's okay for it to be on multiple physical lines, so long as you remember:
+# - There can't be any leading "-"s - All newlines will be removed, so use
+# ";"s
+language: python
+python:
+    - 2.5
+    - 2.6
+    - 2.7   
+matrix:
+    include:
+        - python: 2.7
+    env:
+        - COVERAGE=--with-coverage
 before_install:
-    # The ultimate one-liner setup for NeuroDebian repository
-    - bash <(wget -q -O- http://neuro.debian.net/_files/neurodebian-travis.sh)
-    - sudo apt-get install $PY-dev
-    - travis_retry sudo apt-get install $PY-qt4 $PY-numpy $PY-scipy $PY-matplotlib $PY-nose $PY-nibabel
-    # Do not install recommends for nipy/sympy -- too much bloat comes
-    - travis_retry sudo apt-get install $PY-nipy $PY-sympy --no-install-recommends
-    - travis_retry sudo apt-get install $PY-joblib $PY-sklearn
-    # set non-interactive matplotlib backend to avoid issues related to $DISPLAY
-    # not found
+    - travis_retry sudo apt-get install python-qt4
+    - sudo apt-get install -qq libatlas-dev libatlas-base-dev gfortran libpng-dev
+    - pip install --no-index -f http://wheels2.astropy.org -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
+    - pip install sympy
+    - pip install nibabel
+    - pip install nipy
+    - pip install joblib
+    - pip install scikit-learn
+    - if [ "${COVERAGE}" == "--with-coverage" ]; then
+        pip install coverage;
+        pip install coveralls;
+      fi
     - wget -q http://matplotlib.org/1.3.1/_static/matplotlibrc
     - sed -i.bak  's/^backend.*/backend:Agg/'   matplotlibrc
+# command to install dependencies
+# e.g. pip install -r requirements.txt # --use-mirrors
 install:
     - python setup.py install --user
-    - if [ ! -z "$COVERAGE" ]; then pip install --user -v coveralls; fi
+# command to run tests, e.g. python setup.py test
 script:
-    - export PATH=$HOME/.local/bin:$PATH
-    - export NOSETESTS=$(which nosetests)
+    # Change into an innocuous directory and find tests from installation
+    - mkdir for_testing
+    - cd for_testing
+    - if [ "${COVERAGE}" == "--with-coverage" ]; then cp ../.coveragerc .; fi
     - eval   $COVERAGE $NOSETESTS -v pyhrf $DOCTESTS -s
 after_success:
-    - if [ ! -z "$COVERAGE" ]; then coveralls; fi
+    - if [ "${COVERAGE}" == "--with-coverage" ]; then coveralls; fi
