@@ -37,8 +37,10 @@ before_install:
         pip install coverage;
         pip install coveralls;
       fi
+    # set non-interactive matplotlib backend to avoid issues related to $DISPLAY
+    # not found
     - wget -q http://matplotlib.org/1.3.1/_static/matplotlibrc
-    - sed -i.bak  's/^backend.*/backend:Agg/'   matplotlibrc
+    - sed -i.bak  's/^backend.*/backend:Agg/' matplotlibrc
 # command to install dependencies
 # e.g. pip install -r requirements.txt # --use-mirrors
 install:
@@ -46,8 +48,6 @@ install:
 # command to run tests, e.g. python setup.py test
 script:
     # Change into an innocuous directory and find tests from installation
-    - mkdir for_testing
-    - cd for_testing
     - export NOSETESTS=$(which nosetests)
     - if [ "${COVERAGE}" == "--with-coverage" ]; then cp ../.coveragerc .; fi
     - eval $NOSETESTS $COVERAGE -v pyhrf $DOCTESTS -s
