@@ -22,7 +22,7 @@ python:
 matrix:
     include:
         - python: 2.7
-        env:
+          env:
             - COVERAGE=--with-coverage
 before_install:
     - travis_retry sudo apt-get install python-qt4
