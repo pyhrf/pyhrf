@@ -50,6 +50,6 @@ script:
     - cd for_testing
     - export NOSETESTS=$(which nosetests)
     - if [ "${COVERAGE}" == "--with-coverage" ]; then cp ../.coveragerc .; fi
-    - eval $COVERAGE $NOSETESTS -v pyhrf $DOCTESTS -s
+    - eval $NOSETESTS $COVERAGE -v pyhrf $DOCTESTS -s
 after_success:
     - if [ "${COVERAGE}" == "--with-coverage" ]; then coveralls; fi
