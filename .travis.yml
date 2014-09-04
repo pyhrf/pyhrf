@@ -28,7 +28,7 @@ virtualenv:
 
 before_install:
     - sudo apt-get install -qq libatlas-dev libatlas-base-dev gfortran libpng-dev
-    - sudo apt-get install -qq python-qt4
+    - sudo apt-get install -qq python-qt4 python-pil
     - pip install --no-index -f http://wheels2.astropy.org -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
     - pip install sympy
     - pip install nibabel
