@@ -1,15 +1,6 @@
 # vim ft=yaml
-#
-# travis-ci.org definition for PyHRF build (based on PyMVPA, based on
-# nipype configuration which in turn was based on nipy)
-#
-# We pretend to be erlang because we need can't use the python support in
-# travis-ci; it uses virtualenvs, they do not have numpy, scipy, matplotlib,
-# and it is impractical to build them.  We do not use anaconda to get closer
-# to real Debian-based deployments and test against releases present in Debian
-# and NeuroDebian
+# travis-ci.org definition for PyHRF build (based on nipy)
 
-# vim ft=yaml
 # Multiple lines can be made a single "virtual line" because of the way that
 # Travis munges each line before executing it to print out the exit status.
 # It's okay for it to be on multiple physical lines, so long as you remember:
@@ -23,6 +14,8 @@ matrix:
         - python: 2.7
           env:
             - COVERAGE=--with-coverage
+
+#use this to make PyQt4 importable
 virtualenv:
     system_site_packages: true
 
