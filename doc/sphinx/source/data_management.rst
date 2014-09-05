@@ -41,7 +41,7 @@ also format strings that will be used to create target file names:
 .. code-block:: python
 
        # regexp to capture values of subject and modality:
-       src = '(?P<subject>[A-Z]{2}[0-9]{4}_(?P<modality>[a-zA-Z]+).nii'
+       src = '(?P<subject>[A-Z]{2}[0-9]{4})_(?P<modality>[a-zA-Z]+).nii'
        # definition of targets:
        src_folder = './raw_data/'
        dest_folder = ('./export', '{subject}', '{modality}')
