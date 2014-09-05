@@ -22,6 +22,14 @@ Compile the documentation (sphinx required [sphinx-doc.org])::
     
 The documentation should be in ./doc/sphinx/build/html
 
+Code status:
+------------
+
+* [![tests status](https://secure.travis-ci.org/pyhrf/pyhrf.png?branch=master)](https://travis-ci.org/pyhrf/pyhrf) travis-ci.org (master branch)
+
+* [![Coverage Status](https://coveralls.io/repos/pyhrf/pyhrf/badge.png?branch=master)](https://coveralls.io/r/pyhrf/pyhrf)
+
+
 Licence
 *******
 
