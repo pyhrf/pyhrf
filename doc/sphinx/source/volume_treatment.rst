@@ -58,6 +58,7 @@ Following **fmri_data**, there are parameters that describe data and are common 
 The following **analyser** section groups all parameters for the actual analysis. 
 The contrasts have to be defined in **analyser/sampler/responseLevels/constrasts**.
 Note that condition labels must be consistent with those entered in the data definition part. See contextual comments within the xml for more information on other parameters.
+The estimation of the hemodynamics can be setup by changing parameter "do_sampling". If set to "True" then the response function is estimated, if "False" then it is fixed to the canonical version.
 
 .. _running:
 

@@ -4,7 +4,7 @@ import os.path as op
 from optparse import OptionParser
 import pyhrf
 from pyhrf._verbose import dictToString
-from pyhrf.tools.io import crop_data_file
+from pyhrf.tools._io import crop_data_file
 from pyhrf.tools import add_suffix
 
 usage = 'usage: %%prog [options] MASK DATA_FILE'

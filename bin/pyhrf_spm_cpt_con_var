@@ -1,0 +1,47 @@
+#! /bin/env python
+# -*- coding: utf-8 -*-
+import os, sys
+import os.path as op
+import shutil
+from optparse import OptionParser
+import numpy as np
+
+import pyhrf
+from pyhrf._verbose import dictToString
+from pyhrf.tools._io.spmio import get_contrasts, loadmat
+from pyhrf.ndarray import xndarray
+usage = 'usage: %%prog [options] SPM.MAT '
+
+description = 'Rename some SPM output files with explicit condition or '\
+    'contrast names instead of numbers.'
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+(options,args) = parser.parse_args()
+pyhrf.verbose.set_verbosity(options.verbose)
+
+# Treat result of option parsing:
+if len(args) !=1 :
+    parser.print_help()
+    sys.exit(1)
+
+
+spm_mat_fn = args[0]
+input_dir = op.dirname(spm_mat_fn)
+if input_dir == '':
+    input_dir = './'
+
+spm = loadmat(spm_mat_fn)['SPM']
+conts = get_contrasts(spm)
+bcov = spm['xX'][0][0]['Bcov'][0][0] #works for SPM8, 
+                                     #TODO: make a func, test for SPM5 & SPM12
+residuals = xndarray.load(op.join(input_dir, 'ResMS.img'))
+for i,(cname, con_vec, c_stat) in enumerate(conts):
+    nf = np.dot(np.dot(con_vec, bcov), con_vec)
+    con_var = residuals * nf
+    con_var.save(op.join(input_dir, 'con_%s_var.nii' %''.join(cname)))
+    

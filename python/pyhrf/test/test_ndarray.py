@@ -436,6 +436,42 @@ class xndarrayTest(unittest.TestCase):
         assert c.data.shape == (self.sh3d[2],self.sh3d[0],self.sh3d[1])
 
 
+    def test_xmapping(self):
+        a = xndarray(np.arange(2*4).reshape(2,4).T, ['time', 'parcel'],
+                     {'time':np.arange(4)*.5, 'parcel':[2, 6]})
+        parcel_map = xndarray(np.array([[2,2,2,6], [6,6,6,0], [6,6,0,0]]), 
+                              ['axial','coronal'], value_label='parcel')
+        a_mapped = a.map_onto(parcel_map)
+        
+        self.assertEqual(a_mapped.data.shape, 
+                         parcel_map.data.shape + a.data.shape[:1])
+        self.assertEqual(a_mapped.axes_names, ['axial','coronal','time'])
+        npt.assert_array_equal(a_mapped.get_domain('time'), 
+                               a.get_domain('time'))
+        npt.assert_array_equal(a_mapped.data[0,0], a.data[:,0])
+        npt.assert_array_equal(a_mapped.data[1,0], a.data[:,1])
+        npt.assert_array_equal(a_mapped.data[-1,-1], 0.)
+
+    def test_xmapping_inconsistent_mapping_value(self):
+        a = xndarray(np.arange(2*4).reshape(2,4).T, ['time', 'parcel'],
+                     {'time':np.arange(4)*.5, 'parcel':[2, 6]})
+        parcel_map = xndarray(np.array([[2,2,2,6], [6,6,6,0], [6,6,0,0]]), 
+                              ['axial','coronal'], value_label='ROI')
+        self.assertRaisesRegexp(ArrayMappingError, 
+                                r'Value label "ROI" of xmapping not found '\
+                                 'in array axes \(time, parcel\)', 
+                                a.map_onto, parcel_map)
+
+    def test_xmapping_inconsistent_domain(self):
+        a = xndarray(np.arange(2*4).reshape(2,4).T, ['time', 'parcel'],
+                     {'time':np.arange(4)*.5, 'parcel':[2, 7]})
+        parcel_map = xndarray(np.array([[2,2,2,6], [6,6,6,0], [6,6,0,0]]), 
+                              ['axial','coronal'], value_label='parcel')
+        self.assertRaisesRegexp(ArrayMappingError, 
+                                'Domain of axis "parcel" to be mapped is '\
+                                'not a subset of values in the mapping array.', 
+                                a.map_onto, parcel_map)
+
     def test_expansion(self):
 
         c = xndarray(self.arr_flat, self.arr_flat_names, self.arr_flat_domains)

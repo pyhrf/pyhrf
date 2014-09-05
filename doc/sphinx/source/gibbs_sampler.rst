@@ -1,8 +1,8 @@
 .. _gibbs_sampling:
 
-=============================
-Gibbs Sampling implementation
-=============================
+=======================================
+Gibbs Sampling implementation (sandbox)
+=======================================
 
 pyhrf provides tools to implement Gibbs Sampling for a prototyping purpose. 
 The following features are available: 

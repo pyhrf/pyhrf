@@ -11,7 +11,7 @@ from pyhrf.ui.treatment import *
 from pyhrf.ui.rfir_ui import RFIRAnalyser, DEFAULT_CFG_FILE
 
 from pyhrf.paradigm import *
-from pyhrf.tools.io.spmio import load_paradigm_from_mat
+from pyhrf.tools._io.spmio import load_paradigm_from_mat
 
 from pyhrf import xmlio
 

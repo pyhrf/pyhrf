@@ -128,10 +128,3 @@ print '\n'.join(['- '+ check_opt_dep(dn, dd) for dn, dd in optional_deps.items()
 
 print '\nIf the installation was successfull, you may run '\
     '"pyhrf_maketests" to run package tests.\n'
-print 'Report on installation:'
-
-installCheckers = {
-    'Pyhrf main installation' : checkPyhrf,
-    }
-
-dependCheck(installCheckers)

@@ -278,21 +278,21 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         return ['voxel'], err < tol
 
 
-    def getOutputs(self):
-        outputs = GibbsSamplerVariable.getOutputs(self)
-        drift_signal = np.dot(self.P, self.finalValue)
-        an = ['time','voxel']
-        c = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
+    # def getOutputs(self):
+    #     outputs = GibbsSamplerVariable.getOutputs(self)
+    #     drift_signal = np.dot(self.P, self.finalValue)
+    #     an = ['time','voxel']
+    #     c = xndarray(drift_signal, axes_names=an, value_label='Delta ASL')
 
-        if self.trueValue is not None:
-            tv = self.get_true_value()
-            c_true = xndarray(tv, axes_names=an)
-            c = stack_cuboids([c, c_true], axis='type', domain=['estim', 'true'],
-                              axis_pos='last')
+    #     if self.trueValue is not None:
+    #         tv = self.get_true_value()
+    #         c_true = xndarray(tv, axes_names=an)
+    #         c = stack_cuboids([c, c_true], axis='type', domain=['estim', 'true'],
+    #                           axis_pos='last')
 
-        outputs['drift_signal_pm'] = c
+    #     outputs['drift_signal_pm'] = c
 
-        return outputs
+    #     return outputs
 
 def compute_StS_StY(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
     """ yaj and ajak_vb are only used to store intermediate quantities, they're
@@ -691,11 +691,40 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         self.labeled_vars = np.zeros((self.nbConditions, self.nbVoxels))
         self.labeled_means = np.zeros((self.nbConditions, self.nbVoxels))
 
+        # Intermediate quantities to compute online variance
+        # conditional to the MAP label 
+        self.nbClasses = self.get_variable('label').nbClasses
+        self.final_labeled_vars_cumul = np.zeros((self.nbClasses, 
+                                                  self.nbConditions, 
+                                                  self.nbVoxels))
+
+        self.final_labeled_vars_cumul2 = np.zeros((self.nbClasses, 
+                                                   self.nbConditions, 
+                                                   self.nbVoxels),
+                                                  dtype=np.float64)
+
+        self.final_labeled_vars_it_count = np.zeros((self.nbClasses, 
+                                                     self.nbConditions, 
+                                                     self.nbVoxels),
+                                                    dtype=np.int32)
         self.iteration = 0
 
         self.computeRR()
 
-
+    def updateObsersables(self):
+        GibbsSamplerVariable.updateObsersables(self)
+        labels = self.get_variable('label').currentValue
+        for j in xrange(self.nbConditions):
+            for iclass in xrange(self.nbClasses):
+                class_mask = np.where(labels[j]==iclass)
+                self.final_labeled_vars_it_count[iclass,j,class_mask] += 1
+                self.final_labeled_vars_cumul[iclass,j,class_mask] += \
+                    self.currentValue[j,class_mask]
+                self.final_labeled_vars_cumul2[iclass,j,class_mask] += \
+                    (self.currentValue[j,class_mask] - \
+                     self.final_labeled_vars_cumul[iclass,j,class_mask] /  \
+                     self.final_labeled_vars_it_count[iclass,j,class_mask])**2
+    
 
     def sampleNextInternal(self, variables):
 
@@ -748,6 +777,27 @@ class ResponseLevelSampler(GibbsSamplerVariable):
                 np.multiply(self.currentValue[j,:], self.currentValue[k,:],
                          self.rr[j,k,:])
 
+    def getOutputs(self):
+        outputs = GibbsSamplerVariable.getOutputs(self)
+        
+        #TODO: put this in finalizeSampling?
+        final_labels = self.get_variable('label').get_MAP_labels()
+        final_labeled_vars = np.zeros((self.nbConditions, 
+                                       self.nbVoxels))
+        for j in xrange(self.nbConditions):
+            for iclass in xrange(self.nbClasses):
+                class_mask = np.where(final_labels[j]==iclass)
+                final_labeled_vars[j,class_mask] = \
+                    self.final_labeled_vars_cumul2[iclass,j,class_mask] /   \
+                    self.final_labeled_vars_it_count[iclass,j,class_mask]
+    
+        outputs[self.name + '_mcmc_MAPlab_var'] = \
+            xndarray(final_labeled_vars.astype(np.float32), 
+                     axes_names=['condition','voxel'])
+
+        return outputs
+
+        
 class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
 
     def __init__(self, val_ini=None, do_sampling=True,
@@ -825,20 +875,16 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         wa = self.samplerEngine.get_variable('perf_baseline').wa
 
         return self.varYtilde - Pl - wa
-
-
+        
     def getOutputs(self):
-
-        outputs = GibbsSamplerVariable.getOutputs(self)
-
+        outputs = ResponseLevelSampler.getOutputs(self)
+        
         axes_names = ['voxel']
         roi_lab_vol = np.zeros(self.nbVoxels, dtype=np.int32) + \
           self.dataInput.roiId
         outputs['roi_mapping'] = xndarray(roi_lab_vol, axes_names=axes_names,
-                                        value_label='ROI')
-
+                                          value_label='ROI')
         return outputs
-
 
 
 class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
@@ -1097,6 +1143,11 @@ class LabelSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         self.countLabels()
         self.iteration += 1
+
+    def get_MAP_labels(self):
+        
+        flabels = self.get_final_value()
+        return flabels > .5 #TODO: use other threshold?
 
 class MixtureParamsSampler(GibbsSamplerVariable):
 
@@ -1488,11 +1539,17 @@ class PerfBaselineVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
 class WN_BiG_ASLSamplerInput(WN_BiG_Drift_BOLDSamplerInput):
 
+
+    def __init__(self, data, dt, typeLFD, paramLFD, hrfZc, hrfDuration):
+        self.idx_first_tag = data.get_extra_data('asl_first_tag_scan_idx', 0)
+        WN_BiG_Drift_BOLDSamplerInput.__init__(self, data, dt, typeLFD, 
+                                               paramLFD, hrfZc, hrfDuration)
+
     def makePrecalculations(self):
         WN_BiG_Drift_BOLDSamplerInput.makePrecalculations(self)
 
-        self.w = np.ones(self.ny) * -1
-        self.w[::2] = 1
+        self.w = np.ones(self.ny)
+        self.w[self.idx_first_tag::2] = -1
         #self.w[::2] = -1/2.
         self.W = np.diag(self.w)
 
@@ -1541,7 +1598,7 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
                  drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
                  perf_baseline=PerfBaselineSampler(),
                  perf_baseline_var=PerfBaselineVarianceSampler(),
-                 check_final_value=None):
+                 check_final_value=None, output_fit=False):
 
         variables = [noise_var, brf, brf_var, prf, prf_var,
                      drift_var, drift, perf_response_levels,
@@ -1577,7 +1634,7 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
                               obsHistPace, nbSweeps,
                               callbackObj,
                               globalObsHistoryPace=globalObsHistPace,
-                              check_ftval=check_ftval)
+                              check_ftval=check_ftval, output_fit=output_fit)
 
 
 

@@ -1,0 +1,116 @@
+#! /bin/env python
+# -*- coding: utf-8 -*-
+import os, sys
+import os.path as op
+import shutil
+from optparse import OptionParser
+
+import pyhrf
+from pyhrf._verbose import dictToString
+from pyhrf.tools._io.spmio import load_paradigm_from_mat, load_contrasts, \
+    load_regnames
+
+usage = 'usage: %%prog [options] SPM.MAT '
+
+description = 'Rename some SPM output files with explicit condition or '\
+    'contrast names instead of numbers.'
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
+                  type='int',default=0,
+                  help=dictToString(pyhrf.verboseLevels))
+
+parser.add_option('-o','--output_dir',metavar='PATH',
+                  default=None,
+                  help='Directory where to write fixed files.' \
+                      'Ignored if option --rename is used')
+
+parser.add_option('-r','--rename', default=False,
+                  action='store_true', help='Rename existing files instead '\
+                      'of copying them with new names.')
+
+(options,args) = parser.parse_args()
+pyhrf.verbose.set_verbosity(options.verbose)
+
+# Treat result of option parsing:
+if len(args) !=1 :
+    parser.print_help()
+    sys.exit(1)
+
+
+def protect_str(s):
+    return s.replace(' - ','-').replace(' ','_')
+
+def file_op(src, dest, inplace=False, output_dir='./'):
+    if inplace:
+        f = os.rename
+    else:
+        f = shutil.copy
+        dest = op.join(output_dir, op.basename(dest))
+
+    if not op.exists(src):
+        print 'Warning: SPM output file %s not found (should have been %s as '\
+            '%)' %(src, ['copied','renamed'][inplace])
+    else:
+        pyhrf.verbose(2, '%s: %s -> %s'%(['Copy','Rename'][inplace], src, dest))
+
+    pyhrf.verbose(2, 'Use %s, on:' %str(f))
+    pyhrf.verbose(2, '%s -> %s' %(src, dest))
+
+    f(src, dest)
+
+def rename(src_name, input_dir, dest_name, inplace=False, output_dir='./'):
+    src_name = op.join(input_dir, src_name)
+    if op.exists(src_name+'.img'):
+        file_op(src_name+'.img', dest_name+'.img', inplace, output_dir)
+    if op.exists(src_name+'.hdr'):
+        file_op(src_name+'.hdr', dest_name+'.hdr', inplace, output_dir)
+    if op.exists(src_name+'.nii'):
+        file_op(src_name+'.nii', dest_name+'.nii', inplace, output_dir)
+
+spm_mat_fn = args[0]
+input_dir = op.dirname(spm_mat_fn)
+if input_dir == '':
+    input_dir = './'
+    
+if options.output_dir is None:
+    options.output_dir = input_dir
+
+if not op.exists(options.output_dir): os.makedirs(options.output_dir)
+
+conts = load_contrasts(spm_mat_fn)
+for i,c in enumerate(conts):
+    con_idx = i+1
+    con_type = str(c[2][0])
+    con_name = protect_str(str(c[0][0]))
+    pyhrf.verbose(1, 'Treating contrast %s (SPM idx=%d)' %(con_name,con_idx))
+    if con_type == 'T':
+        rename('con_%04d' %con_idx, input_dir, 'con_%s' %con_name,
+               inplace=options.rename, output_dir=options.output_dir)
+        rename('scon_%04d' %con_idx, input_dir, 'scon_%s' %con_name,
+               inplace=options.rename, output_dir=options.output_dir)
+        rename('spmT_%04d' %con_idx, input_dir, 'spmT_%s' %con_name,
+               inplace=options.rename, output_dir=options.output_dir)
+    if con_type == 'F':
+        rename('ess_%04d' %con_idx, input_dir, 'ess_%s' %con_name,
+               inplace=options.rename,output_dir=options.output_dir)
+        rename('spmF_%04d' %con_idx, input_dir, 'spmF_%s' %con_name,
+               inplace=options.rename,output_dir=options.output_dir)
+        
+regnames = load_regnames(spm_mat_fn)
+def protect(s):
+    """
+    Protect regressor name for file name output
+    Remove parenthesis, replace "*" with _x_, replace spaces with "_"
+    
+    Example:
+    >>> protect('Sn(3) cond*bf(3)')
+    Sn3_cond_x_bf3
+    """
+    return s.replace('(','').replace(')','').replace('*','_x_').replace(' ','_')
+
+for i,rn in enumerate(regnames):
+    pyhrf.verbose(1, 'Treating regressor %s' %(rn))
+    rename('beta_%04d' %i, input_dir, 'beta_%s' %protect(rn),
+           inplace=options.rename, output_dir=options.output_dir)    

@@ -8,6 +8,11 @@ try:
 except:
     from scipy.io.matlab import loadmat
 
+def load_regnames(spmMatFile):
+    d = loadmat(spmMatFile)
+    spm = d['SPM']
+    return [s[0] for s in spm['xX'][0,0]['name'][0,0][0]]
+
 def loadOnsets(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
@@ -22,7 +27,7 @@ def load_paradigm_from_mat(spmMatFile):
 def load_contrasts(spmMatFile):
     d = loadmat(spmMatFile)
     spm = d['SPM']
-    return get_constrasts(spm)
+    return get_contrasts(spm)
 
 def load_scalefactor_from_mat(spmMatFile):
     d = loadmat(spmMatFile)
@@ -45,7 +50,7 @@ def get_tr_from_spm_dict(spm):
         spm = spm[0]
     return float(get_field(get_field(spm,'xY')[0][0],'RT'))
 
-def get_constrasts(spm):
+def get_contrasts(spm):
 
     if isinstance(spm, numpy.ndarray):
         spm = spm[0]

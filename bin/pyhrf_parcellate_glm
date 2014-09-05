@@ -6,7 +6,7 @@ from optparse import OptionParser
 import numpy as np
 import pyhrf
 from pyhrf._verbose import dictToString
-from pyhrf.tools.io import read_volume, write_volume
+from pyhrf.tools._io import read_volume, write_volume
 from pyhrf.parcellation import parcellation_ward_spatial
 from pyhrf.graph import graph_from_lattice, kerMask2D_4n, kerMask3D_6n,\
      graph_from_mesh
@@ -83,7 +83,7 @@ if  nba<minArgs or (maxArgs>=0 and nba>maxArgs):
     parser.print_help()
     sys.exit(1)
 
-from pyhrf.tools.io import has_ext_gzsafe, read_mesh
+from pyhrf.tools._io import has_ext_gzsafe, read_mesh
 def is_surface_data_file(fn):
     return has_ext_gzsafe(fn, 'gii')
 

@@ -9,7 +9,7 @@ from optparse import OptionParser
 import pyhrf
 from pyhrf._verbose import dictToString
 from pyhrf.tools import add_suffix, has_ext
-from pyhrf.tools.io import read_volume, write_volume, read_texture, write_texture
+from pyhrf.tools._io import read_volume, write_volume, read_texture, write_texture
 
 usage = 'usage: %%prog [options] PARCELLATION_FILE PARCEL_ID1 [PARCEL_ID2 ...]'
 

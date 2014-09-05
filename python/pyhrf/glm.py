@@ -7,7 +7,7 @@ import glob
 import pyhrf
 from pyhrf import FmriData
 from pyhrf.ndarray import expand_array_in_mask
-from pyhrf.tools.io import read_volume, write_volume
+from pyhrf.tools._io import read_volume, write_volume
 from pyhrf.ndarray import xndarray
 
 import scipy as sp

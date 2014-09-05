@@ -1,29 +1,151 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import string
 import numpy as np
-import pyhrf
-import os
-import os.path as op
+from itertools import chain
+from collections import defaultdict
+import re
 import pprint
 import csv
 import tempfile
-from collections import defaultdict
+import os
+import os.path as op
+import shutil
 
 from nibabel import gifti
 import nibabel
 
-from pyhrf.graph import graph_from_mesh, sub_graph, graph_is_sane
-from pyhrf.ndarray import xndarray, MRI3Daxes, MRI4Daxes, TIME_AXIS
+import pyhrf
+
 from pyhrf.tools import  distance
 
 PICKLE_DUMPED_FILE_EXTENSION = 'pck'
 VOL_NII_EXTENSION = 'nii'
 TEXTURE_EXTENSION = 'gii'
 
-from _zip import *
+from _zip import gunzip
+
+def find_duplicates(l):
+    """ Find the index of duplicate elements in the given list. 
+    Complexity is O(n*log(d)) where d is the number of unique duplicate 
+    elements.
+
+    Args:
+        - l (list): the list where to search for duplicates
+        
+    Return: groups of indexes corresponding to duplicated element:
+            -> list of list of elements
+
+    Example:
+    >>> find_duplicates([1,1,2,1,4,5,7,2])
+    [[0, 1, 3], [2, 7]]
+    """
+    duplicates = defaultdict(list)
+    for i,e in enumerate(l):
+        duplicates[e].append(i)
+    return [dups for dups in duplicates.values() if len(dups)>1]
+
+class MissingTagError(Exception): pass
+
+class DuplicateTargetError(Exception): pass
+
+def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
+            replacements=None, callback=None):
+    """
+    Copy all file names matching the regexp *src* in folder *src_folder* to
+    targets defined by format strings.
+    The association between source and target file names must be injective.
+    If several file names matched by *src* are associated with the same target,
+    an exception will be raised.
+    
+    Args:
+        - src (str): regular expression matching file names in the given folder
+                     *src_folder* where group names are mapped to
+                     format argument names in *dest_folder* and *dest_basename*
+        - src_folder (str): path where to search for files matched by *src*
+        - dest_basename (str): format string with named arguments 
+                               (eg 'file_{mytag}_{mytag2}.txt') used to form
+                               target file basenames where named arguments are
+                               substituted with group values caught by *src*.
+        - dest_folder (list of str): 
+                      list of format strings with named arguments, 
+                      eg ('folder_{mytag}','folder_{mytag2}'),  to be joined 
+                      to form target directories.
+                      Named arguments are substituted with group values 
+                      extracted by *src*.
+        - dry (bool): if True then do not perform any copy
+        - replacements (list of tuple of str): 
+                      list of replacements, ie [(old,new), (old,new), ...],
+                      to be applied to target file names by calling the function 
+                      string.replace(old,new) on them
+        - callback (func): callback function called on final filenames to
+                           modify target name or filter a copy operation.
+                           -> callback(src_fn, dest_fn)
+                              Return: None | str
+                                      If None then no copy is performed
+                                      If str then it replaces the target filename
+    Return: None
+    """
+    replacements = replacements or []
+    callback = callback or (lambda x,y: y)
+    # check consistency between src group names and dest items:
+    src_tags = set(re.compile(src).groupindex.keys())
+
+    re_named_args = re.compile('\{(.*?)\}')
+    folder_dtags = set(chain(*[re_named_args.findall(d) \
+                                       for d in dest_folder]))
+    bn_dest_tags = set(re_named_args.findall(dest_basename))
+                
+    if not folder_dtags.issubset(src_tags):
+        raise MissingTagError('Tags in dest_folder not defined in src: %s'\
+                              %', '.join(folder_dtags.difference(src_tags)))
+    if not bn_dest_tags.issubset(src_tags):
+        raise MissingTagError('Tags in dest_basename not defined in src: %s'\
+                              %', '.join(bn_dest_tags.difference(src_tags)))
+
+    # resolve file names
+    input_files, output_files = [], []
+    re_src = re.compile(op.join(re.escape(src_folder),src))
+
+    for root, dirs, files in os.walk(src_folder):
+        for fn in files:
+            input_fn = op.join(root, fn) 
+            ri = re_src.match(input_fn)
+            if ri is not None:
+                subs = ri.groupdict()
+                output_subs = [df.format(**subs) for df in dest_folder]
+                output_file = op.join(*(output_subs + \
+                                        [dest_basename.format(**subs)]))
+                for old, new in replacements:
+                    output_file = output_file.replace(old, new)
+                output_file = callback(input_fn, output_file)
+                if output_file is not None:
+                    input_files.append(input_fn)
+                    output_files.append(output_file)
+    
+    # check injectivity:
+    duplicate_indexes = find_duplicates(output_files)
+    if len(duplicate_indexes) > 0:
+        sduplicates = '\n'.join(*[['\n'.join(sorted([input_files[i] \
+                                                     for i in dups])) +  \
+                                   '\n' + '-> ' + output_files[dups[0]] +'\n'] \
+                                 for dups in duplicate_indexes])
+        raise DuplicateTargetError('Copy is not injective, the following copy'\
+                                   ' operations have the same destination:\n'\
+                                   '%s' %sduplicates) 
+
+    if pyhrf.verbose.verbosity > 3:
+        msg = '\n'.join(['\n-> '.join((ifn, ofn)) \
+                        for ifn,ofn in zip(input_files, output_files)])
+        pyhrf.verbose(3, msg)
+
+    if not dry: # do the copy
+        for ifn, ofn in zip(input_files, output_files):
+            # Create sub directories if not existing:
+            output_item_dir = op.dirname(ofn)
+            if not op.exists(output_item_dir):
+                os.makedirs(output_item_dir)
+            shutil.copy(ifn, ofn)
+    return
 
 
 def read_volume(fileName, remove_nans=True):
@@ -50,6 +172,7 @@ def read_volume(fileName, remove_nans=True):
     return arr, (nim.get_affine(), nim.get_header())
 
 def cread_volume(fileName):
+    from pyhrf.ndarray import xndarray
     return xndarray.load(fileName)
 
 def read_spatial_resolution(fileName):
@@ -152,47 +275,6 @@ def writeDictVolumesNiftii(vols, fileName, meta_data=None, sep='_', slice=None):
         return [(slice,fileName)]
 
 
-def writexndarrayToNiftii(cuboid, fileName, meta_data=None, sep='_'):
-    raise DeprecationWarning('writexndarrayToNiftii should not be used any more')
-    axns = cuboid.getAxesNames()
-    pyhrf.verbose(3, 'writexndarrayToNiftii, fn:' + fileName)
-    pyhrf.verbose(3, '-> got axes :' + str(axns))
-
-    if 'sagittal' not in axns or 'coronal' not in axns or 'axial' not in axns:
-        raise Exception('xndarray not writable as nifti image')
-
-    #target_axes = MRI3Daxes + list(set(axns).difference(MRI3Daxes))
-    #print 'target_axes:', target_axes
-
-    if 'iteration' in axns and 'time' not in axns :
-        v = xndarrayViewNoMask(cuboid, mode=xndarrayViewNoMask.MODE_4D,
-                             currentAxes=MRI3Daxes+['iteration'])
-    elif 'time' in axns:
-        v = xndarrayViewNoMask(cuboid, mode=xndarrayViewNoMask.MODE_4D,
-                             currentAxes=MRI3Daxes+['time'])
-
-    else : # 3D volumes to write
-        v = xndarrayViewNoMask(cuboid, mode=xndarrayViewNoMask.MODE_3D,
-                             currentAxes=MRI3Daxes)
-
-    #print 'cuboid axes:', cuboid.axes_names
-    #print 'view currentAxes:', v.currentAxes
-
-    #print 'writexndarrayToNiftii, base fileName :', fileName
-    #print '%%%%%%%%%%% getting all views ....'
-
-    #meta_obj['volume_dimension'] = v.getCurrentShape()
-    #meta_obj['data_type'] = 'DOUBLE'
-    #meta_obj['disk_data_type'] = 'DOUBLE'
-    vols = v.getAllViews()
-    eaxes = v.get_sliced_axes()
-    if 0:
-        print '--------------------'
-        print 'got allViews :'
-        print vols
-        print '--------------------'
-    fns = dict(writeDictVolumesNiftii(vols, fileName, meta_data, sep=sep))
-    return eaxes,fns
 
 
 def writeDictVolumesTex(vols, fileName):
@@ -215,20 +297,6 @@ def writeDictVolumesTex(vols, fileName):
         #tex = Texture(fileName, data=vols)
         #tex.write()
         write_texture(vols, fileName)
-
-def writexndarrayToTex(cuboid, fileName):
-    axns = cuboid.getAxesNames()
-    if 'voxel' not in axns:
-        return
-    if 'time' in axns:
-        v = xndarrayViewNoMask(cuboid, mode=xndarrayViewNoMask.MODE_2D,
-                       currentAxes=['voxel', 'time'])
-    else:
-        v = xndarrayViewNoMask(cuboid, mode=xndarrayViewNoMask.MODE_1D,
-                       currentAxes=['voxel'])
-    texs = v.getAllViews()
-    writeDictVolumesTex(texs, fileName)
-
 
 def sub_sample_vol(image_file, dest_file, dsf, interpolation='continuous',
                    verb_lvl=0):
@@ -301,6 +369,7 @@ def sub_sample_vol(image_file, dest_file, dsf, interpolation='continuous',
 def concat3DVols(files, output):
     """ Concatenate 3D volumes given by a list a file to 4D volume (output)
     """
+    img4D = None
     for i,f in enumerate(files):
         img, meta_data = read_volume(f)
         img = img.squeeze() #remove dim of length=1
@@ -310,9 +379,12 @@ def concat3DVols(files, output):
             pyhrf.verbose(1, "Volume size: %s, type: %s" \
                               %(str(img.shape), str(img.dtype)))
             img4D = np.zeros(img.shape + (len(files),), img.dtype)
-            print 'img4D.shape:', img4D.shape
+            #print 'img4D.shape:', img4D.shape
         img4D[:,:,:,i] = img
-    write_volume(img4D, output, meta_data=meta_data)
+    if img4D is not None:
+        write_volume(img4D, output, meta_data=meta_data)
+    else:
+        raise Exception('No 4D output produced from files: %s'%str(files)) 
 
 
 def split_ext_safe(fn):
@@ -323,6 +395,8 @@ def split_ext_safe(fn):
     return root,ext
 
 def split4DVol(boldFile, output_dir=None):
+    from pyhrf.ndarray import TIME_AXIS
+
     if output_dir is None:
         output_dir = tempfile.mkdtemp(prefix='pyhrf',
                                       dir=pyhrf.cfg['global']['tmp_path'])
@@ -341,8 +415,6 @@ def split4DVol(boldFile, output_dir=None):
             write_volume(img[:,:,:,i], fn, meta_data)
         fns.append(fn)
     return fns
-
-from pyhrf.graph import parcels_to_graphs, kerMask3D_6n
 
 # DATA sanity checks:
 # - volume shapes across sessions
@@ -461,6 +533,9 @@ def load_fmri_vol_data(boldFiles, roiMaskFile, keepBackground=False,
     roiMask -- a 3D numpy int array defining ROIs (0 stands for the background)
     dataHeader -- the header from the BOLD data file
     """
+    from pyhrf.ndarray import MRI3Daxes, MRI4Daxes, TIME_AXIS
+    from pyhrf.graph import parcels_to_graphs, kerMask3D_6n
+
     for boldFile in boldFiles:
         if not os.path.exists(boldFile):
             raise Exception('File not found: ' + boldFile)
@@ -536,10 +611,15 @@ def load_fmri_vol_data(boldFiles, roiMaskFile, keepBackground=False,
 
     return graphs, roiBold, sessionScans, roiMask, mask_meta_data
 
-def discard_bad_data(bold, roiMask, time_axis=TIME_AXIS):
+def discard_bad_data(bold, roiMask, time_axis=None):
     """ Discard positions in 'roiMask' where 'bold' has zero variance or
     contains NaNs
     """
+    from pyhrf.ndarray import TIME_AXIS
+
+    if time_axis is None:
+        time_axis = TIME_AXIS
+
     m = roiMask
     #print 'roiMask:', roiMask.shape
     #print 'bold.shape:', bold.shape
@@ -627,7 +707,7 @@ def read_texture(tex):
             texture = tex_gii.darrays[0].data
         return texture, tex_gii
     elif has_ext_gzsafe(tex, 'tex'):
-        from pyhrf.tools.io.tio import Texture
+        from pyhrf.tools._io.tio import Texture
         texture = Texture.read(tex).data
         return texture, None
     else:
@@ -675,7 +755,7 @@ def write_texture(tex_data, filename, intent=None, meta_data=None):
         if meta_data is not None:
             print 'Warning: meta ignored when saving to tex format'
 
-        from pyhrf.tools.io.tio import Texture
+        from pyhrf.tools._io.tio import Texture
         tex = Texture(filename, data=tex_data)
         tex.write()
     else:
@@ -700,6 +780,7 @@ def load_fmri_surf_data(boldFiles, meshFile, roiMaskFile=None):
     roiMask -- a 1D numpy int array defining ROIs (0 stands for the background)
     dataHeader -- the header from the BOLD data file
     """
+    from pyhrf.graph import graph_from_mesh, sub_graph, graph_is_sane
 
     #Load ROIs:
     pyhrf.verbose(1, 'load roi mask: ' + roiMaskFile)
@@ -939,4 +1020,6 @@ def crop_data_file(data_fn, mask_fn, output_data_fn):
         h[1].extensions.pop()
 
     write_volume(cropped_data, output_data_fn, h)
+
+
 

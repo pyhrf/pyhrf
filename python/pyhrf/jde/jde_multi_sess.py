@@ -22,7 +22,7 @@ from pyhrf.jde.intensivecalc import computeYtilde, sampleSmmNrlBar
 from pyhrf.ndarray import xndarray, stack_cuboids, expand_array_in_mask
 
 from pyhrf.tools import get_2Dtable_string
-from pyhrf.tools.io import write_volume
+from pyhrf.tools._io import write_volume
 from collections import defaultdict
 
 from samplerbase import GibbsSampler, GibbsSamplerVariable

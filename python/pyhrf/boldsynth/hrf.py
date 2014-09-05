@@ -174,7 +174,8 @@ def genBezierHRF(timeAxis=np.arange(0,25.5,0.6), pic=[6,1], picw=2,
 
     resampledHRF[0] = np.array(resampledHRF[0])
     hvals = np.array(resampledHRF[1])
-    resampledHRF[1] = hvals / (hvals**2).sum()**.5
+    if normalize:
+        resampledHRF[1] = hvals / (hvals**2).sum()**.5
     return resampledHRF
 
 def bezierCurve(p1, pc1, p2, pc2, xPrecision):

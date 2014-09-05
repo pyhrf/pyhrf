@@ -18,7 +18,7 @@ from scipy.signal.signaltools import lfilter
 from pyhrf import paradigm
 from pyhrf.boldsynth import hrf as shrf
 import pyhrf.paradigm as mpar
-from pyhrf.tools.io import write_volume
+from pyhrf.tools._io import write_volume
 from pyhrf.graph import bfs_set_label
 
 from pyhrf.tools import add_prefix
@@ -167,7 +167,7 @@ def load_drawn_labels(name):
         raise Exception('Unknown label map %s (%s)' %(name,fn))
 
     from scipy.misc import fromimage
-    import Image
+    from PIL import Image
     labels = fromimage(Image.open(fn))
     return labels[np.newaxis,:,:]
 
@@ -357,7 +357,7 @@ def load_hrf_territories(nb_hrf_territories=0, hrf_territories_name=None):
                                       %nb_hrf_territories)
     assert op.exists(fn)
     from scipy.misc import fromimage
-    import Image
+    from PIL import Image
     territories = fromimage(Image.open(fn))
     territories = territories[np.newaxis,:,:]
     t=territories[np.where(np.ones_like(territories))]
@@ -367,7 +367,7 @@ def load_hrf_territories(nb_hrf_territories=0, hrf_territories_name=None):
     return t
 
 def load_many_hrf_territories(nb_hrf_territories):
-    from pyhrf.tools.io import read_volume
+    from pyhrf.tools._io import read_volume
     fn = pyhrf.get_data_file_name('simu_hrf_%d_territories.nii' \
                         %nb_hrf_territories)
     assert op.exists(fn)

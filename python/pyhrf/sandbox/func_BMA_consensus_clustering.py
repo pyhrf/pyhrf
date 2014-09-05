@@ -26,7 +26,7 @@ def BMA_consensus_cluster_parallel(cfg, remote_path, remote_BOLD_fn, remote_mask
     from RFIR_evaluation_parcellations import JDE_estim, RFIR_estim, clustering_from_RFIR
     
     from Random_parcellations import hrf_roi_to_vox
-    from pyhrf.tools.io import remote_copy, remote_mkdir
+    from pyhrf.tools._io import remote_copy, remote_mkdir
     from nisl import io
     
     #nifti_masker.mask=remote_mask_fn
@@ -83,8 +83,8 @@ def BMA_consensus_cluster_parallel(cfg, remote_path, remote_BOLD_fn, remote_mask
     ## 3D STEP: CLUSTERING FROM RFIR RESULTS
     name_hrf = 'rfir_ehrf.nii'
     
-    from pyhrf.tools.io import write_volume, read_volume
-    from pyhrf.tools.io import read_volume, write_volume
+    from pyhrf.tools._io import write_volume, read_volume
+    from pyhrf.tools._io import read_volume, write_volume
     import nisl.io as ionisl
     from sklearn.feature_extraction import image
     from sklearn.cluster import WardAgglomeration
@@ -166,7 +166,7 @@ def compute_consensus_clusters_parallel(K_clus, consensus_matrices, clustcount_m
     
     from Random_parcellations import random_parcellations, subsample_data_on_time
     from Divers_parcellations_test import *
-    from pyhrf.tools.io import read_volume
+    from pyhrf.tools._io import read_volume
     
     print '  * Consensus with ', K_clus, ' clusters' 
     c_mat = np.array(clustcount_matrices[int(K_clus)])

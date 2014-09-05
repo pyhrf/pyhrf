@@ -11,7 +11,7 @@ from numpy.random import rand, randint, permutation
 
 
 import pyhrf
-from pyhrf.tools.io import read_volume, write_volume, read_texture, write_texture
+from pyhrf.tools._io import read_volume, write_volume, read_texture, write_texture
 from pyhrf.tools import format_duration, peelVolume3D
 from pyhrf.graph import parcels_to_graphs, kerMask3D_6n, \
     connected_components

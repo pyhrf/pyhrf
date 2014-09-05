@@ -6,7 +6,7 @@ import numpy as np
 
 import pyhrf
 from pyhrf._verbose import dictToString
-from pyhrf.tools.io import read_volume, write_volume
+from pyhrf.tools._io import read_volume, write_volume
 from pyhrf.tools import add_suffix
 from pyhrf.ndarray import xndarray
 

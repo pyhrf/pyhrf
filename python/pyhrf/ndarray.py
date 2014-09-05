@@ -23,6 +23,9 @@ MRI3Daxes = ['sagittal','coronal','axial']
 MRI4Daxes = MRI3Daxes + ['time']
 TIME_AXIS = 3
 
+class ArrayMappingError(Exception):
+    pass
+
 class xndarray:
     """ Handles a multidimensional numpy array with axes that are labeled
     and mapped to domain values.
@@ -51,7 +54,8 @@ class xndarray:
                 if None: then axes_names = [\"dim0\", \"dim1\", ...]
             - axes_domains (dictof <str>:<numpy array>):
                 domains associated to axes.
-                If a domain is not specified then it defaults to range(size(axis))
+                If a domain is not specified then it defaults to 
+                range(size(axis))
 
 
         Return: a xndarray instance
@@ -732,6 +736,7 @@ class xndarray:
         return self.expand(cmask.data, axis, cmask.axes_names,
                            cmask.axes_domains, dest=dest)
 
+
     def expand(self, mask, axis, target_axes=None,
                target_domains=None, dest=None, do_checks=True, m=None):
         """ Create a new xndarray instance (or store into an existing 'dest'
@@ -778,8 +783,6 @@ class xndarray:
                             str(target_axes), str(target_domains)))
 
         if do_checks:
-
-
             if  not ((mask.min() == 0 and mask.max() == 1) or \
                      (mask.min() == 1 and mask.max() == 1) or
                      (mask.min() == 0 and mask.max() == 0)):
@@ -801,13 +804,12 @@ class xndarray:
 
         pyhrf.verbose(6, 'target_axes: %s' %str(target_axes))
 
-
         if do_checks and len(target_axes) != 1 and \
                 len(set(target_axes).intersection(self.axes_names)) != 0:
             # if len(target_axes) == 1 & target_axes[0] already in current axes
             #    -> OK, axis is mapped to itself.
-            raise Exception('Error while expanding xndarray, intersection btw '\
-                                'targer axes (%s) and current axes (%s) is ' \
+            raise Exception('Error while expanding xndarray, intersection btwn'\
+                                ' targer axes (%s) and current axes (%s) is ' \
                                 'not empty.' \
                                 %(str(target_axes),str(self.axes_names)))
 
@@ -844,7 +846,73 @@ class xndarray:
         #                         for i in xrange(len(new_axes))])
 
         return xndarray(new_data, new_axes, new_domains, self.value_label,
-                      meta_data=self.meta_data)
+                        meta_data=self.meta_data)
+
+
+    def map_onto(self, xmapping):
+        """
+        Reshape the array by mapping the axis corresponding to 
+        xmapping.value_label onto the shape of xmapping.
+        Args:
+            - xmapping (xndarray): array whose attribute value_label
+                                   matches an axis of the current array
+        
+        Return:
+            - a new array (xndarray) where values from the current array
+              have been mapped according to xmapping
+
+        Example:
+        >>> from pyhrf.ndarray import xndarray
+        >>> import numpy as np
+        >>> # data with a region axis:
+        >>> data = xndarray(np.arange(2*4).reshape(2,4).T * .1,    \
+                            ['time', 'region'],               \
+                            {'time':np.arange(4)*.5, 'region':[2, 6]})
+        >>> data
+        axes: ['time', 'region'], array([[ 0. ,  0.4],
+               [ 0.1,  0.5],
+               [ 0.2,  0.6],
+               [ 0.3,  0.7]])
+        >>> # 2D spatial mask of regions:
+        >>> region_map = xndarray(np.array([[2,2,2,6], [6,6,6,0], [6,6,0,0]]), \
+                                  ['x','y'], value_label='region')
+        >>> # expand region-specific data into region mask 
+        >>> # (duplicate values)
+        >>> data.map_onto(region_map)
+        axes: ['x', 'y', 'time'], array([[[ 0. ,  0.1,  0.2,  0.3],
+                [ 0. ,  0.1,  0.2,  0.3],
+                [ 0. ,  0.1,  0.2,  0.3],
+                [ 0.4,  0.5,  0.6,  0.7]],
+        <BLANKLINE>
+               [[ 0.4,  0.5,  0.6,  0.7],
+                [ 0.4,  0.5,  0.6,  0.7],
+                [ 0.4,  0.5,  0.6,  0.7],
+                [ 0. ,  0. ,  0. ,  0. ]],
+        <BLANKLINE>
+               [[ 0.4,  0.5,  0.6,  0.7],
+                [ 0.4,  0.5,  0.6,  0.7],
+                [ 0. ,  0. ,  0. ,  0. ],
+                [ 0. ,  0. ,  0. ,  0. ]]])
+        """
+        mapped_axis = xmapping.value_label
+        if not self.has_axis(mapped_axis):
+            raise ArrayMappingError('Value label "%s" of xmapping not found '\
+                                        'in array axes (%s)' \
+                                        %(mapped_axis,
+                                          ', '.join(self.axes_names)))
+
+        if not set(xmapping.data.flat).issuperset(self.get_domain(mapped_axis)):
+            raise ArrayMappingError('Domain of axis "%s" to be mapped is not a '
+                                    'subset of values in the mapping array.'\
+                                     %mapped_axis)
+        dest = None
+        for mval in self.get_domain(mapped_axis):
+            sub_a = self.sub_cuboid(**{mapped_axis:mval})
+            sub_mapping = self.xndarray_like(xmapping, data=xmapping.data==mval)
+            rsub_a = sub_a.repeat(sub_mapping.sum(), '__mapped_axis__')
+            dest = rsub_a.cexpand(sub_mapping, '__mapped_axis__', dest=dest)
+        return dest
+
 
     def flatten(self, mask, axes, new_axis):
         """ flatten cudoid.
@@ -1182,7 +1250,7 @@ class xndarray:
             return  header['pixdim'][1:4][MRI3Daxes.index(axis)]
         else:
             raise Exception('xndarray does not have any meta data to get' \
-                                'voxel size')
+                            'voxel size')
 
     def get_dshape(self):
         """
@@ -1336,8 +1404,6 @@ class xndarray:
                 return m
             else:
                 return xndarray(m, an, ad, self.value_label, self.meta_data)
-            return xndarray(self.data.min(axis=ia), an, ad,
-                          self.value_label, self.meta_data)
 
 
     def max(self, axis=None):
@@ -1359,9 +1425,6 @@ class xndarray:
                 return m
             else:
                 return xndarray(m, an, ad, self.value_label, self.meta_data)
-            return xndarray(self.data.min(axis=ia), an, ad,
-                          self.value_label, self.meta_data)
-
 
 
     def ptp(self, axis=None):
@@ -1596,7 +1659,7 @@ class xndarray:
         #     h5file.createArray(root, "array", self.data)
         #     h5file.close()
         elif has_ext(file_name, 'gii'):
-            from pyhrf.tools.io import write_texture
+            from pyhrf.tools._io import write_texture
             pyhrf.verbose(4, 'Save Gifti image (dim=%d) ...' \
                               %(c_to_save.get_ndims()))
             pyhrf.verbose(4, 'axes names: %s' %str(c_to_save.axes_names))
@@ -1626,7 +1689,6 @@ class xndarray:
                                   meta_data=c_to_save.get_extra_info(fmt='xml'))
         else:
             raise Exception('Unsupported file format (ext: "%s")' %ext)
-
 
 
     @staticmethod
@@ -1695,7 +1757,7 @@ class xndarray:
             return a
         elif ext == '.gii' or \
                 (ext == '.gz' and op.splitext(file_name[:-3])[1] == '.gii'):
-            from pyhrf.tools.io import read_texture
+            from pyhrf.tools._io import read_texture
             data, gii = read_texture(file_name)
             md = gii.get_metadata().get_metadata()
             # print 'meta data loaded from gii:'

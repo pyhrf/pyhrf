@@ -7,8 +7,8 @@ import numpy as np
 from pyhrf._verbose import dictToString
 from pyhrf.tools import apply_to_leaves
 from pyhrf.tools import stack_trees, unstack_trees, PickleableStaticMethod
-from pyhrf.tools.io.spmio import load_paradigm_from_mat
-from pyhrf.tools.io import load_paradigm_from_csv
+from pyhrf.tools._io import load_paradigm_from_csv
+from pyhrf.tools._io.spmio import load_paradigm_from_mat
 
 from numpy.testing import assert_array_equal
 from nipy.modalities.fmri.experimental_paradigm import EventRelatedParadigm, BlockParadigm
