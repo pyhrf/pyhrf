@@ -593,6 +593,8 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     drift_var = 10.
     dt = .5
     dsf = 2 #down sampling factor
+    #tr = dt * dsf
+    tr = 3.
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
@@ -647,7 +649,7 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     simulation_steps = {
         'dt' : dt,
         'dsf' : dsf,
-        'tr' : dt * dsf,
+        'tr' : tr,
         'condition_defs' : conditions,
         # Paradigm
         'paradigm' : simbase.create_localizer_paradigm_avd,

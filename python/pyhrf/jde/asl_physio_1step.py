@@ -436,8 +436,8 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
                                     /v_prf
             new_factor_var = np.dot(np.dot(omega.transpose(), sigma_g_inv),omega)\
                             /v_prf
-        varInvSigma = StS + self.nbVoxels * self.varR / v_resp + new_factor_var
-        #varInvSigma = StS + self.varR / v_resp + new_factor_var
+        #varInvSigma = StS + self.nbVoxels * self.varR / v_resp + new_factor_var
+        varInvSigma = StS + self.varR / v_resp + new_factor_var
         mean_h = np.linalg.solve(varInvSigma,StY + self.new_factor_mean)
         resp = np.random.multivariate_normal(mean_h, np.linalg.inv(varInvSigma))
                                              
@@ -513,7 +513,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
         self.omega_operator =  linear_rf_operator(hrf_length, phy_params, self.dt,
                                                   calculating_brf=False)
-        self.omega_operator_l =  linear_rf_operator(hrf_length+2, phy_params, self.dt,
+        self.omega_operator_l =  linear_rf_operator(hrf_length+6, phy_params, self.dt,
                                                   calculating_brf=False)
         
         if 'physio' in self.prior_type:
@@ -609,11 +609,9 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
             sigma_g_inv = self.varR
 
             if self.zc:
-                Oh = np.dot(omega_l,np.concatenate(([0],brf,[0])))[1:-1]
+                #Oh = np.dot(omega_l,np.concatenate(([0],brf,[0])))[1:-1]
                 #Oh = np.dot(omega_l,np.concatenate(([0],[0],brf,[0],[0])))[2:-2]
-                #print omega_l.shape
-                #print np.concatenate(([0],[0],[0],brf,[0],[0],[0])).shape
-                #Oh = np.dot(omega_l,np.concatenate(([0],[0],[0],brf,[0],[0],[0])))[3:-3]
+                Oh = np.dot(omega_l,np.concatenate(([0],[0],[0],brf,[0],[0],[0])))[3:-3]
             else:
                 Oh = np.dot(omega,brf)
             #Oh = np.dot(omega,brf)
@@ -621,8 +619,8 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
             new_factor = np.dot(sigma_g_inv, Oh)/v_resp
             
             
-            varInvSigma = (StS + self.nbVoxels * self.varR / v_resp)
-            #varInvSigma = (StS + self.varR / v_resp)
+            #varInvSigma = (StS + self.nbVoxels * self.varR / v_resp)
+            varInvSigma = (StS + self.varR / v_resp)
             mean_h = np.linalg.solve(varInvSigma, StY+new_factor)
             resp = np.random.multivariate_normal(mean_h, 
                                                  np.linalg.inv(varInvSigma))
