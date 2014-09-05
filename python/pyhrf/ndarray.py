@@ -736,30 +736,6 @@ class xndarray:
         return self.expand(cmask.data, axis, cmask.axes_names,
                            cmask.axes_domains, dest=dest)
 
-    def map_onto(self, xmapping):
-        """
-        Reshape the array by mapping the axis corresponding to 
-        xmapping.value_label onto the shape of xmapping.
-        """
-        mapped_axis = xmapping.value_label
-        if not self.has_axis(mapped_axis):
-            raise ArrayMappingError('Value label "%s" of xmapping not found '\
-                                        'in array axes (%s)' \
-                                        %(mapped_axis,
-                                          ', '.join(self.axes_names)))
-
-        if not set(xmapping.data.flat).issuperset(self.get_domain(mapped_axis)):
-            raise ArrayMappingError('Domain of axis "%s" to be mapped is not a '
-                                    'subset of values in the mapping array.'\
-                                     %mapped_axis)
-        dest = None
-        for mval in self.get_domain(mapped_axis):
-            sub_a = self.sub_cuboid(**{mapped_axis:mval})
-            sub_mapping = self.xndarray_like(xmapping, data=xmapping.data==mval)
-            rsub_a = sub_a.repeat(sub_mapping.sum(), '__mapped_axis__')
-            dest = rsub_a.cexpand(sub_mapping, '__mapped_axis__', dest=dest)
-        return dest
-
 
     def expand(self, mask, axis, target_axes=None,
                target_domains=None, dest=None, do_checks=True, m=None):
@@ -884,6 +860,39 @@ class xndarray:
         Return:
             - a new array (xndarray) where values from the current array
               have been mapped according to xmapping
+
+        Example:
+        >>> from pyhrf.ndarray import xndarray
+        >>> import numpy as np
+        >>> # data with a region axis:
+        >>> data = xndarray(np.arange(2*4).reshape(2,4).T * .1,    \
+                            ['time', 'region'],               \
+                            {'time':np.arange(4)*.5, 'region':[2, 6]})
+        >>> data
+        axes: ['time', 'region'], array([[ 0. ,  0.4],
+               [ 0.1,  0.5],
+               [ 0.2,  0.6],
+               [ 0.3,  0.7]])
+        >>> # 2D spatial mask of regions:
+        >>> region_map = xndarray(np.array([[2,2,2,6], [6,6,6,0], [6,6,0,0]]), \
+                                  ['x','y'], value_label='region')
+        >>> # expand region-specific data into region mask 
+        >>> # (duplicate values)
+        >>> data.map_onto(region_map)
+        axes: ['x', 'y', 'time'], array([[[ 0. ,  0.1,  0.2,  0.3],
+                [ 0. ,  0.1,  0.2,  0.3],
+                [ 0. ,  0.1,  0.2,  0.3],
+                [ 0.4,  0.5,  0.6,  0.7]],
+        <BLANKLINE>
+               [[ 0.4,  0.5,  0.6,  0.7],
+                [ 0.4,  0.5,  0.6,  0.7],
+                [ 0.4,  0.5,  0.6,  0.7],
+                [ 0. ,  0. ,  0. ,  0. ]],
+        <BLANKLINE>
+               [[ 0.4,  0.5,  0.6,  0.7],
+                [ 0.4,  0.5,  0.6,  0.7],
+                [ 0. ,  0. ,  0. ,  0. ],
+                [ 0. ,  0. ,  0. ,  0. ]]])
         """
         mapped_axis = xmapping.value_label
         if not self.has_axis(mapped_axis):
