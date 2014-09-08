@@ -33,4 +33,4 @@ Code status:
 Licence
 *******
 
-pyhrf is under the GPL v3 (see LICENCE for details)
+pyhrf is under the CeCILL v2 (see LICENCE for details)
