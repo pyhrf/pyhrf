@@ -38,5 +38,6 @@ nosetests.xml
 .project
 .pydevproject
 
-# Temporary file of editors
+# Temporary file and backup of editors
 *~
+*.bak
