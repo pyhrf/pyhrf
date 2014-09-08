@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import copy as copyModule
 import re
 import sys

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
 import unittest, os
 import os.path as op
 import pyhrf

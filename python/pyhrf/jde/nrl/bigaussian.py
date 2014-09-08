@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-
-# -*- coding: utf-8 -*-
 import os
 #from numpy import *
 import numpy as np

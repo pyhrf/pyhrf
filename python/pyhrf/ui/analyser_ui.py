@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import os.path as op
 import os
 import sys

@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 #from numpy import *
 import numpy as np
 import scipy.linalg
