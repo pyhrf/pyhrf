@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 """
 Create dummy artificial data: very short paradigm, very few voxels.

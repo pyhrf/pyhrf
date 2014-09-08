@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from pyhrf.ndarray import xndarray, MRI3Daxes, MRI4Daxes
 

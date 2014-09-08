@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 
 ## {{{ http://code.activestate.com/recipes/576693/ (r9)

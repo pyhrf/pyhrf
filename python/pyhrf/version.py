@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 
 # Let setuptools manage package version

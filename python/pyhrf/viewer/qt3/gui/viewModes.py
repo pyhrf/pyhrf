@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 
 MODE_1D = 0
