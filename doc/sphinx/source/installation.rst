@@ -229,19 +229,24 @@ In the directory where the pyhrf tarball has been decompressed or in the pyhrf g
     
 - local installation::
 
-     $python setup.py install --prefix=~/.local/
+    $python setup.py install --user
 
 - local installation in develop mode (only links to the source files are installed)::
 
-        $python setup.py develop --prefix=~/.local/
+    $python setup.py develop --user
 
- Note: /local/installation/path/lib/python2.x/site-packages must exist and be in your ``PYTHONPATH`` environment variable. Pyhrf executables will be installed in /local/installation/bin/ and the latter should then be in the ``PATH`` environment variable (see "Setup a local installation").
+ Note: --user option is an alias to --prefix=~/.local. If you prefer to install PyHRF elsewhere, then proceed as follows::
+
+  $MY_PYHRF_PATH=/path/to/installation
+  $python setup.py develop --prefix=$MY_PYHRF_PATH
+
+ In this case, the following folder $MY_PYHRF_PATH/lib/python2.XX/site-packages must exist and be in your ``PYTHONPATH`` environment variable. Pyhrf executables will be installed in $MY_PYHRF_PATH/bin/ and the latter should then be in the ``PATH`` environment variable (see "Setup a local installation").
 
 *** Run tests to check installation**::
 
     pyhrf_maketests
 
-Prior to the install, the installation path should have the following folders  :
+Prior to the install, the installation path should have the following folders:
  /local/installation/path/bin/
  /local/installation/path/lib/pythonXX/site-packages/ # XX is you python version
  
