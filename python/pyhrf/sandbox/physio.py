@@ -240,6 +240,7 @@ def create_physio_brf(physiological_params, response_dt=.5,
     brf = create_bold_from_hbr_and_cbv(physiological_params, q[:,0], v[:,0])
     if return_brf_q_v:
         return  brf/ (brf**2).sum()**.5, q, v, s, f  #WARNING!! Added to compute figures
+        #return  brf, q, v, s, f  #WARNING!! Added to compute figures
     else:
         return  brf / (brf**2).sum()**.5
 
@@ -272,8 +273,9 @@ def create_physio_prf(physiological_params, response_dt=.5,
     prf = f[:,0] - f[0,0] #remove y-intercept
     if return_prf_q_v:
         return prf/ (prf**2).sum()**.5, q, v
+        #return prf, q, v
     else:
-        return prf / (prf**2).sum()**.5
+        return prf/ (prf**2).sum()**.5
 
 def rescale_bold_over_perf(bold_stim_induced, perf_stim_induced,
                            bold_perf_ratio=5.):
