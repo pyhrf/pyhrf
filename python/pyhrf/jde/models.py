@@ -2435,7 +2435,7 @@ def simulate_bold(output_dir=None, noise_scenario='high_snr',
         'nrls' : sim.create_time_invariant_gaussian_nrls,
         # HRF
         'hrf_var' : 0.1,
-        'primary_hrf' : sim.create_gsmooth_hrf,
+        'primary_hrf' : sim.create_canonical_hrf,
         'normalize_hrf' : normalize_hrf,
         'hrf' : sim.duplicate_hrf,
         # Stim induced
