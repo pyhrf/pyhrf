@@ -240,6 +240,7 @@ def create_physio_brf(physiological_params, response_dt=.5,
     brf = create_bold_from_hbr_and_cbv(physiological_params, q[:,0], v[:,0])
     if return_brf_q_v:
         return  brf/ (brf**2).sum()**.5, q, v, s, f  #WARNING!! Added to compute figures
+        #return  brf, q, v, s, f  #WARNING!! Added to compute figures
     else:
         return  brf / (brf**2).sum()**.5
 
@@ -272,8 +273,9 @@ def create_physio_prf(physiological_params, response_dt=.5,
     prf = f[:,0] - f[0,0] #remove y-intercept
     if return_prf_q_v:
         return prf/ (prf**2).sum()**.5, q, v
+        #return prf, q, v
     else:
-        return prf / (prf**2).sum()**.5
+        return prf/ (prf**2).sum()**.5
 
 def rescale_bold_over_perf(bold_stim_induced, perf_stim_induced,
                            bold_perf_ratio=5.):
@@ -593,13 +595,15 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     drift_var = 10.
     dt = .5
     dsf = 2 #down sampling factor
+    #tr = dt * dsf
+    tr = 3.
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
     elif spatial_size == 'random_small':
         lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
     else:
-        lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
+        lmap1, lmap2, lmap3 = 'ghost', 'icassp13', 'house_sun'
 
     if noise_scenario == 'high_snr':
         v_noise = v_noise or 0.05
@@ -647,7 +651,7 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     simulation_steps = {
         'dt' : dt,
         'dsf' : dsf,
-        'tr' : dt * dsf,
+        'tr' : tr,
         'condition_defs' : conditions,
         # Paradigm
         'paradigm' : simbase.create_localizer_paradigm_avd,
