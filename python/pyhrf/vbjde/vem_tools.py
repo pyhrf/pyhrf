@@ -6,25 +6,10 @@ Used in different versions of VEM
 import os.path as op
 import numpy as np
 from numpy.matlib import *
-import scipy as sp
 from scipy.linalg import toeplitz
-import np
-from pyhrf.ndarray import xndarray
-import time
 from pyhrf.paradigm import restarize_events
+import pyhrf.verbose
 import UtilsC
-import pyhrf
-from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
-from pyhrf.tools.io import read_volume,write_volume
-from pyhrf.tools import format_duration
-from pyhrf.boldsynth.hrf import genBezierHRF
-from pyhrf.boldsynth.hrf import getCanoHRF
-
-
-try:
-    from collections import OrderedDict
-except ImportError:
-    from pyhrf.tools.backports import OrderedDict
 
 
 # Tools

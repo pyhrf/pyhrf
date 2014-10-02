@@ -11,7 +11,7 @@ import os.path as op
 import numpy as np
 import time
 import UtilsC
-from pyhrf import verbose 
+import pyhrf.verbose 
 from pyhrf.tools.io import read_volume 
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.ndarray import xndarray
