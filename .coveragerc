@@ -19,5 +19,5 @@ omit =
     */site-packages/pkg_resources.py
     */site-packages/six.py
     */site-packages/pyparsing.py
-    */site-packages/pyhrf/test/*
+    */pyhrf/test/*
     /usr/*
