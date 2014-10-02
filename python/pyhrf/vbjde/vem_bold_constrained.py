@@ -11,19 +11,31 @@ import os.path as op
 import numpy as np
 import time
 import UtilsC
-import pyhrf.verbose 
+import pyhrf
 from pyhrf.tools.io import read_volume 
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.ndarray import xndarray
 import vem_tools as vt
-
 try:
     from collections import OrderedDict
 except ImportError:
     from pyhrf.tools.backports import OrderedDict
 
 
-def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0,estimateHRF=True,TrueHrfFlag=False,HrfFilename='hrf.nii',estimateLabels=True,LabelsFilename='labels.nii',MFapprox=False,InitVar=0.5,InitMean=2.0,MiniVEMFlag=False,NbItMiniVem=5):    
+def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
+                                     dt,scale=1,estimateSigmaH=True,
+                                     sigmaH=0.05,NitMax=-1,
+                                     NitMin=1,estimateBeta=True,
+                                     PLOT=False,contrasts=[],
+                                     computeContrast=False,
+                                     gamma_h=0,estimateHRF=True,
+                                     TrueHrfFlag=False,
+                                     HrfFilename='hrf.nii',
+                                     estimateLabels=True,
+                                     LabelsFilename='labels.nii',
+                                     MFapprox=False,InitVar=0.5,
+                                     InitMean=2.0,MiniVEMFlag=False,
+                                     NbItMiniVem=5):    
     # VBJDE Function for BOLD with contraints
     
     pyhrf.verbose(1,"Fast EM with C extension started ...")
@@ -40,7 +52,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     NormFlag = False    
     if NitMax < 0:
         NitMax = 100
-    gamma = 7.5#7.5
+    gamma = 7.5
     #gamma_h = 1000
     gradientStep = 0.003
     MaxItGrad = 200
@@ -53,7 +65,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
-    l = int(sqrt(J))
+    l = int(np.sqrt(J))
     condition_names = []
 
     # Neighbours
@@ -184,16 +196,16 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         
         # A 
         pyhrf.verbose(3, "E A step ...")
-        UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
-        val = reshape(m_A,(M*J))
+        UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
+        val = np.reshape(m_A,(M*J))
         val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
         
         # crit. A
-        DIFF = reshape( m_A - m_A1,(M*J) )
+        DIFF = np.reshape( m_A - m_A1,(M*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
@@ -202,7 +214,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             ################################
             #  HRF ESTIMATION
             ################################
-            UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,scale,sigmaH)
+            UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
             
             import cvxpy as cvx
             # data: Sigma_H, m_H
@@ -224,7 +236,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             m_H = np.squeeze(np.array((h.value)))            
             Sigma_H = np.zeros_like(Sigma_H)    
             
-            h_norm += [norm(m_H)]
+            h_norm += [np.linalg.norm(m_H)]
             print 'h_norm = ', h_norm
             
             # Plotting HRF
@@ -249,10 +261,10 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         # crit. AH
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
-        DIFF = reshape( AH - AH1,(M*J*D) )
+        DIFF = np.reshape( AH - AH1,(M*J*D) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -260,25 +272,25 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         if estimateLabels:
             pyhrf.verbose(3, "E Z step ...")
             if MFapprox:
-                UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
+                UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
             if not MFapprox:
-                UtilsC.expectation_Z_ParsiMod_RVM_and_CompMod(Sigma_A,m_A,sigma_M,Beta,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
-                #UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
+                UtilsC.expectation_Z_ParsiMod_RVM_and_CompMod(Sigma_A,m_A,sigma_M,Beta,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
+                #UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
         else:
             pyhrf.verbose(3, "Using True Z ...")
             TrueZ = read_volume(LabelsFilename)
             for m in xrange(M):
-                q_Z[m,1,:] = reshape(TrueZ[0][:,:,:,m],J)
+                q_Z[m,1,:] = np.reshape(TrueZ[0][:,:,:,m],J)
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]            
         
         # crit. Z 
-        val = reshape(q_Z,(M*K*J))
+        val = np.reshape(q_Z,(M*K*J))
         val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         
-        DIFF = reshape( q_Z - q_Z1,(M*K*J) )
+        DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -304,7 +316,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             mu1[m] += [mu_M[m,1]]
         
         # Drift L
-        UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
+        UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(np.int32),J,D,M,Ndrift,N)
         PL = np.dot(P,L)
         y_tilde = Y - PL
         
@@ -313,16 +325,16 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             pyhrf.verbose(3,"estimating beta")
             for m in xrange(0,M):
                 if MFapprox:
-                    Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(float64),Z_tilde[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                    Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
                 if not MFapprox:
-                    #Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(float64),q_Z[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
-                    Beta[m] = UtilsC.maximization_beta_CB(beta,q_Z[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                    #Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                    Beta[m] = UtilsC.maximization_beta_CB(beta,q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
             pyhrf.verbose(3,"End estimating beta")
             pyhrf.verbose.printNdarray(3, Beta)
         
         # Sigma noise
         pyhrf.verbose(3,"M sigma noise step ...")
-        UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N)
+        UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N)
         
         #### Computing Free Energy ####
         if ni > 0:
@@ -404,7 +416,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     CompTime = t2 - t1
     cTimeMean = CompTime/ni
 
-    sigma_M = sqrt(sqrt(sigma_M))
+    sigma_M = np.sqrt(np.sqrt(sigma_M))
     pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
     pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
     #print "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s"

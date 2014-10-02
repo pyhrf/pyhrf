@@ -6,16 +6,32 @@ Used in different versions of VEM
 import os.path as op
 import numpy as np
 from numpy.matlib import *
+import scipy as sp
 from scipy.linalg import toeplitz
-from pyhrf.paradigm import restarize_events
-import pyhrf.verbose
+import time
 import UtilsC
-
+import pyhrf
+from pyhrf.tools.io import read_volume 
+from pyhrf.boldsynth.hrf import getCanoHRF
+from pyhrf.ndarray import xndarray
+from pyhrf.paradigm import restarize_events
+import vem_tools as vt
+try:
+    from collections import OrderedDict
+except ImportError:
+    from pyhrf.tools.backports import OrderedDict
 
 # Tools
 ##############################################################
 
 eps = 1e-4
+
+def mult(v1,v2):
+    matrix = np.zeros((len(v1),len(v2)),dtype=float)
+    for i in xrange(len(v1)):
+        for j in xrange(len(v2)):
+                matrix[i,j] += v1[i]*v2[j]
+    return matrix
 
 def polyFit(signal, tr, order,p):
     n = len(signal)
@@ -64,6 +80,7 @@ def buildFiniteDiffMatrix(order, size):
     diffMat = toeplitz(np.concatenate((b, np.zeros(size-len(b)))))
     return diffMat
 
+
 # Maximization functions
 ##############################################################
 
@@ -106,6 +123,46 @@ def maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h):
     sigmaH = (-D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
 
     return sigmaH
+       
+       
+# Entropy functions
+##############################################################
+       
+eps_FreeEnergy = 0.00000001
+
+def A_Entropy(Sigma_A, M, J):
+
+    pyhrf.verbose(3,'Computing NRLs Entropy ...')
+    Det_Sigma_A_j = np.zeros(J,dtype=np.float64)
+    Entropy = 0.0
+    for j in xrange(0,J):
+        Det_Sigma_A_j = np.linalg.det(Sigma_A[:,:,j])
+        Const = (2*np.pi*np.exp(1))**M
+        Entropy_j = np.sqrt( Const * Det_Sigma_A_j)
+        Entropy += np.log(Entropy_j + eps_FreeEnergy)
+    Entropy = - Entropy
+
+    return Entropy
+
+def H_Entropy(Sigma_H, D):
+
+    pyhrf.verbose(3,'Computing HRF Entropy ...')
+    Det_Sigma_H = np.linalg.det(Sigma_H)
+    Const = (2*np.pi*np.exp(1))**D
+    Entropy = np.sqrt( Const * Det_Sigma_H)
+    Entropy = - np.log(Entropy + eps_FreeEnergy)
+
+    return Entropy
+
+def Z_Entropy(q_Z, M, J):
+
+    pyhrf.verbose(3,'Computing Z Entropy ...')
+    Entropy = 0.0
+    for j in xrange(0,J):
+        for m in xrange(0,M):
+            Entropy += q_Z[m,1,j] * np.log(q_Z[m,1,j] + eps_FreeEnergy) + q_Z[m,0,j] * np.log(q_Z[m,0,j] + eps_FreeEnergy)
+
+    return Entropy
        
        
 # Other functions
