@@ -217,7 +217,6 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
             UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
             
             import cvxpy as cvx
-            # data: Sigma_H, m_H
             m,n = Sigma_H.shape    
             Sigma_H_inv = np.linalg.inv(Sigma_H)
             zeros_H = np.zeros_like(m_H[:,np.newaxis])
@@ -226,9 +225,10 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
             h = cvx.Variable(n)
             expression = cvx.quad_form(h - m_H[:,np.newaxis], Sigma_H_inv) 
             objective = cvx.Minimize(expression)
-            constraints = [h[0] == 0, h[-1]==0, h >= zeros_H, cvx.square(cvx.norm(h,2))<=1]    
+            #constraints = [h[0] == 0, h[-1]==0, h >= zeros_H, cvx.square(cvx.norm(h,2))<=1]    
+            constraints = [h[0] == 0, h[-1]==0, cvx.square(cvx.norm(h,2))<=1]    
             prob = cvx.Problem(objective, constraints)
-            result = prob.solve(verbose=1,solver=cvx.CVXOPT)            
+            result = prob.solve(verbose=0,solver=cvx.CVXOPT)            
 
             # Now we update the mean of h 
             m_H_old = m_H  
@@ -237,7 +237,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
             Sigma_H = np.zeros_like(Sigma_H)    
             
             h_norm += [np.linalg.norm(m_H)]
-            print 'h_norm = ', h_norm
+            #print 'h_norm = ', h_norm
             
             # Plotting HRF
             if PLOT and ni >= 0:
@@ -264,13 +264,17 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
         DIFF = np.reshape( AH - AH1,(M*J*D) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
+        if np.linalg.norm( np.reshape(AH1,(M*J*D)) )==0:
+            Crit_AH = 1000000000.
+        else:
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
         # Z labels
         if estimateLabels:
             pyhrf.verbose(3, "E Z step ...")
+            #WARNING!!! ParsiMod gives better results, but we need the other one.
             if MFapprox:
                 UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
             if not MFapprox:
@@ -290,7 +294,10 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
         DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
+        if np.linalg.norm( np.reshape(q_Z1,(M*K*J)) )==0:
+            Crit_Z = 1000000000.
+        else:
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -430,7 +437,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
     StimulusInducedSignal = vt.computeFit(m_H, m_A, X, J, N)
     SNR = 20 * np.log( np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL) )
     SNR /= np.log(10.)
-    print 'SNR comp =', SNR
+    pyhrf.verbose(1, "SNR = %d" %SNR)   
     return ni,m_A,m_H, q_Z,sigma_epsilone,mu_M,sigma_M,Beta,L,PL,CONTRAST,CONTRASTVAR,cA[2:],cH[2:],cZ[2:],cAH[2:],cTime[2:],cTimeMean,Sigma_A,StimulusInducedSignal,FreeEnergyArray
 
 

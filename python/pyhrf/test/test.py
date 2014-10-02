@@ -24,6 +24,7 @@ if 1:
     from test_paradigm import *
     from test_rfir import *
     from test_xml import *
+    from test_jde_vem_bold import *
 
 from test_ndarray import *
 

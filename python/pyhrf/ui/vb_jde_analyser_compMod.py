@@ -1,5 +1,3 @@
-
-
 # -*- coding: utf-8 -*-
 import numpy as np
 from time import time
@@ -8,8 +6,6 @@ from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.Utils_b import Main_vbjde_Extension_constrained
 from pyhrf.vbjde.Utils import classify,roc_curve,Main_vbjde_Python,Main_vbjde_Extension
 from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained
-
-
 #from pyhrf.vbjde.Utils import Main_vbjde, Main_vbjde_Fast, Main_vbjde_Extension,Main_vbjde_Extension_NoDrifts
 from scipy.linalg import norm
 from pyhrf.tools.io import read_volume
@@ -17,6 +13,7 @@ import pyhrf
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 import os.path as op
+
 
 def change_dim(labels):
     '''
