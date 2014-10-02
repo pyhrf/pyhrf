@@ -1,5 +1,3 @@
-[run]
-source = pyhrf
 [report]
 omit =
     */site-packages/nipy/*
