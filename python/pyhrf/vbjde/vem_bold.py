@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """VEM BOLD Constrained
 
-File that contains function for BOLD data analysis with positivity 
-and l2-norm=1 constraints. 
+Files that contain functions for BOLD data analysis
 
-It imports functions from vem_tools.py in pyhrf/vbjde
+Different implementations (1) with C extensions, (2) all in python,
+(3) to check differences
+
+WARNING: NOT WORKING!!
 """
 
 import os.path as op
@@ -16,7 +18,6 @@ from pyhrf.tools.io import read_volume
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.ndarray import xndarray
 import vem_tools as vt
-
 try:
     from collections import OrderedDict
 except ImportError:
