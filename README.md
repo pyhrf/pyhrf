@@ -27,7 +27,7 @@ Code status:
 
 * [![tests status](https://secure.travis-ci.org/pyhrf/pyhrf.png?branch=master)](https://travis-ci.org/pyhrf/pyhrf) travis-ci.org (master branch)
 
-* [![Coverage Status](https://coveralls.io/repos/pyhrf/pyhrf/badge.png?branch=master)](https://coveralls.io/r/pyhrf/pyhrf)
+* [![Coverage Status](https://coveralls.io/repos/pyhrf/pyhrf/badge.png)](https://coveralls.io/r/pyhrf/pyhrf)
 
 
 Licence
