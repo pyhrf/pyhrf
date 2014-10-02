@@ -2721,7 +2721,7 @@ def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,m
     return InitVar, InitMean, Initgamma_h
 
 def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0,estimateHRF=True,TrueHrfFlag=False,HrfFilename='hrf.nii',estimateLabels=True,LabelsFilename='labels.nii',MFapprox=False,InitVar=0.5,InitMean=2.0,MiniVEMFlag=False,NbItMiniVem=5):    
-#def Main_vbjde_Extension(HRFDict,graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0):    
+    #def Main_vbjde_Extension(HRFDict,graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0):    
     pyhrf.verbose(1,"Fast EM with C extension started ...")
 
     numpy.random.seed(6537546)
@@ -2743,6 +2743,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
     
+    # Initialize sizes vectors
     #D = int(numpy.ceil(Thrf/dt)) ##############################
     D = int(numpy.ceil(Thrf/dt)) + 1
     M = len(Onsets)
@@ -2751,16 +2752,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     l = int(sqrt(J))
     condition_names = []
 
-    #print '======================'
-    #print M
-    #print '======================'
-    #-----------------------------------------------------------------------#
-    # put neighb#figure(1)
-    #plot(m_H,'r')
-    #hold(False)
-    #draw()
-    #show()our lists into a 2D numpy array so that it will be easily
-    # passed to C-code
     maxNeighbours = max([len(nl) for nl in graph])
     neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
     neighboursIndexes -= 1
@@ -2810,8 +2801,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     SUM_q_Z = [[] for m in xrange(M)]
     mu1 = [[] for m in xrange(M)]
     h_norm = []
-    
-    #test_mu1 = [[] for m in xrange(M)]
     
     CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
     CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
@@ -2889,27 +2878,20 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += np.random.normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A        
             
     t1 = time.time()
-    #ion()
-    #timeAxis = numpy.arange(0, 25., 0.5)
-    #hrf0 = genBezierHRF(timeAxis=timeAxis, pic=[4,1], picw=3)[1]
-    
-    #print 'InitVar =',InitVar
-    #print 'InitMean =',InitMean
     
     for ni in xrange(0,NitMin):
-        #print "------------------------------ Iteration n° " + str(ni+1) + " ------------------------------"
         pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
         pyhrf.verbose(3, "E A step ...")
         #t01 = time.time()
         UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         
         val = reshape(m_A,(M*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-        val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
         #m_A = reshape(val, (J,M))
         
         if estimateHRF:
@@ -2935,12 +2917,15 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 plt.hold(True)
         else:
             if TrueHrfFlag:
-                TrueVal, head = read_volume(HrfFilename)
+                #TrueVal, head = read_volume(HrfFilename)
+                TrueVal, head = read_volume(HrfFilename)[:,0,0,0]
+                print TrueVal
+                print TrueVal.shape
                 m_H = TrueVal
                 
         DIFF = reshape( m_A - m_A1,(M*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
         Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
@@ -2952,8 +2937,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
         Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
@@ -2973,12 +2958,12 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]            
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         #q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
         Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
@@ -3041,14 +3026,12 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     #q_Z1[:,:,:] = q_Z[:,:,:]
     #m_A1[:,:] = m_A[:,:]
 
-    #print "------------------------------ Iteration n° " + str(ni+2) + " ------------------------------"
     pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
-    #t01 = time.time()
     UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
 
     val = reshape(m_A,(M*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
     #m_A = reshape(val, (J,M))
 
     if estimateHRF:
@@ -3073,14 +3056,14 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     
     else:
         if TrueHrfFlag:
-            TrueVal, head = read_volume(HrfFilename)
+            TrueVal, head = read_volume(HrfFilename)[:,0,0,0]
             m_H = TrueVal
     
     #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
     #Crit_A = sum(DIFF) / len(find(DIFF != 0))
     DIFF = reshape( m_A - m_A1,(M*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
     Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]    
@@ -3093,8 +3076,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
     Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
@@ -3112,12 +3095,12 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     #q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
     Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
@@ -3168,21 +3151,17 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     t02 = time.time()
     cTime += [t02-t1]
     ni += 2
-    #if (Crit_H > Thresh) and (Crit_Z > Thresh) and (Crit_A > Thresh):
-        #while ((Crit_H > Thresh) and (Crit_Z > Thresh) and (Crit_A > Thresh) and (ni < NitMax) ):# or (ni < 50):
-    #if (Crit_AH > Thresh):
-        #while ( (Crit_AH > Thresh) and (ni < NitMax) ):# or (ni < 50):
-    #if (Crit_H > Thresh) or (Crit_A > Thresh):
-        #while ( (((Crit_H > Thresh) or (Crit_A > Thresh) )) and (ni < NitMax) ):# or (ni < 50):
-    if (Crit_FreeEnergy > Thresh_FreeEnergy or Crit_AH > Thresh):
+
+    
+    if ((Crit_FreeEnergy > Thresh_FreeEnergy) or (Crit_AH > Thresh)):
         while ( ((Crit_FreeEnergy > Thresh_FreeEnergy) or (Crit_AH > Thresh)) and (ni < NitMax) ):
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             #t01 = time.time()
             UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             
             val = reshape(m_A,(M*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-            val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
             #m_A = reshape(val, (J,M))
             
             if estimateHRF:
@@ -3206,14 +3185,14 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             
             else:
                 if TrueHrfFlag:
-                    TrueVal, head = read_volume(HrfFilename)
+                    TrueVal, head = read_volume(HrfFilename)[:,0,0,0]
                     m_H = TrueVal
             
             #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
             #Crit_A = sum(DIFF) / len(find(DIFF != 0))
             DIFF = reshape( m_A - m_A1,(M*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
             Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]       
@@ -3226,8 +3205,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
             Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
@@ -3258,18 +3237,18 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             #draw()
 
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             #q_Z = reshape(val, (M,K,J))
 
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
             Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
 
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
@@ -3379,8 +3358,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             plt.plot(mu1_array[m])
             plt.hold(True)
         plt.hold(False)
-        #plt.legend( ('m=0','m=1', 'm=2', 'm=3') ) 
-        #plt.legend( ('m=0','m=1') ) 
         plt.savefig('./mu1_Iter_CompMod.png')
         
         plt.figure(6)
@@ -3388,14 +3365,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         plt.savefig('./HRF_Norm_CompMod.png')
         
         Data_save = xndarray(h_norm_array, ['Iteration'])
-        Data_save.save('./HRF_Norm_Comp.nii')
-        
-        
-    #for m in xrange(M):
-        #plt.figure(4+m)
-        #plt.plot(test_mu1[m])
-        #plt.savefig('./mu1_CompMod_Cond_%s.png' %m)
-         
+        Data_save.save('./HRF_Norm_Comp.nii')        
 
     CompTime = t2 - t1
     cTimeMean = CompTime/ni
@@ -3426,6 +3396,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 contrast_expr = AExpr(contrasts[cname], **nrls_conds)
                 contrast_expr.check()
                 contrast = contrast_expr.evaluate()
+                print 
                 CONTRAST[:,n] = contrast
                 #------------ contrasts ------------#
 
@@ -3449,48 +3420,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
         #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
-
-
-
-    #if computeContrast:
-	#if len(contrasts) >0:
-            #pyhrf.verbose(3, 'Compute contrasts ...')
-	    #nrls_conds = dict([(str(cn), m_A[:,ic]) \
-                                   #for ic,cn in enumerate(condition_names)] )
-	    #n = 0
-	    #for cname in contrasts:
-		##------------ contrasts ------------#
-		#contrast_expr = AExpr(contrasts[cname], **nrls_conds)
-		#contrast_expr.check()
-		#contrast = contrast_expr.evaluate()
-		#CONTRAST[:,n] = contrast
-		##------------ contrasts ------------#
-
-		##------------ variance -------------#
-		#ContrastCoef = numpy.zeros(M,dtype=float)
-		#ind_conds0 = {}
-		#for m in xrange(0,M):
-		    #ind_conds0[condition_names[m]] = 0.0
-		#for m in xrange(0,M):
-		    #ind_conds = ind_conds0.copy()
-		    #ind_conds[condition_names[m]] = 1.0
-		    #ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-		#ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-		##CovM = numpy.ones(M,dtype=float)
-		#for j in xrange(0,J):
-		    #CovM = numpy.ones(M,dtype=float)
-		    #for m in xrange(0,M):
-			#if ActiveContrasts[m]:
-			    #CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
-			    #for m2 in xrange(0,M):
-				#if ( (ActiveContrasts[m2]) and (CovM[m2]) and (m2 != m)):
-				    #CONTRASTVAR[j,n] += 2*ContrastCoef[m] * ContrastCoef[m2] * Sigma_A[m,m2,j]
-				    #CovM[m2] = 0
-				    #CovM[m] = 0
-		##------------ variance -------------#
-		#n +=1
-            #pyhrf.verbose(3, 'Done contrasts computing.')
-	##+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
     pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
     pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
     #print "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s"
@@ -3506,6 +3435,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     SNR /= np.log(10.)
     print 'SNR comp =', SNR
     return ni,m_A,m_H, q_Z , sigma_epsilone, mu_M , sigma_M, Beta, L, PL, CONTRAST, CONTRASTVAR, cA[2:],cH[2:],cZ[2:],cAH[2:],cTime[2:],cTimeMean,Sigma_A,StimulusInducedSignal,FreeEnergyArray
+
+
 
 def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,NitMax = -1,NitMin = 1,estimateBeta=True,outDir = './'):
     pyhrf.verbose(1,"Fast EM with C extension for JPDE started ...")
