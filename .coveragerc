@@ -1,6 +1,7 @@
 [report]
 omit =
     */site-packages/nipy/*
+    */site-packages/numpy/*
     */site-packages/matplotlib/*
     */site-packages/nibabel/*
     */site-packages/joblib/*
@@ -13,3 +14,5 @@ omit =
     */site-packages/nose/*
     */site-packages/munkres/*
     */site-packages/Pillow/*
+    */site-packages/pyhrf/test/
+    /usr/*
