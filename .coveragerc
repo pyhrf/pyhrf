@@ -14,5 +14,10 @@ omit =
     */site-packages/nose/*
     */site-packages/munkres/*
     */site-packages/Pillow/*
-    */site-packages/pyhrf/test/
+    */site-packages/_markerlib/*
+    */site-packages/munkres.py
+    */site-packages/pkg_resources.py
+    */site-packages/six.py
+    */site-packages/pyparsing.py
+    */site-packages/pyhrf/test/*
     /usr/*
