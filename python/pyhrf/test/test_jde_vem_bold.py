@@ -47,8 +47,8 @@ class VEMBOLDTest(unittest.TestCase):
         
         
     def test_vem_bold_constrained(self):
-        """ Test BOLD VEM sampler on small simulation with small 
-        nb of iterations. Estimation accuracy is not tested.
+        """ Test BOLD VEM constraint function.
+        Estimation accuracy is not tested.
         """
         pyhrf.verbose.set_verbosity(0)
         data = self.data_simu
