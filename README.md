@@ -11,7 +11,7 @@ See http://www.pyhrf.org/installation.html for details
 
 ### Package documentation
 
-Compile the documentation (sphinx required [sphinx-doc.org])::
+Compile the documentation ([sphinx](http://sphinx-doc.org/) required):
     
     $ cd ./doc/sphinx/
     $ make html
