@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Handle view of a xndarray via 2 widgets:
     - a slicer (xndarrayBrowser):

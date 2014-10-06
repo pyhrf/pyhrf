@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 """
 Compute the mean of BOLD signal within parcels.

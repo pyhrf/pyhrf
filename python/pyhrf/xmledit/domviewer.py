@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys, string, os
 import os.path as op
 from PyQt4 import QtCore, QtGui, QtXml

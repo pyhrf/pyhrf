@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import pyhrf
 import numpy as np
 from pyhrf._verbose import dictToString

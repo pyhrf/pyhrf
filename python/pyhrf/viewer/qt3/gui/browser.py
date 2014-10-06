@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 from qt import *
 import numpy as _N

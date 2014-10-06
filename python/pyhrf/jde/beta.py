@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
-# -*- coding: utf-8 -*-
-
 import numpy as _np
 import scipy.interpolate
 

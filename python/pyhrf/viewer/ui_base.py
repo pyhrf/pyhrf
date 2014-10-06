@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pyhrf
 import os.path as op
 from collections import defaultdict

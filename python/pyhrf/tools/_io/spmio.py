@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-# -*- coding: utf-8 -*-
 import numpy
 try:
     from scipy.io.mio import loadmat

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Physio prior, deterministic version where fwd model is changed
 TODO: clean to remove stochastic parts

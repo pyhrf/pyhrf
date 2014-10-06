@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qt import *
 from display import *
 from browser import *

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as _N
 from tools import *
 import copy as copyModule

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 def cartesian(*sequences):
     """
     Generate the `cartesian product' of all SEQUENCES.  Each member of the

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from pyhrf.viewer import qt3 as ndview
 import os, sys, cPickle
 

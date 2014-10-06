@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Main window of the viewer, consisting of :
 - a list of loaded items. Each item in the list can be reloaded from file

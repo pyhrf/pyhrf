@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Launch all unit tests and doc test in this script with code coverage:
 # nosetests indev.py --with-coverage --cover-html --with-doctest --cover-package indev --cover-branches --cover-erase -v
 

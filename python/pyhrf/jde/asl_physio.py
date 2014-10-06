@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pyhrf
 import numpy as np
 from math import sqrt
