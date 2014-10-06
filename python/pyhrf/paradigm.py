@@ -319,8 +319,8 @@ onsets_un_evnt = OrderedDict([
         ('audio', [np.array([  35.])])])
 durations_un_evnt = OrderedDict([
         ('audio', [np.array([  0.])])])
-                                    
-                                    
+
+
 # audio, video only (video does not comprise damier)
 to_discard = ['damier_H','damier_V']
 o,d = onsets_loc, durations_loc
@@ -575,7 +575,7 @@ class Paradigm:
         return s
 
     @classmethod
-    def from_csv(self, csvFile, delim=' '):
+    def from_csv(self, csvFile, delim=None):
         """
         Create a Paradigm object from a CSV file which columns are:
         session, task name, stimulation onset, stimulation duration, [amplitude]
