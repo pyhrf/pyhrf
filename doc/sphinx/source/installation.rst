@@ -60,48 +60,66 @@ The following has been tested on a new installed Ubuntu 12.04.5 LTS version.
 
 Install the following packages::
 
-    sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-pip python-sympy gcc
+    $ sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-pip python-sympy gcc
 
 The version of nibabel and nipy packages available in the Ubuntu 12.04 repositories are too old, install newer version with::
 
-    pip install --user nibabel
-    pip install --user nipy
+    $ pip install --user nibabel
+    $ pip install --user nipy
 
 Optional dependencies::
 
-    sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx
+    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-munkres
 
 Ubuntu 14.04
 ============
 
 The following has been tested on a new installed Ubuntu 14.04.1 LTS version.
 
-It is advised to install python (with development headers) and all above-mentioned dependencies through distribution tools such as apt-get, urpmi or yum. Eg, for a Debian-based linux::
+Required packages::
 
-    sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-nibabel python-nipy
+    $ sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-nibabel python-nipy
 
 Optional dependencies::
 
-    sudo apt-get install python-qt4 python-scikits-learn python-joblib python-pygraph
+    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-munkres
+
+Debian 7 (wheezy)
+=================
+
+The following has been tested on a new installed Debian 7.7.
+
+Required packages::
+
+    $ sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-pip python-sympy python-nibabel gcc
+
+Not available on system repositories::
+
+    $ pip install --user nipy
+
+Optional dependencies::
+
+    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-munkres
 
 Fedora 20
 =========
 
 The following has been tested on a new installed Fedora 20.
 
-Main dependencies, as root::
+Main dependencies::
 
-  # yum install python-devel numpy scipy python-matplotlib python-pip sympy git
+    $ sudo yum install python-devel numpy scipy python-matplotlib python-pip sympy git
 
 These dependencies are not available as system packages, they have to be installed
 by hand ::
 
-  $ pip install --user nibabel
-  $ pip install --user nipy
+    $ pip install --user nibabel
+    $ pip install --user nipy
 
 Optional dependencies::
 
-  # yum install PyQt4 python-matplotlib-qt4 graphviz-python python-sphinx python-scikit-learn python-joblib
+    $ sudo yum install PyQt4 python-matplotlib-qt4 graphviz-python python-sphinx python-scikit-learn python-joblib
+    $ pip install --user munkres
 
 .. _Pyhrf download:
 
@@ -120,8 +138,8 @@ Source repository
 
 First, if git is not installed (``git --version`` does not work), install it from your system packages::
 
-    sudo apt-get install git # on Ubuntu
-    yum install git # on Fedora as root
+    $ sudo apt-get install git # on Ubuntu and Debian
+    $ sudo yum install git # on Fedora as root
 
 The bleeding edge version of pyhrf is available via github. In a folder where you want to create the pyhrf repository, use the command::
 
@@ -153,7 +171,7 @@ In the directory where the pyhrf tarball has been decompressed or in the pyhrf g
 
     $ python setup.py develop --user
 
-On Ubuntu, you need to add the commands folder to your ``PATH`` by adding the following to your ``$HOME/.profile``::
+On Ubuntu and Debian, you need to add the commands folder to your ``PATH`` environement variable by adding the following to your ``$HOME/.profile``::
 
     if [ -d "$HOME/.local/bin"  ]; then
         PATH="$HOME/.local/bin:$PATH"
@@ -161,7 +179,7 @@ On Ubuntu, you need to add the commands folder to your ``PATH`` by adding the fo
 
 *** Run tests to check installation**::
 
-    pyhrf_maketests
+    $ pyhrf_maketests
 
 **Configuration**
 #################
