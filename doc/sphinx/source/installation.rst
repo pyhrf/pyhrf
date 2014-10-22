@@ -111,7 +111,8 @@ Optional dependencies::
 Release tarball
 ***************
 
-The latest pyhrf release (v0.3) is available `here <http://www.pyhrf.org/dist/pyhrf-0.3.tar.gz>`_
+The latest pyhrf release (v0.3) is available `here <http://www.pyhrf.org/dist/pyhrf-0.3.tar.gz>`_.
+Extract it and follow the pyHRF installation guide above.
 
 
 Source repository
