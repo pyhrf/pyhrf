@@ -608,7 +608,7 @@ class FmriData(XmlInitable):
 
         sessionsDurations = [len(ss)*tr for ss in sessionsScans]
         #print 'onsets!:', onsets
-        self.paradigm = Paradigm(onsets, sessionsDurations, 
+        self.paradigm = Paradigm(onsets, sessionsDurations,
                                  stimDurations)
 
         self.tr = tr
@@ -708,7 +708,7 @@ class FmriData(XmlInitable):
 
     def get_extra_data(self, label, default):
         return self.extra_data.get(label, default)
-    
+
     def set_extra_data(self, label, value):
         self.extra_data[label] = value
 
@@ -743,9 +743,9 @@ class FmriData(XmlInitable):
     def from_vol_files(self, mask_file=DEFAULT_MASK_VOL_FILE,
                        paradigm_csv_file=DEFAULT_PARADIGM_CSV,
                        bold_files=[DEFAULT_BOLD_VOL_FILE],
-                       tr=DEFAULT_BOLD_VOL_TR, background_label=None, 
-                       paradigm_csv_delim=' '):
-        paradigm = Paradigm.from_csv(paradigm_csv_file, 
+                       tr=DEFAULT_BOLD_VOL_TR, background_label=None,
+                       paradigm_csv_delim=None):
+        paradigm = Paradigm.from_csv(paradigm_csv_file,
                                      delim=paradigm_csv_delim)
         durations = paradigm.stimDurations
         onsets = paradigm.stimOnsets

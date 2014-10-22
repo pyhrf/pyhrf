@@ -25,13 +25,13 @@ TEXTURE_EXTENSION = 'gii'
 from _zip import gunzip
 
 def find_duplicates(l):
-    """ Find the index of duplicate elements in the given list. 
-    Complexity is O(n*log(d)) where d is the number of unique duplicate 
+    """ Find the index of duplicate elements in the given list.
+    Complexity is O(n*log(d)) where d is the number of unique duplicate
     elements.
 
     Args:
         - l (list): the list where to search for duplicates
-        
+
     Return: groups of indexes corresponding to duplicated element:
             -> list of list of elements
 
@@ -56,26 +56,26 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
     The association between source and target file names must be injective.
     If several file names matched by *src* are associated with the same target,
     an exception will be raised.
-    
+
     Args:
         - src (str): regular expression matching file names in the given folder
                      *src_folder* where group names are mapped to
                      format argument names in *dest_folder* and *dest_basename*
         - src_folder (str): path where to search for files matched by *src*
-        - dest_basename (str): format string with named arguments 
+        - dest_basename (str): format string with named arguments
                                (eg 'file_{mytag}_{mytag2}.txt') used to form
                                target file basenames where named arguments are
                                substituted with group values caught by *src*.
-        - dest_folder (list of str): 
-                      list of format strings with named arguments, 
-                      eg ('folder_{mytag}','folder_{mytag2}'),  to be joined 
+        - dest_folder (list of str):
+                      list of format strings with named arguments,
+                      eg ('folder_{mytag}','folder_{mytag2}'),  to be joined
                       to form target directories.
-                      Named arguments are substituted with group values 
+                      Named arguments are substituted with group values
                       extracted by *src*.
         - dry (bool): if True then do not perform any copy
-        - replacements (list of tuple of str): 
+        - replacements (list of tuple of str):
                       list of replacements, ie [(old,new), (old,new), ...],
-                      to be applied to target file names by calling the function 
+                      to be applied to target file names by calling the function
                       string.replace(old,new) on them
         - callback (func): callback function called on final filenames to
                            modify target name or filter a copy operation.
@@ -94,7 +94,7 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
     folder_dtags = set(chain(*[re_named_args.findall(d) \
                                        for d in dest_folder]))
     bn_dest_tags = set(re_named_args.findall(dest_basename))
-                
+
     if not folder_dtags.issubset(src_tags):
         raise MissingTagError('Tags in dest_folder not defined in src: %s'\
                               %', '.join(folder_dtags.difference(src_tags)))
@@ -108,7 +108,7 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
 
     for root, dirs, files in os.walk(src_folder):
         for fn in files:
-            input_fn = op.join(root, fn) 
+            input_fn = op.join(root, fn)
             ri = re_src.match(input_fn)
             if ri is not None:
                 subs = ri.groupdict()
@@ -121,7 +121,7 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
                 if output_file is not None:
                     input_files.append(input_fn)
                     output_files.append(output_file)
-    
+
     # check injectivity:
     duplicate_indexes = find_duplicates(output_files)
     if len(duplicate_indexes) > 0:
@@ -131,7 +131,7 @@ def rx_copy(src, src_folder, dest_basename, dest_folder, dry=False,
                                  for dups in duplicate_indexes])
         raise DuplicateTargetError('Copy is not injective, the following copy'\
                                    ' operations have the same destination:\n'\
-                                   '%s' %sduplicates) 
+                                   '%s' %sduplicates)
 
     if pyhrf.verbose.verbosity > 3:
         msg = '\n'.join(['\n-> '.join((ifn, ofn)) \
@@ -384,7 +384,7 @@ def concat3DVols(files, output):
     if img4D is not None:
         write_volume(img4D, output, meta_data=meta_data)
     else:
-        raise Exception('No 4D output produced from files: %s'%str(files)) 
+        raise Exception('No 4D output produced from files: %s'%str(files))
 
 
 def split_ext_safe(fn):
@@ -421,7 +421,8 @@ def split4DVol(boldFile, output_dir=None):
 
 
 
-def load_paradigm_from_csv(csvFile, delim=' '):
+#def load_paradigm_from_csv(csvFile, delim=' '):
+def load_paradigm_from_csv(csvFile, delim=None):
     """
     Load an experimental paradigm stored in the CSV file *csvFile*,
     with delimiter *delim*.
@@ -442,32 +443,38 @@ def load_paradigm_from_csv(csvFile, delim=' '):
     Each list is actually a list of lists, eg: onsets[session][event]
     """
 
-    reader = csv.reader(open(csvFile, "rb"), delimiter=delim,
-                        skipinitialspace=True)
+    onsets = defaultdict(lambda: defaultdict(list))
+    durations = defaultdict(lambda: defaultdict(list))
 
-    onsets = defaultdict(lambda : defaultdict(list))
-    durations = defaultdict(lambda : defaultdict(list))
+    with open(csvFile, "rb") as csv_file:
+        if delim is None:
+            dialect = csv.Sniffer().sniff(csv_file.read())
+            csv_file.seek(0)
+            delim = dialect.delimiter
+        reader = csv.reader(csv_file, delimiter=delim, skipinitialspace=True)
 
-    for row in reader:
-        #print 'row:', row
-        isession = int(row[0])
-        cond = row[1]
-        onset = float(row[2])
+        for row in reader:
+            #print 'row:', row
+            isession = int(row[0])
+            cond = row[1]
+            onset = float(row[2])
 
-        amplitude = 1.
-        duration = 0.0
-        if len(row) > 3: duration = float(row[3])
-        if len(row) > 4: amplitude = float(row[4])
+            amplitude = 1.
+            duration = 0.0
+            if len(row) > 3:
+                duration = float(row[3])
+            if len(row) > 4:
+                amplitude = float(row[4])
 
-        onsets[cond][isession].append(onset)
-        durations[cond][isession].append(duration)
+            onsets[cond][isession].append(onset)
+            durations[cond][isession].append(duration)
 
 
-    onsets = dict( [(cn,[np.array(o[s])for s in sorted(o.keys())]) \
-                        for cn,o in onsets.iteritems()] )
+    onsets = dict([(cn, [np.array(o[s]) for s in sorted(o.keys())]) \
+                        for cn, o in onsets.iteritems()])
 
-    durations = dict( [(cn,[np.array(dur[s]) for s in sorted(dur.keys())]) \
-                           for cn,dur in durations.iteritems()] )
+    durations = dict([(cn, [np.array(dur[s]) for s in sorted(dur.keys())]) \
+                           for cn, dur in durations.iteritems()])
 
     return onsets, durations
 
