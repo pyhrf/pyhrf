@@ -4,7 +4,6 @@ import os
 
 import tempfile
 import shutil
-import time
 
 import numpy as np
 import numpy.testing as npt
@@ -13,6 +12,8 @@ from pyhrf.tools import *
 import pyhrf.tools as mtools
 from pyhrf._verbose import dictToString
 import pyhrf
+
+import time
 
 
 class GeometryTest(unittest.TestCase):
@@ -154,7 +155,7 @@ class CartesianTest(unittest.TestCase):
                                        1: {0: {0: 11, 1: 12},
                                            1: {0: 12, 1: 13}}})
 
-    @unittest.skipIf(not tools.is_importable('joblib'),
+    @unittest.skipIf(not mtools.is_importable('joblib'),
                      'joblib (optional dep) is N/A')
     def test_cartesian_apply_parallel(self):
         from pyhrf.tools import cartesian_apply
