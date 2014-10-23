@@ -4,16 +4,17 @@ import os
 
 import tempfile
 import shutil
+import time
 
 import numpy as np
 import numpy.testing as npt
 
-from pyhrf.tools import *
+from pyhrf.tools import (diagBlock, get_2Dtable_string, do_if_nonexistent_file,
+                         peelVolume3D, cartesian, cached_eval, Pipeline,
+                         resampleToGrid, set_leaf, get_leaf, tree_rearrange)
 import pyhrf.tools as mtools
 from pyhrf._verbose import dictToString
 import pyhrf
-
-import time
 
 
 class GeometryTest(unittest.TestCase):
