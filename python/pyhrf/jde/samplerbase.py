@@ -35,8 +35,8 @@ class GibbsSampler:
     """
 
     def __init__(self, variables, nbIt, smplHistoryPace=-1,
-                 obsHistoryPace=-1, nbSweeps=None,
-                 callbackObj=None, randomSeed=None, globalObsHistoryPace=-1,
+                 obsHistoryPace=-1, nbSweeps=None, callbackObj=None, 
+                 randomSeed=None, globalObsHistoryPace=-1,
                  check_ftval=None, output_fit=False):
         """
         Initialize a new GibbsSampler object.

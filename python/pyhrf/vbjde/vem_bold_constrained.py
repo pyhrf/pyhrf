@@ -134,7 +134,18 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
     
     if MiniVEMFlag: 
         pyhrf.verbose(1,"MiniVEM to choose the best initialisation...")
-        InitVar, InitMean, gamma_h = MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,p_Wtilde,scale,Q_barnCond,XGamma,tau1,tau2,NbItMiniVem,sigmaH,estimateHRF)
+        """InitVar, InitMean, gamma_h = MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,
+                                                     gamma,gradientStep,
+                                                     MaxItGrad,D,M,N,J,S,
+                                                     maxNeighbours,
+                                                     neighboursIndexes,
+                                                     XX,X,R,Det_invR,Gamma,
+                                                     Det_Gamma,
+                                                     scale,Q_barnCond,XGamma,
+                                                     NbItMiniVem,
+                                                     sigmaH,estimateHRF)"""
+
+        InitVar, InitMean, gamma_h = vt.MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,p_Wtilde,scale,Q_barnCond,XGamma,tau1,tau2,NbItMiniVem,sigmaH,estimateHRF)
 
     sigmaH = Init_sigmaH
     sigma_epsilone = np.ones(J)
@@ -279,7 +290,6 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
                 UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
             if not MFapprox:
                 UtilsC.expectation_Z_ParsiMod_RVM_and_CompMod(Sigma_A,m_A,sigma_M,Beta,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
-                #UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
         else:
             pyhrf.verbose(3, "Using True Z ...")
             TrueZ = read_volume(LabelsFilename)
@@ -345,8 +355,16 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
         
         #### Computing Free Energy ####
         if ni > 0:
-            FreeEnergy1 = FreeEnergy
+            FreeEnergy1 = FreeEnergy     
+       
+        """FreeEnergy = vt.Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,
+                                           m_H,Sigma_H,R,Det_invR,sigmaH,
+                                           p_Wtilde,q_Z,neighboursIndexes,
+                                           maxNeighbours,Beta,sigma_epsilone,
+                                           XX,Gamma,Det_Gamma,XGamma,J,D,M,
+                                           N,K,S,"CompMod")"""
         FreeEnergy = vt.Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,R,Det_invR,sigmaH,p_Wtilde,tau1,tau2,q_Z,neighboursIndexes,maxNeighbours,Beta,sigma_epsilone,XX,Gamma,Det_Gamma,XGamma,J,D,M,N,K,S,"CompMod")
+
         if ni > 0:
             Crit_FreeEnergy = (FreeEnergy1 - FreeEnergy) / FreeEnergy1
         FreeEnergy_Iter += [FreeEnergy]
@@ -441,4 +459,282 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
     return ni,m_A,m_H, q_Z,sigma_epsilone,mu_M,sigma_M,Beta,L,PL,CONTRAST,CONTRASTVAR,cA[2:],cH[2:],cZ[2:],cAH[2:],cTime[2:],cTimeMean,Sigma_A,StimulusInducedSignal,FreeEnergyArray
 
 
+def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.1,NitMax = -1,NitMin = 1,estimateBeta=False,PLOT=False):
+    pyhrf.verbose(1,"EM started ...")
+    numpy.random.seed(6537546)
     
+    #######################################################################################################################
+    #####################################################################################        INITIALIZATIONS
+    #Initialize parameters
+    if NitMax < 0:
+        NitMax = 100
+    gamma = 7.5
+    gradientStep = 0.005
+    MaxItGrad = 120
+    
+    # Initialize sizes vectors
+    D = int(numpy.ceil(Thrf/dt))
+    M = len(Onsets)
+    N = Y.shape[0]
+    J = Y.shape[1]
+    l = int(sqrt(J))
+    sigma_epsilone = numpy.ones(J)
+    
+    # Neighbours
+    maxNeighbours = max([len(nl) for nl in graph])
+    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes -= 1
+    for i in xrange(J):
+        neighboursIndexes[i,:len(graph[i])] = graph[i]
+    # Conditions
+    X = OrderedDict([])
+    for condition,Ons in Onsets.iteritems():
+        X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
+    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    nc = 0
+    for condition,Ons in Onsets.iteritems():
+        XX[nc,:,:] = X[condition]
+        nc += 1
+    # Sigma and mu
+    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    for k in xrange(1,K):
+        mu_M[:,k] = 2.0
+    # Covariance matrix
+    order = 2
+    D2 = buildFiniteDiffMatrix(order,D)
+    R = numpy.dot(D2,D2) / pow(dt,2*order)
+    
+    Gamma = numpy.identity(N)
+    
+    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+    #for k in xrange(0,K):
+    q_Z[:,1,:] = 1
+    Z_tilde = q_Z.copy()
+    
+    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    m_A = numpy.zeros((J,M),dtype=numpy.float64)
+    TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
+    for j in xrange(0,J):
+        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        for m in xrange(0,M):
+            for k in xrange(0,K):
+                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+    m_H = numpy.array(m_h).astype(numpy.float64)
+    m_H1 = numpy.array(m_h)
+    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    
+    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
+    zerosD = numpy.zeros((D),dtype=numpy.float64)
+    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
+    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
+    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
+    zerosK = numpy.zeros(K)
+    
+    P = PolyMat( N , 4 , TR)
+    zerosP = numpy.zeros((P.shape[0]),dtype=numpy.float64)
+    L = polyFit(Y, TR, 4,P)
+    PL = numpy.dot(P,L)
+    y_tilde = Y - PL
+    sigmaH1 = sigmaH
+    
+    Crit_H = 1
+    Crit_Z = 1
+    Crit_A = 1
+    cA = []
+    cH = []
+    cZ = []
+    Ndrift = L.shape[0]
+    
+    t1 = time.time()
+    
+    #######################################################################################################################
+    ####################################################################################    VBJDE num. iter. minimum
+
+    ni = 0
+    
+    while ((ni < NitMin) or (((Crit_FreeEnergy > Thresh_FreeEnergy) or ((Crit_H > Thresh) and (Crit_Z > Thresh) and (Crit_A > Thresh))) and (ni < NitMax))):
+       
+        pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
+
+        #####################
+        # EXPECTATION
+        #####################
+        
+        # A 
+        pyhrf.verbose(3, "E A step ...")
+        Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
+        m_A1[:,:] = m_A[:,:]
+ 
+        # crit A 
+        DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
+        Crit_A = sum(DIFF) / len(find(DIFF != 0))
+        cA += [Crit_A]
+
+        # H 
+        pyhrf.verbose(3, "E H step ...")
+        Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
+        m_H[0] = 0
+        m_H[-1] = 0
+        m_H1[:] = m_H[:]
+        
+        # crit H
+        Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+        cH += [Crit_H]
+        
+        # Z
+        pyhrf.verbose(3, "E Z step ...")
+        q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
+        
+        # crit Z    
+        DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
+        Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+        cZ += [Crit_Z]
+        q_Z1[:,:,:] = q_Z[:,:,:]
+                
+        # Plotting HRF
+        if PLOT and ni >= 0:
+            import matplotlib.pyplot as plt
+            plt.figure(M+1)
+            plt.plot(m_H)
+            plt.hold(True)
+                
+
+        ####################
+        # MAXIMIZATION
+        #####################
+
+        # HRF: Sigma_h
+        if estimateSigmaH:
+            pyhrf.verbose(3,"M sigma_H step ...")
+            sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+            sigmaH /= D
+        
+        # (mu,sigma)
+        pyhrf.verbose(3,"M (mu,sigma) step ...")
+        mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+
+        # Drift L
+        L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
+        PL = numpy.dot(P,L)
+        y_tilde = Y - PL
+
+        # Beta
+        if estimateBeta:
+            pyhrf.verbose(3,"estimating beta")
+            for m in xrange(0,M):
+                Beta[m] = maximization_beta(Beta[m],q_Z,Z_tilde,J,K,m,graph,gamma,neighboursIndexes,maxNeighbours)
+            pyhrf.verbose(3,"End estimating beta")
+            pyhrf.verbose(3,Beta)
+        
+        # Sigma noise
+        pyhrf.verbose(3,"M sigma noise step ...")
+        sigma_epsilone = maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM)
+
+
+        #### Computing Free Energy ####
+        """
+        if ni > 0:
+            FreeEnergy1 = FreeEnergy
+        FreeEnergy = Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,R,Det_invR,sigmaH,p_Wtilde,tau1,tau2,q_Z,neighboursIndexes,maxNeighbours,Beta,sigma_epsilone,XX,Gamma,Det_Gamma,XGamma,J,D,M,N,K,S,"CompMod")
+        if ni > 0:
+            Crit_FreeEnergy = (FreeEnergy1 - FreeEnergy) / FreeEnergy1
+        FreeEnergy_Iter += [FreeEnergy]
+        cFE += [Crit_FreeEnergy]
+        """
+
+        # Update index
+        ni +=1
+        
+    t2 = time.time()
+    
+    
+    #######################################################################################################################
+    ####################################################################################    PLOTS and SNR computation
+    
+    """FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    for i in xrange(ni):
+        FreeEnergyArray[i] = FreeEnergy_Iter[i]
+
+    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
+    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
+    h_norm_array = numpy.zeros((ni),dtype=numpy.float64)
+    for m in xrange(M):
+        for i in xrange(ni):
+            SUM_q_Z_array[m,i] = SUM_q_Z[m][i]
+            mu1_array[m,i] = mu1[m][i]
+            h_norm_array[i] = h_norm[i]
+    sigma_M = sqrt(sqrt(sigma_M))
+    """
+    
+    Norm = norm(m_H)
+    m_H /= Norm
+    m_A *= Norm
+    mu_M *= Norm
+    sigma_M *= Norm
+    sigma_M = sqrt(sigma_M)
+    
+    if PLOT:
+        import matplotlib.pyplot as plt
+        import matplotlib
+        font = {'size'   : 15}
+        matplotlib.rc('font', **font)
+        plt.savefig('./HRF_Iter_CompMod.png')
+        plt.hold(False)
+        plt.figure(2)
+        plt.plot(cAH[1:-1],'lightblue')
+        plt.hold(True)
+        plt.plot(cFE[1:-1],'m')
+        plt.hold(False)
+        #plt.legend( ('CA','CH', 'CZ', 'CAH', 'CFE') )
+        plt.legend( ('CAH', 'CFE') )
+        plt.grid(True)
+        plt.savefig('./Crit_CompMod.png')
+        plt.figure(3)
+        plt.plot(FreeEnergyArray)
+        plt.grid(True)
+        plt.savefig('./FreeEnergy_CompMod.png')
+
+        plt.figure(4)
+        for m in xrange(M):
+            plt.plot(SUM_q_Z_array[m])
+            plt.hold(True)
+        plt.hold(False)
+        #plt.legend( ('m=0','m=1', 'm=2', 'm=3') )
+        #plt.legend( ('m=0','m=1') ) 
+        plt.savefig('./Sum_q_Z_Iter_CompMod.png')
+        
+        plt.figure(5)
+        for m in xrange(M):
+            plt.plot(mu1_array[m])
+            plt.hold(True)
+        plt.hold(False)
+        plt.savefig('./mu1_Iter_CompMod.png')
+        
+        plt.figure(6)
+        plt.plot(h_norm_array)
+        plt.savefig('./HRF_Norm_CompMod.png')
+        
+        Data_save = xndarray(h_norm_array, ['Iteration'])
+        Data_save.save('./HRF_Norm_Comp.nii')   
+    
+    CompTime = t2 - t1
+    cTimeMean = CompTime/ni
+    
+    pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
+    pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
+    #print "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s"
+    if pyhrf.verbose.verbosity > 1:
+        print 'mu_M:', mu_M
+        print 'sigma_M:', sigma_M
+        print "sigma_H = " + str(sigmaH)
+        print "Beta = " + str(Beta)
+    
+    StimulusInducedSignal = computeFit(m_H, m_A, X, J, N)
+    SNR = 20 * np.log( np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL) )
+    SNR /= np.log(10.)
+    print 'SNR comp =', SNR
+    return m_A,m_H, q_Z , sigma_epsilone, mu_M , sigma_M, Beta, L, PL
+

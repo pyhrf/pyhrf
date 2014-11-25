@@ -15,6 +15,7 @@ from pyhrf.tools.io import read_volume
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.ndarray import xndarray
 from pyhrf.paradigm import restarize_events
+from pyhrf.tools import format_duration
 import vem_tools as vt
 try:
     from collections import OrderedDict
@@ -32,6 +33,16 @@ def mult(v1,v2):
         for j in xrange(len(v2)):
                 matrix[i,j] += v1[i]*v2[j]
     return matrix
+
+def maximum(a):
+    maxx = a[0]
+    maxx_ind = 0
+    for i in xrange(len(a)):
+        if a[i] > maxx :
+            maxx = a[i]
+            maxx_ind = i
+
+    return maxx, maxx_ind
 
 def polyFit(signal, tr, order,p):
     n = len(signal)
@@ -179,7 +190,39 @@ def computeFit(m_H, m_A, X, J, N):
   return stimIndSignal
 
 
-def Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,R,Det_invR,sigmaH,p_Wtilde,tau1,tau2,q_Z,neighboursIndexes,maxNeighbours,Beta,sigma_epsilone,XX,Gamma,Det_Gamma,XGamma,J,D,M,N,K,S,Model):
+def Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H, \
+                       R,Det_invR,sigmaH,p_Wtilde,tau1,tau2,q_Z, \
+                       neighboursIndexes,maxNeighbours,Beta,sigma_epsilone, \
+                       XX,Gamma,Det_Gamma,XGamma,J,D,M,N,K,S,Model):
+        
+    ## First part (Entropy):
+    EntropyA = A_Entropy(Sigma_A, M, J)
+    EntropyH = H_Entropy(Sigma_H, D)
+    EntropyZ = Z_Entropy(q_Z,M,J)
+
+    #if Model=="CompMod":
+    Total_Entropy = EntropyA + EntropyH + EntropyZ
+    ##print 'Total Entropy =', Total_Entropy
+
+    ## Second Part (likelihood)
+    EPtildeLikelihood = UtilsC.expectation_Ptilde_Likelihood(y_tilde,m_A,m_H,XX.astype(int32),Sigma_A,sigma_epsilone,Sigma_H,Gamma,p_Wtilde,XGamma,J,D,M,N,Det_Gamma)
+    EPtildeA = UtilsC.expectation_Ptilde_A(m_A,Sigma_A,p_Wtilde,q_Z,mu_M,sigma_M,J,M,K)
+    EPtildeH = UtilsC.expectation_Ptilde_H(R, m_H, Sigma_H, D, sigmaH, Det_invR)
+    EPtildeZ = UtilsC.expectation_Ptilde_Z(q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+    ##EPtildeZ = UtilsC.expectation_Ptilde_Z_MF_Begin(q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+    #if Model=="CompMod":
+    pyhrf.verbose(5,"Computing Free Energy for CompMod")
+    EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeZ
+
+    FreeEnergy = EPtilde - Total_Entropy
+
+    return FreeEnergy
+
+
+def Compute_FreeEnergy2(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,
+                       R,Det_invR,sigmaH,p_Wtilde,q_Z,neighboursIndexes,
+                       maxNeighbours,Beta,sigma_epsilone,XX,Gamma,
+                       Det_Gamma,XGamma,J,D,M,N,K,S,Model):
     ### Compute Free Energy  
     
     ## First part (Entropy):
@@ -189,18 +232,268 @@ def Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,R,Det_invR,s
     if Model=="CompMod":
         Total_Entropy = EntropyA + EntropyH + EntropyZ
 
-    ## Second Part (likelihood)
-    EPtildeLikelihood = UtilsC.expectation_Ptilde_Likelihood(y_tilde,m_A,m_H,XX.astype(int32),Sigma_A,sigma_epsilone,Sigma_H,Gamma,p_Wtilde,XGamma,J,D,M,N,Det_Gamma)
-    EPtildeA = UtilsC.expectation_Ptilde_A(m_A,Sigma_A,p_Wtilde,q_Z,mu_M,sigma_M,J,M,K)
-    EPtildeH = UtilsC.expectation_Ptilde_H(R, m_H, Sigma_H, D, sigmaH, Det_invR)
-    EPtildeZ = UtilsC.expectation_Ptilde_Z(q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
-    #EPtildeZ = UtilsC.expectation_Ptilde_Z_MF_Begin(q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+    ### Second Part (likelihood)
+    ELikelihood = UtilsC.expectation_Ptilde_Likelihood(y_tilde,m_A,m_H,XX.astype(int32),Sigma_A,sigma_epsilone,Sigma_H,Gamma,p_Wtilde,XGamma,J,D,M,N,Det_Gamma)
+    EA = UtilsC.expectation_A(m_A,Sigma_A,q_Z,mu_M,sigma_M,J,M,K)
+    EH = UtilsC.expectation_H(R, m_H, Sigma_H, D, sigmaH, Det_invR)
+    EZ = UtilsC.expectation_Z(q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+
     if Model=="CompMod":
         pyhrf.verbose(5,"Computing Free Energy for CompMod")
-        EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeZ
+        E = ELikelihood + EA + EH + EZ
 
-    FreeEnergy = EPtilde - Total_Entropy
+    FreeEnergy = E - Total_Entropy
 
     return FreeEnergy
 
+
+
+# MiniVEM
+#########################################################
+
+
+def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,p_Wtilde,scale,Q_barnCond,XGamma,tau1,tau2,Nit,sigmaH,estimateHRF):
     
+    #print 'InitVar =',InitVar,',    InitMean =',InitMean,',     gamma_h =',gamma_h
+
+    Init_sigmaH = sigmaH
+
+    IM_val = np.array([-5.,5.])
+    IV_val = np.array([0.008,0.016,0.032,0.064,0.128,0.256,0.512])
+    #IV_val = np.array([0.01,0.05,0.1,0.5])
+    gammah_val = np.array([1000])
+    MiniVemStep = IM_val.shape[0]*IV_val.shape[0]*gammah_val.shape[0]
+    
+    Init_mixt_p_gammah = []
+                
+    pyhrf.verbose(1,"Number of tested initialisation is %s" %MiniVemStep)
+    
+    t1_MiniVEM = time.time()
+    FE = []
+    for Gh in gammah_val:
+        for InitVar in IV_val:
+            for InitMean in IM_val:
+                Init_mixt_p_gammah += [[InitVar,InitMean,Gh]]
+                sigmaH = Init_sigmaH
+                sigma_epsilone = np.ones(J)
+                if 0:
+                    pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
+                    q_Z = np.ones((M,K,J),dtype=np.float64)
+                    q_Z[:,1,:] = 0
+                if 0:
+                    pyhrf.verbose(3,"Labels are initialized randomly ...")
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
+                    nbVoxInClass = J/K
+                    for j in xrange(M) :
+                        if J%2==0:
+                            l = []
+                        else:
+                            l = [0]
+                        for c in xrange(K) :
+                            l += [c] * nbVoxInClass
+                        q_Z[j,0,:] = np.random.permutation(l)
+                        q_Z[j,1,:] = 1. - q_Z[j,0,:]
+                if 1:
+                    pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
+                    q_Z[:,1,:] = 1
+                
+                #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
+                TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
+                m_h = m_h[:D]
+                m_H = np.array(m_h).astype(np.float64)
+                if estimateHRF:
+                    Sigma_H = np.ones((D,D),dtype=np.float64)
+                else:
+                    Sigma_H = np.zeros((D,D),dtype=np.float64)
+
+                Beta = beta * np.ones((M),dtype=np.float64)
+                P = PolyMat( N , 4 , TR)
+                L = polyFit(Y, TR, 4,P)
+                PL = np.dot(P,L)
+                y_tilde = Y - PL
+                Ndrift = L.shape[0]
+                
+                gamma_h = Gh
+                sigma_M = np.ones((M,K),dtype=np.float64)
+                sigma_M[:,0] = 0.1
+                sigma_M[:,1] = 1.0
+                mu_M = np.zeros((M,K),dtype=np.float64)
+                for k in xrange(1,K):
+                    mu_M[:,k] = InitMean
+                Sigma_A = np.zeros((M,M,J),np.float64)
+                for j in xrange(0,J):
+                    Sigma_A[:,:,j] = 0.01*np.identity(M)    
+                m_A = np.zeros((J,M),dtype=np.float64)
+                for j in xrange(0,J):
+                    for m in xrange(0,M):
+                        for k in xrange(0,K):
+                            m_A[j,m] += np.random.normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+
+                for ni in xrange(0,Nit+1):
+                    pyhrf.verbose(3,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
+                    UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
+                    val = np.reshape(m_A,(M*J))
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
+                    m_A = np.reshape(val, (J,M))
+                    
+                    if estimateHRF:
+                        UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,scale,sigmaH)
+                        m_H[0] = 0
+                        m_H[-1] = 0
+                    
+                    UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
+                    val = np.reshape(q_Z,(M*K*J))
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+                    q_Z = np.reshape(val, (M,K,J))
+                    
+                    if estimateHRF:
+                        if gamma_h > 0:
+                            sigmaH = maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h)
+                        else:
+                            sigmaH = maximization_sigmaH(D,Sigma_H,R,m_H)
+                    mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+                    UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
+                    PL = np.dot(P,L)
+                    y_tilde = Y - PL
+                    for m in xrange(0,M):
+                        Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(float64),q_Z[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                    UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N)
+                    
+                FreeEnergy = Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,R,Det_invR,sigmaH,p_Wtilde,tau1,tau2,q_Z,neighboursIndexes,maxNeighbours,Beta,sigma_epsilone,XX,Gamma,Det_Gamma,XGamma,J,D,M,N,K,S,"CompMod")
+                FE += [FreeEnergy]
+    
+    max_FE, max_FE_ind = vt.maximum(FE)
+    InitVar = Init_mixt_p_gammah[max_FE_ind][0]
+    InitMean = Init_mixt_p_gammah[max_FE_ind][1]
+    Initgamma_h = Init_mixt_p_gammah[max_FE_ind][2]
+    
+    t2_MiniVEM = time.time()
+    pyhrf.verbose(1,"MiniVEM duration is %s" %format_duration(t2_MiniVEM-t1_MiniVEM))
+    pyhrf.verbose(1,"Choosed initialisation is : var = %s,  mean = %s,  gamma_h = %s" %(InitVar,InitMean,Initgamma_h))
+    
+    return InitVar, InitMean, Initgamma_h
+
+
+def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
+                    D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,
+                    Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,
+                    Nit,sigmaH,estimateHRF):
+    # Mini VEM to have a goo initialization
+    
+    Init_sigmaH = sigmaH
+    IM_val = np.array([-5.,5.])
+    IV_val = np.array([0.008,0.016,0.032,0.064,0.128,0.256,0.512])
+    gammah_val = np.array([1000])
+    MiniVemStep = IM_val.shape[0]*IV_val.shape[0]*gammah_val.shape[0]
+    Init_mixt_p_gammah = []
+                
+    pyhrf.verbose(1,"Number of tested initialisation is %s" %MiniVemStep)
+    
+    t1_MiniVEM = time.time()
+    FE = []
+    for Gh in gammah_val:
+        for InitVar in IV_val:
+            for InitMean in IM_val:
+                Init_mixt_p_gammah += [[InitVar,InitMean,Gh]]
+                sigmaH = Init_sigmaH
+                sigma_epsilone = np.ones(J)
+                if 0:
+                    pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
+                    q_Z = np.ones((M,K,J),dtype=np.float64)
+                    q_Z[:,1,:] = 0
+                if 0:
+                    pyhrf.verbose(3,"Labels are initialized randomly ...")
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
+                    nbVoxInClass = J/K
+                    for j in xrange(M) :
+                        if J%2==0:
+                            l = []
+                        else:
+                            l = [0]
+                        for c in xrange(K) :
+                            l += [c] * nbVoxInClass
+                        q_Z[j,0,:] = np.random.permutation(l)
+                        q_Z[j,1,:] = 1. - q_Z[j,0,:]
+                if 1:
+                    pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
+                    q_Z[:,1,:] = 1
+                
+                #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
+                TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
+                m_h = m_h[:D]
+                m_H = np.array(m_h).astype(np.float64)
+                if estimateHRF:
+                    Sigma_H = np.ones((D,D),dtype=np.float64)
+                else:
+                    Sigma_H = np.zeros((D,D),dtype=np.float64)
+
+                Beta = beta * np.ones((M),dtype=np.float64)
+                P = PolyMat( N , 4 , TR)
+                L = polyFit(Y, TR, 4,P)
+                PL = np.dot(P,L)
+                y_tilde = Y - PL
+                Ndrift = L.shape[0]
+                
+                gamma_h = Gh
+                sigma_M = np.ones((M,K),dtype=np.float64)
+                sigma_M[:,0] = 0.1
+                sigma_M[:,1] = 1.0
+                mu_M = np.zeros((M,K),dtype=np.float64)
+                for k in xrange(1,K):
+                    mu_M[:,k] = InitMean
+                Sigma_A = np.zeros((M,M,J),np.float64)
+                for j in xrange(0,J):
+                    Sigma_A[:,:,j] = 0.01*np.identity(M)    
+                m_A = np.zeros((J,M),dtype=np.float64)
+                for j in xrange(0,J):
+                    for m in xrange(0,M):
+                        for k in xrange(0,K):
+                            m_A[j,m] += np.random.normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+
+                for ni in xrange(0,Nit+1):
+                    pyhrf.verbose(3,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
+                    UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
+                    val = np.reshape(m_A,(M*J))
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
+                    m_A = np.reshape(val, (J,M))
+                    
+                    if estimateHRF:
+                        UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,scale,sigmaH)
+                        m_H[0] = 0
+                        m_H[-1] = 0
+                    
+                    UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
+                    val = np.reshape(q_Z,(M*K*J))
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+                    q_Z = np.reshape(val, (M,K,J))
+                    
+                    if estimateHRF:
+                        if gamma_h > 0:
+                            sigmaH = maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h)
+                        else:
+                            sigmaH = maximization_sigmaH(D,Sigma_H,R,m_H)
+                    mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+                    UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
+                    PL = np.dot(P,L)
+                    y_tilde = Y - PL
+                    for m in xrange(0,M):
+                        Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(float64),q_Z[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                    UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N)
+                    
+                FreeEnergy = Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,R,Det_invR,sigmaH,q_Z,neighboursIndexes,maxNeighbours,Beta,sigma_epsilone,XX,Gamma,Det_Gamma,XGamma,J,D,M,N,K,S,"CompMod")
+                FE += [FreeEnergy]
+    
+    max_FE, max_FE_ind = vt.maximum(FE)
+    InitVar = Init_mixt_p_gammah[max_FE_ind][0]
+    InitMean = Init_mixt_p_gammah[max_FE_ind][1]
+    Initgamma_h = Init_mixt_p_gammah[max_FE_ind][2]
+    
+    t2_MiniVEM = time.time()
+    pyhrf.verbose(1,"MiniVEM duration is %s" %format_duration(t2_MiniVEM-t1_MiniVEM))
+    pyhrf.verbose(1,"Choosed initialisation is : var = %s,  mean = %s,  gamma_h = %s" %(InitVar,InitMean,Initgamma_h))
+    
+    return InitVar, InitMean, Initgamma_h

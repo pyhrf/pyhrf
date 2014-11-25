@@ -3,9 +3,10 @@ import numpy as np
 from time import time
 from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.ndarray import xndarray
-from pyhrf.vbjde.Utils_b import Main_vbjde_Extension_constrained
-from pyhrf.vbjde.Utils import classify,roc_curve,Main_vbjde_Python,Main_vbjde_Extension
-from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained
+#from pyhrf.vbjde.Utils_b import Main_vbjde_Extension_constrained
+from pyhrf.vbjde.Utils import classify,roc_curve,Main_vbjde_Python #,Main_vbjde_Extension
+from pyhrf.vbjde.vem_bold import Main_vbjde_Extension
+from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained, Main_vbjde_Python_constrained
 #from pyhrf.vbjde.Utils import Main_vbjde, Main_vbjde_Fast, Main_vbjde_Extension,Main_vbjde_Extension_NoDrifts
 from scipy.linalg import norm
 from pyhrf.tools.io import read_volume
@@ -202,7 +203,6 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         self.estimateLabels,self.LabelsFilename,
                                         self.MFapprox,self.InitVar,self.InitMean,
                                         self.MiniVemFlag,self.NbItMiniVem)
-
         else:
             # if not self.fast
             if self.estimateDrifts:
@@ -210,8 +210,9 @@ class JDEVEMAnalyser(JDEAnalyser):
                 nrls, estimated_hrf, \
                 labels, noiseVar, mu_k, \
                 sigma_k, Beta, L, \
-                PL = Main_vbjde_Python(graph,data,Onsets,self.hrfDuration,
-                                       self.nbClasses,TR,beta,self.dt,scale,
+                PL = Main_vbjde_Python_constrained(graph,data,Onsets,
+                                       self.hrfDuration,self.nbClasses,
+                                       TR,beta,self.dt,scale,
                                        self.estimateSigmaH,self.sigmaH,
                                        self.nItMax,self.nItMin,
                                        self.estimateBeta,self.PLOT)     
