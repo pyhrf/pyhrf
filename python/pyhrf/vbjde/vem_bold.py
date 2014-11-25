@@ -14,7 +14,7 @@ import numpy as np
 import time
 import UtilsC
 import pyhrf
-from pyhrf.tools.io import read_volume 
+from pyhrf.tools._io import read_volume 
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.ndarray import xndarray
 import vem_tools as vt

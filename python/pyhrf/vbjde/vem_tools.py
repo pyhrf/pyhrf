@@ -11,7 +11,7 @@ from scipy.linalg import toeplitz
 import time
 import UtilsC
 import pyhrf
-from pyhrf.tools.io import read_volume 
+from pyhrf.tools._io import read_volume 
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.ndarray import xndarray
 from pyhrf.paradigm import restarize_events
