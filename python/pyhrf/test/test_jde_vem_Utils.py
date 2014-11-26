@@ -9,8 +9,7 @@ from pyhrf import FmriData
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.jde.models import simulate_bold
 from pyhrf.ui.vb_jde_analyser_compMod import JDEVEMAnalyser
-from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained, Main_vbjde_Python_constrained
-from pyhrf.vbjde.vem_bold import Main_vbjde_Extension, Main_vbjde_Python, Main_vbjde
+from pyhrf.vbjde.Utils import Main_vbjde_Extension, Main_vbjde_Python, Main_vbjde
 from pyhrf.boldsynth.hrf import getCanoHRF
 try:
     from collections import OrderedDict
@@ -50,29 +49,8 @@ class VEMBOLDTest(unittest.TestCase):
                                 analyser=jde_vem_analyser, 
                                 output_dir=None)
         tjde_vem.run()  
-        
-    
-    @unittest.skipIf(not tools.is_importable('cvxpy'),
-                     'joblib (optional dep) is N/A')
-    def test_vem_bold_constrained(self):
-        """ Test BOLD VEM constraint function.
-        Estimation accuracy is not tested.
-        """
-        pyhrf.verbose.set_verbosity(0)
-        data = self.data_simu
-        graph = data.get_graph()
-        Onsets = data.get_joined_onsets()
-        
-        NbIter, nrls, estimated_hrf, \
-        labels, noiseVar, mu_k, sigma_k, \
-        Beta, L, PL, CONTRAST, CONTRASTVAR, \
-        cA,cH,cZ,cAH,cTime,cTimeMean, \
-        Sigma_nrls, StimuIndSignal,\
-        FreeEnergy = Main_vbjde_Extension_constrained(graph,data.bold,Onsets,
-                                                      Thrf=25.,K=2,TR=1.,
-                                                      beta=1.0,dt=.5, 
-                                                      NitMax=2,NitMin=2)
-    
+
+
     def test_vem_bold(self):
         """ Test BOLD VEM function.
         Estimation accuracy is not tested.
@@ -91,29 +69,13 @@ class VEMBOLDTest(unittest.TestCase):
                                             Thrf=25.,K=2,TR=1.,
                                             beta=1.0,dt=.5, 
                                             NitMax=2,NitMin=2)
-    
-    
-    @unittest.skipIf(not tools.is_importable('cvxpy'),
-                     'joblib (optional dep) is N/A')
-    def test_vem_bold_constrained_python(self):
-        """ Test BOLD VEM constraint function.
-        Estimation accuracy is not tested.
-        """
-        pyhrf.verbose.set_verbosity(0)
-        data = self.data_simu
-        graph = data.get_graph()
-        Onsets = data.get_joined_onsets()
-        
-        m_A, m_H, q_Z, sigma_epsilone, \
-        mu_M, sigma_M, Beta, L, \
-        PL= Main_vbjde_Python_constrained(graph,data.bold,Onsets,
-                                          25.,2,1.,1.0,.5,
-                                          NitMax=2,NitMin=2)
 
     
+    
     def test_vem_bold_python(self):
-        """ Test BOLD VEM function.
-        Estimation accuracy is not tested.
+        """ 
+        Test BOLD VEM function.
+        Estimation accuracy is not tested
         """
         pyhrf.verbose.set_verbosity(0)
         data = self.data_simu
@@ -124,7 +86,8 @@ class VEMBOLDTest(unittest.TestCase):
         mu_M , sigma_M, Beta, L, PL = Main_vbjde_Python(graph,data.bold,Onsets,
                                                         Thrf=25.,K=2,TR=1.,
                                                         beta=1.0,dt=.5, 
-                                                        NitMax=2,NitMin=2)    
+                                                        NitMax=2,NitMin=2) 
+                                                        
 
 
     def test_vem_bold_v1(self):
@@ -141,5 +104,10 @@ class VEMBOLDTest(unittest.TestCase):
                                 Thrf=25.,K=2,TR=1.,
                                 beta=1.0,dt=.5, 
                                 NitMax=2,NitMin=2)  
+        
+        # TODO: check this test. Fails because of arguments 
+        #       of the functions expectation and maximization
+        
+        
         
         

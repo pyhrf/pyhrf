@@ -273,8 +273,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -364,7 +364,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             m_H = TrueVal
     
     #DIFF = abs(np.reshape(m_A,(M*J)) - np.reshape(m_A1,(M*J)))
-    #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = np.reshape( m_A - m_A1,(M*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
@@ -410,8 +410,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -493,7 +493,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                     m_H = TrueVal
             
             #DIFF = abs(np.reshape(m_A,(M*J)) - np.reshape(m_A1,(M*J)))
-            #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = np.reshape( m_A - m_A1,(M*J) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
@@ -553,7 +553,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
 
             #DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
             #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -750,6 +750,9 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
     gamma = 7.5
     gradientStep = 0.005
     MaxItGrad = 120
+    Thresh = 1e-5
+    Thresh_FreeEnergy = 1e-5
+    
     D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
@@ -759,7 +762,7 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
     # put neighbour lists into a 2D np array so that it will be easily
     # passed to C-code
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.np.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -768,7 +771,7 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
-    XX = np.zeros((M,N,D),dtype=np.np.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -826,15 +829,10 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
         Sigma_H, m_H = vt.expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
         pyhrf.verbose(3, "E Z step ...")
         q_Z,Z_tilde = vt.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
-        figure(1)
-        plot(m_H,'r')
-        hold(False)
-        draw()
-        show()
 
         if estimateSigmaH:
             pyhrf.verbose(3,"M sigma_H step ...")
-            sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+            sigmaH = (np.dot(vt.mult(m_H,m_H) + Sigma_H , R )).trace()
             sigmaH /= D
         pyhrf.verbose(3,"M (mu,sigma) step ...")
         mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
@@ -861,15 +859,15 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
             pyhrf.verbose(3,Beta)
         pyhrf.verbose(3,"M sigma noise step ...")
         sigma_epsilone = vt.maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM)
-    m_H1[:] = m_H[:]
-    q_Z1[:,:,:] = q_Z[:,:,:]
-    m_A1[:,:] = m_A[:,:]
+    m_H1 = m_H
+    q_Z1 = q_Z
+    m_A1 = m_A
     pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
     Sigma_A, m_A = vt.expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
     DIFF = abs(np.reshape(m_A,(M*J)) - np.reshape(m_A1,(M*J)))
-    Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     cA += [Crit_A]
-    m_A1[:,:] = m_A[:,:]
+    m_A1 = m_A
     Sigma_H, m_H = vt.expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
     m_H[0] = 0
     m_H[-1] = 0
@@ -878,12 +876,12 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
     m_H1[:] = m_H[:]
     q_Z,Z_tilde = vt.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
     DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
-    Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+    Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     if estimateSigmaH:
         pyhrf.verbose(3,"M sigma_H step ...")
-        sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+        sigmaH = (np.dot(vt.mult(m_H,m_H) + Sigma_H , R )).trace()
         sigmaH /= D
     mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
     L = vt.maximization_L(Y,m_A,X,m_H,L,P,zerosP)
@@ -902,7 +900,7 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             Sigma_A, m_A = vt.expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
             DIFF = abs(np.reshape(m_A,(M*J)) - np.reshape(m_A1,(M*J)))
-            Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             Sigma_H, m_H = vt.expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
@@ -913,12 +911,12 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
             m_H1[:] = m_H[:]
             q_Z,Z_tilde = vt.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
             DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
-            Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+            Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             if estimateSigmaH:
                 pyhrf.verbose(3,"M sigma_H step ...")
-                sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+                sigmaH = (np.dot(vt.mult(m_H,m_H) + Sigma_H , R )).trace()
                 sigmaH /= D
             mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
             L = vt.maximization_L(Y,m_A,X,m_H,L,P,zerosP)
@@ -1017,11 +1015,17 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
     Crit_sigmaH = [0]
     Hist_sigmaH = []
     ni = 0
-    Y_bar_tilde = np.zeros((D),dtype=float)
-    zerosND = np.zeros((N,D),dtype=float)
+    Y_bar_tilde = np.zeros((D),dtype=float)    
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
     X_tilde = np.zeros((Y.shape[1],M,D),dtype=float)
     Q_bar = np.zeros(R.shape)
     P = vt.PolyMat( N , 4 , TR)
+    zerosP = np.zeros((P.shape[0]),dtype=np.float64)
     L = vt.polyFit(Y, TR, 4,P)
     PL = np.dot(P,L)
     y_tilde = Y - PL
@@ -1034,18 +1038,18 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
             #print "------------------------------ Iteration n° " + str(ni+1) + " ------------------------------"
         pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
         pyhrf.verbose(3, "E A step ...")
-        Sigma_A, m_A = vt.expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone)
+        Sigma_A, m_A = vt.expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
         pyhrf.verbose(3,"E H step ...")
-        Sigma_H, m_H = vt.expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale)
+        Sigma_H, m_H = vt.expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
         Crit_H += [abs(np.mean(m_H - m_H1) / np.mean(m_H))]
         m_H1[:] = m_H[:]
         pyhrf.verbose(3,"E Z step ...")
-        q_Z,Z_tilde = vt.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K)
+        q_Z,Z_tilde = vt.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
         DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
         Crit_Z += [np.mean(DIFF) / (DIFF != 0).sum()]
         q_Z1[:,:,:] = q_Z[:,:,:]
         pyhrf.verbose(3,"M (mu,sigma) step ...")
-        mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M)
+        mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
         if estimateSigmaH:
             pyhrf.verbose(3,"M sigma_H step ...")
             sigmaH = np.dot(np.dot(m_H.transpose(),R) , m_H ) + (np.dot(Sigma_H,R)).trace()
@@ -1054,11 +1058,11 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
             Hist_sigmaH += [sigmaH]
             sigmaH1 = sigmaH
         pyhrf.verbose(3,"M L step ...")
-        L = vt.maximization_L(Y,m_A,X,m_H,L,P)
+        L = vt.maximization_L(Y,m_A,X,m_H,L,P,zerosP)
         PL = np.dot(P,L)
         y_tilde = Y - PL
         pyhrf.verbose(3,"M sigma_epsilone step ...")
-        sigma_epsilone = vt.maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M)
+        sigma_epsilone = vt.maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM)
         #if ( (ni+1)% 1) == 0:
         if PLOT:
             from matplotlib import pyplot
@@ -1076,21 +1080,6 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
             pyplot.hold(False)
             pyplot.draw()
             pyplot.show()
-            #figure(2)
-            #plot(Hist_sigmaH)
-            #title(str(sigmaH))
-            ##hold(False)
-            #draw()
-            #show()
-            #for m in range(0,M):
-                #for k in range(0,K):
-                    #z1 = q_Z[m,k,:];
-                    #z2 = np.reshape(z1,(l,l));
-                    #figure(2).add_subplot(M,K,1 + m*K + k)
-                    #imshow(z2)
-                    #title("m = " + str(m) +"k = " + str(k))
-            #draw()
-            #show()
         ni +=1
     t2 = time.time()
     CompTime = t2 - t1
@@ -1098,7 +1087,7 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
     #print Norm
     m_H /= Norm
     m_A *= Norm
-    pyhrf.veborse(1, "Nb iterations to reach criterion: %d" %ni)
+    pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
     pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
     return m_A, m_H, q_Z , sigma_epsilone, (np.array(Hist_sigmaH)).transpose()
 

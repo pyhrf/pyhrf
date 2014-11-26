@@ -44,6 +44,11 @@ def maximum(a):
 
     return maxx, maxx_ind
 
+def normpdf(x, mu, sigma):
+    u = (x-mu)/np.abs(sigma)
+    y = (1/(np.sqrt(2*np.pi)*np.abs(sigma)))*np.exp(-u*u/2)
+    return y
+
 def polyFit(signal, tr, order,p):
     n = len(signal)
     ptp = np.dot(p.transpose(),p)
@@ -92,6 +97,96 @@ def buildFiniteDiffMatrix(order, size):
     return diffMat
 
 
+# Expectation functions
+##############################################################
+
+def expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_MK,q_Z,mu_MK,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD):
+    X_tilde = zerosJMD.copy()#np.zeros((Y.shape[1],M,D),dtype=float)
+    J = Y.shape[1]
+    for i in xrange(0,J):
+        m = 0
+        for k1 in X:
+            m2 = 0
+            for k2 in X:
+                Sigma_A[m,m2,i] = np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
+                Sigma_A[m,m2,i] += (np.dot(np.dot(np.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
+                m2 += 1
+            X_tilde[i,m,:] = np.dot(np.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
+            m += 1
+        tmp = np.dot(X_tilde[i,:,:],m_H)
+        for k in xrange(0,K):
+            Delta = np.diag( q_Z[:,k,i]/(sigma_MK[:,k] + eps) )
+            tmp += np.dot(Delta,mu_MK[:,k])
+            Sigma_A[:,:,i] += Delta
+        tmp2 = np.linalg.inv(Sigma_A[:,:,i])
+        Sigma_A[:,:,i] = tmp2
+        m_A[i,:] = np.dot(Sigma_A[:,:,i],tmp)
+    return Sigma_A, m_A
+
+def expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD):
+    Y_bar_tilde = zerosD.copy()#np.zeros((D),dtype=float)
+    Q_bar = scale * R/sigmaH
+    Q_bar2 = scale * R/sigmaH
+    for i in xrange(0,J):
+        m = 0
+        tmp =  zerosND.copy() #np.zeros((N,D),dtype=float)
+        for k in X: # Loop over the M conditions
+            tmp += m_A[i,m] * X[k]
+            m += 1
+        Y_bar_tilde += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),y_tilde[:,i])
+        Q_bar += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),tmp)
+        Q_bar2[:,:] = Q_bar[:,:]
+        m1 = 0
+        for k1 in X: # Loop over the M conditions
+            m2 = 0
+            for k2 in X: # Loop over the M conditions
+                Q_bar += Sigma_A[m1,m2,i] * np.dot(np.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[i],eps)),X[k2])
+                m2 +=1
+            m1 +=1
+    Sigma_H = np.linalg.inv(Q_bar)
+    m_H = np.dot(Sigma_H,Y_bar_tilde)
+    m_H[0] = 0
+    m_H[-1] = 0
+    return Sigma_H, m_H
+
+
+def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
+    energy = zerosK.copy()
+    Gauss = zerosK.copy()
+    for i in xrange(0,J):
+        for m in xrange(0,M):
+            alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
+            Malpha = alpha.mean()
+            alpha /= Malpha
+            tmp = sum(Z_tilde[m,:,graph[i]],0)
+            for k in xrange(0,K):
+                extern_field = alpha[k] + max(np.log( normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k])) + eps) ,-100 )
+                local_energy = Beta[m] * tmp[k]
+                energy[k] = extern_field + local_energy
+            Emax = max(energy)
+            Probas = np.exp(energy - Emax)
+            Sum = sum(Probas)
+            Z_tilde[m,:,i] = Probas/ (Sum + eps)
+    for i in xrange(0,J):
+        for m in xrange(0,M):
+            alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
+            Malpha = alpha.mean()
+            alpha /= Malpha
+            tmp = sum(Z_tilde[m,:,graph[i]],0)
+            for k in xrange(0,K):
+                extern_field = alpha[k]
+                local_energy = Beta[m] * tmp[k]
+                energy[k] = extern_field + local_energy
+                Gauss[k] = normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k]))
+            Emax = max(energy)
+            Probas = np.exp(energy - Emax)
+            Sum = sum(Probas)
+            q_Z[m,:,i] = Gauss * Probas / Sum
+            SZ = sum(q_Z[m,:,i])
+            q_Z[m,:,i] /= SZ
+    return q_Z, Z_tilde
+
+
 # Maximization functions
 ##############################################################
 
@@ -134,7 +229,29 @@ def maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h):
     sigmaH = (-D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
 
     return sigmaH
-       
+
+def maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM):
+    N = PL.shape[0]
+    J = Y.shape[1]
+    Htilde = zerosMM.copy() #np.zeros((M,M),dtype=float)
+    for i in xrange(0,J):
+        S = np.zeros((N),dtype=float)
+        m = 0
+        for k in X:
+            m2 = 0
+            for k2 in X:
+                Htilde[m,m2] =  np.dot(np.dot(np.dot(m_H.transpose(),X[k].transpose()),X[k2]),m_H)
+                Htilde[m,m2] += (np.dot(np.dot(Sigma_H,X[k].transpose()),X[k2])).trace()
+                m2 += 1
+            S += m_A[i,m]*np.dot(X[k],m_H)
+            m += 1
+        sigma_epsilone[i] = np.dot( -2*S, Y[:,i] - PL[:,i] )
+        sigma_epsilone[i] += (np.dot(Sigma_A[:,:,i],Htilde)).trace()
+        sigma_epsilone[i] += np.dot( np.dot(m_A[i,:].transpose(), Htilde),m_A[i,:] )
+        sigma_epsilone[i] += np.dot((Y[:,i] - PL[:,i]).transpose(), Y[:,i] - PL[:,i] )
+        sigma_epsilone[i] /= N
+    return sigma_epsilone
+
        
 # Entropy functions
 ##############################################################
@@ -218,7 +335,7 @@ def Compute_FreeEnergy(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H, \
 
     return FreeEnergy
 
-
+"""
 def Compute_FreeEnergy2(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,
                        R,Det_invR,sigmaH,p_Wtilde,q_Z,neighboursIndexes,
                        maxNeighbours,Beta,sigma_epsilone,XX,Gamma,
@@ -245,12 +362,11 @@ def Compute_FreeEnergy2(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,
     FreeEnergy = E - Total_Entropy
 
     return FreeEnergy
-
+"""
 
 
 # MiniVEM
 #########################################################
-
 
 def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,p_Wtilde,scale,Q_barnCond,XGamma,tau1,tau2,Nit,sigmaH,estimateHRF):
     
@@ -376,6 +492,7 @@ def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,m
     return InitVar, InitMean, Initgamma_h
 
 
+"""
 def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
                     D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,
                     Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,
@@ -497,3 +614,4 @@ def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
     pyhrf.verbose(1,"Choosed initialisation is : var = %s,  mean = %s,  gamma_h = %s" %(InitVar,InitMean,Initgamma_h))
     
     return InitVar, InitMean, Initgamma_h
+"""

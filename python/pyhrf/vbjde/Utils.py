@@ -10,10 +10,10 @@ except ImportError:
 #from scipy.spatial import *
 import os.path as op
 from scipy.linalg import toeplitz,norm,inv
-import numpy
 from pyhrf.ndarray import xndarray
 import time
 import scipy
+from numpy.random import normal ### TODO: Check!! where did it come from before?
 
 from pyhrf.paradigm import restarize_events
 #from nifti import NiftiImage
@@ -37,19 +37,19 @@ except ImportError:
     from pyhrf.tools.backports import OrderedDict
 
 def tridiag(l,autocorr,rho):
-    diag_rows = numpy.array([-rho*numpy.ones(l),
-                autocorr*numpy.ones(l),
-                -rho*numpy.ones(l)])
+    diag_rows = np.array([-rho*np.ones(l),
+                autocorr*np.ones(l),
+                -rho*np.ones(l)])
     positions = [-1, 0, 1]
     return sp.sparse.spdiags(diag_rows, positions, l, l).todense()
 
 
 def tridiag2(l,autocorr,rho1,rho2):
-    diag_rows = numpy.array([rho2*numpy.ones(l),
-                rho1*numpy.ones(l),
-                autocorr*numpy.ones(l),
-                rho1*numpy.ones(l),
-                rho2*numpy.ones(l)])
+    diag_rows = np.array([rho2*np.ones(l),
+                rho1*np.ones(l),
+                autocorr*np.ones(l),
+                rho1*np.ones(l),
+                rho2*np.ones(l)])
     positions = [-2, -1, 0, 1,2]
     return sp.sparse.spdiags(diag_rows, positions, l, l).todense()
 
@@ -76,26 +76,26 @@ def roc_curve( dvals, labels, rocN=None, normalize=True ) :
     returns (FP coordinates, TP coordinates, AUC )
     """
     if rocN is not None and rocN < 1 :
-        rocN = int(rocN * numpy.sum(numpy.not_equal(labels, 1)))
+        rocN = int(rocN * np.sum(np.not_equal(labels, 1)))
 
     TP = 0.0  # current number of true positives
     FP = 0.0  # current number of false positives
 
     fpc = [ 0.0 ]  # fp coordinates
     tpc = [ 0.0 ]  # tp coordinates
-    dv_prev = -numpy.inf # previous decision value
+    dv_prev = -np.inf # previous decision value
     TP_prev = 0.0
     FP_prev = 0.0
     area = 0.0
 
-    num_pos = labels.count( 1 )  # number of pos labels  numpy.sum(labels)
-    num_neg = labels.count( 0 ) # number of neg labels  numpy.prod(labels.shape) - num_pos
+    num_pos = labels.count( 1 )  # number of pos labels  np.sum(labels)
+    num_neg = labels.count( 0 ) # number of neg labels  np.prod(labels.shape) - num_pos
 
     if num_pos == 0 or num_pos == len(labels) :
         raise ValueError, "There must be at least one example from each class"
 
     # sort decision values from highest to lowest
-    indices = numpy.argsort( dvals )[ ::-1 ]
+    indices = np.argsort( dvals )[ ::-1 ]
 
     for idx in indices:
         # increment associated TP/FP count
@@ -135,7 +135,7 @@ def mult(v1,v2):
     """For the Utils documentation
 
     """
-    matrix = numpy.zeros((len(v1),len(v2)),dtype=float)
+    matrix = np.zeros((len(v1),len(v2)),dtype=float)
     for i in xrange(len(v1)):
         for j in xrange(len(v2)):
                 matrix[i,j] += v1[i]*v2[j]
@@ -148,10 +148,10 @@ def polyFit(signal, tr, order,p):
 
     """
     n = len(signal)
-    ptp = numpy.dot(p.transpose(),p)
-    invptp = numpy.linalg.inv(ptp)
-    invptppt = numpy.dot(invptp, p.transpose())
-    l = numpy.dot(invptppt,signal)
+    ptp = np.dot(p.transpose(),p)
+    invptp = np.linalg.inv(ptp)
+    invptppt = np.dot(invptp, p.transpose())
+    l = np.dot(invptppt,signal)
     return l
 
 from numpy.matlib import *
@@ -172,8 +172,8 @@ def PolyMat( Nscans , paramLFD , tr):
 def normpdfMultivariate(x, mu, sigma):
     l = x.shape[0]
     u = (x-mu)
-    #print 'det =' + str(numpy.linalg.det(sigma))
-    y = (exp(-0.5*numpy.dot(u,numpy.dot(sigma,u)) ) * numpy.linalg.det(sigma)**(0.5))  / ((2*numpy.pi)**(l/2.) )
+    #print 'det =' + str(np.linalg.det(sigma))
+    y = (exp(-0.5*np.dot(u,np.dot(sigma,u)) ) * np.linalg.det(sigma)**(0.5))  / ((2*np.pi)**(l/2.) )
     return y
 
 def compute_MSE(nrl , nrlref):
@@ -185,11 +185,11 @@ def compute_MSE(nrl , nrlref):
 
 def mean_HRF(m_H,Pr):
     #D = m_H.shape[0]
-    sh = numpy.dot(m_H,Pr)/(sum(Pr) + eps)
+    sh = np.dot(m_H,Pr)/(sum(Pr) + eps)
     return sh
 
 def hrf_porte(LEN):
-    porte = numpy.ones(LEN)
+    porte = np.ones(LEN)
     porte[0:LEN/10] = 0
     porte[LEN/2:] = -1
     porte[LEN-LEN/10:] = 0
@@ -197,7 +197,7 @@ def hrf_porte(LEN):
 
 
 def hrf_triang(LEN):
-    triang = numpy.zeros(LEN)
+    triang = np.zeros(LEN)
     for i in xrange(0,LEN/4):
         triang[i] = i
     for i in xrange(0,3*LEN/4):
@@ -213,46 +213,46 @@ def mean_HRF_covar(Sigma_H,Pr,zerosDD):
     for j in xrange(0,J):
         sh += 0.5*(Pr[0,j]  * Sigma_H[:,:,j] / (eps + sum(Pr[0,:])) + Pr[0,j]  * Sigma_H[:,:,j] / (eps + sum(Pr[1,:])) )
 
-    #sh = numpy.dot(m_H,Pr)/(sum(Pr) + eps)
+    #sh = np.dot(m_H,Pr)/(sum(Pr) + eps)
     return sh
 
 #def normpdfMultivariate(x, mu, sigma):
     #k = x.shape[0]
-    #part1 = numpy.exp(-0.5*k*numpy.log(2*numpy.pi))
-    #part2 = numpy.power(numpy.linalg.det(sigma),0.5)
+    #part1 = np.exp(-0.5*k*np.log(2*np.pi))
+    #part2 = np.power(np.linalg.det(sigma),0.5)
     #dev = x-mu
-    #part3 = numpy.exp(numpy.dot(numpy.dot(dev,cov),dev.transpose()))
+    #part3 = np.exp(np.dot(np.dot(dev,cov),dev.transpose()))
     #y = part1*part2*part3
     #return y
 
 
 def normpdf(x, mu, sigma):
     u = (x-mu)/abs(sigma)
-    y = (1/(numpy.sqrt(2*numpy.pi)*abs(sigma)))*numpy.exp(-u*u/2)
+    y = (1/(np.sqrt(2*np.pi)*abs(sigma)))*np.exp(-u*u/2)
     return y
 
 def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     if durations is None: #assume spiked stimuli
-        durations = numpy.zeros_like(onsets)
+        durations = np.zeros_like(onsets)
     osf = tr/dt # over-sampling factor
     if int(osf) != osf: #construction will only work if dt is a multiple of tr
         raise Exception('OSF (%f) is not an integer' %osf)
 
-    x = numpy.zeros((nbscans,lhrf),dtype=float)
+    x = np.zeros((nbscans,lhrf),dtype=float)
     tmax = nbscans * tr #total session duration
     lgt = (nbscans + 2) * osf # nb of scans if tr=dt
-    paradigm_bins = restarize_events(onsets, numpy.zeros_like(onsets), dt, tmax)
-    firstcol = numpy.concatenate( (paradigm_bins, numpy.zeros(lgt-len(paradigm_bins))) )
-    firstrow = numpy.concatenate( ([paradigm_bins[0]], numpy.zeros(lhrf-1, dtype=int)) )
-    x_tmp = numpy.array(toeplitz( firstcol, firstrow), dtype=int)
-    os_indexes = [(numpy.arange(nbscans)*osf).astype(int)]
+    paradigm_bins = restarize_events(onsets, np.zeros_like(onsets), dt, tmax)
+    firstcol = np.concatenate( (paradigm_bins, np.zeros(lgt-len(paradigm_bins))) )
+    firstrow = np.concatenate( ([paradigm_bins[0]], np.zeros(lhrf-1, dtype=int)) )
+    x_tmp = np.array(toeplitz( firstcol, firstrow), dtype=int)
+    os_indexes = [(np.arange(nbscans)*osf).astype(int)]
     x = x_tmp[os_indexes]
     return x
 
 def compute_mat_X(nbscans, lhrf, tr, tmax, onsets, durations=None):
-    x = numpy.zeros((nbscans,lhrf),dtype=float)
-    x_tmp = numpy.zeros(nbscans,dtype=float)
-    x_tmp[xrange(0,tmax)] = restarize_events(onsets,numpy.zeros_like(onsets),tr,tmax)
+    x = np.zeros((nbscans,lhrf),dtype=float)
+    x_tmp = np.zeros(nbscans,dtype=float)
+    x_tmp[xrange(0,tmax)] = restarize_events(onsets,np.zeros_like(onsets),tr,tmax)
     for i in xrange(0,lhrf):
         for j in xrange(0,len(x)):
             x[j,i] = x_tmp[j-i]
@@ -269,152 +269,152 @@ def maximum(a):
     return maxx, maxx_ind
 
 def expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_MK,q_Z,mu_MK,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD):
-    X_tilde = zerosJMD.copy()#numpy.zeros((Y.shape[1],M,D),dtype=float)
+    X_tilde = zerosJMD.copy()#np.zeros((Y.shape[1],M,D),dtype=float)
     J = Y.shape[1]
     for i in xrange(0,J):
         m = 0
         for k1 in X:
             m2 = 0
             for k2 in X:
-                Sigma_A[m,m2,i] = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
-                Sigma_A[m,m2,i] += (numpy.dot(numpy.dot(numpy.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
+                Sigma_A[m,m2,i] = np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
+                Sigma_A[m,m2,i] += (np.dot(np.dot(np.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
                 m2 += 1
-            X_tilde[i,m,:] = numpy.dot(numpy.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
+            X_tilde[i,m,:] = np.dot(np.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
             m += 1
-        tmp = numpy.dot(X_tilde[i,:,:],m_H)
+        tmp = np.dot(X_tilde[i,:,:],m_H)
         for k in xrange(0,K):
-            Delta = numpy.diag( q_Z[:,k,i]/(sigma_MK[:,k] + eps) )
-            tmp += numpy.dot(Delta,mu_MK[:,k])
+            Delta = np.diag( q_Z[:,k,i]/(sigma_MK[:,k] + eps) )
+            tmp += np.dot(Delta,mu_MK[:,k])
             Sigma_A[:,:,i] += Delta
         tmp2 = inv(Sigma_A[:,:,i])
         Sigma_A[:,:,i] = tmp2
-        m_A[i,:] = numpy.dot(Sigma_A[:,:,i],tmp)
+        m_A[i,:] = np.dot(Sigma_A[:,:,i],tmp)
     return Sigma_A, m_A
 
 def expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD):
-    Y_bar_tilde = zerosD.copy()#numpy.zeros((D),dtype=float)
+    Y_bar_tilde = zerosD.copy()#np.zeros((D),dtype=float)
     Q_bar = scale * R/sigmaH
     Q_bar2 = scale * R/sigmaH
     for i in xrange(0,J):
         m = 0
-        tmp =  zerosND.copy() #numpy.zeros((N,D),dtype=float)
+        tmp =  zerosND.copy() #np.zeros((N,D),dtype=float)
         for k in X: # Loop over the M conditions
             tmp += m_A[i,m] * X[k]
             m += 1
-        Y_bar_tilde += numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),y_tilde[:,i])
-        Q_bar += numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),tmp)
+        Y_bar_tilde += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),y_tilde[:,i])
+        Q_bar += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),tmp)
         Q_bar2[:,:] = Q_bar[:,:]
         m1 = 0
         for k1 in X: # Loop over the M conditions
             m2 = 0
             for k2 in X: # Loop over the M conditions
-                Q_bar += Sigma_A[m1,m2,i] * numpy.dot(numpy.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[i],eps)),X[k2])
+                Q_bar += Sigma_A[m1,m2,i] * np.dot(np.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[i],eps)),X[k2])
                 m2 +=1
             m1 +=1
     Sigma_H = inv(Q_bar)
-    m_H = numpy.dot(Sigma_H,Y_bar_tilde)
+    m_H = np.dot(Sigma_H,Y_bar_tilde)
     m_H[0] = 0
     m_H[-1] = 0
     return Sigma_H, m_H
 
 def expectation_AP2(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_MK,q_Z,mu_MK,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD):
-    X_tilde = zerosJMD.copy()#numpy.zeros((Y.shape[1],M,D),dtype=float)
+    X_tilde = zerosJMD.copy()#np.zeros((Y.shape[1],M,D),dtype=float)
     J = Y.shape[1]
     for i in xrange(0,J):
         m = 0
         for k1 in X:
             m2 = 0
             for k2 in X:
-                Sigma_A[m,m2,i] = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H[:,i].transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H[:,i])
-                Sigma_A[m,m2,i] += (numpy.dot(numpy.dot(numpy.dot(Sigma_H[:,:,i],X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
+                Sigma_A[m,m2,i] = np.dot(np.dot(np.dot(np.dot(m_H[:,i].transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H[:,i])
+                Sigma_A[m,m2,i] += (np.dot(np.dot(np.dot(Sigma_H[:,:,i],X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
                 m2 += 1
-            X_tilde[i,m,:] = numpy.dot(numpy.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
+            X_tilde[i,m,:] = np.dot(np.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
             m += 1
-        tmp = numpy.dot(X_tilde[i,:,:],m_H[:,i])
+        tmp = np.dot(X_tilde[i,:,:],m_H[:,i])
         for k in xrange(0,K):
-            Delta = numpy.diag( q_Z[:,k,i]/(sigma_MK[:,k] + eps) )
-            tmp += numpy.dot(Delta,mu_MK[:,k])
+            Delta = np.diag( q_Z[:,k,i]/(sigma_MK[:,k] + eps) )
+            tmp += np.dot(Delta,mu_MK[:,k])
             Sigma_A[:,:,i] += Delta
         tmp2 = inv(Sigma_A[:,:,i])
         Sigma_A[:,:,i] = tmp2
-        m_A[i,:] = numpy.dot(Sigma_A[:,:,i],tmp)
+        m_A[i,:] = np.dot(Sigma_A[:,:,i],tmp)
     return Sigma_A, m_A
 
 def expectation_AP(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_MK,q_Z,mu_MK,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD,Pmask):
-    X_tilde = zerosJMD.copy()#numpy.zeros((Y.shape[1],M,D),dtype=float)
+    X_tilde = zerosJMD.copy()#np.zeros((Y.shape[1],M,D),dtype=float)
     J = Y.shape[1]
     for i in xrange(0,J):
         m = 0
         for k1 in X:
             m2 = 0
             for k2 in X:
-                Sigma_A[m,m2,i] = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H[:,i].transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H[:,i])
-                Sigma_A[m,m2,i] += (numpy.dot(numpy.dot(numpy.dot(Sigma_H[:,:,i],X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
+                Sigma_A[m,m2,i] = np.dot(np.dot(np.dot(np.dot(m_H[:,i].transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H[:,i])
+                Sigma_A[m,m2,i] += (np.dot(np.dot(np.dot(Sigma_H[:,:,i],X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
                 m2 += 1
-            X_tilde[i,m,:] = numpy.dot(numpy.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
+            X_tilde[i,m,:] = np.dot(np.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
             m += 1
-        tmp = numpy.dot(X_tilde[i,:,:],m_H[:,i])
+        tmp = np.dot(X_tilde[i,:,:],m_H[:,i])
         for k in xrange(0,K):
-            Delta = numpy.diag( q_Z[:,k,i]/(sigma_MK[:,k,Pmask[i]] + eps) )
-            tmp += numpy.dot(Delta,mu_MK[:,k,Pmask[i]])
+            Delta = np.diag( q_Z[:,k,i]/(sigma_MK[:,k,Pmask[i]] + eps) )
+            tmp += np.dot(Delta,mu_MK[:,k,Pmask[i]])
             Sigma_A[:,:,i] += Delta
         tmp2 = inv(Sigma_A[:,:,i])
         Sigma_A[:,:,i] = tmp2
-        m_A[i,:] = numpy.dot(Sigma_A[:,:,i],tmp)
+        m_A[i,:] = np.dot(Sigma_A[:,:,i],tmp)
     return Sigma_A, m_A
 
 #def expectation_HP(Y,Sigma_A,Sigma_H,m_A,m_H,X,I,q_Q,HRFDictCovar,HRFDict,Gamma,D,J,N,y_tilde,zerosND,sigma_epsilone):
     #for j in xrange(0,J):
 	#Sigma_bar_j_1 = q_Q[0,j]*HRFDictCovar[0]
-	#Sum_Sigma_h_k = q_Q[0,j]*numpy.dot(HRFDictCovar[0],HRFDict[0])
+	#Sum_Sigma_h_k = q_Q[0,j]*np.dot(HRFDictCovar[0],HRFDict[0])
 	#for l in xrange(1,I):
 	    #Sigma_bar_j_1 += q_Q[l,j]*HRFDictCovar[l]
-	    #Sum_Sigma_h_k += q_Q[l,j]*numpy.dot(HRFDictCovar[l],HRFDict[l])
-	##mu_bar_j = numpy.dot(Sigma_bar_j_1,Sum_Sigma_h_k)
-	##mu_bar_j = numpy.dot(inv(Sigma_bar_j_1),Sum_Sigma_h_k)
+	    #Sum_Sigma_h_k += q_Q[l,j]*np.dot(HRFDictCovar[l],HRFDict[l])
+	##mu_bar_j = np.dot(Sigma_bar_j_1,Sum_Sigma_h_k)
+	##mu_bar_j = np.dot(inv(Sigma_bar_j_1),Sum_Sigma_h_k)
 	#m = 0
 	#tmp =  zerosND.copy()
 	#for k in X: # Loop over the M conditions
 	    #tmp += m_A[j,m] * X[k]
 	    #m += 1
-	#Y_bar_tilde = numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),y_tilde[:,j])
-	#Q_bar = numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),tmp)
+	#Y_bar_tilde = np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),y_tilde[:,j])
+	#Q_bar = np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),tmp)
 	#m1 = 0
 	#for k1 in X: # Loop over the M conditions
 	    #m2 = 0
 	    #for k2 in X: # Loop over the M conditions
-		#Q_bar += Sigma_A[m1,m2,j] * numpy.dot(numpy.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[j],eps)),X[k2])
+		#Q_bar += Sigma_A[m1,m2,j] * np.dot(np.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[j],eps)),X[k2])
 		#m2 += 1
 	    #m1 += 1
 	#Sigma_H[:,:,j] = inv(Q_bar + Sigma_bar_j_1)
-	##tmp3 = Sum_Sigma_h_k#numpy.dot(Sigma_bar_j_1,mu_bar_j)
-	##tmp2 = Y_bar_tilde#numpy.dot(inv(Q_bar),numpy.dot(Q_bar,Y_bar_tilde))
-	#m_H[:,j] = numpy.dot(Sigma_H[:,:,j],Y_bar_tilde + Sum_Sigma_h_k)
+	##tmp3 = Sum_Sigma_h_k#np.dot(Sigma_bar_j_1,mu_bar_j)
+	##tmp2 = Y_bar_tilde#np.dot(inv(Q_bar),np.dot(Q_bar,Y_bar_tilde))
+	#m_H[:,j] = np.dot(Sigma_H[:,:,j],Y_bar_tilde + Sum_Sigma_h_k)
     #return Sigma_H, m_H
 
 def expectation_HP(Y,Sigma_A,Sigma_H,m_A,m_H,X,I,q_Q,HRFDictCovar,HRFDict,Gamma,D,J,N,y_tilde,zerosND,sigma_epsilone):
     for j in xrange(0,J):
         Sigma_bar_j_1 = q_Q[0,j]*HRFDictCovar[0]
-        Sum_Sigma_h_k = q_Q[0,j]*numpy.dot(HRFDictCovar[0],HRFDict[0])
+        Sum_Sigma_h_k = q_Q[0,j]*np.dot(HRFDictCovar[0],HRFDict[0])
         for l in xrange(1,I):
             Sigma_bar_j_1 += q_Q[l,j]*HRFDictCovar[l]
-            Sum_Sigma_h_k += q_Q[l,j]*numpy.dot(HRFDictCovar[l],HRFDict[l])
+            Sum_Sigma_h_k += q_Q[l,j]*np.dot(HRFDictCovar[l],HRFDict[l])
         m = 0
         tmp =  zerosND.copy()
         for k in X: # Loop over the M conditions
             tmp += m_A[j,m] * X[k]
             m += 1
-        Y_bar_tilde = numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),y_tilde[:,j])
-        Q_bar = numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),tmp)
+        Y_bar_tilde = np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),y_tilde[:,j])
+        Q_bar = np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[j],eps)),tmp)
         m1 = 0
         for k1 in X: # Loop over the M conditions
             m2 = 0
             for k2 in X: # Loop over the M conditions
-                Q_bar += Sigma_A[m1,m2,j] * numpy.dot(numpy.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[j],eps)),X[k2])
+                Q_bar += Sigma_A[m1,m2,j] * np.dot(np.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[j],eps)),X[k2])
                 m2 += 1
             m1 += 1
         Sigma_H[:,:,j] = inv(Q_bar + Sigma_bar_j_1)
-        m_H[:,j] = numpy.dot(Sigma_H[:,:,j],Y_bar_tilde + Sum_Sigma_h_k)
+        m_H[:,j] = np.dot(Sigma_H[:,:,j],Y_bar_tilde + Sum_Sigma_h_k)
     return Sigma_H, m_H
 
 def maximization_hk_Sigmak(R,J,q_Q,Sigma_H,m_H,HRFDict,HRFDictCovar,I,zerosDD,zerosD):
@@ -426,10 +426,10 @@ def maximization_hk_Sigmak(R,J,q_Q,Sigma_H,m_H,HRFDict,HRFDictCovar,I,zerosDD,ze
             tp = m_H[:,j]- HRFDict[i]
             tmp += q_Q[i,j]*(Sigma_H[:,:,j] + mult(tp,tp))
             tmpD +=  q_Q[i,j]*m_H[:,j]
-        tmpf = numpy.dot(R,tmp / S)
+        tmpf = np.dot(R,tmp / S)
         #print tmpf
         print tmpf.min(),tmpf.max()
-        HRFDictCovar[i] = numpy.dot(inv(tmpf),R)
+        HRFDictCovar[i] = np.dot(inv(tmpf),R)
         #HRFDictCovar[i] = inv(tmp / S)
         HRFDict[i] = tmpD / S
     return HRFDictCovar,HRFDict
@@ -455,8 +455,8 @@ def maximization_hk(J,q_Q,m_H,HRFDict,I,zerosD):
 def classify(Pr):
     nbClass = Pr.shape[0]
     J = Pr.shape[1]
-    #CL = (nbClass-1)*numpy.ones((J))
-    CL = numpy.zeros((J))
+    #CL = (nbClass-1)*np.ones((J))
+    CL = np.zeros((J))
     #print 'J:', J
     #print 'Pr.shape:', Pr.shape
     #print 'Pr:', Pr
@@ -468,7 +468,7 @@ def classify(Pr):
         tmp = Pr[:,j]
         #print 'Pr[:,j]', Pr[:,j]
         #print max(tmp)
-        ind = find(tmp == max(tmp))
+        ind = np.where(tmp == max(tmp))
         #print 'ind:', ind
         #print 'CL:', CL
         #print 'ind.shape:', ind.shape
@@ -483,13 +483,13 @@ def expectation_Q(m_H,Sigma_H,sigma_M,beta,Q_tilde,HRFDict,HRFDictCovar,q_Q,grap
         for j in xrange(0,J):
             tmp = sum(Q_tilde[:,graph[j]],1)
             for i in xrange(0,I):
-                alpha[i] = -0.5*numpy.dot(Sigma_H[:,:,j],HRFDictCovar[i]).trace()
+                alpha[i] = -0.5*np.dot(Sigma_H[:,:,j],HRFDictCovar[i]).trace()
             Malpha = alpha.mean()
             alpha /= Malpha
             maxGauss = 1
             for i in xrange(0,I):
                 u = m_H[:,j]-HRFDict[i]
-                Gauss[i] = exp(-0.5*numpy.dot(u,numpy.dot(HRFDictCovar[i],u))) * (numpy.linalg.det(HRFDictCovar[i])**0.5)
+                Gauss[i] = exp(-0.5*np.dot(u,np.dot(HRFDictCovar[i],u))) * (np.linalg.det(HRFDictCovar[i])**0.5)
                 if ( Gauss[i]>maxGauss ):
                     maxGauss = Gauss[i]
                 extern_field = alpha[i]# + gauss
@@ -497,14 +497,14 @@ def expectation_Q(m_H,Sigma_H,sigma_M,beta,Q_tilde,HRFDict,HRFDictCovar,q_Q,grap
                 energy[i] = extern_field + local_energy
             Emax = energy.mean()
             Gauss /= maxGauss
-            Probas = numpy.exp(energy - Emax) * Gauss
+            Probas = np.exp(energy - Emax) * Gauss
             Sum = sum(Probas)
             Q_tilde[:,j] = Probas/Sum
 
     for j in xrange(0,J):
         tmp = sum(Q_tilde[:,graph[j]],1)
         for i in xrange(0,I):
-            alpha[i] = -0.5*numpy.dot(Sigma_H[:,:,j],HRFDictCovar[i]).trace()
+            alpha[i] = -0.5*np.dot(Sigma_H[:,:,j],HRFDictCovar[i]).trace()
         Malpha = alpha.mean()
         alpha /= Malpha
         maxGauss = 1
@@ -512,26 +512,26 @@ def expectation_Q(m_H,Sigma_H,sigma_M,beta,Q_tilde,HRFDict,HRFDictCovar,q_Q,grap
             local_energy = beta * tmp[i]
             u = m_H[:,j]-HRFDict[i]
             extern_field = alpha[i]
-            Gauss[i] = exp(-0.5*numpy.dot(u,numpy.dot(HRFDictCovar[i],u))) * (numpy.linalg.det(HRFDictCovar[i])**0.5)
+            Gauss[i] = exp(-0.5*np.dot(u,np.dot(HRFDictCovar[i],u))) * (np.linalg.det(HRFDictCovar[i])**0.5)
             if ( Gauss[i]>maxGauss):
                 maxGauss = Gauss[i]
             energy[i] = extern_field + local_energy
         Emax = energy.mean()
         Gauss /= maxGauss
-        Probas = numpy.exp(energy - Emax) * Gauss
+        Probas = np.exp(energy - Emax) * Gauss
         Sum = sum(Probas)
         q_Q[:,j] = Probas/Sum
     return q_Q, Q_tilde
 
 def thresholding(x,thresh = 0.5):
-    ind = find(x>thresh).tolist()
+    ind = np.where(x>thresh).tolist()
     x *= 0
     for i in ind:
         x[i] = 1
     return x
 
 def labelling(x,label,thresh = 0.5):
-    ind = find(x>thresh).tolist()
+    ind = np.where(x>thresh).tolist()
     x *= 0
     for i in ind:
         x[i] = label
@@ -547,13 +547,13 @@ def expectation_H_Wavelet(Dw,Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zer
         for k in X:
             tmp += m_A[i,m] * X[k]
             m += 1
-        Y_bar_tilde += numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),y_tilde[:,i])
-        Q_bar += numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),tmp)
+        Y_bar_tilde += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),y_tilde[:,i])
+        Q_bar += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),tmp)
         m1 = 0
         for k1 in X:
             m2 = 0
             for k2 in X:
-                Q_bar += Sigma_A[m1,m2,i] * numpy.dot(numpy.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[i],eps)),X[k2])
+                Q_bar += Sigma_A[m1,m2,i] * np.dot(np.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[i],eps)),X[k2])
                 m2 +=1
             m1 +=1
     tmp = scale * R
@@ -562,7 +562,7 @@ def expectation_H_Wavelet(Dw,Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zer
     cA, cD = dwt(Y_bar_tilde,'db8','per')
     Y_bar_tilde[0:Dw] = cA
     Y_bar_tilde[Dw:] = cD
-    m_H = numpy.dot(Sigma_H,Y_bar_tilde)
+    m_H = np.dot(Sigma_H,Y_bar_tilde)
     return Sigma_H, m_H
 
 def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
@@ -575,11 +575,11 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
             alpha /= Malpha
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
-                extern_field = alpha[k] + max(numpy.log( normpdf(m_A[i,m], mu_M[m,k], numpy.sqrt(sigma_M[m,k])) + eps) ,-100 )
+                extern_field = alpha[k] + max(np.log( normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k])) + eps) ,-100 )
                 local_energy = Beta[m] * tmp[k]
                 energy[k] = extern_field + local_energy
             Emax = max(energy)
-            Probas = numpy.exp(energy - Emax)
+            Probas = np.exp(energy - Emax)
             Sum = sum(Probas)
             Z_tilde[m,:,i] = Probas/ (Sum + eps)
     for i in xrange(0,J):
@@ -592,9 +592,9 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
                 extern_field = alpha[k]
                 local_energy = Beta[m] * tmp[k]
                 energy[k] = extern_field + local_energy
-                Gauss[k] = normpdf(m_A[i,m], mu_M[m,k], numpy.sqrt(sigma_M[m,k]))
+                Gauss[k] = normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k]))
             Emax = max(energy)
-            Probas = numpy.exp(energy - Emax)
+            Probas = np.exp(energy - Emax)
             Sum = sum(Probas)
             q_Z[m,:,i] = Gauss * Probas / Sum
             SZ = sum(q_Z[m,:,i])
@@ -639,8 +639,8 @@ def maximization_mu_sigma_P2(Mu,Sigma,q_Z,m_A,K,M,Sigma_A):
 def maximization_mu_sigma_P(Mu,Sigma,q_Z,m_A,K,M,Sigma_A,Pmask,I):
 
     for i in xrange(0,I):
-        #ind = find(Pmask == i)
-        ind = find(Pmask < 100)
+        #ind = np.where(Pmask == i)
+        ind = np.where(Pmask < 100)
         for m in xrange(0,M):
             for k in xrange(0,K):
                 S = sum( q_Z[m,k,ind] ) + eps
@@ -660,9 +660,9 @@ def maximization_L(Y,m_A,X,m_H,L,P,zerosP):
         S = zerosP.copy()
         m = 0
         for k in X:
-            S += m_A[i,m]*numpy.dot(X[k],m_H)
+            S += m_A[i,m]*np.dot(X[k],m_H)
             m +=1
-        L[:,i] = numpy.dot(P.transpose(), Y[:,i] - S)
+        L[:,i] = np.dot(P.transpose(), Y[:,i] - S)
     return L
 
 def maximization_LP(Y,m_A,X,m_H,L,P,zerosP):
@@ -671,9 +671,9 @@ def maximization_LP(Y,m_A,X,m_H,L,P,zerosP):
         S = zerosP.copy()
         m = 0
         for k in X:
-            S += m_A[i,m]*numpy.dot(X[k],m_H[:,i])
+            S += m_A[i,m]*np.dot(X[k],m_H[:,i])
             m +=1
-        L[:,i] = numpy.dot(P.transpose(), Y[:,i] - S)
+        L[:,i] = np.dot(P.transpose(), Y[:,i] - S)
     return L
 
 def gradient(q_Z,Z_tilde,J,m,K,graph,beta,gamma):
@@ -681,11 +681,11 @@ def gradient(q_Z,Z_tilde,J,m,K,graph,beta,gamma):
     for i in xrange(0,J):
         tmp2 = beta * sum(Z_tilde[m,:,graph[i]],0)
         Emax = max(tmp2)
-        Sum = sum( numpy.exp( tmp2 - Emax ) )
+        Sum = sum( np.exp( tmp2 - Emax ) )
         for k in xrange(0,K):
             tmp = sum(Z_tilde[m,k,graph[i]],0)
             energy = beta * tmp
-            Pzmi = numpy.exp(energy - Emax)
+            Pzmi = np.exp(energy - Emax)
             Pzmi /= (Sum + eps)
             Gr += tmp * (-q_Z[m,k,i] + Pzmi)
     return Gr
@@ -703,22 +703,22 @@ def maximization_beta(beta,q_Z,Z_tilde,J,K,m,graph,gamma,neighbour,maxNeighbours
 def maximization_sigma_noiseP(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM):
     N = PL.shape[0]
     J = Y.shape[1]
-    Htilde = zerosMM.copy() #numpy.zeros((M,M),dtype=float)
+    Htilde = zerosMM.copy() #np.zeros((M,M),dtype=float)
     for i in xrange(0,J):
-        S = numpy.zeros((N),dtype=float)
+        S = np.zeros((N),dtype=float)
         m = 0
         for k in X:
             m2 = 0
             for k2 in X:
-                Htilde[m,m2] =  numpy.dot(numpy.dot(numpy.dot(m_H[:,i].transpose(),X[k].transpose()),X[k2]),m_H[:,i])
-                Htilde[m,m2] += (numpy.dot(numpy.dot(Sigma_H[:,:,i],X[k].transpose()),X[k2])).trace()
+                Htilde[m,m2] =  np.dot(np.dot(np.dot(m_H[:,i].transpose(),X[k].transpose()),X[k2]),m_H[:,i])
+                Htilde[m,m2] += (np.dot(np.dot(Sigma_H[:,:,i],X[k].transpose()),X[k2])).trace()
                 m2 += 1
-            S += m_A[i,m]*numpy.dot(X[k],m_H[:,i])
+            S += m_A[i,m]*np.dot(X[k],m_H[:,i])
             m += 1
-        sigma_epsilone[i] = numpy.dot( -2*S, Y[:,i] - PL[:,i] )
-        sigma_epsilone[i] += (numpy.dot(Sigma_A[:,:,i],Htilde)).trace()
-        sigma_epsilone[i] += numpy.dot( numpy.dot(m_A[i,:].transpose(), Htilde),m_A[i,:] )
-        sigma_epsilone[i] += numpy.dot((Y[:,i] - PL[:,i]).transpose(), Y[:,i] - PL[:,i] )
+        sigma_epsilone[i] = np.dot( -2*S, Y[:,i] - PL[:,i] )
+        sigma_epsilone[i] += (np.dot(Sigma_A[:,:,i],Htilde)).trace()
+        sigma_epsilone[i] += np.dot( np.dot(m_A[i,:].transpose(), Htilde),m_A[i,:] )
+        sigma_epsilone[i] += np.dot((Y[:,i] - PL[:,i]).transpose(), Y[:,i] - PL[:,i] )
         sigma_epsilone[i] /= N
     return sigma_epsilone
 
@@ -726,22 +726,22 @@ def maximization_sigma_noiseP(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,ze
 def maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM):
     N = PL.shape[0]
     J = Y.shape[1]
-    Htilde = zerosMM.copy() #numpy.zeros((M,M),dtype=float)
+    Htilde = zerosMM.copy() #np.zeros((M,M),dtype=float)
     for i in xrange(0,J):
-        S = numpy.zeros((N),dtype=float)
+        S = np.zeros((N),dtype=float)
         m = 0
         for k in X:
             m2 = 0
             for k2 in X:
-                Htilde[m,m2] =  numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k].transpose()),X[k2]),m_H)
-                Htilde[m,m2] += (numpy.dot(numpy.dot(Sigma_H,X[k].transpose()),X[k2])).trace()
+                Htilde[m,m2] =  np.dot(np.dot(np.dot(m_H.transpose(),X[k].transpose()),X[k2]),m_H)
+                Htilde[m,m2] += (np.dot(np.dot(Sigma_H,X[k].transpose()),X[k2])).trace()
                 m2 += 1
-            S += m_A[i,m]*numpy.dot(X[k],m_H)
+            S += m_A[i,m]*np.dot(X[k],m_H)
             m += 1
-        sigma_epsilone[i] = numpy.dot( -2*S, Y[:,i] - PL[:,i] )
-        sigma_epsilone[i] += (numpy.dot(Sigma_A[:,:,i],Htilde)).trace()
-        sigma_epsilone[i] += numpy.dot( numpy.dot(m_A[i,:].transpose(), Htilde),m_A[i,:] )
-        sigma_epsilone[i] += numpy.dot((Y[:,i] - PL[:,i]).transpose(), Y[:,i] - PL[:,i] )
+        sigma_epsilone[i] = np.dot( -2*S, Y[:,i] - PL[:,i] )
+        sigma_epsilone[i] += (np.dot(Sigma_A[:,:,i],Htilde)).trace()
+        sigma_epsilone[i] += np.dot( np.dot(m_A[i,:].transpose(), Htilde),m_A[i,:] )
+        sigma_epsilone[i] += np.dot((Y[:,i] - PL[:,i]).transpose(), Y[:,i] - PL[:,i] )
         sigma_epsilone[i] /= N
     return sigma_epsilone
 
@@ -752,13 +752,13 @@ def maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zer
 
 def buildFiniteDiffMatrix(order, size):
     o = order
-    a = numpy.diff(numpy.concatenate((numpy.zeros(o),[1],numpy.zeros(o))),n=o)
+    a = np.diff(np.concatenate((np.zeros(o),[1],np.zeros(o))),n=o)
     b = a[len(a)/2:]
-    diffMat = toeplitz(numpy.concatenate((b, numpy.zeros(size-len(b)))))
+    diffMat = toeplitz(np.concatenate((b, np.zeros(size-len(b)))))
     return diffMat
 
 def maximization_sigmaH(D,Sigma_H,R,m_H):
-    sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+    sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
     sigmaH /= D
     return sigmaH
 
@@ -769,9 +769,9 @@ def maximization_sigmaH_P(D,J,I,Sigma_H,R,m_H,HRFDict,HRFDictCovar,q_Q,gamma_h):
         alpha = 0
         for j in xrange(0,J):
             tp = m_H[:,j]- HRFDict[i]
-            alpha += q_Q[i,j]*(numpy.dot(mult(tp,tp) + Sigma_H[:,:,j] , R )).trace()
+            alpha += q_Q[i,j]*(np.dot(mult(tp,tp) + Sigma_H[:,:,j] , R )).trace()
         sigmaH = (D*S + sqrt(D*D*S*S + 8*gamma_h*alpha)) / (4*gamma_h)
-            #sigmaH += q_Q[i,j]*(numpy.dot(mult(tp,tp) + Sigma_H[:,:,j] , R )).trace()
+            #sigmaH += q_Q[i,j]*(np.dot(mult(tp,tp) + Sigma_H[:,:,j] , R )).trace()
         #sigmaH /= (S * D)
         #sigmaH = 1
         print sigmaH
@@ -781,16 +781,16 @@ def maximization_sigmaH_P(D,J,I,Sigma_H,R,m_H,HRFDict,HRFDictCovar,q_Q,gamma_h):
 
   #def mean_HRF(m_H,Pr):
     ##D = m_H.shape[0]
-    #sh = numpy.dot(m_H,Pr)/(sum(Pr) + eps)
+    #sh = np.dot(m_H,Pr)/(sum(Pr) + eps)
 #mean_HRF(m_H,Pr)
 
 def maximization_h_k_prior2(m_H,Pr,Sigma_k,R):
     J = Pr.shape[0]
     D = m_H.shape[0]
     S = sum(Pr)
-    Mat = inv( numpy.dot( R,inv(Sigma_k) )/S + numpy.identity(D) )
+    Mat = inv( np.dot( R,inv(Sigma_k) )/S + np.identity(D) )
     tmp = mean_HRF(m_H,Pr)
-    h_k = numpy.dot( Mat, tmp)
+    h_k = np.dot( Mat, tmp)
 
     return h_k
 
@@ -801,12 +801,12 @@ def maximization_h_k_prior(m_H,Pr,Sigma_k,R):
     tmp = 0*m_H[:,0]
     for j in xrange(0,J):
         tmp += m_H[:,j] * Pr[j]
-    #h_k = numpy.dot( inv( numpy.dot( R,inv(Sigma_k) ) + S*numpy.identity(D) ) ,numpy.dot(m_H,Pr))
-    h_k = numpy.dot( inv( numpy.dot( R,inv(Sigma_k) ) + S*numpy.identity(D) ) ,tmp)
+    #h_k = np.dot( inv( np.dot( R,inv(Sigma_k) ) + S*np.identity(D) ) ,np.dot(m_H,Pr))
+    h_k = np.dot( inv( np.dot( R,inv(Sigma_k) ) + S*np.identity(D) ) ,tmp)
     return h_k
 
 def maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h):
-    alpha = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+    alpha = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
     #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
     sigmaH = (-D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
 
@@ -821,60 +821,60 @@ def maximization_alphaRVM(k_RVM,lam_RVM,Mw,Vw,M,alpha_RVM):
         
 
 def expectation_A_ParsiMod(Sigma_H,m_H,m_A,X,Gamma,sigma_MK,q_Z,mu_MK,J,y_tilde,Sigma_A,sigma_epsilone,zerosJMD,p_Wtilde,M):
-    X_tilde = zerosJMD.copy()#numpy.zeros((Y.shape[1],M,D),dtype=float)
+    X_tilde = zerosJMD.copy()#np.zeros((Y.shape[1],M,D),dtype=float)
 
     for i in xrange(0,J):
         m = 0
         for k1 in X:
             m2 = 0
             for k2 in X:
-                Sigma_A[m,m2,i] = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
-                Sigma_A[m,m2,i] += (numpy.dot(numpy.dot(numpy.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
+                Sigma_A[m,m2,i] = np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
+                Sigma_A[m,m2,i] += (np.dot(np.dot(np.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
                 Sigma_A[m,m2,i] = Sigma_A[m,m2,i] * p_Wtilde[m,1] * p_Wtilde[m2,1]
                 m2 += 1
-            X_tilde[i,m,:] = numpy.dot(numpy.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
+            X_tilde[i,m,:] = np.dot(np.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
             X_tilde[i,m,:] *= p_Wtilde[m,1]
             m += 1
-        tmp = numpy.dot(X_tilde[i,:,:],m_H)
+        tmp = np.dot(X_tilde[i,:,:],m_H)
 
         # Computing of Delta Matrix in case of 2 classes, with W matrix in activation and inactivation case
         # Have not the same forme so we can't do a loop to build Delta (as in complet model).
-        Delta_0 = numpy.diag( (1 - q_Z[:,1,i] * p_Wtilde[:,1])/sigma_MK[:,0] )
+        Delta_0 = np.diag( (1 - q_Z[:,1,i] * p_Wtilde[:,1])/sigma_MK[:,0] )
         Sigma_A[:,:,i] += Delta_0
-        tmp += numpy.dot(Delta_0,mu_MK[:,0])
+        tmp += np.dot(Delta_0,mu_MK[:,0])
 
-        Delta_1 = numpy.diag( (q_Z[:,1,i] * p_Wtilde[:,1])/sigma_MK[:,1] )
+        Delta_1 = np.diag( (q_Z[:,1,i] * p_Wtilde[:,1])/sigma_MK[:,1] )
         Sigma_A[:,:,i] += Delta_1
-        tmp += numpy.dot(Delta_1,mu_MK[:,1])
+        tmp += np.dot(Delta_1,mu_MK[:,1])
 
         tmp2 = inv(Sigma_A[:,:,i])
         Sigma_A[:,:,i] = tmp2
 
-        m_A[i,:] = numpy.dot(Sigma_A[:,:,i],tmp)
+        m_A[i,:] = np.dot(Sigma_A[:,:,i],tmp)
     return Sigma_A, m_A
 
 def expectation_H_ParsiMod(Sigma_A,m_A,X,Gamma,R,sigmaH,J,y_tilde,zerosND,sigma_epsilone,scale,zerosD,p_Wtilde):
-    Y_bar_tilde = zerosD.copy()#numpy.zeros((D),dtype=float)
+    Y_bar_tilde = zerosD.copy()#np.zeros((D),dtype=float)
     Q_bar = scale * R/sigmaH
     Q_bar2 = scale * R/sigmaH
     for i in xrange(0,J):
         m = 0
-        tmp =  zerosND.copy() #numpy.zeros((N,D),dtype=float)
+        tmp =  zerosND.copy() #np.zeros((N,D),dtype=float)
         for k in X: # Loop over the M conditions
             tmp += p_Wtilde[m,1] * m_A[i,m] * X[k]
             m += 1
-        Y_bar_tilde += numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),y_tilde[:,i])
-        Q_bar += numpy.dot(numpy.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),tmp)
+        Y_bar_tilde += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),y_tilde[:,i])
+        Q_bar += np.dot(np.dot(tmp.transpose(),Gamma/max(sigma_epsilone[i],eps)),tmp)
         Q_bar2[:,:] = Q_bar[:,:]
         m1 = 0
         for k1 in X: # Loop over the M conditions
             m2 = 0
             for k2 in X: # Loop over the M conditions
-                Q_bar += p_Wtilde[m1,1] * p_Wtilde[m2,1] * Sigma_A[m1,m2,i] * numpy.dot(numpy.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[i],eps)),X[k2])
+                Q_bar += p_Wtilde[m1,1] * p_Wtilde[m2,1] * Sigma_A[m1,m2,i] * np.dot(np.dot(X[k1].transpose(),Gamma/max(sigma_epsilone[i],eps)),X[k2])
                 m2 +=1
             m1 +=1
     Sigma_H = inv(Q_bar)
-    m_H = numpy.dot(Sigma_H,Y_bar_tilde)
+    m_H = np.dot(Sigma_H,Y_bar_tilde)
     m_H[0] = 0
     m_H[-1] = 0
     return Sigma_H, m_H
@@ -895,44 +895,44 @@ def expectation_Z_ParsiMod(tau1,tau2,Sigma_A,m_A,J,M,sigma_M,mu_M,V,K,Beta,graph
     for i in xrange(0,J):
       for v in xrange(0,V):
         part_2 = 1.
-        part_1 = ((-1)**(v+1))*numpy.exp(((v+1)*tau1*tau2)/J)/(v+1)
+        part_1 = ((-1)**(v+1))*np.exp(((v+1)*tau1*tau2)/J)/(v+1)
         for j in xrange(0,J):
             if j != i:
-                tmp = numpy.exp(((v+1)*tau1*tau2)/J)*(q_Z[m,0,j] + numpy.exp(-(v+1)*tau1)*q_Z[m,1,j])
+                tmp = np.exp(((v+1)*tau1*tau2)/J)*(q_Z[m,0,j] + np.exp(-(v+1)*tau1)*q_Z[m,1,j])
                 part_2 *= tmp
         P_mv[v] = part_1 * part_2
-        part_3[v] = numpy.exp(-(v+1)*tau1) * P_mv[v]
+        part_3[v] = np.exp(-(v+1)*tau1) * P_mv[v]
 
         for k in xrange(0,K):
             tmp[k] = sum(q_Z[m,k,graph[i]],0)
-            part_4[k] = normpdf(m_A[i,m], mu_M[m,k], numpy.sqrt(sigma_M[m,k]))
+            part_4[k] = normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k]))
 
-      #numpy.seterr (all='ignore')
-      #q_Z[m,0,i] = min( numpy.exp(sum(P_mv) + Beta[m]*tmp[0]), numpy.exp(700) )
+      #np.seterr (all='ignore')
+      #q_Z[m,0,i] = min( np.exp(sum(P_mv) + Beta[m]*tmp[0]), np.exp(700) )
 
       #part_5 = (part_4[1] / max(part_4[0],eps) )**p_Wtilde[m,1]
-      #part_5 = numpy.exp( p_Wtilde[m,1] * ( numpy.log(part_4[1]+eps) - numpy.log(part_4[0]+eps) ) )
-      part_5 = p_Wtilde[m,1] * ( numpy.log(part_4[1]+eps) - numpy.log(part_4[0]+eps) )
+      #part_5 = np.exp( p_Wtilde[m,1] * ( np.log(part_4[1]+eps) - np.log(part_4[0]+eps) ) )
+      part_5 = p_Wtilde[m,1] * ( np.log(part_4[1]+eps) - np.log(part_4[0]+eps) )
 
       #VAR = 1.
       #for v in xrange(0,V):
-        #VAR *= numpy.exp(part_3[v])
-      #part_6 = VAR * numpy.exp(Beta[m]*tmp[1])
-      #part_7 = numpy.exp(0.5*Sigma_A[m,m,i]*p_Wtilde[m,1]*( 1./sigma_M[m,0] - 1./sigma_M[m,1] ) + tau1*(p_Wtilde[m,1]-1.))*part_6
+        #VAR *= np.exp(part_3[v])
+      #part_6 = VAR * np.exp(Beta[m]*tmp[1])
+      #part_7 = np.exp(0.5*Sigma_A[m,m,i]*p_Wtilde[m,1]*( 1./sigma_M[m,0] - 1./sigma_M[m,1] ) + tau1*(p_Wtilde[m,1]-1.))*part_6
 
       part_6 = sum(part_3) + Beta[m]*tmp[1]
-      #numpy.seterr (all='ignore')
-      #part_7 = min( numpy.exp(0.5*Sigma_A[m,m,i]*p_Wtilde[m,1]*( 1./sigma_M[m,0] - 1./sigma_M[m,1] ) + tau1*(p_Wtilde[m,1]-1.) + part_6), numpy.exp(700) )
+      #np.seterr (all='ignore')
+      #part_7 = min( np.exp(0.5*Sigma_A[m,m,i]*p_Wtilde[m,1]*( 1./sigma_M[m,0] - 1./sigma_M[m,1] ) + tau1*(p_Wtilde[m,1]-1.) + part_6), np.exp(700) )
       #q_Z[m,1,i] = part_5 * part_7
 
       part_7 = 0.5*Sigma_A[m,m,i]*p_Wtilde[m,1]*( 1./sigma_M[m,0] - 1./sigma_M[m,1] ) + tau1*(p_Wtilde[m,1]-1.) + part_6
 
-      #numpy.seterr (all='ignore')
-      #q_Z[m,1,i] = 1 + (1./max(part_5,eps))* min( numpy.exp(sum(P_mv) + Beta[m]*tmp[0] - part_7), numpy.exp(700) )
+      #np.seterr (all='ignore')
+      #q_Z[m,1,i] = 1 + (1./max(part_5,eps))* min( np.exp(sum(P_mv) + Beta[m]*tmp[0] - part_7), np.exp(700) )
       if (sum(P_mv) + Beta[m]*tmp[0] - part_7 - part_5) < 700.:
-        q_Z[m,1,i] = 1 + numpy.exp(sum(P_mv) + Beta[m]*tmp[0] - part_7 - part_5)
+        q_Z[m,1,i] = 1 + np.exp(sum(P_mv) + Beta[m]*tmp[0] - part_7 - part_5)
       else:
-        q_Z[m,1,i] = 1 + numpy.exp(700.)
+        q_Z[m,1,i] = 1 + np.exp(700.)
 
       q_Z[m,1,i] = 1./q_Z[m,1,i]
       q_Z[m,0,i] = 1. - q_Z[m,1,i]
@@ -950,7 +950,7 @@ def MC_step_log(tau1,tau2,m,i,q_Zi,q_Z,M,J,S,K):
 
   for s in xrange(0,S):
     labels = zeros((M,J), dtype=int)
-    labels_samples = numpy.random.rand(M,J)
+    labels_samples = np.random.rand(M,J)
     for j in xrange(0,J):
       if j != i:
         lab = K - 1
@@ -960,7 +960,7 @@ def MC_step_log(tau1,tau2,m,i,q_Zi,q_Z,M,J,S,K):
         labels[m,j] = lab
     SUM = sum(labels[m,:])
 
-    log_term = numpy.log( 1 + numpy.exp( - tau1 * (SUM + q_Zi - tau2) ) )
+    log_term = np.log( 1 + np.exp( - tau1 * (SUM + q_Zi - tau2) ) )
     sum_log_term += log_term
 
   E_log_term = sum_log_term/S
@@ -980,21 +980,21 @@ def expectation_Z_ParsiMod2(tau1,tau2,Sigma_A,m_A,J,M,sigma_M,mu_M,S,K,Beta,grap
     for i in xrange(0,J):
       for k in xrange(0,K):
         tmp[k] = sum(q_Z[m,k,graph[i]],0)
-        part_4[k] = normpdf(m_A[i,m], mu_M[m,k], numpy.sqrt(sigma_M[m,k]))
+        part_4[k] = normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k]))
         E_log_term[k] = MC_step_log(tau1,tau2,m,i,k,q_Z,M,J,S,K)
 
-      part_5 = p_Wtilde[m,1] * ( numpy.log(part_4[1]+eps) - numpy.log(part_4[0]+eps) )
+      part_5 = p_Wtilde[m,1] * ( np.log(part_4[1]+eps) - np.log(part_4[0]+eps) )
 
 
       part_6 = Beta[m]*tmp[1]
 
       part_7 = 0.5*Sigma_A[m,m,i]*p_Wtilde[m,1]*( 1./sigma_M[m,0] - 1./sigma_M[m,1] ) + tau1*(p_Wtilde[m,1]-1.) + part_6
 
-      #numpy.seterr (all='ignore')
+      #np.seterr (all='ignore')
       if (Beta[m]*tmp[0] - E_log_term[0] - part_7 - part_5 + E_log_term[1]) < 700. :
-        q_Z[m,1,i] = 1 + numpy.exp(Beta[m]*tmp[0] - E_log_term[0] - part_7 - part_5 + E_log_term[1])
+        q_Z[m,1,i] = 1 + np.exp(Beta[m]*tmp[0] - E_log_term[0] - part_7 - part_5 + E_log_term[1])
       else:
-        q_Z[m,1,i] = 1 + numpy.exp(700.)
+        q_Z[m,1,i] = 1 + np.exp(700.)
 
       q_Z[m,1,i] = 1./q_Z[m,1,i]
       q_Z[m,0,i] = 1. - q_Z[m,1,i]
@@ -1020,17 +1020,17 @@ def expectation_W_ParsiMod(tau1,tau2,Sigma_A,m_A,X,Gamma,J,M,y_tilde,sigma_epsil
 
     for i in xrange(0,J):
       for k in xrange(0,K):
-        part_1[k] = normpdf(m_A[i,m], mu_M[m,k], numpy.sqrt(sigma_M[m,k]))
+        part_1[k] = normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k]))
 
       #part_2 *= ( part_1[1] / max(part_1[0],eps) )**q_Z[m,1,i]
-      #part_2 *= numpy.exp( q_Z[m,1,i] * ( numpy.log (part_1[1]+eps) - numpy.log(part_1[0]+eps) ) )
-      part_2 += q_Z[m,1,i] * ( numpy.log(part_1[1]+eps) - numpy.log(part_1[0]+eps) )
+      #part_2 *= np.exp( q_Z[m,1,i] * ( np.log (part_1[1]+eps) - np.log(part_1[0]+eps) ) )
+      part_2 += q_Z[m,1,i] * ( np.log(part_1[1]+eps) - np.log(part_1[0]+eps) )
 
       part_3 += 0.5*q_Z[m,1,i]*Sigma_A[m,m,i]*( 1./sigma_M[m,0] - 1./sigma_M[m,1] )
 
-      part_4 = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1]),m_H)
+      part_4 = np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1]),m_H)
 
-      part_4 += (numpy.dot(numpy.dot(numpy.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1])).trace()
+      part_4 += (np.dot(np.dot(np.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1])).trace()
 
       part_4 *= (m_A[i,m]**2 +  Sigma_A[m,m,i])
       part_5 -= 0.5*part_4
@@ -1039,28 +1039,28 @@ def expectation_W_ParsiMod(tau1,tau2,Sigma_A,m_A,X,Gamma,J,M,y_tilde,sigma_epsil
       for m2,k2 in enumerate(X):
 
         if m2 != m:
-            part_6 = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
-            part_6 += (numpy.dot(numpy.dot(numpy.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
+            part_6 = np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
+            part_6 += (np.dot(np.dot(np.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
             part_6 *= (m_A[i,m]*m_A[i,m2] +  Sigma_A[m,m2,i])
             part_6 *= p_Wtilde[m2,1]
         part_7 += part_6
 
       part_8 += part_7
-      X_tilde[i,m,:] = numpy.dot(numpy.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
-    tmp = numpy.dot(X_tilde[:,m,:],m_H)
-    part_9 = numpy.dot(m_A[:,m],tmp)
+      X_tilde[i,m,:] = np.dot(np.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
+    tmp = np.dot(X_tilde[:,m,:],m_H)
+    part_9 = np.dot(m_A[:,m],tmp)
 
-    #p_Wtilde[m,1] = 1 + ( 1./ max(part_2,eps) ) * min(numpy.exp( part - (part_3 + part_5 - part_8 + part_9) ), numpy.exp(700))
+    #p_Wtilde[m,1] = 1 + ( 1./ max(part_2,eps) ) * min(np.exp( part - (part_3 + part_5 - part_8 + part_9) ), np.exp(700))
     if ( part - (part_2 + part_3 + part_5 - part_8 + part_9) ) < 700.:
-      p_Wtilde[m,1] = 1 + numpy.exp( part - (part_2 + part_3 + part_5 - part_8 + part_9) )
+      p_Wtilde[m,1] = 1 + np.exp( part - (part_2 + part_3 + part_5 - part_8 + part_9) )
     else:
-      p_Wtilde[m,1] = 1 + numpy.exp(700.)
+      p_Wtilde[m,1] = 1 + np.exp(700.)
 
     p_Wtilde[m,1] = 1. / p_Wtilde[m,1]
     p_Wtilde[m,0] = 1. - p_Wtilde[m,1]
 
   #for m in xrange(0,M):
-    #p_Wtilde[m,0] = numpy.exp(- tau1 * (sum(q_Z[m,1,:]) - tau2))
+    #p_Wtilde[m,0] = np.exp(- tau1 * (sum(q_Z[m,1,:]) - tau2))
 
   #for m,k1 in enumerate(X):
     #part_2 = 1.
@@ -1072,27 +1072,27 @@ def expectation_W_ParsiMod(tau1,tau2,Sigma_A,m_A,X,Gamma,J,M,y_tilde,sigma_epsil
 
     #for i in xrange(0,J):
       #for k in xrange(0,K):
-        #part_1[k] = normpdf(m_A[i,m], mu_M[m,k], numpy.sqrt(sigma_M[m,k]))
+        #part_1[k] = normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k]))
       #part_2 *= (part_1[1] / part_1[0])**q_Z[m,1,i]
-      #part_3 *= numpy.exp(0.5*q_Z[m,1,i]*Sigma_A[m,m,i]*(1./sigma_M[m,0] - 1./sigma_M[m,1]))
-      #part_4 = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1]),m_H)
-      #part_4 += (numpy.dot(numpy.dot(numpy.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1])).trace()
+      #part_3 *= np.exp(0.5*q_Z[m,1,i]*Sigma_A[m,m,i]*(1./sigma_M[m,0] - 1./sigma_M[m,1]))
+      #part_4 = np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1]),m_H)
+      #part_4 += (np.dot(np.dot(np.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k1])).trace()
       #part_4 *= (m_A[i,m]**2 +  Sigma_A[m,m,i])
-      #part_5 *= numpy.exp(-0.5*part_4)
+      #part_5 *= np.exp(-0.5*part_4)
       #for m2,k2 in enumerate(X):
         #if m2 != m:
-        #part_6 = numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
-        #part_6 += (numpy.dot(numpy.dot(numpy.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
+        #part_6 = np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2]),m_H)
+        #part_6 += (np.dot(np.dot(np.dot(Sigma_H,X[k1].transpose()),Gamma/max(sigma_epsilone[i],eps)),X[k2])).trace()
         #part_6 *= (m_A[i,m]*m_A[i,m2] +  Sigma_A[m,m2,i])
         #part_6 *= p_Wtilde[m2,1]
         ##print 'm2',m2
         ##print 'p_Wtilde[m2,1]',p_Wtilde[m2,1]
         #part += part_6
-        #part_7 *= numpy.exp(part_6)
+        #part_7 *= np.exp(part_6)
       #part_8 *= part_7
-      #X_tilde[i,m,:] = numpy.dot(numpy.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
-    #tmp = numpy.dot(X_tilde[:,m,:],m_H)
-    #part_9 = numpy.exp(numpy.dot(m_A[:,m],tmp))
+      #X_tilde[i,m,:] = np.dot(np.dot(Gamma/max(sigma_epsilone[i],eps),y_tilde[:,i]).transpose(),X[k1])
+    #tmp = np.dot(X_tilde[:,m,:],m_H)
+    #part_9 = np.exp(np.dot(m_A[:,m],tmp))
     #p_Wtilde[m,1] = part_2*part_3*part_5*part_8*part_9
 
     #SW = sum(p_Wtilde[m,:])
@@ -1138,9 +1138,9 @@ def gradient_mu1(q_Z_Mk,p_Wtilde_Mk,Mu_Mk,Sigma_Mk,m_A_M,tau1,tau2,J):
 
     Droite = A * Mu_Mk - B
     if (-tau1*(Mu_Mk-tau2)) > 700.:
-        Sigmoid = 1.0 / (1.0 + numpy.exp(700.) )
+        Sigmoid = 1.0 / (1.0 + np.exp(700.) )
     else:
-        Sigmoid = 1.0 / (1.0 + numpy.exp(-tau1*(Mu_Mk-tau2)) )
+        Sigmoid = 1.0 / (1.0 + np.exp(-tau1*(Mu_Mk-tau2)) )
 
     Gr_mu1 = Droite + ( tau1 * Sigmoid )
 
@@ -1160,9 +1160,9 @@ def Function_Dichotomie_square(A,B,tau1,tau2,x,estimateW):
     D = A * x + B
     if estimateW:
         if (tau1*(x**2 - tau2)) >= 0.0:
-            S = 1.0 / (1.0 + numpy.exp(-tau1*(x**2 - tau2)) )
+            S = 1.0 / (1.0 + np.exp(-tau1*(x**2 - tau2)) )
         if (tau1*(x**2 - tau2)) < 0.0:
-            S = numpy.exp(tau1*(x**2 - tau2)) / (1.0 + numpy.exp(tau1*(x**2 - tau2)) )
+            S = np.exp(tau1*(x**2 - tau2)) / (1.0 + np.exp(tau1*(x**2 - tau2)) )
     if not estimateW:
         S = 1.
         
@@ -1173,7 +1173,7 @@ def Function_Dichotomie_square(A,B,tau1,tau2,x,estimateW):
 def Dichotomie_square(q_Z_Mk,p_Wtilde_Mk,Mu_Mk,Sigma_Mk,m_A_M,tau1,tau2,J,m,Iter,estimateW):
     
     '''
-    Method to find zeros of complicated functions
+    Method to np.where zeros of complicated functions
     
     '''
     
@@ -1188,17 +1188,17 @@ def Dichotomie_square(q_Z_Mk,p_Wtilde_Mk,Mu_Mk,Sigma_Mk,m_A_M,tau1,tau2,J,m,Iter
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.1
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_square(A,B,tau1,tau2,xx1,estimateW)
     vxx2 = - 0.1
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_square(A,B,tau1,tau2,xx2,estimateW)
     while Fxx1 * Fxx2 > 0.:
         vxx1 *= 2.0
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_square(A,B,tau1,tau2,xx1,estimateW) 
         vxx2 *= 2.0
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_square(A,B,tau1,tau2,xx2,estimateW)
       
     x1 = xx1
@@ -1244,16 +1244,16 @@ def Dichotomie_square(q_Z_Mk,p_Wtilde_Mk,Mu_Mk,Sigma_Mk,m_A_M,tau1,tau2,J,m,Iter
     
     #if ((x3 < -0.005) or (x3 > 0.005)):
         ##### Plotting F To verify is computed zero is right ####
-        #Mu_test = numpy.arange(-20,20.,0.1)
-        #F_test = numpy.zeros(size(Mu_test), dtype=float)
-        #D = numpy.zeros(size(Mu_test), dtype=float)
-        #S = numpy.zeros(size(Mu_test), dtype=float)
+        #Mu_test = np.arange(-20,20.,0.1)
+        #F_test = np.zeros(size(Mu_test), dtype=float)
+        #D = np.zeros(size(Mu_test), dtype=float)
+        #S = np.zeros(size(Mu_test), dtype=float)
         #for i in xrange(size(Mu_test)):
             #D[i] = A * Mu_test[i] + B
             #if (- tau1*(Mu_test[i]**2 - tau2)) > 700.:
-                #S[i] = 1.0 / (1.0 + numpy.exp(700.) )
+                #S[i] = 1.0 / (1.0 + np.exp(700.) )
             #else:
-                #S[i] = tau1*Mu_test[i]*( 1.0 / (1.0 + numpy.exp(-tau1*(Mu_test[i]**2 - tau2)) ))
+                #S[i] = tau1*Mu_test[i]*( 1.0 / (1.0 + np.exp(-tau1*(Mu_test[i]**2 - tau2)) ))
             ##F_test[i] = Function_Dichotomie_square(A,B,tau1,tau2,Mu_test[i],estimateW)
             
         #print 'n =',n,',    x3 =',x3    
@@ -1271,9 +1271,9 @@ def Function_Dichotomie_mu1_Parsi4(A,B1,tau1,tau2,x,Sigma,p_Wtilde,m):
     dKL = 0.5 * (x**2) * (1./Sigma[m,1] + 1./Sigma[m,0]) + ( (Sigma[m,1] - Sigma[m,0])**2 )/( 2. * Sigma[m,1] * Sigma[m,0] )
     
     if (tau1*(dKL - tau2)) >= 0.0:
-        S = 1.0 / (1.0 + numpy.exp(-tau1*(dKL - tau2)) )
+        S = 1.0 / (1.0 + np.exp(-tau1*(dKL - tau2)) )
     if (tau1*(dKL - tau2)) < 0.0:
-        S = numpy.exp(tau1*(dKL - tau2)) / (1.0 + numpy.exp(tau1*(dKL - tau2)) )
+        S = np.exp(tau1*(dKL - tau2)) / (1.0 + np.exp(tau1*(dKL - tau2)) )
     
     F = B1 - x * A + (p_Wtilde[m,1] - S) * tau1 * x * ( 1. + Sigma[m,1]/Sigma[m,0] )
 
@@ -1284,9 +1284,9 @@ def Function_Dichotomie_v1_Parsi4(A,B2,tau1,tau2,x,Sigma,Mu,p_Wtilde,m):
     dKL = 0.5 * (Mu[m,1]**2) * (1./x + 1./Sigma[m,0]) + ( (x - Sigma[m,0])**2 )/( 2. * x * Sigma[m,0] )
     
     if (tau1*(dKL - tau2)) >= 0.0:
-        S = 1.0 / (1.0 + numpy.exp(-tau1*(dKL - tau2)) )
+        S = 1.0 / (1.0 + np.exp(-tau1*(dKL - tau2)) )
     if (tau1*(dKL - tau2)) < 0.0:
-        S = numpy.exp(tau1*(dKL - tau2)) / (1.0 + numpy.exp(tau1*(dKL - tau2)) )
+        S = np.exp(tau1*(dKL - tau2)) / (1.0 + np.exp(tau1*(dKL - tau2)) )
        
     F = B2 - x * A + (p_Wtilde[m,1] - S) * tau1 * ( -(Mu[m,1])**2 + (x**3/Sigma[m,0]) - Sigma[m,0])
     
@@ -1297,9 +1297,9 @@ def Function_Dichotomie_v0_Parsi4(A,B3,tau1,tau2,x,Sigma,Mu,p_Wtilde,m):
     dKL = 0.5 * (Mu[m,1]**2) * (1./Sigma[m,1] + 1./x) + ( (Sigma[m,1] - x)**2 )/( 2. * Sigma[m,1] * x )
     
     if (tau1*(dKL - tau2)) >= 0.0:
-        S = 1.0 / (1.0 + numpy.exp(-tau1*(dKL - tau2)) )
+        S = 1.0 / (1.0 + np.exp(-tau1*(dKL - tau2)) )
     if (tau1*(dKL - tau2)) < 0.0:
-        S = numpy.exp(tau1*(dKL - tau2)) / (1.0 + numpy.exp(tau1*(dKL - tau2)) )
+        S = np.exp(tau1*(dKL - tau2)) / (1.0 + np.exp(tau1*(dKL - tau2)) )
         
     F = B3 - x * A + (p_Wtilde[m,1] - S) * tau1 * ( -(Mu[m,1])**2 + (x**3/Sigma[m,1]) - Sigma[m,1])
     
@@ -1318,17 +1318,17 @@ def dichotomie_mu1_Parsi4(q_Z,p_Wtilde,tau1,tau2,Mu,Sigma,m,m_A,J):
 
     ##  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 1.0
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_mu1_Parsi4(A,B1,tau1,tau2,xx1,Sigma,p_Wtilde,m)
     vxx2 = - 1.0
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_mu1_Parsi4(A,B1,tau1,tau2,xx2,Sigma,p_Wtilde,m)
     while Fxx1 * Fxx2 > 0.:
         vxx1 *= 2.0
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_mu1_Parsi4(A,B1,tau1,tau2,xx1,Sigma,p_Wtilde,m)
         vxx2 *= 2.0
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_mu1_Parsi4(A,B1,tau1,tau2,xx2,Sigma,p_Wtilde,m) 
     
     x1 = xx1
@@ -1373,8 +1373,8 @@ def dichotomie_mu1_Parsi4(q_Z,p_Wtilde,tau1,tau2,Mu,Sigma,m,m_A,J):
         raise Exception(' ********* F(x1)*F(x2) > 0.  ->  Choice of x1,x2 in Dichotomie is NOT OK ********* ')
 
     ##### Plotting F To verify is computed zero is right ####
-    #Mu_test = numpy.arange(-20,20.,0.1)
-    #F_test = numpy.zeros(size(Mu_test), dtype=float)
+    #Mu_test = np.arange(-20,20.,0.1)
+    #F_test = np.zeros(size(Mu_test), dtype=float)
     #for i in xrange(size(Mu_test)):
         #F_test[i] = Function_Dichotomie_mu1_Parsi4(A,B1,tau1,tau2,Mu_test[i],Sigma,p_Wtilde,m)   
     #figure(13)
@@ -1396,17 +1396,17 @@ def dichotomie_v1_Parsi4(q_Z,p_Wtilde,tau1,tau2,Mu,Sigma,m,m_A,Sigma_A,J):
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x)     
     vxx1 = 0.0001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_v1_Parsi4(A,B2,tau1,tau2,xx1,Sigma,Mu,p_Wtilde,m)
     vxx2 = 0.1
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_v1_Parsi4(A,B2,tau1,tau2,xx2,Sigma,Mu,p_Wtilde,m)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.0001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_v1_Parsi4(A,B2,tau1,tau2,xx1,Sigma,Mu,p_Wtilde,m)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_v1_Parsi4(A,B2,tau1,tau2,xx2,Sigma,Mu,p_Wtilde,m)
         
     x1 = xx1
@@ -1454,8 +1454,8 @@ def dichotomie_v1_Parsi4(q_Z,p_Wtilde,tau1,tau2,Mu,Sigma,m,m_A,Sigma_A,J):
         raise Exception(' ********* NEGATIVE VARIANCE :((((  ********* ')
     
     ##### Plotting F To verify is computed zero is right ####
-    #V_test = numpy.arange(0.0001,20.,0.1)
-    #F_test = numpy.zeros(size(V_test), dtype=float)
+    #V_test = np.arange(0.0001,20.,0.1)
+    #F_test = np.zeros(size(V_test), dtype=float)
     #for i in xrange(size(V_test)):
         #F_test[i] = Function_Dichotomie_v1_Parsi4(A,B2,tau1,tau2,V_test[i],Sigma,Mu,p_Wtilde,m)
     #figure(14)
@@ -1477,17 +1477,17 @@ def dichotomie_v0_Parsi4(q_Z,p_Wtilde,tau1,tau2,Mu,Sigma,m,m_A,Sigma_A,J):
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.0001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_v0_Parsi4(A,B3,tau1,tau2,xx1,Sigma,Mu,p_Wtilde,m)
     vxx2 = 0.1
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_v0_Parsi4(A,B3,tau1,tau2,xx2,Sigma,Mu,p_Wtilde,m)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.0001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_v0_Parsi4(A,B3,tau1,tau2,xx1,Sigma,Mu,p_Wtilde,m)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_v0_Parsi4(A,B3,tau1,tau2,xx2,Sigma,Mu,p_Wtilde,m)
     
     x1 = xx1
@@ -1535,8 +1535,8 @@ def dichotomie_v0_Parsi4(q_Z,p_Wtilde,tau1,tau2,Mu,Sigma,m,m_A,Sigma_A,J):
         raise Exception(' ********* NEGATIVE VARIANCE :((((  ********* ')
     
     ##### Plotting F To verify is computed zero is right ####
-    #V_test = numpy.arange(0.0001,20.,0.1)
-    #F_test = numpy.zeros(size(V_test), dtype=float)
+    #V_test = np.arange(0.0001,20.,0.1)
+    #F_test = np.zeros(size(V_test), dtype=float)
     #for i in xrange(size(V_test)):
         #F_test[i] = Function_Dichotomie_v0_Parsi4(A,B3,tau1,tau2,V_test[i],Sigma,Mu,p_Wtilde,m)
     #figure(15)
@@ -1547,15 +1547,15 @@ def dichotomie_v0_Parsi4(q_Z,p_Wtilde,tau1,tau2,Mu,Sigma,m,m_A,Sigma_A,J):
 
 def Function_Dichotomie_tau2_Parsi4(x,Sigma,Mu,p_Wtilde,M,alpha,lam,p0):
     
-    c = numpy.log((1.-p0)/p0)
+    c = np.log((1.-p0)/p0)
     
     val = 0.0
     for m in xrange(M):
         dKL = 0.5 * (Mu[m,1]**2) * (1./Sigma[m,1] + 1./Sigma[m,0]) + ( (Sigma[m,1] - Sigma[m,0])**2 )/( 2. * Sigma[m,1] * Sigma[m,0] )
         if ((c/x)*(dKL - x)) >= 0.0:
-            S = 1.0 / (1.0 + numpy.exp(-(c/x)*(dKL - x)) )
+            S = 1.0 / (1.0 + np.exp(-(c/x)*(dKL - x)) )
         if ((c/x)*(dKL - x)) < 0.0:
-            S = numpy.exp((c/x)*(dKL - x)) / (1.0 + numpy.exp((c/x)*(dKL - x)) )
+            S = np.exp((c/x)*(dKL - x)) / (1.0 + np.exp((c/x)*(dKL - x)) )
             
         val +=  dKL * (S - p_Wtilde[m,1])
          
@@ -1569,9 +1569,9 @@ def Function_Dichotomie_tau2_Parsi4_FixedTau1(x,Sigma,Mu,p_Wtilde,M,alpha,lam,ta
     for m in xrange(M):
         dKL = 0.5 * (Mu[m,1]**2) * (1./Sigma[m,1] + 1./Sigma[m,0]) + ( (Sigma[m,1] - Sigma[m,0])**2 )/( 2. * Sigma[m,1] * Sigma[m,0] )
         if (tau1*(dKL - x)) >= 0.0:
-            S = 1.0 / (1.0 + numpy.exp(-tau1*(dKL - x)) )
+            S = 1.0 / (1.0 + np.exp(-tau1*(dKL - x)) )
         if (tau1*(dKL - x)) < 0.0:
-            S = numpy.exp(tau1*(dKL - x)) / (1.0 + numpy.exp(tau1*(dKL - x)) )
+            S = np.exp(tau1*(dKL - x)) / (1.0 + np.exp(tau1*(dKL - x)) )
             
         val +=  (S - p_Wtilde[m,1])
          
@@ -1584,9 +1584,9 @@ def Function_Dichotomie_tau2_Parsi3(x,Sigma,Mu,p_Wtilde,M,alpha,lam,c):
     val = 0.0
     for m in xrange(M):
         if ((c/x)*((Mu[m,1]**2) - x)) >= 0.0:
-            S = 1.0 / (1.0 + numpy.exp(-(c/x)*((Mu[m,1]**2) - x)) )
+            S = 1.0 / (1.0 + np.exp(-(c/x)*((Mu[m,1]**2) - x)) )
         if ((c/x)*((Mu[m,1]**2) - x)) < 0.0:
-            S = numpy.exp((c/x)*((Mu[m,1]**2) - x)) / (1.0 + numpy.exp((c/x)*((Mu[m,1]**2) - x)) )
+            S = np.exp((c/x)*((Mu[m,1]**2) - x)) / (1.0 + np.exp((c/x)*((Mu[m,1]**2) - x)) )
             
         val +=  (Mu[m,1]**2) * (S - p_Wtilde[m,1])
     
@@ -1600,9 +1600,9 @@ def Function_Dichotomie_tau2_Parsi3_FixedTau1(x,Sigma,Mu,p_Wtilde,M,alpha,lam,ta
     val = 0.0
     for m in xrange(M):
         if (tau1*((Mu[m,1]**2) - x)) >= 0.0:
-            S = 1.0 / (1.0 + numpy.exp(-tau1*((Mu[m,1]**2) - x)) )
+            S = 1.0 / (1.0 + np.exp(-tau1*((Mu[m,1]**2) - x)) )
         if (tau1*((Mu[m,1]**2) - x)) < 0.0:
-            S = numpy.exp(tau1*((Mu[m,1]**2) - x)) / (1.0 + numpy.exp(tau1*((Mu[m,1]**2) - x)) )
+            S = np.exp(tau1*((Mu[m,1]**2) - x)) / (1.0 + np.exp(tau1*((Mu[m,1]**2) - x)) )
             
         val +=  (S - p_Wtilde[m,1])
     
@@ -1613,9 +1613,9 @@ def Function_Dichotomie_tau2_Parsi3_FixedTau1(x,Sigma,Mu,p_Wtilde,M,alpha,lam,ta
 def Function_Dichotomie_tau2_Parsi3_Cond(x,Sigma,Mu,p_Wtilde,M,alpha,lam,c,m):
     
     if ((c/x)*((Mu[m,1]**2) - x)) >= 0.0:
-        S = 1.0 / (1.0 + numpy.exp(-(c/x)*((Mu[m,1]**2) - x)) )
+        S = 1.0 / (1.0 + np.exp(-(c/x)*((Mu[m,1]**2) - x)) )
     if ((c/x)*((Mu[m,1]**2) - x)) < 0.0:
-        S = numpy.exp((c/x)*((Mu[m,1]**2) - x)) / (1.0 + numpy.exp((c/x)*((Mu[m,1]**2) - x)) )
+        S = np.exp((c/x)*((Mu[m,1]**2) - x)) / (1.0 + np.exp((c/x)*((Mu[m,1]**2) - x)) )
         
     val =  (Mu[m,1]**2) * (S - p_Wtilde[m,1])
     
@@ -1626,9 +1626,9 @@ def Function_Dichotomie_tau2_Parsi3_Cond(x,Sigma,Mu,p_Wtilde,M,alpha,lam,c,m):
 def Function_Dichotomie_tau2_Parsi3_Cond_FixedTau1(x,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1,m):
     
     if (tau1*((Mu[m,1]**2) - x)) >= 0.0:
-        S = 1.0 / (1.0 + numpy.exp(-tau1*((Mu[m,1]**2) - x)) )
+        S = 1.0 / (1.0 + np.exp(-tau1*((Mu[m,1]**2) - x)) )
     if (tau1*((Mu[m,1]**2) - x)) < 0.0:
-        S = numpy.exp(tau1*((Mu[m,1]**2) - x)) / (1.0 + numpy.exp(tau1*((Mu[m,1]**2) - x)) )
+        S = np.exp(tau1*((Mu[m,1]**2) - x)) / (1.0 + np.exp(tau1*((Mu[m,1]**2) - x)) )
         
     val =  (S - p_Wtilde[m,1])
     
@@ -1640,17 +1640,17 @@ def dichotomie_tau2_Parsi4(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,p0):
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_tau2_Parsi4(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,p0)
     vxx2 = 0.05
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_tau2_Parsi4(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,p0)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_tau2_Parsi4(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,p0)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_tau2_Parsi4(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,p0)
     
     x1 = xx1
@@ -1698,8 +1698,8 @@ def dichotomie_tau2_Parsi4(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,p0):
         raise Exception(' ********* NEGATIVE TAU2 :((((  ********* ')
     
     ##### Plotting F To verify is computed zero is right ####
-    #tau2_test = numpy.arange(0.0001,20.,0.1)
-    #F_test = numpy.zeros(size(tau2_test), dtype=float)
+    #tau2_test = np.arange(0.0001,20.,0.1)
+    #F_test = np.zeros(size(tau2_test), dtype=float)
     #for i in xrange(size(tau2_test)):
     #F_test[i] = Function_Dichotomie_tau2_Parsi4(tau2_test[i],Sigma,Mu,p_Wtilde,M,alpha,lam,p0)
     #figure(15)
@@ -1712,17 +1712,17 @@ def dichotomie_tau2_Parsi4_FixedTau1(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,tau1):
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_tau2_Parsi4_FixedTau1(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     vxx2 = 0.05
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_tau2_Parsi4_FixedTau1(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_tau2_Parsi4_FixedTau1(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_tau2_Parsi4_FixedTau1(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     
     x1 = xx1
@@ -1770,8 +1770,8 @@ def dichotomie_tau2_Parsi4_FixedTau1(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,tau1):
         raise Exception(' ********* NEGATIVE TAU2 :((((  ********* ')
     
     ##### Plotting F To verify is computed zero is right ####
-    #tau2_test = numpy.arange(0.0001,20.,0.1)
-    #F_test = numpy.zeros(size(tau2_test), dtype=float)
+    #tau2_test = np.arange(0.0001,20.,0.1)
+    #F_test = np.zeros(size(tau2_test), dtype=float)
     #for i in xrange(size(tau2_test)):
     #F_test[i] = Function_Dichotomie_tau2_Parsi4_FixedTau1(tau2_test[i],Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     #figure(15)
@@ -1784,17 +1784,17 @@ def dichotomie_tau2_Parsi3(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,c):
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_tau2_Parsi3(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,c)
     vxx2 = 0.05
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_tau2_Parsi3(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,c)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_tau2_Parsi3(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,c)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_tau2_Parsi3(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,c)
     
     x1 = xx1
@@ -1842,8 +1842,8 @@ def dichotomie_tau2_Parsi3(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,c):
         raise Exception(' ********* NEGATIVE TAU2 :((((  ********* ')
     
     ##### Plotting F To verify is computed zero is right ####
-    #tau2_test = numpy.arange(0.0001,20.,0.1)
-    #F_test = numpy.zeros(size(tau2_test), dtype=float)
+    #tau2_test = np.arange(0.0001,20.,0.1)
+    #F_test = np.zeros(size(tau2_test), dtype=float)
     #for i in xrange(size(tau2_test)):
     #F_test[i] = Function_Dichotomie_tau2_Parsi3(au2_test[i],Sigma,Mu,p_Wtilde,M,alpha,lam,c)
     #figure(15)
@@ -1856,17 +1856,17 @@ def dichotomie_tau2_Parsi3_FixedTau1(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,tau1):
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_tau2_Parsi3_FixedTau1(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     vxx2 = 0.05
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_tau2_Parsi3_FixedTau1(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_tau2_Parsi3_FixedTau1(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_tau2_Parsi3_FixedTau1(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     
     x1 = xx1
@@ -1914,8 +1914,8 @@ def dichotomie_tau2_Parsi3_FixedTau1(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,tau1):
         raise Exception(' ********* NEGATIVE TAU2 :((((  ********* ')
     
     ##### Plotting F To verify is computed zero is right ####
-    #tau2_test = numpy.arange(0.0001,20.,0.1)
-    #F_test = numpy.zeros(size(tau2_test), dtype=float)
+    #tau2_test = np.arange(0.0001,20.,0.1)
+    #F_test = np.zeros(size(tau2_test), dtype=float)
     #for i in xrange(size(tau2_test)):
     #F_test[i] = Function_Dichotomie_tau2_Parsi3_FixedTau1(au2_test[i],Sigma,Mu,p_Wtilde,M,alpha,lam,tau1)
     #figure(15)
@@ -1928,17 +1928,17 @@ def dichotomie_tau2_Parsi3_Cond(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,c,m):
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_tau2_Parsi3_Cond(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,c,m)
     vxx2 = 0.05
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_tau2_Parsi3_Cond(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,c,m)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_tau2_Parsi3_Cond(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,c,m)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_tau2_Parsi3_Cond(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,c,m)
     
     x1 = xx1
@@ -1990,8 +1990,8 @@ def dichotomie_tau2_Parsi3_Cond(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,c,m):
 def dichotomie_tau2_Parsi3_Cond_FixedTau1(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,tau1,m):
 
     ##### Plotting F To verify is computed zero is right ####
-    #tau2_test = numpy.arange(0.0001,20.,0.1)
-    #F_test = numpy.zeros(size(tau2_test), dtype=float)
+    #tau2_test = np.arange(0.0001,20.,0.1)
+    #F_test = np.zeros(size(tau2_test), dtype=float)
     #for i in xrange(size(tau2_test)):
         #F_test[i] = Function_Dichotomie_tau2_Parsi3_Cond_FixedTau1(tau2_test[i],Sigma,Mu,p_Wtilde,M,alpha,lam,1,m)
     ##print 'F =',F_test[i]
@@ -2001,17 +2001,17 @@ def dichotomie_tau2_Parsi3_Cond_FixedTau1(q_Z,p_Wtilde,Mu,Sigma,M,alpha,lam,tau1
 
     #  Choice of x1, x2 : F(x1)*F(x2) < 0.0 with F(x) 
     vxx1 = 0.001
-    xx1 = vxx1 * numpy.random.rand()
+    xx1 = vxx1 * np.random.rand()
     Fxx1 = Function_Dichotomie_tau2_Parsi3_Cond_FixedTau1(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1,m)
     vxx2 = 0.05
-    xx2 = vxx2 * numpy.random.rand()
+    xx2 = vxx2 * np.random.rand()
     Fxx2 = Function_Dichotomie_tau2_Parsi3_Cond_FixedTau1(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1,m)
     while Fxx1 * Fxx2 > 0.:
         vxx1 += 0.001
-        xx1 = vxx1 * numpy.random.rand()
+        xx1 = vxx1 * np.random.rand()
         Fxx1 = Function_Dichotomie_tau2_Parsi3_Cond_FixedTau1(xx1,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1,m)
         vxx2 += 0.01
-        xx2 = vxx2 * numpy.random.rand()
+        xx2 = vxx2 * np.random.rand()
         Fxx2 = Function_Dichotomie_tau2_Parsi3_Cond_FixedTau1(xx2,Sigma,Mu,p_Wtilde,M,alpha,lam,tau1,m)
     
     x1 = xx1
@@ -2189,23 +2189,23 @@ def maximization_mu_sigma_ParsiMod3_Cond(Mu,Sigma,q_Z,m_A,K,M,Sigma_A,p_Wtilde,J
     return Mu , Sigma
 
 def maximization_sigma_noise_ParsiMod(Y,X,m_A,m_H,Sigma_H,Sigma_A,sigma_epsilone,zerosMM,N,J,p_Wtilde,Gamma):
-    Htilde = zerosMM.copy() #numpy.zeros((M,M),dtype=float)
+    Htilde = zerosMM.copy() #np.zeros((M,M),dtype=float)
     for i in xrange(0,J):
-        S = numpy.zeros((N),dtype=float)
+        S = np.zeros((N),dtype=float)
         m = 0
         for k in X:
             m2 = 0
             for k2 in X:
-                Htilde[m,m2] =  numpy.dot(numpy.dot(numpy.dot(numpy.dot(m_H.transpose(),X[k].transpose()),Gamma),X[k2]),m_H)
-                Htilde[m,m2] += (numpy.dot(numpy.dot(numpy.dot(Sigma_H,X[k].transpose()),Gamma),X[k2])).trace()
+                Htilde[m,m2] =  np.dot(np.dot(np.dot(np.dot(m_H.transpose(),X[k].transpose()),Gamma),X[k2]),m_H)
+                Htilde[m,m2] += (np.dot(np.dot(np.dot(Sigma_H,X[k].transpose()),Gamma),X[k2])).trace()
                 Htilde[m,m2] = Htilde[m,m2] * p_Wtilde[m,1] * p_Wtilde[m2,1]
                 m2 += 1
-            S += p_Wtilde[m,1] * m_A[i,m] * numpy.dot(numpy.dot(X[k],m_H),Gamma)
+            S += p_Wtilde[m,1] * m_A[i,m] * np.dot(np.dot(X[k],m_H),Gamma)
             m += 1
-        sigma_epsilone[i] = numpy.dot( -2*S, Y[:,i])
-        sigma_epsilone[i] += (numpy.dot(Sigma_A[:,:,i],Htilde)).trace()
-        sigma_epsilone[i] += numpy.dot( numpy.dot(m_A[i,:].transpose(), Htilde),m_A[i,:] )
-        sigma_epsilone[i] += numpy.dot(numpy.dot(Y[:,i].transpose(),Gamma), Y[:,i])
+        sigma_epsilone[i] = np.dot( -2*S, Y[:,i])
+        sigma_epsilone[i] += (np.dot(Sigma_A[:,:,i],Htilde)).trace()
+        sigma_epsilone[i] += np.dot( np.dot(m_A[i,:].transpose(), Htilde),m_A[i,:] )
+        sigma_epsilone[i] += np.dot(np.dot(Y[:,i].transpose(),Gamma), Y[:,i])
         sigma_epsilone[i] /= N
 
     return sigma_epsilone
@@ -2213,12 +2213,12 @@ def maximization_sigma_noise_ParsiMod(Y,X,m_A,m_H,Sigma_H,Sigma_A,sigma_epsilone
 def computeFit(m_H, m_A, X, J, N):
     
   #print 'Computing Fit ...'
-  stimIndSignal = numpy.zeros((N,J), dtype=numpy.float64)
+  stimIndSignal = np.zeros((N,J), dtype=np.float64)
 
   for i in xrange(0,J):
     m = 0
     for k in X:
-      stimIndSignal[:,i] += m_A[i,m] * numpy.dot(X[k],m_H)
+      stimIndSignal[:,i] += m_A[i,m] * np.dot(X[k],m_H)
       m += 1
 
   return stimIndSignal
@@ -2227,19 +2227,19 @@ def computeParsiFit(w, m_H, m_A, X, J, N):
 
   #print 'Computing Parsimonious Fit ...'
   #print 'w =',w
-  stimIndSignal = numpy.zeros((N,J), dtype=numpy.float64)
+  stimIndSignal = np.zeros((N,J), dtype=np.float64)
 
   for i in xrange(0,J):
     m = 0
     for k in X:
-      stimIndSignal[:,i] += w[m] * m_A[i,m] * numpy.dot(X[k],m_H)
+      stimIndSignal[:,i] += w[m] * m_A[i,m] * np.dot(X[k],m_H)
       m += 1
     
   return stimIndSignal  
 
 def MeanUpdate(stimIndSignal,Y, N, J):
 
-    Y_MeanUpdated = numpy.zeros((N,J), dtype=numpy.float64)
+    Y_MeanUpdated = np.zeros((N,J), dtype=np.float64)
     for i in xrange(0,J):
         Y_MeanUpdated[:,i] = Y[:,i] - Y[:,i].mean(0)
         Y_MeanUpdated[:,i] = Y_MeanUpdated[:,i] + stimIndSignal[:,i].mean(0)
@@ -2248,44 +2248,44 @@ def MeanUpdate(stimIndSignal,Y, N, J):
 
 def LikeLihood(Y, m_H, m_A, X, sigma_epsilone, J, N, Gamma):
 
-  StimulusInducedSignal = numpy.zeros((N,J), dtype=numpy.float64)
+  StimulusInducedSignal = np.zeros((N,J), dtype=np.float64)
   StimulusInducedSignal = computeFit(m_H, m_A, X, J, N)
 
-  Diff = numpy.zeros((N,J), dtype=numpy.float64)
+  Diff = np.zeros((N,J), dtype=np.float64)
   Diff = Y - StimulusInducedSignal
 
   Li_final = 1.
 
-  Const1 = (2*numpy.pi)**(N/2.)
-  Const3 = (numpy.linalg.det(Gamma))**(-0.5)
+  Const1 = (2*np.pi)**(N/2.)
+  Const3 = (np.linalg.det(Gamma))**(-0.5)
 
   for i in xrange(0,J):
     var_noise_i= pow(sigma_epsilone[i],2)
     Const2 = pow(sigma_epsilone[i],N)
     Const = Const1 * Const2 * Const3
-    Li = (1./Const) * numpy.exp(- (0.5/var_noise_i) * numpy.dot(numpy.dot(Diff[:,i].transpose(), Gamma), Diff[:,i]))
+    Li = (1./Const) * np.exp(- (0.5/var_noise_i) * np.dot(np.dot(Diff[:,i].transpose(), Gamma), Diff[:,i]))
     Li_final *= Li
 
   print 'Li_final =',Li_final
 
 def Log_LikeLihood(Y, m_H, m_A, X, sigma_epsilone, J, N, Gamma):
 
-  StimulusInducedSignal = numpy.zeros((N,J), dtype=numpy.float64)
+  StimulusInducedSignal = np.zeros((N,J), dtype=np.float64)
   StimulusInducedSignal = computeFit(m_H, m_A, X, J, N)
 
-  Diff = numpy.zeros((N,J), dtype=numpy.float64)
+  Diff = np.zeros((N,J), dtype=np.float64)
   Diff = Y - StimulusInducedSignal
 
   Li_final = 0.
 
-  Const1 = 0.5 * N * numpy.log(2*numpy.pi)
-  Const3 = - 0.5 * numpy.log(numpy.linalg.det(Gamma))
+  Const1 = 0.5 * N * np.log(2*np.pi)
+  Const3 = - 0.5 * np.log(np.linalg.det(Gamma))
 
   for i in xrange(0,J):
-    Const2 = N * numpy.log(sigma_epsilone[i])
+    Const2 = N * np.log(sigma_epsilone[i])
     Const = Const1 + Const2 + Const3
     var_noise_i = sigma_epsilone[i] ** 2
-    Li = - Const - ( (0.5/var_noise_i) * numpy.dot(numpy.dot(Diff[:,i].transpose(), Gamma), Diff[:,i]))
+    Li = - Const - ( (0.5/var_noise_i) * np.dot(np.dot(Diff[:,i].transpose(), Gamma), Diff[:,i]))
     Li_final += Li
 
   print 'Li_final =',Li_final
@@ -2295,13 +2295,13 @@ eps_FreeEnergy = 0.00000001
 def A_Entropy(Sigma_A, M, J):
 
     pyhrf.verbose(3,'Computing NRLs Entropy ...')
-    Det_Sigma_A_j = numpy.zeros(J,dtype=numpy.float64)
+    Det_Sigma_A_j = np.zeros(J,dtype=np.float64)
     Entropy = 0.0
     for j in xrange(0,J):
-        Det_Sigma_A_j = numpy.linalg.det(Sigma_A[:,:,j])
-        Const = (2*numpy.pi*numpy.exp(1))**M
-        Entropy_j = numpy.sqrt( Const * Det_Sigma_A_j)
-        Entropy += numpy.log(Entropy_j + eps_FreeEnergy)
+        Det_Sigma_A_j = np.linalg.det(Sigma_A[:,:,j])
+        Const = (2*np.pi*np.exp(1))**M
+        Entropy_j = np.sqrt( Const * Det_Sigma_A_j)
+        Entropy += np.log(Entropy_j + eps_FreeEnergy)
     Entropy = - Entropy
 
     return Entropy
@@ -2309,10 +2309,10 @@ def A_Entropy(Sigma_A, M, J):
 def H_Entropy(Sigma_H, D):
 
     pyhrf.verbose(3,'Computing HRF Entropy ...')
-    Det_Sigma_H = numpy.linalg.det(Sigma_H)
-    Const = (2*numpy.pi*numpy.exp(1))**D
-    Entropy = numpy.sqrt( Const * Det_Sigma_H)
-    Entropy = - numpy.log(Entropy + eps_FreeEnergy)
+    Det_Sigma_H = np.linalg.det(Sigma_H)
+    Const = (2*np.pi*np.exp(1))**D
+    Entropy = np.sqrt( Const * Det_Sigma_H)
+    Entropy = - np.log(Entropy + eps_FreeEnergy)
 
     return Entropy
 
@@ -2322,7 +2322,7 @@ def Z_Entropy(q_Z, M, J):
     Entropy = 0.0
     for j in xrange(0,J):
         for m in xrange(0,M):
-            Entropy += q_Z[m,1,j] * numpy.log(q_Z[m,1,j] + eps_FreeEnergy) + q_Z[m,0,j] * numpy.log(q_Z[m,0,j] + eps_FreeEnergy)
+            Entropy += q_Z[m,1,j] * np.log(q_Z[m,1,j] + eps_FreeEnergy) + q_Z[m,0,j] * np.log(q_Z[m,0,j] + eps_FreeEnergy)
 
     return Entropy
 
@@ -2331,7 +2331,7 @@ def W_Entropy(p_Wtilde, M):
     pyhrf.verbose(3,'Computing W Entropy ...')
     Entropy = 0.0
     for m in xrange(0,M):
-        Entropy += p_Wtilde[m,1] * numpy.log(p_Wtilde[m,1] + eps_FreeEnergy) + p_Wtilde[m,0] * numpy.log(p_Wtilde[m,0] + eps_FreeEnergy)
+        Entropy += p_Wtilde[m,1] * np.log(p_Wtilde[m,1] + eps_FreeEnergy) + p_Wtilde[m,0] * np.log(p_Wtilde[m,0] + eps_FreeEnergy)
 
     return Entropy
 
@@ -2340,9 +2340,9 @@ def W_Entropy_RVM(V_Wtilde, M):
     pyhrf.verbose(3,'Computing W Entropy ...')
     Entropy = 0.0
     for m in xrange(0,M):
-        Const = (2*numpy.pi*numpy.exp(1))
-        Entropy_m = numpy.sqrt( Const * V_Wtilde[m,m])
-        Entropy += numpy.log(Entropy_m + eps_FreeEnergy)
+        Const = (2*np.pi*np.exp(1))
+        Entropy_m = np.sqrt( Const * V_Wtilde[m,m])
+        Entropy += np.log(Entropy_m + eps_FreeEnergy)
     Entropy = - Entropy
     
     return Entropy
@@ -2399,7 +2399,7 @@ def Compute_FreeEnergy_RVM(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,R,Det_in
     ## Second Part (likelihood)
     EPtildeLikelihood = UtilsC.expectation_Ptilde_Likelihood_RVM(y_tilde,m_A,m_H,XX.astype(int32),Sigma_A,sigma_epsilone,Sigma_H,Gamma,m_Wtilde,V_Wtilde,XGamma,J,D,M,N,Det_Gamma)
     
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
     EPtildeA = UtilsC.expectation_Ptilde_A(m_A,Sigma_A,p_Wtilde,q_Z,mu_M,sigma_M,J,M,K)
     
@@ -2458,49 +2458,49 @@ def Main_vbjde_Fast(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimateSigmaH,sigmaH
         NitMax = 100
     gamma = 10
     gamma_h = 10
-    D = int(numpy.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=float)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=float)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
-    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
-    zerosDD = numpy.zeros((D,D),dtype=float)
-    zerosD = numpy.zeros((D),dtype=float)
-    zerosND = numpy.zeros((N,D),dtype=float)
-    zerosMM = numpy.zeros((M,M),dtype=float)
-    zerosJMD = numpy.zeros((J,M,D),dtype=float)
-    zerosK = numpy.zeros(K)
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
+    Sigma_H = np.ones((D,D),dtype=np.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
+    zerosDD = np.zeros((D,D),dtype=float)
+    zerosD = np.zeros((D),dtype=float)
+    zerosND = np.zeros((N,D),dtype=float)
+    zerosMM = np.zeros((M,M),dtype=float)
+    zerosJMD = np.zeros((J,M,D),dtype=float)
+    zerosK = np.zeros(K)
     P = PolyMat( N , 4 , TR)
-    zerosP = numpy.zeros((P.shape[0]),dtype=float)
+    zerosP = np.zeros((P.shape[0]),dtype=float)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -2516,12 +2516,12 @@ def Main_vbjde_Fast(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimateSigmaH,sigmaH
         q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
         if estimateSigmaH:
             pyhrf.verbose(3,"M sigma_H step ...")
-            sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+            sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
             sigmaH /= D
         pyhrf.verbose(3,"M (mu,sigma) step ...")
         mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
         L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         if estimateBeta:
             pyhrf.verbose(3,"estimating beta")
@@ -2536,16 +2536,16 @@ def Main_vbjde_Fast(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimateSigmaH,sigmaH
     pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
     Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
     Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
-    Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+    Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     m_H1[:] = m_H[:]
     q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
     if estimateSigmaH:
         pyhrf.verbose(3,"M sigma_H step ...")
-        sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+        sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
         sigmaH /= D
     mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
     L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     if estimateBeta:
         pyhrf.verbose(3,"estimating beta")
@@ -2560,16 +2560,16 @@ def Main_vbjde_Fast(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimateSigmaH,sigmaH
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
             Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
-            Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+            Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             m_H1[:] = m_H[:]
             q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
             if estimateSigmaH:
                 pyhrf.verbose(3,"M sigma_H step ...")
-                sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+                sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
                 sigmaH /= D
             mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
             L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
             if estimateBeta:
                 pyhrf.verbose(3,"estimating beta")
@@ -2620,14 +2620,14 @@ def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,m
             for InitMean in IM_val:
                 Init_mixt_p_gammah += [[InitVar,InitMean,Gh]]
                 sigmaH = Init_sigmaH
-                sigma_epsilone = numpy.ones(J)
+                sigma_epsilone = np.ones(J)
                 if 0:
                     pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-                    q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+                    q_Z = np.ones((M,K,J),dtype=np.float64)
                     q_Z[:,1,:] = 0
                 if 0:
                     pyhrf.verbose(3,"Labels are initialized randomly ...")
-                    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
                     nbVoxInClass = J/K
                     for j in xrange(M) :
                         if J%2==0:
@@ -2636,51 +2636,51 @@ def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,m
                             l = [0]
                         for c in xrange(K) :
                             l += [c] * nbVoxInClass
-                        q_Z[j,0,:] = numpy.random.permutation(l)
+                        q_Z[j,0,:] = np.random.permutation(l)
                         q_Z[j,1,:] = 1. - q_Z[j,0,:]
                 if 1:
                     pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-                    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
                     q_Z[:,1,:] = 1
                 
                 #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
                 TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
                 m_h = m_h[:D]
-                m_H = numpy.array(m_h).astype(numpy.float64)
+                m_H = np.array(m_h).astype(np.float64)
                 if estimateHRF:
-                    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+                    Sigma_H = np.ones((D,D),dtype=np.float64)
                 else:
-                    Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+                    Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-                Beta = beta * numpy.ones((M),dtype=numpy.float64)
+                Beta = beta * np.ones((M),dtype=np.float64)
                 P = PolyMat( N , 4 , TR)
                 L = polyFit(Y, TR, 4,P)
-                PL = numpy.dot(P,L)
+                PL = np.dot(P,L)
                 y_tilde = Y - PL
                 Ndrift = L.shape[0]
                 
                 gamma_h = Gh
-                sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+                sigma_M = np.ones((M,K),dtype=np.float64)
                 sigma_M[:,0] = 0.1
                 sigma_M[:,1] = 1.0
-                mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+                mu_M = np.zeros((M,K),dtype=np.float64)
                 for k in xrange(1,K):
                     mu_M[:,k] = InitMean
-                Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+                Sigma_A = np.zeros((M,M,J),np.float64)
                 for j in xrange(0,J):
-                    Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-                m_A = numpy.zeros((J,M),dtype=numpy.float64)
+                    Sigma_A[:,:,j] = 0.01*np.identity(M)    
+                m_A = np.zeros((J,M),dtype=np.float64)
                 for j in xrange(0,J):
                     for m in xrange(0,M):
                         for k in xrange(0,K):
-                            m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                            m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
                 for ni in xrange(0,Nit+1):
                     pyhrf.verbose(3,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
                     UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
                     val = reshape(m_A,(M*J))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-                    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
                     m_A = reshape(val, (J,M))
                     
                     if estimateHRF:
@@ -2690,7 +2690,7 @@ def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,m
                     
                     UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
                     val = reshape(q_Z,(M*K*J))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
                     q_Z = reshape(val, (M,K,J))
                     
                     if estimateHRF:
@@ -2700,7 +2700,7 @@ def MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,m
                             sigmaH = maximization_sigmaH(D,Sigma_H,R,m_H)
                     mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
                     UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
-                    PL = numpy.dot(P,L)
+                    PL = np.dot(P,L)
                     y_tilde = Y - PL
                     for m in xrange(0,M):
                         Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(float64),q_Z[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
@@ -2724,7 +2724,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     #def Main_vbjde_Extension(HRFDict,graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0):    
     pyhrf.verbose(1,"Fast EM with C extension started ...")
 
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
 
     tau1 = 0.0
     tau2 = 0.0
@@ -2744,8 +2744,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     Thresh_FreeEnergy = 1e-5
     
     # Initialize sizes vectors
-    #D = int(numpy.ceil(Thrf/dt)) ##############################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt)) ##############################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -2753,7 +2753,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -2763,7 +2763,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -2771,23 +2771,23 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
     Crit_H = 1
     Crit_Z = 1
     Crit_A = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -2802,17 +2802,17 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     mu1 = [[] for m in xrange(M)]
     h_norm = []
     
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         m1 += 1
     
     if MiniVEMFlag: 
@@ -2820,14 +2820,14 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         InitVar, InitMean, gamma_h = MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,p_Wtilde,scale,Q_barnCond,XGamma,tau1,tau2,NbItMiniVem,sigmaH,estimateHRF)
 
     sigmaH = Init_sigmaH
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -2836,49 +2836,49 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
         
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)   
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)   
     Z_tilde = q_Z.copy()
     
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     m_h = m_h[:D]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     sigmaH1 = sigmaH
     if estimateHRF:
-        Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+        Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-        Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+        Sigma_H = np.zeros((D,D),dtype=np.float64)
     
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Ndrift = L.shape[0]
 
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.5
     sigma_M[:,1] = 0.6
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = InitMean
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)    
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)    
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += np.random.normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += np.random.normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A        
             
     t1 = time.time()
@@ -2926,11 +2926,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = reshape( m_A - m_A1,(M*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
@@ -2939,7 +2939,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = reshape( AH - AH1,(M*J*D) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -2964,13 +2964,13 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -2992,7 +2992,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         
         UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         if estimateBeta:
             pyhrf.verbose(3,"estimating beta")
@@ -3060,16 +3060,16 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             m_H = TrueVal
     
     #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-    #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = reshape( m_A - m_A1,(M*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]    
         
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-    #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+    #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
@@ -3078,7 +3078,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     DIFF = reshape( AH - AH1,(M*J*D) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -3101,13 +3101,13 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -3127,7 +3127,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         mu1[m] += [mu_M[m,1]]
         
     UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     if estimateBeta:
         pyhrf.verbose(3,"estimating beta")
@@ -3189,16 +3189,16 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                     m_H = TrueVal
             
             #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-            #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = reshape( m_A - m_A1,(M*J) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]       
                     
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-            #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+            #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
@@ -3207,7 +3207,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             DIFF = reshape( AH - AH1,(M*J*D) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
             
@@ -3243,13 +3243,13 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
 
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
             #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -3269,7 +3269,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 mu1[m] += [mu_M[m,1]]
                 
             UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
             if estimateBeta:
                 pyhrf.verbose(3,"estimating beta")
@@ -3295,18 +3295,18 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             cTime += [t02-t1]
     t2 = time.time()
     
-    #FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
-    FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    #FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
+    FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     #for i in xrange(ni-1,NitMax+1):
         #FreeEnergyArray[i] = FreeEnergy_Iter[ni-1]
 
-    #SUM_q_Z_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #mu1_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    h_norm_array = numpy.zeros((ni),dtype=numpy.float64)
+    #SUM_q_Z_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #mu1_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
+    mu1_array = np.zeros((M,ni),dtype=np.float64)
+    h_norm_array = np.zeros((ni),dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             SUM_q_Z_array[m,i] = SUM_q_Z[m][i]
@@ -3401,7 +3401,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -3409,13 +3409,13 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 #print ContrastCoef
                 #print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -3446,7 +3446,7 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
     gradientStep = 0.003
     MaxItGrad = 200
     Thresh = 1e-8
-    D = int(numpy.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -3457,38 +3457,38 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
     #print 'J:', J
     condition_names = []
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
 
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    RR = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
+    RR = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
     # ----------- activation class --------------#
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
     # ----------- activation class --------------#
     # --------- Parcellisation class ------------#
-    q_Q = numpy.zeros((I,J),dtype=numpy.float64)
+    q_Q = np.zeros((I,J),dtype=np.float64)
     Z_tilde = q_Z.copy()
     for j in xrange(0,J):
         ind = Pmask[j]
@@ -3497,26 +3497,26 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
     q_Q0 = q_Q.copy()
     ion()
     # --------- Parcellisation class ------------#
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
-    m_H = numpy.ones((D,J),dtype=numpy.float64)
-    Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
-    mu_bar = numpy.zeros((D),dtype=numpy.float64)
-    Sigma_bar = numpy.zeros((D,D),dtype=numpy.float64)
-    Sum_Sigma_h_k = numpy.zeros((D),dtype=numpy.float64)
-    Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
+    m_H = np.ones((D,J),dtype=np.float64)
+    Sigma_H = np.ones((D,D,J),dtype=np.float64)
+    mu_bar = np.zeros((D),dtype=np.float64)
+    Sigma_bar = np.zeros((D,D),dtype=np.float64)
+    Sum_Sigma_h_k = np.zeros((D),dtype=np.float64)
+    Sigma_H = np.ones((D,D,J),dtype=np.float64)
     for j in xrange(0,J):
-        m_H[:,j] = numpy.array(m_h).astype(numpy.float64)
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        m_H[:,j] = np.array(m_h).astype(np.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
                 m_A[j,m] += normal(mu_M[m,k], sigma_M[m,k])*Z_tilde[m,k,j]
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     #print PL.shape()
     y_tilde = Y - PL
     Crit_H = 1
@@ -3534,23 +3534,23 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
     q_Z1[:,:,:] = q_Z[:,:,:]
     m_A1[:,:] = m_A[:,:]
     q_Q1 = q_Q.copy()
-    zerosI = numpy.zeros((I),dtype=float)
-    zerosK = numpy.zeros((K),dtype=float)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosDD = 0 * numpy.identity(D)#numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosP = numpy.zeros((P.shape[0]),dtype=float)
-    zerosMM = 0 * numpy.identity(M)
+    zerosI = np.zeros((I),dtype=float)
+    zerosK = np.zeros((K),dtype=float)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosDD = 0 * np.identity(D)#np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosP = np.zeros((P.shape[0]),dtype=float)
+    zerosMM = 0 * np.identity(M)
     HRFDict = []
     HRFDictCovar = []
     for i in xrange(0,I):
         #tmp = HRFDict0[i]
-        HRFDict.append(numpy.array(m_h).astype(numpy.float64))
-        tmp2 = numpy.identity((D))
+        HRFDict.append(np.array(m_h).astype(np.float64))
+        tmp2 = np.identity((D))
         HRFDictCovar.append(tmp2) #HRFDictCovar.append(tmp2/sigmaH)
         #print HRFDictCovar[i]
-        #print numpy.linalg.det(HRFDictCovar[i])
+        #print np.linalg.det(HRFDictCovar[i])
     #raw_input('')
 
     while ((Crit_Q > Thresh) or(Crit_H > Thresh) or (Crit_Z > Thresh) or (Crit_A > Thresh) or (ni < NitMin)) and (ni < NitMax) :
@@ -3564,26 +3564,26 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
         #tt2 = time.time()
         #print tt2-tt1
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         pyhrf.verbose(2, "E H step ...")
         Sigma_H, m_H = expectation_HP(Y,Sigma_A,Sigma_H,m_A,m_H,X,I,q_Q,HRFDictCovar,HRFDict,Gamma,D,J,N,y_tilde,zerosND,sigma_epsilone)
         m_H[0,:] = 0
         m_H[-1,:] = 0
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:,:] = m_H[:,:]
         pyhrf.verbose(2, "E Z step ...")
         #q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
         UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
 
-        Crit_Z = (numpy.linalg.norm( reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)) ) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        Crit_Z = (np.linalg.norm( reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)) ) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         pyhrf.verbose(2, "E Q step ...")
         q_Q,Q_tilde = expectation_Q(m_H,Sigma_H,sigma_M,beta_Q,Q_tilde,HRFDict,HRFDictCovar,q_Q,graph,J,I,zerosI)
-        Crit_Q = (numpy.linalg.norm( reshape(q_Q,(I*J)) - reshape(q_Q1,(I*J)) ) / numpy.linalg.norm( reshape(q_Q1,(I*J)) ))**2
+        Crit_Q = (np.linalg.norm( reshape(q_Q,(I*J)) - reshape(q_Q1,(I*J)) ) / np.linalg.norm( reshape(q_Q1,(I*J)) ))**2
         cQ += [Crit_Q]
         q_Q1[:,:] = q_Q[:,:]
 
@@ -3606,7 +3606,7 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
         #raw_input('')
         #UtilsC.maximization_LP(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
         L = maximization_LP(Y,m_A,X,m_H,L,P,zerosP)
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         if estimateBeta:
             pyhrf.verbose(2,"estimating beta")
@@ -3639,7 +3639,7 @@ def Main_vbjpde(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,v_h=0.1,beta=0.8,beta_Q=0.8,
         print 'sigma_M:', sigma_M
         print "Beta = " + str(Beta)
     #write_volume(Pmask,op.join('/home/chaari/Boulot/Data/JPDE/simuls','Estimated_Pmask.nii'))
-    #write_volume(numpy.array(HRFDict),'Estimated_HRFs.nii')
+    #write_volume(np.array(HRFDict),'Estimated_HRFs.nii')
     return m_A,m_H, q_Z, q_Q, Pmask, HRFDict, sigma_epsilone, mu_M , sigma_M, Beta, L, PL, cA[2:],cH[2:],cZ[2:],cQ[2:]
 
 
@@ -3651,7 +3651,7 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     gradientStep = 0.003
     MaxItGrad = 200
     Thresh = 1e-8
-    D = int(numpy.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -3659,38 +3659,38 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     Par0 = reshape(Pmask,(l,l))
     condition_names = []
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
 
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    RR = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
+    RR = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
     # ----------- activation class --------------#
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
     # ----------- activation class --------------#
     # --------- Parcellisation class ------------#
-    q_Q = numpy.zeros((I,J),dtype=numpy.float64)
+    q_Q = np.zeros((I,J),dtype=np.float64)
     from scipy.misc import fromimage
     from PIL import Image
     dataDir = '/home/chaari/Logiciels/pyhrf/pyhrf-free/trunk/python/pyhrf/datafiles/'
@@ -3699,13 +3699,13 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     Par_im = label
     label = reshape(label,(J))
     Par = label
-    #ind = find(Par==0)
+    #ind = np.where(Par==0)
     #Par[ind] = 3
-    #ind = find(Par==1)
+    #ind = np.where(Par==1)
     #Par[ind] = 0
-    #ind = find(Par==2)
+    #ind = np.where(Par==2)
     #Par[ind] = 1
-    #ind = find(Par==3)
+    #ind = np.where(Par==3)
     #Par[ind] = 2
     #for j in xrange(0,J):
         ##print label[j]
@@ -3743,26 +3743,26 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     q_Q0 = q_Q.copy()
     ion()
     # --------- Parcellisation class ------------#
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
-    m_H = numpy.ones((D,J),dtype=numpy.float64)
-    Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
-    mu_bar = numpy.zeros((D),dtype=numpy.float64)
-    Sigma_bar = numpy.zeros((D,D),dtype=numpy.float64)
-    Sum_Sigma_h_k = numpy.zeros((D),dtype=numpy.float64)
-    Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
+    m_H = np.ones((D,J),dtype=np.float64)
+    Sigma_H = np.ones((D,D,J),dtype=np.float64)
+    mu_bar = np.zeros((D),dtype=np.float64)
+    Sigma_bar = np.zeros((D,D),dtype=np.float64)
+    Sum_Sigma_h_k = np.zeros((D),dtype=np.float64)
+    Sigma_H = np.ones((D,D,J),dtype=np.float64)
     for j in xrange(0,J):
-        m_H[:,j] = numpy.array(m_h).astype(numpy.float64)
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        m_H[:,j] = np.array(m_h).astype(np.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
                 m_A[j,m] += normal(mu_M[m,k], sigma_M[m,k])*Z_tilde[m,k,j]
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Crit_H = 1
     Crit_Z = 1
@@ -3773,17 +3773,17 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     cZ = []
     cQ = []
     Ndrift = L.shape[0]
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    #XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    #XGamma = np.zeros((M,D,N),dtype=np.float64)
     #m1 = 0
     #for k1 in X: # Loop over the M conditions
         #m2 = 0
         #for k2 in X:
-            #Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            #Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             #m2 += 1
-        #XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        #XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         #m1 += 1
     t1 = time.time()
     ni = 0
@@ -3791,16 +3791,16 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
     q_Z1[:,:,:] = q_Z[:,:,:]
     m_A1[:,:] = m_A[:,:]
     q_Q1 = q_Q.copy()
-    zerosI = numpy.zeros((I),dtype=float)
-    zerosK = numpy.zeros((K),dtype=float)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosDD = 0 * numpy.identity(D)#numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosP = numpy.zeros((P.shape[0]),dtype=float)
-    zerosMM = 0 * numpy.identity(M)
+    zerosI = np.zeros((I),dtype=float)
+    zerosK = np.zeros((K),dtype=float)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosDD = 0 * np.identity(D)#np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosP = np.zeros((P.shape[0]),dtype=float)
+    zerosMM = 0 * np.identity(M)
     HRFDict = []
-    #Par = numpy.zeros((l,l),dtype=numpy.float64)
+    #Par = np.zeros((l,l),dtype=np.float64)
     for i in xrange(0,I):
         tmp = HRFDict0[i]
         HRFDict.append(tmp)
@@ -3815,28 +3815,28 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
         pyhrf.verbose(2, "E A step ...")
         Sigma_A, m_A = expectation_AP2(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         pyhrf.verbose(2, "E H step ...")
         Sigma_H, m_H = expectation_HP(Y,Sigma_A,Sigma_H,m_A,m_H,X,I,q_Q,HRFDictCovar,HRFDict,Gamma,D,J,N,y_tilde,zerosND,sigma_epsilone)
         m_H[0,:] = 0
         m_H[-1,:] = 0
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:,:] = m_H[:,:]
         pyhrf.verbose(2, "E Z step ...")
         q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
         #UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
         DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         pyhrf.verbose(2, "E Q step ...")
         q_Q,Q_tilde = expectation_Q(m_H,Sigma_H,sigma_M,beta_Q,Q_tilde,HRFDict,HRFDictCovar,q_Q,graph,J,I,zerosI)
-        figure(3).clf()
+        plt.figure(3).clf()
 
-        figure(6).clf()
+        plt.figure(6).clf()
         Par_im = classify(q_Q)
         Par_im = reshape(Par_im,(l,l))
         Par00 = reshape(Par0,J)
@@ -3847,7 +3847,7 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
         #Par00[ind1] = 5
         #Par00[ind3] = 6
         #Par00[ind2] = 7
-        DVect = numpy.zeros((2,J))
+        DVect = np.zeros((2,J))
         DVect[0,:] = Par00
         DVect[1,:] = reshape(Par_im,(J))
         dice = sp.spatial.distance.pdist(DVect,'dice')
@@ -3947,7 +3947,7 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
             plt.hold(True)
             plt.plot(HRFDict0[i],'k')
             plt.hold(True)
-            plt.plot(numpy.array(m_h),'y')
+            plt.plot(np.array(m_h),'y')
             plt.legend(("Est","Est Prior","Ref","Init"))
             plt.title('mse c1 = %.11f' %compute_MSE(hh/(norm(hh)),HRFDict0[i]) )
             plt.xlabel('parcel %d' %i)
@@ -3991,7 +3991,7 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
         print '------------------------------'
         L = maximization_LP(Y,m_A,X,m_H,L,P,zerosP)
         #UtilsC.maximization_L(Y,m_A,(mean_HRF(m_H,q_Q[0,:]) + mean_HRF(m_H,q_Q[1,:])+ mean_HRF(m_H,q_Q[2,:]))/3.0,L,P,XX.astype(int32),J,D,M,Ndrift,N)
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         if estimateBeta:
             pyhrf.verbose(2,"estimating beta")
@@ -4014,7 +4014,7 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
             for k in range(0,K):
                 z1 = q_Z[m,k,:];
                 z2 = reshape(z1,(l,l));
-                figure(2).add_subplot(M,K,1 + m*K + k)
+                plt.figure(2).add_subplot(M,K,1 + m*K + k)
                 imshow(z2)
                 title("m = " + str(m) +"k = " + str(k))
                 print "plot"
@@ -4045,7 +4045,7 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -4053,10 +4053,10 @@ def Main_vbjpde2(NRL0,graph,Y,Onsets,Thrf,K,I,Pmask,HRFDict0,HRFDictCovar,TR,dt,
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -4094,46 +4094,46 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     gradientStep = 0.003
     MaxItGrad = 200
     Thresh = 1e-8
-    D = int(numpy.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
     condition_names = []
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
 
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    RR = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
+    RR = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
     # ----------- activation class --------------#
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
     # ----------- activation class --------------#
 
     # --------- Parcellisation class ------------#
-    q_Q = numpy.zeros((I,J),dtype=numpy.float64)
+    q_Q = np.zeros((I,J),dtype=np.float64)
     for j in xrange(0,J):
         ind = Pmask[j]
         q_Q[ind,j] = 1
@@ -4141,26 +4141,26 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     Q_tilde = q_Q.copy()
     q_Q0 = q_Q.copy()
     # --------- Parcellisation class ------------#
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
-    m_H = numpy.ones((D,J),dtype=numpy.float64)
-    Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
-    mu_bar = numpy.zeros((D),dtype=numpy.float64)
-    Sigma_bar = numpy.zeros((D,D),dtype=numpy.float64)
-    Sum_Sigma_h_k = numpy.zeros((D),dtype=numpy.float64)
-    Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
+    m_H = np.ones((D,J),dtype=np.float64)
+    Sigma_H = np.ones((D,D,J),dtype=np.float64)
+    mu_bar = np.zeros((D),dtype=np.float64)
+    Sigma_bar = np.zeros((D,D),dtype=np.float64)
+    Sum_Sigma_h_k = np.zeros((D),dtype=np.float64)
+    Sigma_H = np.ones((D,D,J),dtype=np.float64)
     for j in xrange(0,J):
-        m_H[:,j] = numpy.array(m_h).astype(numpy.float64)
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        m_H[:,j] = np.array(m_h).astype(np.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
                 for k in xrange(0,K):
                     m_A[j,m] += normal(mu_M[m,k], sigma_M[m,k])*Z_tilde[m,k,j]
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Crit_H = 1
     Crit_Z = 1
@@ -4171,48 +4171,48 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     cZ = []
     cQ = []
     Ndrift = L.shape[0]
-    #CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    #CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
+    #CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    #CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
     t1 = time.time()
     ni = 0
     m_H1 = m_H.copy()
     q_Z1[:,:,:] = q_Z[:,:,:]
     m_A1[:,:] = m_A[:,:]
     q_Q1 = q_Q.copy()
-    zerosI = numpy.zeros((I),dtype=float)
-    zerosK = numpy.zeros((K),dtype=float)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosDD = 0 * numpy.identity(D)#numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosP = numpy.zeros((P.shape[0]),dtype=float)
-    zerosMM = 0 * numpy.identity(M)
+    zerosI = np.zeros((I),dtype=float)
+    zerosK = np.zeros((K),dtype=float)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosDD = 0 * np.identity(D)#np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosP = np.zeros((P.shape[0]),dtype=float)
+    zerosMM = 0 * np.identity(M)
     HRFDict = []
     HRFDictCovar = []
     for i in range(0,I):
-        HRFDict.append(numpy.array(m_h).astype(numpy.float64))
-        tmp = numpy.identity((D)) / sigmaH
+        HRFDict.append(np.array(m_h).astype(np.float64))
+        tmp = np.identity((D)) / sigmaH
         HRFDictCovar.append(tmp)
     while ((Crit_H > Thresh) or (Crit_Z > Thresh) or (Crit_A > Thresh) or (ni < NitMin)) and (ni < NitMax) :
         pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
         pyhrf.verbose(2, "E A step ...")
         Sigma_A, m_A = expectation_AP2(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         pyhrf.verbose(2, "E H step ...")
         Sigma_H, m_H = expectation_HP(Y,Sigma_A,Sigma_H,m_A,m_H,X,I,q_Q,HRFDictCovar,HRFDict,Gamma,D,J,N,y_tilde,zerosND,sigma_epsilone)
         m_H[0,:] = 0
         m_H[-1,:] = 0
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:,:] = m_H[:,:]
         pyhrf.verbose(2, "E Z step ...")
         UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
         DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         pyhrf.verbose(2, "E Q step ...")
@@ -4222,7 +4222,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
         pyhrf.verbose(2,"M (mu,sigma) step ...")
         mu_M , sigma_M = maximization_mu_sigma_P2(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
         L = maximization_LP(Y,m_A,X,m_H,L,P,zerosP)
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         if estimateBeta:
             pyhrf.verbose(2,"estimating beta")
@@ -4262,7 +4262,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 		##------------ contrasts ------------#
 
 		##------------ variance -------------#
-		#ContrastCoef = numpy.zeros(M,dtype=float)
+		#ContrastCoef = np.zeros(M,dtype=float)
 		#ind_conds0 = {}
 		#for m in xrange(0,M):
 		    #ind_conds0[condition_names[m]] = 0.0
@@ -4270,10 +4270,10 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 		    #ind_conds = ind_conds0.copy()
 		    #ind_conds[condition_names[m]] = 1.0
 		    #ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-		#ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-		#CovM = numpy.ones(M,dtype=float)
+		#ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+		#CovM = np.ones(M,dtype=float)
 		#for j in xrange(0,J):
-		    #CovM = numpy.ones(M,dtype=float)
+		    #CovM = np.ones(M,dtype=float)
 		    #for m in xrange(0,M):
 			#if ActiveContrasts[m]:
 			    #CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -4309,14 +4309,14 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     #autocorr = 600
     #rho = 200
     ##v_h = 0.1
-    #D = int(numpy.ceil(Thrf/dt))
+    #D = int(np.ceil(Thrf/dt))
     #M = len(Onsets)
     #N = Y.shape[0]
     #J = Y.shape[1]
     #l = int(sqrt(J))
 
     #Par0 = reshape(Pmask,(l,l))
-    ##HRFDictCovar.append(0.001*numpy.identity((D)))
+    ##HRFDictCovar.append(0.001*np.identity((D)))
     ##hh = 0*hrf_triang(D)
     ####multivariate_normal(tmp[1], inv(tmp2)/sigmaH, 1)[0]
     ##HRFDict.append(hh)
@@ -4325,40 +4325,40 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     ##R = inv(array(tridiag(D,autocorr,rho)))
     #condition_names = []
     #maxNeighbours = max([len(nl) for nl in graph])
-    #neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    #neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     #neighboursIndexes -= 1
     #for i in xrange(J):
         #neighboursIndexes[i,:len(graph[i])] = graph[i]
-    #sigma_epsilone = numpy.ones(J)
+    #sigma_epsilone = np.ones(J)
     #X = OrderedDict([])
     #for condition,Ons in Onsets.iteritems():
         #X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         #condition_names += [condition]
-    #XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    #XX = np.zeros((M,N,D),dtype=np.int32)
     #nc = 0
     #for condition,Ons in Onsets.iteritems():
         #XX[nc,:,:] = X[condition]
         #nc += 1
 
-    #mu_M = numpy.zeros((M,K,I),dtype=numpy.float64)
-    #sigma_M = 0.5 * numpy.ones((M,K,I),dtype=numpy.float64)
-    #sigma_M0 = 0.5*numpy.ones((M,K,I),dtype=numpy.float64)
+    #mu_M = np.zeros((M,K,I),dtype=np.float64)
+    #sigma_M = 0.5 * np.ones((M,K,I),dtype=np.float64)
+    #sigma_M0 = 0.5*np.ones((M,K,I),dtype=np.float64)
     #for k in xrange(1,K):
         #mu_M[:,k] = 2.0
     #order = 2
     #D2 = buildFiniteDiffMatrix(order,D)
-    #RR = numpy.dot(D2,D2) / pow(dt,2*order)
-    ##R = 0.01*RR + 20*numpy.identity((D),dtype=float)
-    #Gamma = numpy.identity(N)
+    #RR = np.dot(D2,D2) / pow(dt,2*order)
+    ##R = 0.01*RR + 20*np.identity((D),dtype=float)
+    #Gamma = np.identity(N)
     ## ----------- activation class --------------#
-    #q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    #q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    #q_Z = np.zeros((M,K,J),dtype=np.float64)
+    #q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     #q_Z[:,1,:] = 1
     #Z_tilde = q_Z.copy()
     ## ----------- activation class --------------#
     ## --------- Parcellisation class ------------#
-    #q_Q = numpy.zeros((I,J),dtype=numpy.float64)
-    ##q_Q1 = numpy.zeros((I,J),dtype=numpy.float64)
+    #q_Q = np.zeros((I,J),dtype=np.float64)
+    ##q_Q1 = np.zeros((I,J),dtype=np.float64)
     ##q_Q[1,:] = 1
     ##for j in xrange(0,J):
 	##ind = random.randint(0,I-1)
@@ -4415,41 +4415,41 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     ##raw_input('')
 
     ## --------- Parcellisation class ------------#
-    #Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    #m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    #m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    #Sigma_A = np.zeros((M,M,J),np.float64)
+    #m_A = np.zeros((J,M),dtype=np.float64)
+    #m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
-    ##timeAxis = numpy.arange(0, Thrf, dt)
+    ##timeAxis = np.arange(0, Thrf, dt)
     ##TT,m_h = genBezierHRF(timeAxis=timeAxis, pic=[5,1], picw=3)
-    #m_H = numpy.ones((D,J),dtype=numpy.float64)
-    ##m_H1 = numpy.ones((D,J),dtype=numpy.float64)
-    #Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
-    #mu_bar = numpy.zeros((D),dtype=numpy.float64)
-    #Sigma_bar = numpy.zeros((D,D),dtype=numpy.float64)
-    #Sum_Sigma_h_k = numpy.zeros((D),dtype=numpy.float64)
+    #m_H = np.ones((D,J),dtype=np.float64)
+    ##m_H1 = np.ones((D,J),dtype=np.float64)
+    #Sigma_H = np.ones((D,D,J),dtype=np.float64)
+    #mu_bar = np.zeros((D),dtype=np.float64)
+    #Sigma_bar = np.zeros((D,D),dtype=np.float64)
+    #Sum_Sigma_h_k = np.zeros((D),dtype=np.float64)
     ##for i in xrange(0,I):
-        ###tmp = numpy.array(HRFDictCovar[i])#.astype(numpy.float64)
-        ###tmp2 = numpy.array(HRFDict[i])#.astype(numpy.float64)
+        ###tmp = np.array(HRFDictCovar[i])#.astype(np.float64)
+        ###tmp2 = np.array(HRFDict[i])#.astype(np.float64)
         ###tmp = HRFDictCovar[i]
         ###tmp2 = HRFDict[i]
-        ##Sum_Sigma_h_k += numpy.dot(HRFDictCovar[i],HRFDict[i])
-    #Sigma_H = numpy.ones((D,D,J),dtype=numpy.float64)
+        ##Sum_Sigma_h_k += np.dot(HRFDictCovar[i],HRFDict[i])
+    #Sigma_H = np.ones((D,D,J),dtype=np.float64)
     #for j in xrange(0,J):
-	##m_H[:,j] = numpy.array(m_h).astype(numpy.float64)
-	##m_H[:,j] = numpy.array(HRFDict[1]).astype(numpy.float64)
+	##m_H[:,j] = np.array(m_h).astype(np.float64)
+	##m_H[:,j] = np.array(HRFDict[1]).astype(np.float64)
 	#m_H[:,j] = hrf_triang(D)
-	##m_H1[:,j] = numpy.array(HRFDict[0]).astype(numpy.float64)
-	##Sigma_H[:,:,j] = numpy.array(HRFDictCovar[0]).astype(numpy.float64)
-	#Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+	##m_H1[:,j] = np.array(HRFDict[0]).astype(np.float64)
+	##Sigma_H[:,:,j] = np.array(HRFDictCovar[0]).astype(np.float64)
+	#Sigma_A[:,:,j] = 0.01*np.identity(M)
 	#for i in xrange(0,I):
 	    #for m in xrange(0,M):
 		#for k in xrange(0,K):
-		    #m_A[j,m] += normal(mu_M[m,k,i], numpy.sqrt(sigma_M[m,k,i]))*Z_tilde[m,k,j]
+		    #m_A[j,m] += normal(mu_M[m,k,i], np.sqrt(sigma_M[m,k,i]))*Z_tilde[m,k,j]
     #m_A = NRL0.copy()
-    #Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    #Beta = beta * np.ones((M),dtype=np.float64)
     #P = PolyMat( N , 4 , TR)
     #L = polyFit(Y, TR, 4,P)
-    #PL = numpy.dot(P,L)
+    #PL = np.dot(P,L)
     #y_tilde = Y - PL
     #Crit_H = 1
     #Crit_Z = 1
@@ -4460,17 +4460,17 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     #cZ = []
     #cQ = []
     #Ndrift = L.shape[0]
-    #CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    #CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    #Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    #XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
+    #CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    #CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    #Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    #XGamma = np.zeros((M,D,N),dtype=np.float64)
     #m1 = 0
     #for k1 in X: # Loop over the M conditions
 	#m2 = 0
 	#for k2 in X:
-	    #Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+	    #Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
 	    #m2 += 1
-	#XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+	#XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
 	#m1 += 1
     #t1 = time.time()
     #ni = 0
@@ -4478,21 +4478,21 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
     #q_Z1[:,:,:] = q_Z[:,:,:]
     #m_A1[:,:] = m_A[:,:]
     #q_Q1 = q_Q.copy()
-    #zerosI = numpy.zeros((I),dtype=float)
-    #zerosK = numpy.zeros((K),dtype=float)
-    #zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    #zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    #zerosDD = 0 * numpy.identity(D)#numpy.zeros((D,D),dtype=numpy.float64)
-    #zerosD = numpy.zeros((D),dtype=numpy.float64)
-    #zerosP = numpy.zeros((P.shape[0]),dtype=float)
-    ##Par0 = numpy.zeros((l,l),dtype=numpy.float64)
-    #zerosMM = 0 * numpy.identity(M)
+    #zerosI = np.zeros((I),dtype=float)
+    #zerosK = np.zeros((K),dtype=float)
+    #zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    #zerosND = np.zeros((N,D),dtype=np.float64)
+    #zerosDD = 0 * np.identity(D)#np.zeros((D,D),dtype=np.float64)
+    #zerosD = np.zeros((D),dtype=np.float64)
+    #zerosP = np.zeros((P.shape[0]),dtype=float)
+    ##Par0 = np.zeros((l,l),dtype=np.float64)
+    #zerosMM = 0 * np.identity(M)
     ##for i in range(0,I):
 	##z1 = q_Q0[i,:]
 	##Par0 += reshape(labelling(z1.copy(),i+1),(l,l))
     ##Par0 = reshape(Pmask,(l,l))
     #HRFDict0 = []
-    #Par = numpy.zeros((l,l),dtype=numpy.float64)
+    #Par = np.zeros((l,l),dtype=np.float64)
     #for i in xrange(0,I):
 	##print i
 	#tmp = HRFDict[i]
@@ -4509,14 +4509,14 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
         #Sigma_A, m_A = expectation_AP(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD,uint(reshape(Par0-1,J)))
 	##m_A = NRL0.copy()
 	#DIFF = reshape( m_A - m_A1,(M*J) )
-	#Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+	#Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
 	#cA += [Crit_A]
 	#m_A1[:,:] = m_A[:,:]
 	#pyhrf.verbose(2, "E H step ...")
 	#Sigma_H, m_H = expectation_HP(Y,Sigma_A,Sigma_H,m_A,m_H,X,I,q_Q,HRFDictCovar,HRFDict,Gamma,D,J,N,y_tilde,zerosND,sigma_epsilone)
 	#m_H[0,:] = 0
         #m_H[-1,:] = 0
-        #Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        #Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
 	#cH += [Crit_H]
 	#m_H1[:,:] = m_H[:,:]
         #pyhrf.verbose(2, "E Z step ...")
@@ -4524,12 +4524,12 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
         ##q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK,uint(reshape(Par0-1,J)))
 
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-	#Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+	#Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
 	#cZ += [Crit_Z]
 	#q_Z1[:,:,:] = q_Z[:,:,:]
 	#pyhrf.verbose(2, "E Q step ...")
 	##q_Q,Q_tilde = expectation_Q(m_H,Sigma_H,sigma_M,beta_Q,Q_tilde,HRFDict,HRFDictCovar,q_Q,graph,J,I,zerosI)
-	##q_Q = numpy.zeros((I,J),dtype=numpy.float64)
+	##q_Q = np.zeros((I,J),dtype=np.float64)
 	##for j in xrange(0,J):
 	    ##ind = random.randint(0,3)
 	    ##q_Q[ind,j] = 1
@@ -4537,11 +4537,11 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 	#figure(3).clf()
 	##figure(4).clf()
 	##pyplot.clf()
-	##Par = numpy.zeros((l,l),dtype=numpy.float64)
-	#Par = numpy.zeros((J),dtype=numpy.float64)
+	##Par = np.zeros((l,l),dtype=np.float64)
+	#Par = np.zeros((J),dtype=np.float64)
 	#for j in range(0,J):
 	    #mm = max(q_Q[:,j])
-	    #Par[j] = find(q_Q[:,j] == mm)[0]
+	    #Par[j] = np.where(q_Q[:,j] == mm)[0]
 	#Par = reshape(Par,(l,l))
 	#for i in range(0,I):
 	    #z1 = q_Q[i,:]
@@ -4609,12 +4609,12 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 		##hold(False)
 
 	#draw()
-	##R = 0.002*RR + 30*numpy.identity((D),dtype=float)
+	##R = 0.002*RR + 30*np.identity((D),dtype=float)
 	##R = array(tridiag2(D,96,-40,10))
 	##R = array(tridiag2(D,96,-64,16))
 	#R = RR
 	#R2 = RR
-	##R2 = numpy.identity(D)
+	##R2 = np.identity(D)
 	##v_h = 0.1
 	##v_h = 0.001
 	##sigmaH = 0.0000001
@@ -4622,7 +4622,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 
 	##v_h = 0
 	##for j in xrange(0,J):
-	    ##v_h += (numpy.dot(mult(m_H[:,j],m_H[:,j]) + Sigma_H[:,:,j] , R2 )).trace()
+	    ##v_h += (np.dot(mult(m_H[:,j],m_H[:,j]) + Sigma_H[:,:,j] , R2 )).trace()
 	##v_h /= (D*J)
 	##v_h = 20.0/100.5
 	#print v_h
@@ -4631,7 +4631,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 	    ##if (i<I):
 		##HRFDict[i] = maximization_h_k_prior(m_H,q_Q[i,:],HRFDictCovar[i],R2/v_h)
 
-	    ##HRFDictCovar[i] = R/sigmaH#numpy.identity(D)#
+	    ##HRFDictCovar[i] = R/sigmaH#np.identity(D)#
 	    ##hh = mean_HRF(m_H,q_Q[i,:])
 	    #hh = sum(m_H,1)
 	    ##hh = HRFDict[i]
@@ -4647,7 +4647,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 	    #plot(HRFDict0[i],'k')
 	    ##plot(HRFDict0[i]/(norm(HRFDict0[i]) + eps),'k')
 	    #hold(True)
-	    #plot(numpy.array(m_h),'y')
+	    #plot(np.array(m_h),'y')
 	    ##legend(("Est","Est2","Ref","Init"))
 	    #legend(("Est","Ref","Init"))
 	    #title('mse c1 = %.11f' %compute_MSE(hh,HRFDict0[0]) )
@@ -4681,7 +4681,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 	#L = maximization_LP(Y,m_A,X,m_H,L,P,zerosP)
 	##UtilsC.maximization_L(Y,m_A,0.5*(mean_HRF(m_H,q_Q[0,:]) + mean_HRF(m_H,q_Q[1,:])),L,P,XX.astype(int32),J,D,M,Ndrift,N)
 	##UtilsC.maximization_L(Y,m_A,m_H[1,:],L,P,XX.astype(int32),J,D,M,Ndrift,N)
-	#PL = numpy.dot(P,L)
+	#PL = np.dot(P,L)
 	#y_tilde = Y - PL
 	#if estimateBeta:
 	    #pyhrf.verbose(2,"estimating beta")
@@ -4747,7 +4747,7 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 		##------------ contrasts ------------#
 
 		##------------ variance -------------#
-		#ContrastCoef = numpy.zeros(M,dtype=float)
+		#ContrastCoef = np.zeros(M,dtype=float)
 		#ind_conds0 = {}
 		#for m in xrange(0,M):
 		    #ind_conds0[condition_names[m]] = 0.0
@@ -4755,10 +4755,10 @@ def Main_vbjpde3(graph,Y,Onsets,Thrf,Pmask,TR,dt,K=2,I=1,sigmaH=0.1,v_h=0.1,beta
 		    #ind_conds = ind_conds0.copy()
 		    #ind_conds[condition_names[m]] = 1.0
 		    #ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-		#ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-		#CovM = numpy.ones(M,dtype=float)
+		#ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+		#CovM = np.ones(M,dtype=float)
 		#for j in xrange(0,J):
-		    #CovM = numpy.ones(M,dtype=float)
+		    #CovM = np.ones(M,dtype=float)
 		    #for m in xrange(0,M):
 			#if ActiveContrasts[m]:
 			    #CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -4791,69 +4791,69 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
     gradientStep = 0.005
     MaxItGrad = 150
     Thresh = 5e-4
-    D = int(numpy.ceil(Thrf/dt))
-    Dw = int(numpy.ceil(0.5*Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
+    Dw = int(np.ceil(0.5*Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
     condition_names = []
     #-----------------------------------------------------------------------#
-    # put neighbour lists into a 2D numpy array so that it will be easily
+    # put neighbour lists into a 2D np array so that it will be easily
     # passed to C-code
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    #R = numpy.dot(D2,D2) / pow(dt,2*order)
+    #R = np.dot(D2,D2) / pow(dt,2*order)
     #print R.shape
-    R = numpy.identity(D)
+    R = np.identity(D)
     sigmaG_D = 0.00001
     sigmaG_A = 0.00001
     for i in xrange(0,Dw):
         R[i,i] = 1.0/sigmaG_A
         R[i+Dw,i+Dw] = 1.0/sigmaG_D
     #print R
-    Gamma = numpy.identity(N)
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    Gamma = np.identity(N)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
-    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
+    Sigma_H = np.ones((D,D),dtype=np.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -4863,22 +4863,22 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
     cH = []
     cZ = []
     Ndrift = L.shape[0]
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    zerosDD = numpy.zeros((D,D),dtype=float)
-    zerosD = numpy.zeros((D),dtype=float)
-    zerosND = numpy.zeros((N,D),dtype=float)
-    cA = numpy.zeros((Dw),dtype=float)
-    cD = numpy.zeros((Dw),dtype=float)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    zerosDD = np.zeros((D,D),dtype=float)
+    zerosD = np.zeros((D),dtype=float)
+    zerosND = np.zeros((N,D),dtype=float)
+    cA = np.zeros((Dw),dtype=float)
+    cD = np.zeros((Dw),dtype=float)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         m1 += 1
     t1 = time.time()
     for ni in xrange(0,NitMin):
@@ -4893,12 +4893,12 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
         cD[:] = m_G[Dw:]
         #m_H = idwt(cA, cD, 'db8','per')
         m_H = m_G
-        figure(2)
+        plt.figure(2)
         plot(cA)
-        figure(3)
+        plt.figure(3)
         plot(cD)
 
-        figure(1)
+        plt.figure(1)
         plot(m_H,'r')
         hold(False)
         draw()
@@ -4910,10 +4910,10 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
         UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
         if estimateSigmaH:
             pyhrf.verbose(3,"M sigma_H step ...")
-            #sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+            #sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
             #sigmaH = (mult(m_G,m_G) + Sigma_H).trace()
-            #sigmaG_A = (numpy.dot(mult(m_G[0:Dw],m_G[0:Dw]) + Sigma_H[0:Dw,0:Dw] , R[0:Dw,0:Dw] )).trace()/Dw
-            #sigmaG_D = (numpy.dot(mult(m_G[Dw:],m_G[Dw:]) + Sigma_H[Dw:,Dw:] , R[Dw:,Dw:] )).trace()/Dw
+            #sigmaG_A = (np.dot(mult(m_G[0:Dw],m_G[0:Dw]) + Sigma_H[0:Dw,0:Dw] , R[0:Dw,0:Dw] )).trace()/Dw
+            #sigmaG_D = (np.dot(mult(m_G[Dw:],m_G[Dw:]) + Sigma_H[Dw:,Dw:] , R[Dw:,Dw:] )).trace()/Dw
             #sigmaH = (mult(m_H,m_H) + Sigma_H).trace()
             #sigmaH /= D
             sigmaG_D = 1
@@ -4925,7 +4925,7 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
         pyhrf.verbose(3,"M (mu,sigma) step ...")
         mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
         UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         if estimateBeta:
             pyhrf.verbose(3,"estimating beta")
@@ -4942,7 +4942,7 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
     pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
     UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-    Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     #UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,scale,sigmaH)
@@ -4954,21 +4954,21 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
 
     m_H[0] = 0
     m_H[-1] = 0
-    Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+    Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     cH += [Crit_H]
     m_H1[:] = m_H[:]
     UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+    Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     if estimateSigmaH:
         pyhrf.verbose(3,"M sigma_H step ...")
-        sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+        sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
         sigmaH /= D
     mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
     UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     if estimateBeta:
         pyhrf.verbose(3,"estimating beta")
@@ -4984,7 +4984,7 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-            Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,scale,sigmaH)
@@ -4994,21 +4994,21 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
 
             m_H[0] = 0
             m_H[-1] = 0
-            Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+            Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             cH += [Crit_H]
             m_H1[:] = m_H[:]
             UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+            Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             if estimateSigmaH:
                 pyhrf.verbose(3,"M sigma_H step ...")
-                sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+                sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
                 sigmaH /= D
             mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
             UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(int32),J,D,M,Ndrift,N)
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
             if estimateBeta:
                 pyhrf.verbose(3,"estimating beta")
@@ -5021,7 +5021,7 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
     t2 = time.time()
     
     if PLOT:
-        figure(1)
+        plt.figure(1)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -5053,7 +5053,7 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -5061,10 +5061,10 @@ def Main_vbjde_Extension_Wavelet(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale,estimate
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -5096,71 +5096,71 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     gradientStep = 0.003
     MaxItGrad = 200
     Thresh = 1e-5
-    #D = int(numpy.ceil(Thrf/dt))
+    #D = int(np.ceil(Thrf/dt))
 
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     condition_names = []
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
     P = PolyMat( N , 4 , TR)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
-    Gamma = Gamma - numpy.dot(P,P.transpose())
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
+    Gamma = Gamma - np.dot(P,P.transpose())
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     #for k in xrange(0,K):
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     #Norm1 = norm(m_h)
     #print 'Norm1 =',Norm1
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
-    PL = numpy.zeros((N,J),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
+    PL = np.zeros((N,J),dtype=np.float64)
     y_tilde = Y
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -5172,20 +5172,20 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     cZ = []
 
     cTime = []
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         m1 += 1
 
-    StimulusInducedSignal = numpy.zeros((N,J), dtype=numpy.float64)
+    StimulusInducedSignal = np.zeros((N,J), dtype=np.float64)
 
     t1 = time.time()
     for ni in xrange(0,NitMin):
@@ -5194,7 +5194,7 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         if estimateHRF:
@@ -5235,16 +5235,16 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
             #mu_M *= Norm
             #sigma_M *= Norm**2
             if PLOT and ni >= 50:
-                figure(1)
+                plt.figure(1)
                 plot(m_H)
                 hold(True)
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         pyhrf.verbose(3, "E Z step ...")
         UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
-        Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         if estimateSigmaH:
@@ -5276,9 +5276,9 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
     UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-    #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     if estimateHRF:
@@ -5321,16 +5321,16 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
       if PLOT and ni >= 50:
         plot(m_H)
         hold(True)
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-    #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+    #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     if estimateSigmaH:
@@ -5364,9 +5364,9 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-            #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             if estimateHRF:
@@ -5408,16 +5408,16 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
                 if PLOT and ni >= 50:
                     plot(m_H)
                     hold(True)
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-            #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+            #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             if estimateSigmaH:
@@ -5445,7 +5445,7 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
 
     if PLOT:
         savefig('./HRF_Iter.png')
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -5481,7 +5481,7 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -5489,10 +5489,10 @@ def Main_vbjde_Extension_NoDrifts(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -5530,80 +5530,80 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     #print 'type tau2 =',type(tau2)
     V = 10
 
-    D = int(numpy.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
-    zerosV = numpy.zeros(V)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
+    zerosV = np.zeros(V)
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     condition_names = []
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    #XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    #XX = np.zeros((M,N,D),dtype=np.int32)
     #nc = 0
     #for condition,Ons in Onsets.iteritems():
         #XX[nc,:,:] = X[condition]
         #nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
     P = PolyMat( N , 4 , TR)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
-    Gamma = Gamma - numpy.dot(P,P.transpose())
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
+    Gamma = Gamma - np.dot(P,P.transpose())
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     #for k in xrange(0,K):
     q_Z[:,1,:] = 1
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64) #####
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64) #####
+    p_Wtilde = np.zeros((M,K),dtype=np.float64) #####
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64) #####
     p_Wtilde[:,1] = 1 #####
 
     #Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                #m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j] #####
+                #m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j] #####
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
-    #PL = numpy.zeros((N,J),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
+    #PL = np.zeros((N,J),dtype=np.float64)
     y_tilde = Y
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -5620,17 +5620,17 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
 
     cTime = []
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    #Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    #XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    #Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    #XGamma = np.zeros((M,D,N),dtype=np.float64)
     #m1 = 0
     #for k1 in X: # Loop over the M conditions
         #m2 = 0
         #for k2 in X:
-            #Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            #Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             #m2 += 1
-        #XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        #XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         #m1 += 1
 
     t1 = time.time()
@@ -5682,9 +5682,9 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     pyhrf.verbose(3, "E A step ...")
     Sigma_A, m_A = expectation_A_ParsiMod(Sigma_H,m_H,m_A,X,Gamma,sigma_M,q_Z,mu_M,J,y_tilde,Sigma_A,sigma_epsilone,zerosJMD,p_Wtilde,M)
     #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-    #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     if estimateHRF:
@@ -5692,24 +5692,24 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
       Sigma_H, m_H = expectation_H_ParsiMod(Sigma_A,m_A,X,Gamma,R,sigmaH,J,y_tilde,zerosND,sigma_epsilone,scale,zerosD,p_Wtilde)
       m_H[0] = 0
       m_H[-1] = 0
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-    #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+    #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     cH += [Crit_H]
     m_H1[:] = m_H[:]
     pyhrf.verbose(3, "E Z step ...")
     q_Z = expectation_Z_ParsiMod(tau1,tau2,Sigma_A,m_A,J,M,sigma_M,mu_M,V,K,Beta,graph,p_Wtilde,zerosV,zerosK,q_Z)
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     pyhrf.verbose(3, "E W step ...")
     p_Wtilde = expectation_W_ParsiMod(tau1,tau2,Sigma_A,m_A,X,Gamma,J,M,y_tilde,sigma_epsilone,sigma_M,mu_M,p_Wtilde,q_Z,zerosK,K,m_H,Sigma_H,zerosJMD)
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #Crit_W = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_W = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     if estimateSigmaH:
@@ -5737,31 +5737,31 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             Sigma_A, m_A = expectation_A_ParsiMod(Sigma_H,m_H,m_A,X,Gamma,sigma_M,q_Z,mu_M,J,y_tilde,Sigma_A,sigma_epsilone,zerosJMD,p_Wtilde,M)
             #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-            #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             if estimateHRF:
                 Sigma_H, m_H = expectation_H_ParsiMod(Sigma_A,m_A,X,Gamma,R,sigmaH,J,y_tilde,zerosND,sigma_epsilone,scale,zerosD,p_Wtilde)
                 m_H[0] = 0
                 m_H[-1] = 0
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-            #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+            #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             cH += [Crit_H]
             m_H1[:] = m_H[:]
             q_Z = expectation_Z_ParsiMod(tau1,tau2,Sigma_A,m_A,J,M,sigma_M,mu_M,V,K,Beta,graph,p_Wtilde,zerosV,zerosK,q_Z)
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             p_Wtilde = expectation_W_ParsiMod(tau1,tau2,Sigma_A,m_A,X,Gamma,J,M,y_tilde,sigma_epsilone,sigma_M,mu_M,p_Wtilde,q_Z,zerosK,K,m_H,Sigma_H,zerosJMD)
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #Crit_W = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_W = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             if estimateSigmaH:
@@ -5786,7 +5786,7 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     t2 = time.time()
 
     if PLOT:
-        figure(1)
+        plt.figure(1)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -5824,7 +5824,7 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -5832,10 +5832,10 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -5861,7 +5861,7 @@ def Main_vbjde_NoDrifts_ParsiMod_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
 def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0,estimateHRF=True,tau1=1.,tau2=0.,S=100,InitVar=0.5,InitMean=2.0):
     pyhrf.verbose(1,"Fast EM for Parsimonious Model (( Definition 1 ---> W-Q)) without Drifts estimation and with C Extension started...")
     
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     if NitMax < 0:
         NitMax = 100
@@ -5871,47 +5871,47 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    MC_mean = numpy.zeros((M,J,S,K),dtype=numpy.float64)
+    MC_mean = np.zeros((M,J,S,K),dtype=np.float64)
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
-    #zerosV = numpy.zeros(V)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
+    #zerosV = np.zeros(V)
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     condition_names = []
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    #sigma_M = InitVar * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    #sigma_M = InitVar * np.ones((M,K),dtype=np.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    #sigma_M0 = InitVar * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = numpy.ones((M,K),dtype=numpy.float64)
+    #sigma_M0 = InitVar * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = np.ones((M,K),dtype=np.float64)
     sigma_M0[:,0] = 0.1
     sigma_M0[:,1] = 1.0
     
@@ -5921,47 +5921,47 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
     P = PolyMat( N , 4 , TR)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     #print 'Det_invR =', Det_invR
-    Gamma = numpy.identity(N)
-    Gamma = Gamma - numpy.dot(P,P.transpose())
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Gamma = Gamma - np.dot(P,P.transpose())
+    Det_Gamma = np.linalg.det(Gamma)
     #print 'Det_Gamma =',Det_Gamma
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     #for k in xrange(0,K):
     q_Z[:,1,:] = 1
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
     #Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                #m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                #m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
 
-    #PL = numpy.zeros((N,J),dtype=numpy.float64)
+    #PL = np.zeros((N,J),dtype=np.float64)
     y_tilde = Y
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -5969,8 +5969,8 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
 
     cA = []
@@ -5986,19 +5986,19 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     SUM_q_Z = [[] for m in xrange(M)]
     mu1 = [[] for m in xrange(M)]
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -6009,7 +6009,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         if estimateHRF:
@@ -6050,30 +6050,30 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             #mu_M *= Norm
             #sigma_M *= Norm**2
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
             #print 'HXGamma=',HXGamma
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
 
         pyhrf.verbose(3, "E Z step ...")
         UtilsC.expectation_Z_ParsiMod_1(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,S,K,maxNeighbours,tau1,tau2,MC_mean)
         DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -6082,7 +6082,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         UtilsC.expectation_W_ParsiMod_1(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
         #print 'p_Wtilde =',p_Wtilde
         DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -6136,9 +6136,9 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-    #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
@@ -6180,32 +6180,32 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
       #mu_M *= Norm
       #sigma_M *= Norm**2
       if PLOT and ni >= 0:
-        figure(M+1)
+        plt.figure(M+1)
         plot(m_H)
         hold(True)
       #Update HXGamma
       m1 = 0
       for k1 in X: # Loop over the M conditions
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-    #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+    #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     cH += [Crit_H]
     m_H1[:] = m_H[:]
     
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
     pyhrf.verbose(3, "E Z step ...")
     UtilsC.expectation_Z_ParsiMod_1(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,S,K,maxNeighbours,tau1,tau2,MC_mean)
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -6213,9 +6213,9 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     UtilsC.expectation_W_ParsiMod_1(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
     #print 'p_Wtilde =',p_Wtilde
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #Crit_W = sum(DIFF) / len(find(DIFF != 0))
+    #Crit_W = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
@@ -6267,9 +6267,9 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             #DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-            #Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
@@ -6310,40 +6310,40 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                 #mu_M *= Norm
                 #sigma_M *= Norm**2
                 if PLOT and ni >= 0:
-                    figure(1)
+                    plt.figure(1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
-            #Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+            #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             cH += [Crit_H]
             m_H1[:] = m_H[:]
             
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
             
             UtilsC.expectation_Z_ParsiMod_1(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,S,K,maxNeighbours,tau1,tau2,MC_mean)
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
             UtilsC.expectation_W_ParsiMod_1(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
             #print 'p_Wtilde =',p_Wtilde
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #Crit_W = sum(DIFF) / len(find(DIFF != 0))
+            #Crit_W = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
@@ -6388,19 +6388,19 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
 
     t2 = time.time()
 
-    #FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
-    FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    #FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
+    FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     #for i in xrange(ni-1,NitMax+1):
         #FreeEnergyArray[i] = FreeEnergy_Iter[ni-1]
         
-    #W_Iter_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #SUM_q_Z_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #mu1_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    W_Iter_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
+    #W_Iter_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #SUM_q_Z_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #mu1_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    W_Iter_array = np.zeros((M,ni),dtype=np.float64)
+    SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
+    mu1_array = np.zeros((M,ni),dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             W_Iter_array[m,i] = W_Iter[m][i]
@@ -6414,7 +6414,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         #plot(cA[1:-1],'r')
         #hold(True)
         #plot(cH[1:-1],'b')
@@ -6434,11 +6434,11 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         #draw()
         #show()
 
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergy_Iter)
         savefig('./FreeEnergy.png')
 
-        figure(4)
+        plt.figure(4)
         for m in xrange(M):
             plot(W_Iter_array[m])
             hold(True)
@@ -6447,7 +6447,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         legend( ('m=0','m=1') ) 
         savefig('./W_Iter.png')
         
-        figure(5)
+        plt.figure(5)
         for m in xrange(M):
             plot(SUM_q_Z_array[m])
             hold(True)
@@ -6456,7 +6456,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         legend( ('m=0','m=1') ) 
         savefig('./Sum_q_Z_Iter.png')
         
-        figure(6)
+        plt.figure(6)
         for m in xrange(M):
             plot(mu1_array[m])
             hold(True)
@@ -6490,7 +6490,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -6498,10 +6498,10 @@ def Main_vbjde_NoDrifts_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -6541,7 +6541,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     
     HRF_Normalization = False
     
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     if NitMax < 0:
         NitMax = 100
@@ -6551,8 +6551,8 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -6563,37 +6563,37 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     print 'tau2 =',tau2
     print 'tau1 =',tau1
 
-    MC_mean = numpy.zeros((M,J,S,K),dtype=numpy.float64)
+    MC_mean = np.zeros((M,J,S,K),dtype=np.float64)
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     condition_names = []
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.5
     sigma_M[:,1] = 0.6
-    sigma_M0 = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M0 = np.ones((M,K),dtype=np.float64)
     sigma_M0[:,0] = 0.5
     sigma_M0[:,1] = 0.6
     
@@ -6602,23 +6602,23 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     #print 'Det_invR =', Det_invR
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
     #print 'Det_Gamma =',Det_Gamma
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -6627,44 +6627,44 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
         
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64) 
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64) 
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
 
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -6672,8 +6672,8 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
 
     cA = []
@@ -6691,19 +6691,19 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     h_norm = []
 
     Ndrift = L.shape[0]
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -6714,7 +6714,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
@@ -6734,22 +6734,22 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
             #print 'HRF Norm =', norm(m_H)
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
 
@@ -6763,7 +6763,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 q_Z[m,1,:] = reshape(TrueZ[0][:,:,:,m],J)
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]            
         DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -6773,7 +6773,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             UtilsC.expectation_W_ParsiMod_1(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
             print 'p_Wtilde =',p_Wtilde[:,1]
         DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -6796,7 +6796,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -6833,7 +6833,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
@@ -6853,22 +6853,22 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
         #print 'HRF Norm =', norm(m_H)
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
     
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -6882,7 +6882,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             q_Z[m,1,:] = reshape(TrueZ[0][:,:,:,m],J)
             q_Z[m,0,:] = 1 - q_Z[m,1,:]    
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -6890,7 +6890,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         pyhrf.verbose(3, "E W step ...")
         UtilsC.expectation_W_ParsiMod_1(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
     DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
@@ -6912,7 +6912,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     
     if estimateBeta:
@@ -6947,7 +6947,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
@@ -6966,22 +6966,22 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
                 #print 'HRF Norm =', norm(m_H)
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
             
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -6994,7 +6994,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     q_Z[m,1,:] = reshape(TrueZ[0][:,:,:,m],J)
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -7002,7 +7002,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 UtilsC.expectation_W_ParsiMod_1(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
                 #print 'p_Wtilde =',p_Wtilde
             DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
@@ -7024,7 +7024,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
             
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
             
             if estimateBeta:
@@ -7052,20 +7052,20 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
     t2 = time.time()
 
-    #FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
-    FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    #FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
+    FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     #for i in xrange(ni-1,NitMax+1):
         #FreeEnergyArray[i] = FreeEnergy_Iter[ni-1]
 
-    #W_Iter_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #SUM_q_Z_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #mu1_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    W_Iter_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    h_norm_array = numpy.zeros((ni),dtype=numpy.float64)
+    #W_Iter_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #SUM_q_Z_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #mu1_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    W_Iter_array = np.zeros((M,ni),dtype=np.float64)
+    SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
+    mu1_array = np.zeros((M,ni),dtype=np.float64)
+    h_norm_array = np.zeros((ni),dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             W_Iter_array[m,i] = W_Iter[m][i]
@@ -7080,7 +7080,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     if PLOT:
         savefig('./HRF_Iter_Parsi1.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         #plot(cA[1:-1],'r')
         #hold(True)
         #plot(cH[1:-1],'b')
@@ -7100,11 +7100,11 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         #draw()
         #show()
 
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergy_Iter)
         savefig('./FreeEnergy_Parsi1.png')
         
-        figure(4)
+        plt.figure(4)
         for m in xrange(M):
             plot(W_Iter_array[m])
             hold(True)
@@ -7113,7 +7113,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         legend( ('m=0','m=1') ) 
         savefig('./W_Iter_Parsi1.png')
         
-        figure(5)
+        plt.figure(5)
         for m in xrange(M):
             plot(SUM_q_Z_array[m])
             hold(True)
@@ -7122,7 +7122,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         legend( ('m=0','m=1') ) 
         savefig('./Sum_q_Z_Iter_Parsi1.png')
         
-        figure(6)
+        plt.figure(6)
         for m in xrange(M):
             plot(mu1_array[m])
             hold(True)
@@ -7131,7 +7131,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         legend( ('m=0','m=1') ) 
         savefig('./mu1_Iter_Parsi1.png')
         
-        figure(8)
+        plt.figure(8)
         plot(h_norm_array)
         savefig('./HRF_Norm_Parsi1.png')
         
@@ -7163,7 +7163,7 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -7171,10 +7171,10 @@ def Main_vbjde_Extension_ParsiMod_C_1(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -7220,10 +7220,10 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
     
     HRF_Normalization = False
     
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     #p0 = 0.001
-    #c = numpy.log((1.-p0)/p0)
+    #c = np.log((1.-p0)/p0)
     #tau1 = c/tau2
     
     if NitMax < 0:
@@ -7234,44 +7234,44 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    MC_mean = numpy.zeros((M,J,S,K),dtype=numpy.float64)
+    MC_mean = np.zeros((M,J,S,K),dtype=np.float64)
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     condition_names = []
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    sigma_M0 = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M0 = np.ones((M,K),dtype=np.float64)
     sigma_M0[:,0] = 0.1
     sigma_M0[:,1] = 1.0
     
@@ -7280,23 +7280,23 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     #print 'Det_invR =', Det_invR
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
     #print 'Det_Gamma =',Det_Gamma
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -7305,44 +7305,44 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
         
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64) 
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64) 
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
 
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -7350,8 +7350,8 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
 
     cA = []
@@ -7368,19 +7368,19 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
     mu1 = [[] for m in xrange(M)]
 
     Ndrift = L.shape[0]
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -7390,7 +7390,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
@@ -7411,22 +7411,22 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                 #sigma_M *= Norm**2
             #print 'HRF Norm =', norm(m_H)
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
 
@@ -7440,7 +7440,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                 q_Z[m,1,:] = reshape(TrueZ[0][:,:,:,m],J)
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]            
         DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -7450,7 +7450,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
             UtilsC.expectation_W_ParsiMod_1_MeanLabels(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
             #print 'p_Wtilde =',p_Wtilde
         DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -7473,7 +7473,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
         
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -7510,7 +7510,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
@@ -7531,22 +7531,22 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
             #sigma_M *= Norm**2
         #print 'HRF Norm =', norm(m_H)
     if PLOT and ni >= 0:
-        figure(M+1)
+        plt.figure(M+1)
         plot(m_H)
         hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
     
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -7560,7 +7560,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
             q_Z[m,1,:] = reshape(TrueZ[0][:,:,:,m],J)
             q_Z[m,0,:] = 1 - q_Z[m,1,:]    
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -7568,7 +7568,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
         pyhrf.verbose(3, "E W step ...")
         UtilsC.expectation_W_ParsiMod_1_MeanLabels(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
     DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
@@ -7590,7 +7590,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
     
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     
     if estimateBeta:
@@ -7625,7 +7625,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
@@ -7645,22 +7645,22 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                     #sigma_M *= Norm**2
                 #print 'HRF Norm =', norm(m_H)
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
             
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -7673,7 +7673,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                     q_Z[m,1,:] = reshape(TrueZ[0][:,:,:,m],J)
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -7681,7 +7681,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                 UtilsC.expectation_W_ParsiMod_1_MeanLabels(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
                 #print 'p_Wtilde =',p_Wtilde
             DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
@@ -7703,7 +7703,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
             
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
             
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
             
             if estimateBeta:
@@ -7731,19 +7731,19 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
 
     t2 = time.time()
 
-    #FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
-    FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    #FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
+    FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     #for i in xrange(ni-1,NitMax+1):
         #FreeEnergyArray[i] = FreeEnergy_Iter[ni-1]
 
-    #W_Iter_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #SUM_q_Z_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #mu1_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    W_Iter_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
+    #W_Iter_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #SUM_q_Z_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #mu1_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    W_Iter_array = np.zeros((M,ni),dtype=np.float64)
+    SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
+    mu1_array = np.zeros((M,ni),dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             W_Iter_array[m,i] = W_Iter[m][i]
@@ -7757,7 +7757,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         #plot(cA[1:-1],'r')
         #hold(True)
         #plot(cH[1:-1],'b')
@@ -7777,11 +7777,11 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
         #draw()
         #show()
 
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergy_Iter)
         savefig('./FreeEnergy.png')
         
-        figure(4)
+        plt.figure(4)
         for m in xrange(M):
             plot(W_Iter_array[m])
             hold(True)
@@ -7790,7 +7790,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
         legend( ('m=0','m=1') ) 
         savefig('./W_Iter.png')
         
-        figure(5)
+        plt.figure(5)
         for m in xrange(M):
             plot(SUM_q_Z_array[m])
             hold(True)
@@ -7799,7 +7799,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
         legend( ('m=0','m=1') ) 
         savefig('./Sum_q_Z_Iter.png')
         
-        figure(6)
+        plt.figure(6)
         for m in xrange(M):
             plot(mu1_array[m])
             hold(True)
@@ -7833,7 +7833,7 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -7841,10 +7841,10 @@ def Main_vbjde_Extension_ParsiMod_C_1_MeanLabels(graph,Y,Onsets,Thrf,K,TR,beta,d
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -7895,86 +7895,86 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    MC_mean = numpy.zeros((M,J,S,K),dtype=numpy.float64)
+    MC_mean = np.zeros((M,J,S,K),dtype=np.float64)
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
-    #zerosV = numpy.zeros(V)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
+    #zerosV = np.zeros(V)
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     condition_names = []
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
     P = PolyMat( N , 4 , TR)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
+    R = np.dot(D2,D2) / pow(dt,2*order)
 
-    Gamma = numpy.identity(N)
-    Gamma = Gamma - numpy.dot(P,P.transpose())
+    Gamma = np.identity(N)
+    Gamma = Gamma - np.dot(P,P.transpose())
 
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     #for k in xrange(0,K):
     q_Z[:,1,:] = 1
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
     #Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                #m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                #m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
 
-    #PL = numpy.zeros((N,J),dtype=numpy.float64)
+    #PL = np.zeros((N,J),dtype=np.float64)
     y_tilde = Y
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -7991,19 +7991,19 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
 
     cTime = []
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -8013,7 +8013,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         if estimateHRF:
@@ -8023,30 +8023,30 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             m_H[-1] = 0
             #print 'HRF Norm =', norm(m_H)
             if PLOT and ni >= 0:
-                figure(1)
+                plt.figure(1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
             #print 'HXGamma=',HXGamma
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         pyhrf.verbose(3, "E Z step ...")
         UtilsC.expectation_Z_ParsiMod_2(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours,alpha_0)
         DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         pyhrf.verbose(3, "E W step ...")
         UtilsC.expectation_W_ParsiMod_2(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,Beta,neighboursIndexes.astype(int32),J,D,M,N,K,maxNeighbours,alpha,alpha_0)
         #print 'p_Wtilde =',p_Wtilde
         DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         if estimateSigmaH:
@@ -8082,7 +8082,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     if estimateHRF:
@@ -8092,29 +8092,29 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
       m_H[-1] = 0
       #print 'HRF Norm =', norm(m_H)
       if PLOT and ni >= 0:
-        figure(1)
+        plt.figure(1)
         plot(m_H)
         hold(True)
       #Update HXGamma
       m1 = 0
       for k1 in X: # Loop over the M conditions
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
     pyhrf.verbose(3, "E Z step ...")
     UtilsC.expectation_Z_ParsiMod_2(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours,alpha_0)
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     pyhrf.verbose(3, "E W step ...")
     UtilsC.expectation_W_ParsiMod_2(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,Beta,neighboursIndexes.astype(int32),J,D,M,N,K,maxNeighbours,alpha,alpha_0)
     #print 'p_Wtilde =',p_Wtilde
     DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     if estimateSigmaH:
@@ -8145,7 +8145,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             if estimateHRF:
@@ -8154,26 +8154,26 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                 m_H[-1] = 0
                 #print 'HRF Norm =', norm(m_H)
                 if PLOT and ni >= 0:
-                    figure(1)
+                    plt.figure(1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
             UtilsC.expectation_Z_ParsiMod_2(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours,alpha_0)
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             UtilsC.expectation_W_ParsiMod_2(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,Beta,neighboursIndexes.astype(int32),J,D,M,N,K,maxNeighbours,alpha,alpha_0)
             #print 'p_Wtilde =',p_Wtilde
             DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             if estimateSigmaH:
@@ -8201,7 +8201,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
 
     if PLOT:
         savefig('./HRF_Iter.png')
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -8239,7 +8239,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -8247,10 +8247,10 @@ def Main_vbjde_NoDrifts_ParsiMod_C_2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -8278,7 +8278,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 3 ---> W-mu1, Fixed tau2)) with C extension started ...")
 
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     NormFlag = False
     Nb2Norm = 1
@@ -8286,7 +8286,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     #p0 = 0.001
     #print 'tau2 =',tau2
     #print 'p0 =',p0
-    #tau1 = (1./tau2)*numpy.log((1.-p0)/p0)
+    #tau1 = (1./tau2)*np.log((1.-p0)/p0)
     
     print 'tau1 =',tau1
     print 'tau2 =',tau2
@@ -8300,8 +8300,8 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -8310,7 +8310,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -8319,7 +8319,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -8327,20 +8327,20 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
 
     Crit_H = 1
     Crit_Z = 1
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -8356,15 +8356,15 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     SUM_q_Z = [[] for m in xrange(M)]
     mu1 = [[] for m in xrange(M)]
 
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -8373,68 +8373,68 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
     
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)    
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)    
     Z_tilde = q_Z.copy()
     
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
     
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     m_h = m_h[:D]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     sigmaH1 = sigmaH
     if estimateHRF:
-        Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+        Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-        Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+        Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Ndrift = L.shape[0]
 
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.5
     sigma_M[:,1] = 0.6
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = InitMean
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A        
     
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1   
     
     t1 = time.time()
@@ -8445,8 +8445,8 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         
         val = reshape(m_A,(M*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-        val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
         m_A = reshape(val, (J,M))
         
         if estimateHRF:
@@ -8469,13 +8469,13 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     #sigma_M *= Norm**2 
             # Plotting HRF
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
         else:
@@ -8484,22 +8484,22 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 m_H = TrueVal
         
         DIFF = reshape( m_A - m_A1,(M*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -8518,19 +8518,19 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -8539,19 +8539,19 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             UtilsC.expectation_W_ParsiMod_3(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
         
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
         #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -8577,7 +8577,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -8618,8 +8618,8 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     
     val = reshape(m_A,(M*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
     m_A = reshape(val, (J,M))
     
     if estimateHRF:
@@ -8642,13 +8642,13 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 #sigma_M *= Norm**2 
         # Plotting HRF
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
     else:
@@ -8657,22 +8657,22 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             m_H = TrueVal
     
     DIFF = reshape( m_A - m_A1,(M*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -8690,19 +8690,19 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -8712,19 +8712,19 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         #print 'p_Wtilde =',p_Wtilde
     
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cW += [Crit_W]
     #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -8749,7 +8749,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -8787,8 +8787,8 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             
             val = reshape(m_A,(M*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-            val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
             m_A = reshape(val, (J,M))
             
             if estimateHRF:
@@ -8810,13 +8810,13 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                         #sigma_M *= Norm**2 
                 # Plotting HRF
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
             else:
@@ -8825,22 +8825,22 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     m_H = TrueVal
             
             DIFF = reshape( m_A - m_A1,(M*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -8857,19 +8857,19 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
                     
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))        
              
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:] 
              
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -8878,19 +8878,19 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 #print 'p_Wtilde =',p_Wtilde
             
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cW += [Crit_W]
             #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -8915,7 +8915,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -8945,19 +8945,19 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
     t2 = time.time()
 
-    #FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
-    FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    #FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
+    FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     #for i in xrange(ni-1,NitMax+1):
         #FreeEnergyArray[i] = FreeEnergy_Iter[ni-1]
 
-    #W_Iter_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #SUM_q_Z_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #mu1_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    W_Iter_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
+    #W_Iter_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #SUM_q_Z_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #mu1_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    W_Iter_array = np.zeros((M,ni),dtype=np.float64)
+    SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
+    mu1_array = np.zeros((M,ni),dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             W_Iter_array[m,i] = W_Iter[m][i]
@@ -8971,7 +8971,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     if PLOT:
         savefig('./HRF_Iter_Parsi3.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         #plot(cA[1:-1],'r')
         #hold(True)
         #plot(cH[1:-1],'b')
@@ -8989,15 +8989,15 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         grid(True)
         savefig('./Crit_Parsi3.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy_Parsi3.png')
         
-        figure(4)
+        plt.figure(4)
         plot(test_tau2)
         savefig('./tau2_Parsi3.png')
         
-        figure(5)
+        plt.figure(5)
         for m in xrange(M):
             plot(W_Iter_array[m])
             hold(True)
@@ -9007,7 +9007,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         axis([0, ni, 0, 1.2])
         savefig('./W_Iter_Parsi3.png')
         
-        figure(6)
+        plt.figure(6)
         for m in xrange(M):
             plot(SUM_q_Z_array[m])
             hold(True)
@@ -9016,7 +9016,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         #legend( ('m=0','m=1') ) 
         savefig('./Sum_q_Z_Iter_Parsi3.png')
         
-        figure(7)
+        plt.figure(7)
         for m in xrange(M):
             plot(mu1_array[m])
             hold(True)
@@ -9060,7 +9060,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -9068,13 +9068,13 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -9102,7 +9102,7 @@ def Main_vbjde_Extension_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
 def MiniVEM_ParsiMod_C_3_tau2(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,tau1,tau2,Nit,sigmaH,estimateHRF):
 
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     Init_tau2 = tau2
     Init_tau1 = tau1
     Init_sigmaH = sigmaH
@@ -9127,14 +9127,14 @@ def MiniVEM_ParsiMod_C_3_tau2(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep
                 tau1 = c/tau2
                 #print 'tau1 =',tau1,',  tau2 =',tau2
                 sigmaH = Init_sigmaH
-                sigma_epsilone = numpy.ones(J)
+                sigma_epsilone = np.ones(J)
                 if 0:
                     pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-                    q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+                    q_Z = np.ones((M,K,J),dtype=np.float64)
                     q_Z[:,1,:] = 0
                 if 0:
                     pyhrf.verbose(3,"Labels are initialized randomly ...")
-                    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
                     nbVoxInClass = J/K
                     for j in xrange(M) :
                         if J%2==0:
@@ -9143,60 +9143,60 @@ def MiniVEM_ParsiMod_C_3_tau2(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep
                             l = [0]
                         for c in xrange(K) :
                             l += [c] * nbVoxInClass
-                        q_Z[j,0,:] = numpy.random.permutation(l)
+                        q_Z[j,0,:] = np.random.permutation(l)
                         q_Z[j,1,:] = 1. - q_Z[j,0,:]
                 if 1:
                     pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-                    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
                     q_Z[:,1,:] = 1
                 
-                p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-                p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+                p_Wtilde = np.zeros((M,K),dtype=np.float64)
+                p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
                 p_Wtilde[:,1] = 1
                 
                 #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
                 TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
                 m_h = m_h[:D]
-                m_H = numpy.array(m_h).astype(numpy.float64)
+                m_H = np.array(m_h).astype(np.float64)
                 if estimateHRF:
-                    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+                    Sigma_H = np.ones((D,D),dtype=np.float64)
                 else:
-                    Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+                    Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-                Beta = beta * numpy.ones((M),dtype=numpy.float64)
+                Beta = beta * np.ones((M),dtype=np.float64)
                 P = PolyMat( N , 4 , TR)
                 L = polyFit(Y, TR, 4,P)
-                PL = numpy.dot(P,L)
+                PL = np.dot(P,L)
                 y_tilde = Y - PL
                 Ndrift = L.shape[0]
                 
                 gamma_h = Gh
-                sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+                sigma_M = np.ones((M,K),dtype=np.float64)
                 sigma_M[:,0] = 0.1
                 sigma_M[:,1] = 1.0
-                mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+                mu_M = np.zeros((M,K),dtype=np.float64)
                 for k in xrange(1,K):
                     mu_M[:,k] = InitMean
-                Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+                Sigma_A = np.zeros((M,M,J),np.float64)
                 for j in xrange(0,J):
-                    Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-                m_A = numpy.zeros((J,M),dtype=numpy.float64)
+                    Sigma_A[:,:,j] = 0.01*np.identity(M)    
+                m_A = np.zeros((J,M),dtype=np.float64)
                 for j in xrange(0,J):
                     for m in xrange(0,M):
                         for k in xrange(0,K):
-                            m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                            m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
 
                 for ni in xrange(0,Nit+1):
                     pyhrf.verbose(3,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
                     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
                     val = reshape(m_A,(M*J))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-                    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
                     m_A = reshape(val, (J,M))
 
                     if estimateHRF:
@@ -9206,17 +9206,17 @@ def MiniVEM_ParsiMod_C_3_tau2(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep
                         #Update HXGamma
                         m1 = 0
                         for k1 in X: # Loop over the M conditions
-                            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                             m1 += 1
                     
                     UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
                     val = reshape(q_Z,(M*K*J))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
                     q_Z = reshape(val, (M,K,J))
 
                     UtilsC.expectation_W_ParsiMod_3(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
                     val = reshape(p_Wtilde,(M*K))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
                     p_Wtilde = reshape(val, (M,K))
                     
                     if estimateHRF:
@@ -9230,7 +9230,7 @@ def MiniVEM_ParsiMod_C_3_tau2(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep
                     #print 'tau1 =',tau1,',  tau2 =',tau2
                     mu_M , sigma_M = maximization_mu_sigma_ParsiMod3(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A,p_Wtilde,J,tau1,tau2,ni,estimateW)
                     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
-                    PL = numpy.dot(P,L)
+                    PL = np.dot(P,L)
                     y_tilde = Y - PL
                     for m in xrange(0,M):
                         Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(float64),q_Z[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
@@ -9255,13 +9255,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 3)) with C extension started ...")
 
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     Nb2Norm = 1
     NormFlag = False
 
     p0 = 0.001
-    c = numpy.log((1.-p0)/p0)
+    c = np.log((1.-p0)/p0)
     tau1 = c/tau2
     Init_sigmaH = sigmaH
     Init_tau2 = tau2
@@ -9274,8 +9274,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -9284,7 +9284,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -9293,7 +9293,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -9301,20 +9301,20 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
 
     Crit_H = 1
     Crit_Z = 1
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -9327,18 +9327,18 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     cFE = []
     cTime = []
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         m1 += 1   
 
     if MiniVEMFlag:
@@ -9349,14 +9349,14 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     tau1 = c/Init_tau2
     #print 'tau1 =',tau1,',  tau2 =',tau2
     sigmaH = Init_sigmaH
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -9365,58 +9365,58 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
     
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)    
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)    
     Z_tilde = q_Z.copy()
     
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
     
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     m_h = m_h[:D]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     sigmaH1 = sigmaH
     if estimateHRF:
-        Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+        Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-        Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+        Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Ndrift = L.shape[0]
 
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = InitMean
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A        
     
     m1 = 0
     for k1 in X: # Loop over the M conditions
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
     
     t1 = time.time()
@@ -9428,8 +9428,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         
         val = reshape(m_A,(M*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-        val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
         m_A = reshape(val, (J,M))
 
         if estimateHRF:
@@ -9452,13 +9452,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     #sigma_M *= Norm**2
             # Plotting HRF
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
         else:
@@ -9467,22 +9467,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 m_H = TrueVal
         
         DIFF = reshape( m_A - m_A1,(M*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -9501,19 +9501,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -9522,19 +9522,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
             UtilsC.expectation_W_ParsiMod_3(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
         
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
         #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -9559,7 +9559,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -9599,8 +9599,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     
     val = reshape(m_A,(M*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
     m_A = reshape(val, (J,M))
     
     if estimateHRF:
@@ -9623,13 +9623,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 #sigma_M *= Norm**2 
         # Plotting HRF
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
  
     else:
@@ -9638,22 +9638,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
             m_H = TrueVal
  
     DIFF = reshape( m_A - m_A1,(M*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -9671,19 +9671,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -9693,19 +9693,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         #print 'p_Wtilde =',p_Wtilde
     
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cW += [Crit_W]
     #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -9730,7 +9730,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -9768,8 +9768,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             
             val = reshape(m_A,(M*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-            val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
             m_A = reshape(val, (J,M))
             
             if estimateHRF:
@@ -9791,13 +9791,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                         #sigma_M *= Norm**2 
                 # Plotting HRF
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
             else:
@@ -9806,22 +9806,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     m_H = TrueVal
             
             DIFF = reshape( m_A - m_A1,(M*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -9838,19 +9838,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
                     
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))        
              
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:] 
              
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -9859,19 +9859,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 #print 'p_Wtilde =',p_Wtilde
             
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cW += [Crit_W]
             #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -9896,7 +9896,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -9925,7 +9925,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -9934,7 +9934,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -9951,11 +9951,11 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         grid(True)
         savefig('./Crit.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy.png')
         
-        figure(4)
+        plt.figure(4)
         plot(test_tau2)
         savefig('./tau2.png')
 
@@ -9993,7 +9993,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -10001,13 +10001,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -10033,7 +10033,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 3 ---> W-mu1, Glob tau2, Fixed tau1)) with C extension started ...")
 
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     NormFlag = False
     Nb2Norm = 1
@@ -10041,7 +10041,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     p0 = 0.001
     #print 'p0 =',p0
     val = (alpha-1.)/lam
-    tau1 = (1./val)*numpy.log((1.-p0)/p0)
+    tau1 = (1./val)*np.log((1.-p0)/p0)
     #tau1 = 1.
     #print 'tau1 =',tau1
 
@@ -10053,8 +10053,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -10063,7 +10063,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -10072,7 +10072,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -10080,20 +10080,20 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
 
     Crit_H = 1
     Crit_Z = 1
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -10110,15 +10110,15 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     mu1 = [[] for m in xrange(M)]
     h_norm = []
 
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -10127,68 +10127,68 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
     
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)    
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)    
     Z_tilde = q_Z.copy()
     
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
     
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     m_h = m_h[:D]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     sigmaH1 = sigmaH
     if estimateHRF:
-        Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+        Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-        Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+        Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Ndrift = L.shape[0]
 
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.5
     sigma_M[:,1] = 0.6
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = InitMean
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A        
     
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1   
     
     t1 = time.time()
@@ -10200,8 +10200,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         
         val = reshape(m_A,(M*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-        val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
         m_A = reshape(val, (J,M))
         
         if estimateHRF:
@@ -10222,13 +10222,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     Sigma_A *= Norm**2
             # Plotting HRF
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
         else:
@@ -10237,22 +10237,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 m_H = TrueVal
         
         DIFF = reshape( m_A - m_A1,(M*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -10271,19 +10271,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -10292,19 +10292,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
             UtilsC.expectation_W_ParsiMod_3(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
             #print 'p_wtilde =',p_Wtilde[:,1]
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
         #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -10332,7 +10332,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -10373,8 +10373,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     
     val = reshape(m_A,(M*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
     m_A = reshape(val, (J,M))
     
     if estimateHRF:
@@ -10392,13 +10392,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 Sigma_A *= Norm**2
         # Plotting HRF
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
     else:
@@ -10407,22 +10407,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
             m_H = TrueVal
     
     DIFF = reshape( m_A - m_A1,(M*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -10440,19 +10440,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -10462,19 +10462,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         #print 'p_Wtilde =',p_Wtilde
     
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cW += [Crit_W]
     #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -10501,7 +10501,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -10539,8 +10539,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             
             val = reshape(m_A,(M*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-            val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
             m_A = reshape(val, (J,M))
             
             if estimateHRF:
@@ -10557,13 +10557,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                         Sigma_A *= Norm**2
                 # Plotting HRF
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
             else:
@@ -10572,22 +10572,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     m_H = TrueVal
             
             DIFF = reshape( m_A - m_A1,(M*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -10604,19 +10604,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
                     
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))        
              
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:] 
              
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -10625,19 +10625,19 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 #print 'p_Wtilde =',p_Wtilde
             
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cW += [Crit_W]
             #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -10664,7 +10664,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -10694,20 +10694,20 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
     t2 = time.time()
 
-    #FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
-    FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    #FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
+    FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     #for i in xrange(ni-1,NitMax+1):
         #FreeEnergyArray[i] = FreeEnergy_Iter[ni-1]
 
-    #W_Iter_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #SUM_q_Z_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    #mu1_array = numpy.zeros((M,NitMax+1),dtype=numpy.float64)
-    W_Iter_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    h_norm_array = numpy.zeros((ni),dtype=numpy.float64)
+    #W_Iter_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #SUM_q_Z_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    #mu1_array = np.zeros((M,NitMax+1),dtype=np.float64)
+    W_Iter_array = np.zeros((M,ni),dtype=np.float64)
+    SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
+    mu1_array = np.zeros((M,ni),dtype=np.float64)
+    h_norm_array = np.zeros((ni),dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             W_Iter_array[m,i] = W_Iter[m][i]
@@ -10725,7 +10725,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     if PLOT:
         savefig('./HRF_Iter_Parsi3.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         #plot(cA[1:-1],'r')
         #hold(True)
         #plot(cH[1:-1],'b')
@@ -10743,15 +10743,15 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         grid(True)
         savefig('./Crit_Parsi3.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy_Parsi3.png')
         
-        figure(4)
+        plt.figure(4)
         plot(test_tau2)
         savefig('./tau2_Parsi3.png')
         
-        figure(5)
+        plt.figure(5)
         for m in xrange(M):
             plot(W_Iter_array[m])
             hold(True)
@@ -10762,7 +10762,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         axis([0, ni, 0, 1.2])
         savefig('./W_Iter_Parsi3.png')
         
-        figure(6)
+        plt.figure(6)
         for m in xrange(M):
             plot(SUM_q_Z_array[m])
             hold(True)
@@ -10772,7 +10772,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         #legend( ('Calcul','Phrase','Clic','Damier'),loc='upper left')
         savefig('./Sum_q_Z_Iter_Parsi3.png')
         
-        figure(7)
+        plt.figure(7)
         for m in xrange(M):
             plot(mu1_array[m])
             hold(True)
@@ -10782,7 +10782,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         #legend( ('Calcul','Phrase','Clic','Damier'),loc='upper left')
         savefig('./mu1_Iter_Parsi3.png')
         
-        figure(8)
+        plt.figure(8)
         plot(h_norm_array)
         savefig('./HRF_Norm_Parsi3.png')
         
@@ -10823,7 +10823,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -10831,13 +10831,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -10865,7 +10865,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
 def MiniVEM_ParsiMod_C_3_tau2_Cond(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,Nit,sigmaH,estimateHRF):
 
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     Init_sigmaH = sigmaH
     
     IM_val = np.array([-5.,5.])
@@ -10884,17 +10884,17 @@ def MiniVEM_ParsiMod_C_3_tau2_Cond(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradien
         for InitVar in IV_val:
             for InitMean in IM_val:
                 Init_mixt_p_gammah += [[InitVar,InitMean,Gh]]
-                tau2 = 0.1*numpy.ones(M,dtype=numpy.float64)
+                tau2 = 0.1*np.ones(M,dtype=np.float64)
                 tau1 = c/tau2
                 sigmaH = Init_sigmaH
-                sigma_epsilone = numpy.ones(J)
+                sigma_epsilone = np.ones(J)
                 if 0:
                     pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-                    q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+                    q_Z = np.ones((M,K,J),dtype=np.float64)
                     q_Z[:,1,:] = 0
                 if 0:
                     pyhrf.verbose(3,"Labels are initialized randomly ...")
-                    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
                     nbVoxInClass = J/K
                     for j in xrange(M) :
                         if J%2==0:
@@ -10903,60 +10903,60 @@ def MiniVEM_ParsiMod_C_3_tau2_Cond(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradien
                             l = [0]
                         for c in xrange(K) :
                             l += [c] * nbVoxInClass
-                        q_Z[j,0,:] = numpy.random.permutation(l)
+                        q_Z[j,0,:] = np.random.permutation(l)
                         q_Z[j,1,:] = 1. - q_Z[j,0,:]
                 if 1:
                     pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-                    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+                    q_Z = np.zeros((M,K,J),dtype=np.float64)
                     q_Z[:,1,:] = 1
                 
-                p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-                p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+                p_Wtilde = np.zeros((M,K),dtype=np.float64)
+                p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
                 p_Wtilde[:,1] = 1
                 
                 #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
                 TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
                 m_h = m_h[:D]
-                m_H = numpy.array(m_h).astype(numpy.float64)
+                m_H = np.array(m_h).astype(np.float64)
                 if estimateHRF:
-                    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+                    Sigma_H = np.ones((D,D),dtype=np.float64)
                 else:
-                    Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+                    Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-                Beta = beta * numpy.ones((M),dtype=numpy.float64)
+                Beta = beta * np.ones((M),dtype=np.float64)
                 P = PolyMat( N , 4 , TR)
                 L = polyFit(Y, TR, 4,P)
-                PL = numpy.dot(P,L)
+                PL = np.dot(P,L)
                 y_tilde = Y - PL
                 Ndrift = L.shape[0]
                 
                 gamma_h = Gh
-                sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+                sigma_M = np.ones((M,K),dtype=np.float64)
                 sigma_M[:,0] = 0.1
                 sigma_M[:,1] = 1.0
-                mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+                mu_M = np.zeros((M,K),dtype=np.float64)
                 for k in xrange(1,K):
                     mu_M[:,k] = InitMean
-                Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+                Sigma_A = np.zeros((M,M,J),np.float64)
                 for j in xrange(0,J):
-                    Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-                m_A = numpy.zeros((J,M),dtype=numpy.float64)
+                    Sigma_A[:,:,j] = 0.01*np.identity(M)    
+                m_A = np.zeros((J,M),dtype=np.float64)
                 for j in xrange(0,J):
                     for m in xrange(0,M):
                         for k in xrange(0,K):
-                            m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                            m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
 
                 for ni in xrange(0,Nit+1):
                     pyhrf.verbose(3,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
                     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
                     val = reshape(m_A,(M*J))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-                    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
                     m_A = reshape(val, (J,M))
 
                     if estimateHRF:
@@ -10966,17 +10966,17 @@ def MiniVEM_ParsiMod_C_3_tau2_Cond(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradien
                         #Update HXGamma
                         m1 = 0
                         for k1 in X: # Loop over the M conditions
-                            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                             m1 += 1
                     
                     UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
                     val = reshape(q_Z,(M*K*J))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
                     q_Z = reshape(val, (M,K,J))
 
                     UtilsC.expectation_W_ParsiMod_3_Cond(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
                     val = reshape(p_Wtilde,(M*K))
-                    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+                    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
                     p_Wtilde = reshape(val, (M,K))
                     
                     if estimateHRF:
@@ -10990,7 +10990,7 @@ def MiniVEM_ParsiMod_C_3_tau2_Cond(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradien
                     
                     mu_M , sigma_M = maximization_mu_sigma_ParsiMod3_Cond(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A,p_Wtilde,J,tau1,tau2,ni)
                     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
-                    PL = numpy.dot(P,L)
+                    PL = np.dot(P,L)
                     y_tilde = Y - PL
                     for m in xrange(0,M):
                         Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(float64),q_Z[m,:,:].astype(float64),J,K,neighboursIndexes.astype(int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
@@ -11014,7 +11014,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
 
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 3 with tau2/condition)) with C extension started ...")
 
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
 
     NormFlag = False
     Nb2Norm = 1
@@ -11027,22 +11027,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
     p0 = 0.001
-    c = numpy.log((1.-p0)/p0)
+    c = np.log((1.-p0)/p0)
     
     Init_sigmaH = sigmaH
 
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -11051,7 +11051,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -11059,20 +11059,20 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
 
     Crit_H = 1
     Crit_Z = 1
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -11084,35 +11084,35 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
     cFE = []
     cTime = []
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         m1 += 1   
 
     if MiniVEMFlag:
         pyhrf.verbose(1,"MiniVEM to choose the best initialisation...")
         InitVar, InitMean, gamma_h = MiniVEM_ParsiMod_C_3_tau2_Cond(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,NbItMiniVem,sigmaH,estimateHRF)
 
-    tau2 = 0.1*numpy.ones(M,dtype=numpy.float64)
+    tau2 = 0.1*np.ones(M,dtype=np.float64)
     tau1 = c/tau2
     sigmaH = Init_sigmaH
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -11121,58 +11121,58 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
     
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     Z_tilde = q_Z.copy()
     
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
     
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     m_h = m_h[:D]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     sigmaH1 = sigmaH
     if estimateHRF:
-        Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+        Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-        Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+        Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Ndrift = L.shape[0]
 
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = InitMean
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A        
     
     m1 = 0
     for k1 in X: # Loop over the M conditions
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
     
     t1 = time.time()
@@ -11184,8 +11184,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
 
         val = reshape(m_A,(M*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-        val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
         m_A = reshape(val, (J,M))
 
         if estimateHRF:
@@ -11208,13 +11208,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                     #sigma_M *= Norm**2 
             # Plotting HRF
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
         else:
@@ -11223,22 +11223,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                 m_H = TrueVal
         
         DIFF = reshape( m_A - m_A1,(M*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -11256,13 +11256,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -11271,13 +11271,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
             UtilsC.expectation_W_ParsiMod_3_Cond(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
         
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -11299,7 +11299,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
 
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -11332,8 +11332,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     
     val = reshape(m_A,(M*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
     m_A = reshape(val, (J,M))
     
     if estimateHRF:
@@ -11356,13 +11356,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                 #sigma_M *= Norm**2 
         # Plotting HRF
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
     else:
@@ -11371,22 +11371,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
             m_H = TrueVal
     
     DIFF = reshape( m_A - m_A1,(M*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -11404,13 +11404,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -11419,13 +11419,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
         UtilsC.expectation_W_ParsiMod_3_Cond(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
     
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -11446,7 +11446,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
 
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -11478,8 +11478,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             
             val = reshape(m_A,(M*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-            val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
             m_A = reshape(val, (J,M))
             
             if estimateHRF:
@@ -11501,13 +11501,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                         #sigma_M *= Norm**2 
                 # Plotting HRF
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
             else:
@@ -11516,22 +11516,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                     m_H = TrueVal
             
             DIFF = reshape( m_A - m_A1,(M*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -11548,13 +11548,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
                     
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))        
              
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -11562,13 +11562,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                 UtilsC.expectation_W_ParsiMod_3_Cond(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
             
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
@@ -11589,7 +11589,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
 
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -11618,7 +11618,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -11627,7 +11627,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -11644,7 +11644,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
         grid(True)
         savefig('./Crit.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy.png')
 
@@ -11682,7 +11682,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -11690,13 +11690,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond(graph,Y,Onsets,Thrf,K,TR,beta,dt
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -11722,7 +11722,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
 
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 3 with tau2/condition)) with C extension started ...")
 
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
 
     NormFlag = False
     Nb2Norm = 1
@@ -11735,22 +11735,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
     p0 = 0.001
-    c = numpy.log((1.-p0)/p0)
+    c = np.log((1.-p0)/p0)
     
     Init_sigmaH = sigmaH
 
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -11759,7 +11759,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -11767,20 +11767,20 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
 
     Crit_H = 1
     Crit_Z = 1
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -11796,35 +11796,35 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
     test_tau2 = [[] for m in xrange(M)]
     #test_mu1 =  [[] for m in xrange(M)]
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
         m1 += 1   
 
     if MiniVEMFlag:
         pyhrf.verbose(1,"MiniVEM to choose the best initialisation...")
         InitVar, InitMean, gamma_h = MiniVEM_ParsiMod_C_3_tau2_Cond(Thrf,TR,dt,beta,Y,K,alpha,lam,c,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,NbItMiniVem,sigmaH,estimateHRF)
 
-    tau2 = 0.1*numpy.ones(M,dtype=numpy.float64)
+    tau2 = 0.1*np.ones(M,dtype=np.float64)
     tau1 = c/tau2
     sigmaH = Init_sigmaH
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -11833,58 +11833,58 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
     
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     Z_tilde = q_Z.copy()
     
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
     
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     m_h = m_h[:D]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     sigmaH1 = sigmaH
     if estimateHRF:
-        Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+        Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-        Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+        Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Ndrift = L.shape[0]
 
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = InitMean
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)    
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A        
     
     m1 = 0
     for k1 in X: # Loop over the M conditions
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
     
     t1 = time.time()
@@ -11896,8 +11896,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
 
         val = reshape(m_A,(M*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-        val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
         #m_A = reshape(val, (J,M))
 
         if estimateHRF:
@@ -11920,13 +11920,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                     #sigma_M *= Norm**2 
             # Plotting HRF
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
         else:
@@ -11935,22 +11935,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                 m_H = TrueVal
         
         DIFF = reshape( m_A - m_A1,(M*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -11968,13 +11968,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         #q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -11983,13 +11983,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
             UtilsC.expectation_W_ParsiMod_3_Cond(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
         
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -12014,7 +12014,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
 
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -12047,8 +12047,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     
     val = reshape(m_A,(M*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-    val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
     #m_A = reshape(val, (J,M))
     
     if estimateHRF:
@@ -12071,13 +12071,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                 #sigma_M *= Norm**2 
         # Plotting HRF
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
     else:
@@ -12086,22 +12086,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
             m_H = TrueVal
     
     DIFF = reshape( m_A - m_A1,(M*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -12119,13 +12119,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     #q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -12134,13 +12134,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
         UtilsC.expectation_W_ParsiMod_3_Cond(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
         
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     #p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -12164,7 +12164,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
 
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -12196,8 +12196,8 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             
             val = reshape(m_A,(M*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
-            val[ find((val>=-1e-50) & (val<0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
             #m_A = reshape(val, (J,M))
             
             if estimateHRF:
@@ -12219,13 +12219,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                         #sigma_M *= Norm**2 
                 # Plotting HRF
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
             else:
@@ -12234,22 +12234,22 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                     m_H = TrueVal
             
             DIFF = reshape( m_A - m_A1,(M*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -12266,13 +12266,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
                     
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             #q_Z = reshape(val, (M,K,J))        
              
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -12280,13 +12280,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                 UtilsC.expectation_W_ParsiMod_3_Cond(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
                     
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             #p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
@@ -12310,7 +12310,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
 
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -12339,7 +12339,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -12350,7 +12350,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -12367,20 +12367,20 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
         grid(True)
         savefig('./Crit.png')
 
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy.png')
 
     for m in xrange(M):
-        figure(4+m)
+        plt.figure(4+m)
         plot(test_W[m])
         savefig('./W_%s.png' %m)
-        figure(4+M+m)
+        plt.figure(4+M+m)
         plot(test_tau2[m])
         savefig('./tau2_%s.png' %m)
 
     #for m in xrange(M):
-        #figure(4+2*M+m)
+        #plt.figure(4+2*M+m)
         #plot(test_mu1[m])
         #savefig('./mu1_ParsiMod_Cond_%s.png' %m)
 
@@ -12418,7 +12418,7 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -12426,13 +12426,13 @@ def Main_vbjde_Extension_ParsiMod_C_3_tau2_Cond_FixedTau1(graph,Y,Onsets,Thrf,K,
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -12459,7 +12459,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 4)) with C extension started ...")
     
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     NormFlag = False
     Nb2Norm = 1    
@@ -12472,43 +12472,43 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
 
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    sigma_M0 = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M0 = np.ones((M,K),dtype=np.float64)
     sigma_M0[:,0] = 0.1
     sigma_M0[:,1] = 1.0
     
@@ -12517,23 +12517,23 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     print 'Det_invR =', Det_invR
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
     print 'Det_Gamma =',Det_Gamma
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -12542,44 +12542,44 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
         
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)    
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)    
     Z_tilde = q_Z.copy()
     
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check #########################
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -12587,8 +12587,8 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -12606,19 +12606,19 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     cTime = []
 
     Ndrift = L.shape[0]
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -12639,7 +12639,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
 
@@ -12662,23 +12662,23 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     #mu_M *= Norm
                     #sigma_M *= Norm**2 
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -12696,18 +12696,18 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -12722,18 +12722,18 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 test_mu2[m] += [mu_M[m,1]**2]
         
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
         #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -12753,7 +12753,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -12792,7 +12792,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
 
@@ -12815,23 +12815,23 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 #mu_M *= Norm
                 #sigma_M *= Norm**2 
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -12849,18 +12849,18 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
             
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]        
             
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -12875,18 +12875,18 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             test_mu2[m] += [mu_M[m,1]**2]
             
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
 
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cW += [Crit_W]
     #p_Wtilde1[:,:] = p_Wtilde[:,:]
     
@@ -12905,7 +12905,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -12942,7 +12942,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
 
@@ -12964,23 +12964,23 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                         #mu_M *= Norm
                         #sigma_M *= Norm**2 
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -12997,18 +12997,18 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
             
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))
             
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -13022,18 +13022,18 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     test_mu2[m] += [mu_M[m,1]**2]
                     
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cW += [Crit_W]
             #p_Wtilde1[:,:] = p_Wtilde[:,:]
             
@@ -13052,7 +13052,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
             
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -13082,7 +13082,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -13091,7 +13091,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -13108,18 +13108,18 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
         grid(True)
         savefig('./Crit.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy.png')
         
         for m in xrange(M):
-            figure(6+m)
+            plt.figure(6+m)
             plot(test_W[m])
             savefig('./W_%s.png' %m)
-            figure(6+M+m)
+            plt.figure(6+M+m)
             plot(test_dKL[m])
             savefig('./dKL_%s.png' %m)
-            figure(6+M+M+m)
+            plt.figure(6+M+M+m)
             plot(test_mu2[m])
             savefig('./mu²_%s.png' %m)
 
@@ -13157,7 +13157,7 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -13165,13 +13165,13 @@ def Main_vbjde_Extension_ParsiMod_C_4(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,e
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -13199,13 +13199,13 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 4)) with C extension started ...")
         
     p0 = 0.001
-    c = numpy.log((1.-p0)/p0)
+    c = np.log((1.-p0)/p0)
     tau1 = c/tau2
     
     NormFlag = True
     Nb2Norm = 1
     
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     if NitMax < 0:
         NitMax = 100
@@ -13215,43 +13215,43 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
 
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    sigma_M0 = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M0 = np.ones((M,K),dtype=np.float64)
     sigma_M0[:,0] = 0.1
     sigma_M0[:,1] = 1.0
     
@@ -13260,23 +13260,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     print 'Det_invR =', Det_invR
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
     print 'Det_Gamma =',Det_Gamma
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -13285,44 +13285,44 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
         
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     Z_tilde = q_Z.copy()
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check #########################
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -13330,8 +13330,8 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -13352,19 +13352,19 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     cTime = []
 
     Ndrift = L.shape[0]
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -13385,7 +13385,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
 
@@ -13408,23 +13408,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     #mu_M *= Norm
                     #sigma_M *= Norm**2 
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -13442,18 +13442,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -13470,18 +13470,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 test_v1[m] +=[sigma_M[m,1]]
         
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
         #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -13508,7 +13508,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -13547,7 +13547,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
 
@@ -13570,23 +13570,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 #mu_M *= Norm
                 #sigma_M *= Norm**2 
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -13604,18 +13604,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -13632,18 +13632,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
             test_v1[m] +=[sigma_M[m,1]]
     
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cW += [Crit_W]
     #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -13669,7 +13669,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -13706,7 +13706,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
 
@@ -13728,23 +13728,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                         #mu_M *= Norm
                         #sigma_M *= Norm**2 
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -13761,18 +13761,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
             
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))
             
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -13788,18 +13788,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     test_v1[m] +=[sigma_M[m,1]]
             
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cW += [Crit_W]
             #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -13825,7 +13825,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -13855,7 +13855,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -13864,7 +13864,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -13881,27 +13881,27 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         grid(True)
         savefig('./Crit.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy.png')
         
-        figure(4)
+        plt.figure(4)
         plot(test_tau2)
         savefig('./tau2.png')
         
         for m in xrange(M):
-            figure(6+m)
+            plt.figure(6+m)
             plot(test_W[m])
             savefig('./W_%s.png' %m)
-            figure(6+M+m)
+            plt.figure(6+M+m)
             plot(test_dKL[m])
             savefig('./dKL_%s.png' %m)
-            figure(6+M+M+m)
+            plt.figure(6+M+M+m)
             plot(test_mu2[m])
             savefig('./mu²_%s.png' %m)
             
         for m in xrange(M):
-            figure(6+M+M+M+m)
+            plt.figure(6+M+M+M+m)
             plot(test_v0[m],'r')
             hold(True)
             plot(test_v1[m],'b')
@@ -13942,7 +13942,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -13950,13 +13950,13 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -13984,13 +13984,13 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((Definition 4)) with C extension started ...")
         
     p0 = 0.001
-    c = numpy.log((1.-p0)/p0)
+    c = np.log((1.-p0)/p0)
     tau1 = c/tau2
     
     NormFlag = False
     Nb2Norm = 1
     
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     if NitMax < 0:
         NitMax = 100
@@ -14000,43 +14000,43 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
 
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.1
     sigma_M[:,1] = 1.0
-    sigma_M0 = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M0 = np.ones((M,K),dtype=np.float64)
     sigma_M0[:,0] = 0.1
     sigma_M0[:,1] = 1.0
     
@@ -14045,23 +14045,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     print 'Det_invR =', Det_invR
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
     print 'Det_Gamma =',Det_Gamma
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -14070,44 +14070,44 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
         
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     Z_tilde = q_Z.copy()
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check #########################
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -14115,8 +14115,8 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     Crit_A = 1
     Crit_W = 1
     Crit_AH = 1
-    AH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -14137,19 +14137,19 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     cTime = []
 
     Ndrift = L.shape[0]
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -14170,7 +14170,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
 
@@ -14193,23 +14193,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     #mu_M *= Norm
                     #sigma_M *= Norm**2 
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -14227,18 +14227,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 q_Z[m,0,:] = 1 - q_Z[m,1,:]
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -14255,18 +14255,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 test_v1[m] +=[sigma_M[m,1]]
         
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         
         #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
         
@@ -14289,7 +14289,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
         UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -14328,7 +14328,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
 
@@ -14351,23 +14351,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 #mu_M *= Norm
                 #sigma_M *= Norm**2 
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -14385,18 +14385,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
             q_Z[m,0,:] = 1 - q_Z[m,1,:]
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
     
@@ -14413,18 +14413,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
             test_v1[m] +=[sigma_M[m,1]]
     
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cW += [Crit_W]
     #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -14446,7 +14446,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     
     UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -14483,7 +14483,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
 
@@ -14505,23 +14505,23 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                         #mu_M *= Norm
                         #sigma_M *= Norm**2 
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
             
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -14538,18 +14538,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
             
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))
             
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
             
@@ -14565,18 +14565,18 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     test_v1[m] +=[sigma_M[m,1]]
             
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cW += [Crit_W]
             #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -14598,7 +14598,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
             UtilsC.maximization_L_ParsiMod(Y,m_A,m_H,L,P,XX.astype(int32),p_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -14628,7 +14628,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -14637,7 +14637,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
     if PLOT:
         savefig('./HRF_Iter.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -14654,27 +14654,27 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
         grid(True)
         savefig('./Crit.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy.png')
         
-        figure(4)
+        plt.figure(4)
         plot(test_tau2)
         savefig('./tau2.png')
         
         for m in xrange(M):
-            figure(6+m)
+            plt.figure(6+m)
             plot(test_W[m])
             savefig('./W_%s.png' %m)
-            figure(6+M+m)
+            plt.figure(6+M+m)
             plot(test_dKL[m])
             savefig('./dKL_%s.png' %m)
-            figure(6+M+M+m)
+            plt.figure(6+M+M+m)
             plot(test_mu2[m])
             savefig('./mu²_%s.png' %m)
             
         for m in xrange(M):
-            figure(6+M+M+M+m)
+            plt.figure(6+M+M+M+m)
             plot(test_v0[m],'r')
             hold(True)
             plot(test_v1[m],'b')
@@ -14715,7 +14715,7 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -14723,13 +14723,13 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2_FixedTau1(graph,Y,Onsets,Thrf,K,TR,be
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -14757,7 +14757,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
 
     pyhrf.verbose(1,"Fast EM for Parsimonious Model ((RVM)) with C extension started ...")
     
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     if NitMax < 0:
         NitMax = 100
@@ -14767,8 +14767,8 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
 
-    #D = int(numpy.ceil(Thrf/dt))  ##################################
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))  ##################################
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -14777,7 +14777,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     condition_names = []
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
@@ -14786,7 +14786,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
@@ -14794,21 +14794,21 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     
-    Gamma = numpy.identity(N)
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
     
     Crit_H = 1
     Crit_Z = 1
     Crit_A = 1
     Crit_W = 1
     Crit_AWH = 1
-    AW = numpy.zeros((J,M),dtype=numpy.float64)
-    AWH = numpy.zeros((J,M,D),dtype=numpy.float64)
-    AWH1 = numpy.zeros((J,M,D),dtype=numpy.float64)
+    AW = np.zeros((J,M),dtype=np.float64)
+    AWH = np.zeros((J,M,D),dtype=np.float64)
+    AWH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
     
     cA = []
@@ -14820,16 +14820,16 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     cFE = []
     cTime = []
     
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
    
     if 0:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = numpy.ones((M,K,J),dtype=numpy.float64)
+        q_Z = np.ones((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 0
     
     if 0:
         pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         nbVoxInClass = J/K
         for j in xrange(M) :
             if J%2==0:
@@ -14838,78 +14838,78 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
                 l = [0]
             for c in xrange(K) :
                 l += [c] * nbVoxInClass
-            q_Z[j,0,:] = numpy.random.permutation(l)
+            q_Z[j,0,:] = np.random.permutation(l)
             q_Z[j,1,:] = 1. - q_Z[j,0,:]
     
     if 1:
         pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+        q_Z = np.zeros((M,K,J),dtype=np.float64)
         q_Z[:,1,:] = 1
         
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)    
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)    
     Z_tilde = q_Z.copy()
 
     if estimateW:
-        m_Wtilde = numpy.ones((M),dtype=numpy.float64)
-        m_Wtilde1 = numpy.ones((M),dtype=numpy.float64)
-        V_Wtilde = numpy.identity(M)
-        alpha_RVM = 0.1*numpy.ones((M),dtype=numpy.float64)
+        m_Wtilde = np.ones((M),dtype=np.float64)
+        m_Wtilde1 = np.ones((M),dtype=np.float64)
+        V_Wtilde = np.identity(M)
+        alpha_RVM = 0.1*np.ones((M),dtype=np.float64)
         # with zeros we have a noninformative prior
         k_RVM = 3. #1.
         lam_RVM = 0.05 #0.2
     else:
-        m_Wtilde = numpy.ones((M),dtype=numpy.float64)
-        m_Wtilde1 = numpy.ones((M),dtype=numpy.float64)
-        V_Wtilde = numpy.zeros((M,M),dtype=numpy.float64)
+        m_Wtilde = np.ones((M),dtype=np.float64)
+        m_Wtilde1 = np.ones((M),dtype=np.float64)
+        V_Wtilde = np.zeros((M,M),dtype=np.float64)
     
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check #########################
     m_h = m_h[:D]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
     sigmaH1 = sigmaH
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
       
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     P = PolyMat( N , 4 , TR)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     Ndrift = L.shape[0]  
       
-    sigma_M = numpy.ones((M,K),dtype=numpy.float64)
+    sigma_M = np.ones((M,K),dtype=np.float64)
     sigma_M[:,0] = 0.5
     sigma_M[:,1] = 0.6
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = InitMean
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     for j in xrange(0,J):
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
     m_A1 = m_A
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -14925,13 +14925,13 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
             m_H[0] = 0
             m_H[-1] = 0       
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
         
         if estimateLabels:
@@ -14956,9 +14956,9 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
         for d in xrange(0,D):
             AWH[:,:,d] = AW[:,:]*m_H[d]
         DIFF = reshape( AWH - AWH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AWH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AWH1,(M*J*D)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_AWH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AWH1,(M*J*D)) ))**2
         cAWH += [Crit_AWH]
         AWH1[:,:,:] = AWH[:,:,:]
         
@@ -14979,7 +14979,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
         
         UtilsC.maximization_L_ParsiMod_RVM(Y,m_A,m_H,L,P,XX.astype(int32),m_Wtilde,J,D,M,Ndrift,N)
         
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         
         if estimateBeta:
@@ -15017,13 +15017,13 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
         m_H[0] = 0
         m_H[-1] = 0
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
     
     if estimateLabels:
@@ -15048,9 +15048,9 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     for d in xrange(0,D):
         AWH[:,:,d] = AW[:,:]*m_H[d]
     DIFF = reshape( AWH - AWH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AWH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AWH1,(M*J*D)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_AWH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AWH1,(M*J*D)) ))**2
     cAWH += [Crit_AWH]
     AWH1[:,:,:] = AWH[:,:,:]
     
@@ -15070,7 +15070,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     
     UtilsC.maximization_L_ParsiMod_RVM(Y,m_A,m_H,L,P,XX.astype(int32),m_Wtilde,J,D,M,Ndrift,N)
     
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
 
     if estimateBeta:
@@ -15106,13 +15106,13 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
                 m_H[0] = 0
                 m_H[-1] = 0
                 if PLOT and ni >= 0:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
 
             if estimateLabels:
@@ -15135,9 +15135,9 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
             for d in xrange(0,D):
                 AWH[:,:,d] = AW[:,:]*m_H[d]
             DIFF = reshape( AWH - AWH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AWH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AWH1,(M*J*D)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_AWH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AWH1,(M*J*D)) ))**2
             cAWH += [Crit_AWH]
             AWH1[:,:,:] = AWH[:,:,:]
             
@@ -15157,7 +15157,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
             
             UtilsC.maximization_L_ParsiMod_RVM(Y,m_A,m_H,L,P,XX.astype(int32),m_Wtilde,J,D,M,Ndrift,N)
 
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
 
             if estimateBeta:
@@ -15186,7 +15186,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -15199,7 +15199,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
     if PLOT:
         savefig('./HRF_Iter_RVM.png')
         hold(False)
-        figure(2)
+        plt.figure(2)
         plot(cAWH[1:-1],'lightblue')
         hold(True)
         plot(cFE[1:-1],'m')
@@ -15208,7 +15208,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
         grid(True)
         savefig('./Crit_RVM.png')
         
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy_RVM.png')
 
@@ -15243,7 +15243,7 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -15251,13 +15251,13 @@ def Main_vbjde_Extension_ParsiMod_C_RVM(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
                 print ContrastCoef
                 print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
-                    CONTRASTVAR[j,n] = numpy.dot(numpy.dot(AC,S_tmp),AC)
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
@@ -15289,90 +15289,90 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     Thresh = 1e-5
     Thresh_FreeEnergy = 1e-5
     
-    #D = int(numpy.ceil(Thrf/dt))
-    D = int(numpy.ceil(Thrf/dt)) + 1
+    #D = int(np.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt)) + 1
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
 
-    MC_mean = numpy.zeros((M,J,S,K),dtype=numpy.float64)
+    MC_mean = np.zeros((M,J,S,K),dtype=np.float64)
 
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
-    #zerosV = numpy.zeros(V)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
+    #zerosV = np.zeros(V)
 
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     condition_names = []
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
     P = PolyMat( N , 4 , TR)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    invR = numpy.linalg.inv(R)
-    Det_invR = numpy.linalg.det(invR)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
     print 'Det_invR =', Det_invR
     
-    Gamma = numpy.identity(N)
-    Gamma = Gamma - numpy.dot(P,P.transpose())
-    Det_Gamma = numpy.linalg.det(Gamma)
+    Gamma = np.identity(N)
+    Gamma = Gamma - np.dot(P,P.transpose())
+    Det_Gamma = np.linalg.det(Gamma)
     print 'Det_Gamma =',Det_Gamma
     
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
-    q_Z1 = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
 
-    p_Wtilde = numpy.zeros((M,K),dtype=numpy.float64)
-    p_Wtilde1 = numpy.zeros((M,K),dtype=numpy.float64)
+    p_Wtilde = np.zeros((M,K),dtype=np.float64)
+    p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
 
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
-    m_A1 = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)
     #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                #m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+                #m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
 
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
 
     if estimateHRF:
-      Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
+      Sigma_H = np.ones((D,D),dtype=np.float64)
     else:
-      Sigma_H = numpy.zeros((D,D),dtype=numpy.float64)
+      Sigma_H = np.zeros((D,D),dtype=np.float64)
 
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
 
-    #PL = numpy.zeros((N,J),dtype=numpy.float64)
+    #PL = np.zeros((N,J),dtype=np.float64)
     y_tilde = Y
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -15392,19 +15392,19 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
 
     cTime = []
 
-    CONTRAST = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    CONTRASTVAR = numpy.zeros((J,len(contrasts)),dtype=numpy.float64)
-    Q_barnCond = numpy.zeros((M,M,D,D),dtype=numpy.float64)
-    XGamma = numpy.zeros((M,D,N),dtype=numpy.float64)
-    HXGamma = numpy.zeros((M,N),dtype=numpy.float64)
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    HXGamma = np.zeros((M,N),dtype=np.float64)
     m1 = 0
     for k1 in X: # Loop over the M conditions
         m2 = 0
         for k2 in X:
-            Q_barnCond[m1,m2,:,:] = numpy.dot(numpy.dot(X[k1].transpose(),Gamma),X[k2])
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
             m2 += 1
-        XGamma[m1,:,:] = numpy.dot(X[k1].transpose(),Gamma)
-        HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
         m1 += 1
 
     t1 = time.time()
@@ -15414,7 +15414,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
 
@@ -15437,25 +15437,25 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                     #mu_M *= Norm
                     #sigma_M *= Norm**2
             if PLOT and ni >= 0:
-                figure(M+1)
+                plt.figure(M+1)
                 plot(m_H)
                 hold(True)
             #Update HXGamma
             m1 = 0
             for k1 in X: # Loop over the M conditions
-                HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                 m1 += 1
             #print 'HXGamma=',HXGamma
-        Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
         cH += [Crit_H]
         m_H1[:] = m_H[:]
 
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
 
@@ -15466,18 +15466,18 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
         
         val = reshape(q_Z,(M*K*J))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         q_Z = reshape(val, (M,K,J))
         
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
         #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cZ += [Crit_Z]
         #q_Z1[:,:,:] = q_Z[:,:,:]
 
@@ -15485,18 +15485,18 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         UtilsC.expectation_W_ParsiMod_3(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
 
         val = reshape(p_Wtilde,(M*K))
-        val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+        val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         p_Wtilde = reshape(val, (M,K))
         
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-        DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+        DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
 
         #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-        #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+        #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
         #cW += [Crit_W]
         #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -15549,7 +15549,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     pyhrf.verbose(3, "E A step ...")
     UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
     DIFF = reshape( m_A - m_A1,(M*J) )
-    Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
 
@@ -15571,24 +15571,24 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                 #mu_M *= Norm
                 #sigma_M *= Norm**2
         if PLOT and ni >= 0:
-            figure(M+1)
+            plt.figure(M+1)
             plot(m_H)
             hold(True)
         #Update HXGamma
         m1 = 0
         for k1 in X: # Loop over the M conditions
-            HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+            HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
             m1 += 1
-    Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
     for d in xrange(0,D):
         AH[:,:,d] = m_A[:,:]*m_H[d]
     DIFF = reshape( AH - AH1,(M*J*D) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -15599,18 +15599,18 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
     
     val = reshape(q_Z,(M*K*J))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     q_Z = reshape(val, (M,K,J))
     
     DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     
     #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cZ += [Crit_Z]
     #q_Z1[:,:,:] = q_Z[:,:,:]
 
@@ -15618,18 +15618,18 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
     UtilsC.expectation_W_ParsiMod_3(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
     
     val = reshape(p_Wtilde,(M*K))
-    val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+    val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
     p_Wtilde = reshape(val, (M,K))
     
     DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-    DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+    DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+    DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+    Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
     cW += [Crit_W]
     p_Wtilde1[:,:] = p_Wtilde[:,:]
     
     #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-    #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+    #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
     #cW += [Crit_W]
     #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -15676,7 +15676,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
             DIFF = reshape( m_A - m_A1,(M*J) )
-            Crit_A = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(m_A1,(M*J)) ))**2
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
 
@@ -15697,24 +15697,24 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                         #mu_M *= Norm
                         #sigma_M *= Norm**2
                 if PLOT and ni >= 10:
-                    figure(M+1)
+                    plt.figure(M+1)
                     plot(m_H)
                     hold(True)
                 #Update HXGamma
                 m1 = 0
                 for k1 in X: # Loop over the M conditions
-                    HXGamma[m1,:] = numpy.dot(numpy.dot(m_H.transpose(),X[k1].transpose()),Gamma)
+                    HXGamma[m1,:] = np.dot(np.dot(m_H.transpose(),X[k1].transpose()),Gamma)
                     m1 += 1
-            Crit_H = (numpy.linalg.norm( m_H - m_H1 ) / numpy.linalg.norm( m_H1 ))**2
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
             for d in xrange(0,D):
                 AH[:,:,d] = m_A[:,:]*m_H[d]
             DIFF = reshape( AH - AH1,(M*J*D) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
 
@@ -15724,36 +15724,36 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                 UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(int32),M,J,K,maxNeighbours)
             
             val = reshape(q_Z,(M*K*J))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             q_Z = reshape(val, (M,K,J))
             
             DIFF = reshape( q_Z - q_Z1,(M*K*J) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             
             #DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            #Crit_Z = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cZ += [Crit_Z]
             #q_Z1[:,:,:] = q_Z[:,:,:]
 
             UtilsC.expectation_W_ParsiMod_3(p_Wtilde,q_Z,HXGamma,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),mu_M,sigma_M,J,D,M,N,K,tau1,tau2)
             
             val = reshape(p_Wtilde,(M*K))
-            val[ find((val<=1e-50) & (val>0.0)) ] = 0.0
+            val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             p_Wtilde = reshape(val, (M,K))
             
             DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
-            DIFF[ find( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            DIFF[ find( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_W = ( numpy.linalg.norm(DIFF) / numpy.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+            DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
+            DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
             cW += [Crit_W]
             p_Wtilde1[:,:] = p_Wtilde[:,:]
             
             #DIFF = abs(reshape(p_Wtilde,(M*K)) - reshape(p_Wtilde1,(M*K)))
-            #Crit_W = (sum(DIFF) / len(find(DIFF != 0)))**2
+            #Crit_W = (sum(DIFF) / len(np.where(DIFF != 0)))**2
             #cW += [Crit_W]
             #p_Wtilde1[:,:] = p_Wtilde[:,:]
 
@@ -15796,7 +15796,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
 
     t2 = time.time()
 
-    FreeEnergyArray = numpy.zeros((NitMax+1),dtype=numpy.float64)
+    FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
     for i in xrange(ni-1,NitMax+1):
@@ -15804,7 +15804,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
 
     if PLOT:
         savefig('./HRF_Iter.png')
-        figure(M+2)
+        plt.figure(M+2)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -15821,7 +15821,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
         grid(True)
         savefig('./Crit.png')
 
-        figure(3)
+        plt.figure(3)
         plot(FreeEnergyArray)
         savefig('./FreeEnergy.png')
 
@@ -15855,7 +15855,7 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                 #------------ contrasts ------------#
 
                 #------------ variance -------------#
-                ContrastCoef = numpy.zeros(M,dtype=float)
+                ContrastCoef = np.zeros(M,dtype=float)
                 ind_conds0 = {}
                 for m in xrange(0,M):
                     ind_conds0[condition_names[m]] = 0.0
@@ -15863,10 +15863,10 @@ def Main_vbjde_NoDrifts_ParsiMod_C_3(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,es
                     ind_conds = ind_conds0.copy()
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * numpy.ones(M,dtype=float)
-                CovM = numpy.ones(M,dtype=float)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                CovM = np.ones(M,dtype=float)
                 for j in xrange(0,J):
-                    CovM = numpy.ones(M,dtype=float)
+                    CovM = np.ones(M,dtype=float)
                     for m in xrange(0,M):
                         if ActiveContrasts[m]:
                             CONTRASTVAR[j,n] += (ContrastCoef[m]**2) * Sigma_A[m,m,j]
@@ -15898,64 +15898,66 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
     gamma = 7.5
     gradientStep = 0.005
     MaxItGrad = 120
-    D = int(numpy.ceil(Thrf/dt))
+    Thresh = 1e-5
+    Thresh_FreeEnergy = 1e-5
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
     #-----------------------------------------------------------------------#
-    # put neighbour lists into a 2D numpy array so that it will be easily
+    # put neighbour lists into a 2D np array so that it will be easily
     # passed to C-code
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
     #for k in xrange(0,K):
     q_Z[:,1,:] = 1
     Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
-    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
+    Sigma_H = np.ones((D,D),dtype=np.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
     P = PolyMat( N , 4 , TR)
-    zerosP = numpy.zeros((P.shape[0]),dtype=numpy.float64)
+    zerosP = np.zeros((P.shape[0]),dtype=np.float64)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     Crit_H = 1
@@ -15974,22 +15976,24 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
         Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
         pyhrf.verbose(3, "E Z step ...")
         q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
-        figure(1)
-        plot(m_H,'r')
-        hold(False)
-        draw()
-        show()
+        
+        if 0:
+            figure(1)
+            plot(m_H,'r')
+            hold(False)
+            draw()
+            show()
 
         if estimateSigmaH:
             pyhrf.verbose(3,"M sigma_H step ...")
-            sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+            sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
             sigmaH /= D
         pyhrf.verbose(3,"M (mu,sigma) step ...")
         mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
         #print mu_M , sigma_M
 
         L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
-        PL = numpy.dot(P,L)
+        PL = np.dot(P,L)
         #print L.shape
         #for j in xrange(0,J):
             #print j
@@ -16009,33 +16013,33 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
             pyhrf.verbose(3,Beta)
         pyhrf.verbose(3,"M sigma noise step ...")
         sigma_epsilone = maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM)
-    m_H1[:] = m_H[:]
-    q_Z1[:,:,:] = q_Z[:,:,:]
-    m_A1[:,:] = m_A[:,:]
+    m_H1 = m_H
+    q_Z1 = q_Z
+    m_A1 = m_A
     pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
     Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
     DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-    Crit_A = sum(DIFF) / len(find(DIFF != 0))
+    Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]
     Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
     m_H[0] = 0
     m_H[-1] = 0
-    Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+    Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     cH += [Crit_H]
     m_H1[:] = m_H[:]
     q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
     DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-    Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+    Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
     if estimateSigmaH:
         pyhrf.verbose(3,"M sigma_H step ...")
-        sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+        sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
         sigmaH /= D
     mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
     L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     if estimateBeta:
         pyhrf.verbose(3,"estimating beta")
@@ -16050,27 +16054,27 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
             pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
             Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
             DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-            Crit_A = sum(DIFF) / len(find(DIFF != 0))
+            Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]
             Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
             m_H[0] = 0
             m_H[-1] = 0
-            Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+            Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             cH += [Crit_H]
             m_H1[:] = m_H[:]
             q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
             DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-            Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+            Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             if estimateSigmaH:
                 pyhrf.verbose(3,"M sigma_H step ...")
-                sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+                sigmaH = (np.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
                 sigmaH /= D
             mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
             L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
-            PL = numpy.dot(P,L)
+            PL = np.dot(P,L)
             y_tilde = Y - PL
             if estimateBeta:
                 pyhrf.verbose(3,"estimating beta")
@@ -16084,7 +16088,7 @@ def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=Tr
     CompTime = t2 - t1
     
     if PLOT:
-        figure(1)
+        plt.figure(1)
         plot(cA[1:-1],'r')
         hold(True)
         plot(cH[1:-1],'b')
@@ -16115,19 +16119,19 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
     pyhrf.verbose(2,"EM started ...")
     if NitMax < 0:
         NitMax = 100
-    D = int(numpy.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
     l = int(sqrt(J))
-    sigma_epsilone = numpy.ones(J)
+    sigma_epsilone = np.ones(J)
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
         X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
-    mu_M = numpy.zeros((M,K),dtype=float)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=float)
-    mu_M0 = numpy.zeros((M,K),dtype=float)
-    sigma_M0 = numpy.zeros((M,K),dtype=float)
+    mu_M = np.zeros((M,K),dtype=float)
+    sigma_M = 0.5 * np.ones((M,K),dtype=float)
+    mu_M0 = np.zeros((M,K),dtype=float)
+    sigma_M0 = np.zeros((M,K),dtype=float)
     for k in xrange(0,K):
         mu_M[:,0] = 2.0
     mu_M0[:,:] = mu_M[:,:]
@@ -16135,40 +16139,46 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
     #sigmaH = 0.005
     order = 2
     D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
-    Gamma = numpy.identity(N)
-    q_Z = numpy.zeros((M,K,J),dtype=float)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    Gamma = np.identity(N)
+    q_Z = np.zeros((M,K,J),dtype=float)
     for k in xrange(0,K):
         q_Z[:,1,:] = 1
     q_Z1 = q_Z.copy()
     Z_tilde = q_Z.copy()
-    Sigma_A = numpy.zeros((M,M,J),float)
-    m_A = numpy.zeros((J,M),dtype=float)
+    Sigma_A = np.zeros((M,M,J),float)
+    m_A = np.zeros((J,M),dtype=float)
     TT,m_h = getCanoHRF(Thrf-dt,dt)
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-    m_H = numpy.array(m_h)
-    m_H1 = numpy.array(m_h)
-    Sigma_H = numpy.ones((D,D),dtype=float)
-    #Sigma_H = 0.1 * numpy.identity(D)
-    Beta = beta * numpy.ones((M),dtype=float)
-    m_A1 = numpy.zeros((J,M),dtype=float)
+                m_A[j,m] += normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+    m_H = np.array(m_h)
+    m_H1 = np.array(m_h)
+    Sigma_H = np.ones((D,D),dtype=float)
+    #Sigma_H = 0.1 * np.identity(D)
+    Beta = beta * np.ones((M),dtype=float)
+    m_A1 = np.zeros((J,M),dtype=float)
     m_A1[:,:] = m_A[:,:]
     Crit_H = [0]
     Crit_Z = [0]
     Crit_sigmaH = [0]
     Hist_sigmaH = []
     ni = 0
-    Y_bar_tilde = numpy.zeros((D),dtype=float)
-    zerosND = numpy.zeros((N,D),dtype=float)
-    X_tilde = numpy.zeros((Y.shape[1],M,D),dtype=float)
-    Q_bar = numpy.zeros(R.shape)
+    Y_bar_tilde = np.zeros((D),dtype=float)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K) 
+    X_tilde = np.zeros((Y.shape[1],M,D),dtype=float)
+    Q_bar = np.zeros(R.shape)
     P = PolyMat( N , 4 , TR)
+    zerosP = np.zeros((P.shape[0]),dtype=np.float64)
     L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
 
@@ -16179,37 +16189,37 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
             #print "------------------------------ Iteration n° " + str(ni+1) + " ------------------------------"
         pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
         pyhrf.verbose(3, "E A step ...")
-        Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone)
+        Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
         pyhrf.verbose(3,"E H step ...")
-        Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale)
-        Crit_H += [abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))]
+        Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
+        Crit_H += [abs(np.mean(m_H - m_H1) / np.mean(m_H))]
         m_H1[:] = m_H[:]
         pyhrf.verbose(3,"E Z step ...")
-        q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K)
-        DIFF = abs(numpy.reshape(q_Z,(M*K*J)) - numpy.reshape(q_Z1,(M*K*J)))
-        Crit_Z += [numpy.mean(DIFF) / (DIFF != 0).sum()]
+        q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
+        DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
+        Crit_Z += [np.mean(DIFF) / (DIFF != 0).sum()]
         q_Z1[:,:,:] = q_Z[:,:,:]
         pyhrf.verbose(3,"M (mu,sigma) step ...")
-        mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M)
+        mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
         if estimateSigmaH:
             pyhrf.verbose(3,"M sigma_H step ...")
-            sigmaH = numpy.dot(numpy.dot(m_H.transpose(),R) , m_H ) + (numpy.dot(Sigma_H,R)).trace()
+            sigmaH = np.dot(np.dot(m_H.transpose(),R) , m_H ) + (np.dot(Sigma_H,R)).trace()
             sigmaH /= D
             Crit_sigmaH += [abs((sigmaH - sigmaH1) / sigmaH)]
             Hist_sigmaH += [sigmaH]
             sigmaH1 = sigmaH
         pyhrf.verbose(3,"M L step ...")
-        L = maximization_L(Y,m_A,X,m_H,L,P)
-        PL = numpy.dot(P,L)
+        L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
         pyhrf.verbose(3,"M sigma_epsilone step ...")
-        sigma_epsilone = maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M)
+        sigma_epsilone = maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM)
         #if ( (ni+1)% 1) == 0:
         if PLOT:
             from matplotlib import pyplot
             m_Htmp = m_H / norm(m_H)
             hrftmp = hrf / norm(hrf)
-            snrH = 20*numpy.log(1 / norm(m_Htmp - hrftmp))
+            snrH = 20*np.log(1 / norm(m_Htmp - hrftmp))
             #print snrH
             pyplot.clf()
             pyplot.figure(1)
@@ -16221,7 +16231,7 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
             pyplot.hold(False)
             pyplot.draw()
             pyplot.show()
-            #figure(2)
+            #plt.figure(2)
             #plot(Hist_sigmaH)
             #title(str(sigmaH))
             ##hold(False)
@@ -16243,6 +16253,6 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
     #print Norm
     m_H /= Norm
     m_A *= Norm
-    pyhrf.veborse(1, "Nb iterations to reach criterion: %d" %ni)
+    pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
     pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
-    return m_A, m_H, q_Z , sigma_epsilone, (numpy.array(Hist_sigmaH)).transpose()
+    return m_A, m_H, q_Z , sigma_epsilone, (np.array(Hist_sigmaH)).transpose()

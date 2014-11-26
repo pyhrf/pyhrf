@@ -61,7 +61,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
     estimateLabels=True #WARNING!! They should be estimated
     
     # Initialize sizes vectors
-    D = int(np.ceil(Thrf/dt)) + 1 #D = int(numpy.ceil(Thrf/dt)) 
+    D = int(np.ceil(Thrf/dt)) + 1 #D = int(np.ceil(Thrf/dt)) 
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
@@ -309,7 +309,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
         else:
             Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
-        q_Z1[:,:,:] = q_Z[:,:,:]
+        q_Z1 = q_Z
         
         #####################
         # MAXIMIZATION
@@ -461,7 +461,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
 
 def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.1,NitMax = -1,NitMin = 1,estimateBeta=False,PLOT=False):
     pyhrf.verbose(1,"EM started ...")
-    numpy.random.seed(6537546)
+    np.random.seed(6537546)
     
     #######################################################################################################################
     #####################################################################################        INITIALIZATIONS
@@ -471,72 +471,75 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     gamma = 7.5
     gradientStep = 0.005
     MaxItGrad = 120
+    #Thresh = 1e-5
+    Thresh_FreeEnergy = 1e-5
     
     # Initialize sizes vectors
-    D = int(numpy.ceil(Thrf/dt))
+    D = int(np.ceil(Thrf/dt))
     M = len(Onsets)
     N = Y.shape[0]
     J = Y.shape[1]
-    l = int(sqrt(J))
-    sigma_epsilone = numpy.ones(J)
+    l = int(np.sqrt(J))
+    sigma_epsilone = np.ones(J)
     
     # Neighbours
     maxNeighbours = max([len(nl) for nl in graph])
-    neighboursIndexes = numpy.zeros((J, maxNeighbours), dtype=numpy.int32)
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
     neighboursIndexes -= 1
     for i in xrange(J):
         neighboursIndexes[i,:len(graph[i])] = graph[i]
     # Conditions
     X = OrderedDict([])
     for condition,Ons in Onsets.iteritems():
-        X[condition] = compute_mat_X_2(N, TR, D, dt, Ons)
-    XX = numpy.zeros((M,N,D),dtype=numpy.int32)
+        X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
+    XX = np.zeros((M,N,D),dtype=np.int32)
     nc = 0
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
     # Sigma and mu
-    mu_M = numpy.zeros((M,K),dtype=numpy.float64)
-    sigma_M = 0.5 * numpy.ones((M,K),dtype=numpy.float64)
-    sigma_M0 = 0.5*numpy.ones((M,K),dtype=numpy.float64)
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    sigma_M = 0.5 * np.ones((M,K),dtype=np.float64)
+    sigma_M0 = 0.5*np.ones((M,K),dtype=np.float64)
     for k in xrange(1,K):
         mu_M[:,k] = 2.0
     # Covariance matrix
     order = 2
-    D2 = buildFiniteDiffMatrix(order,D)
-    R = numpy.dot(D2,D2) / pow(dt,2*order)
+    D2 = vt.buildFiniteDiffMatrix(order,D)
+    R = np.dot(D2,D2) / pow(dt,2*order)
     
-    Gamma = numpy.identity(N)
+    Gamma = np.identity(N)
     
-    q_Z = numpy.zeros((M,K,J),dtype=numpy.float64)
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
     #for k in xrange(0,K):
     q_Z[:,1,:] = 1
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)   
     Z_tilde = q_Z.copy()
     
-    Sigma_A = numpy.zeros((M,M,J),numpy.float64)
-    m_A = numpy.zeros((J,M),dtype=numpy.float64)
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    m_A = np.zeros((J,M),dtype=np.float64)
     TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     for j in xrange(0,J):
-        Sigma_A[:,:,j] = 0.01*numpy.identity(M)
+        Sigma_A[:,:,j] = 0.01*np.identity(M)
         for m in xrange(0,M):
             for k in xrange(0,K):
-                m_A[j,m] += normal(mu_M[m,k], numpy.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
-    m_H = numpy.array(m_h).astype(numpy.float64)
-    m_H1 = numpy.array(m_h)
-    Sigma_H = numpy.ones((D,D),dtype=numpy.float64)
-    Beta = beta * numpy.ones((M),dtype=numpy.float64)
+                m_A[j,m] += np.random.normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*Z_tilde[m,k,j]
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
+    Sigma_H = np.ones((D,D),dtype=np.float64)
+    Beta = beta * np.ones((M),dtype=np.float64)
     
-    zerosDD = numpy.zeros((D,D),dtype=numpy.float64)
-    zerosD = numpy.zeros((D),dtype=numpy.float64)
-    zerosND = numpy.zeros((N,D),dtype=numpy.float64)
-    zerosMM = numpy.zeros((M,M),dtype=numpy.float64)
-    zerosJMD = numpy.zeros((J,M,D),dtype=numpy.float64)
-    zerosK = numpy.zeros(K)
+    zerosDD = np.zeros((D,D),dtype=np.float64)
+    zerosD = np.zeros((D),dtype=np.float64)
+    zerosND = np.zeros((N,D),dtype=np.float64)
+    zerosMM = np.zeros((M,M),dtype=np.float64)
+    zerosJMD = np.zeros((J,M,D),dtype=np.float64)
+    zerosK = np.zeros(K)
     
-    P = PolyMat( N , 4 , TR)
-    zerosP = numpy.zeros((P.shape[0]),dtype=numpy.float64)
-    L = polyFit(Y, TR, 4,P)
-    PL = numpy.dot(P,L)
+    P = vt.PolyMat( N , 4 , TR)
+    zerosP = np.zeros((P.shape[0]),dtype=np.float64)
+    L = vt.polyFit(Y, TR, 4,P)
+    PL = np.dot(P,L)
     y_tilde = Y - PL
     sigmaH1 = sigmaH
     
@@ -547,6 +550,7 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     cH = []
     cZ = []
     Ndrift = L.shape[0]
+    Crit_FreeEnergy = 1
     
     t1 = time.time()
     
@@ -565,34 +569,34 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
         
         # A 
         pyhrf.verbose(3, "E A step ...")
-        Sigma_A, m_A = expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
-        m_A1[:,:] = m_A[:,:]
+        Sigma_A, m_A = vt.expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_M,q_Z,mu_M,D,N,J,M,K,y_tilde,Sigma_A,sigma_epsilone,zerosJMD)
+        m_A1 = m_A
  
         # crit A 
-        DIFF = abs(reshape(m_A,(M*J)) - reshape(m_A1,(M*J)))
-        Crit_A = sum(DIFF) / len(find(DIFF != 0))
+        DIFF = np.abs(np.reshape(m_A,(M*J)) - np.reshape(m_A1,(M*J)))
+        Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
         cA += [Crit_A]
 
         # H 
         pyhrf.verbose(3, "E H step ...")
-        Sigma_H, m_H = expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
+        Sigma_H, m_H = vt.expectation_H(Y,Sigma_A,m_A,X,Gamma,PL,D,R,sigmaH,J,N,y_tilde,zerosND,sigma_epsilone,scale,zerosDD,zerosD)
         m_H[0] = 0
         m_H[-1] = 0
-        m_H1[:] = m_H[:]
+        m_H1 = m_H
         
         # crit H
-        Crit_H = abs(numpy.mean(m_H - m_H1) / numpy.mean(m_H))
+        Crit_H = np.abs(np.mean(m_H - m_H1) / np.mean(m_H))
         cH += [Crit_H]
         
         # Z
         pyhrf.verbose(3, "E Z step ...")
-        q_Z,Z_tilde = expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
+        q_Z,Z_tilde = vt.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK)
         
         # crit Z    
-        DIFF = abs(reshape(q_Z,(M*K*J)) - reshape(q_Z1,(M*K*J)))
-        Crit_Z = sum(DIFF) / len(find(DIFF != 0))
+        DIFF = np.abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
+        Crit_Z = sum(DIFF) / len(np.where(DIFF != 0))
         cZ += [Crit_Z]
-        q_Z1[:,:,:] = q_Z[:,:,:]
+        q_Z1 = q_Z
                 
         # Plotting HRF
         if PLOT and ni >= 0:
@@ -609,16 +613,16 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
         # HRF: Sigma_h
         if estimateSigmaH:
             pyhrf.verbose(3,"M sigma_H step ...")
-            sigmaH = (numpy.dot(mult(m_H,m_H) + Sigma_H , R )).trace()
+            sigmaH = (np.dot(vt.mult(m_H,m_H) + Sigma_H , R )).trace()
             sigmaH /= D
         
         # (mu,sigma)
         pyhrf.verbose(3,"M (mu,sigma) step ...")
-        mu_M , sigma_M = maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+        mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
 
         # Drift L
-        L = maximization_L(Y,m_A,X,m_H,L,P,zerosP)
-        PL = numpy.dot(P,L)
+        L = vt.maximization_L(Y,m_A,X,m_H,L,P,zerosP)
+        PL = np.dot(P,L)
         y_tilde = Y - PL
 
         # Beta
@@ -631,7 +635,7 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
         
         # Sigma noise
         pyhrf.verbose(3,"M sigma noise step ...")
-        sigma_epsilone = maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM)
+        sigma_epsilone = vt.maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zerosMM)
 
 
         #### Computing Free Energy ####
@@ -654,27 +658,27 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     #######################################################################################################################
     ####################################################################################    PLOTS and SNR computation
     
-    """FreeEnergyArray = numpy.zeros((ni),dtype=numpy.float64)
+    """FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
 
-    SUM_q_Z_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    mu1_array = numpy.zeros((M,ni),dtype=numpy.float64)
-    h_norm_array = numpy.zeros((ni),dtype=numpy.float64)
+    SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
+    mu1_array = np.zeros((M,ni),dtype=np.float64)
+    h_norm_array = np.zeros((ni),dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             SUM_q_Z_array[m,i] = SUM_q_Z[m][i]
             mu1_array[m,i] = mu1[m][i]
             h_norm_array[i] = h_norm[i]
-    sigma_M = sqrt(sqrt(sigma_M))
+    sigma_M = np.sqrt(np.sqrt(sigma_M))
     """
     
-    Norm = norm(m_H)
+    Norm = np.linalg.norm(m_H)
     m_H /= Norm
     m_A *= Norm
     mu_M *= Norm
     sigma_M *= Norm
-    sigma_M = sqrt(sigma_M)
+    sigma_M = np.sqrt(sigma_M)
     
     if PLOT:
         import matplotlib.pyplot as plt
@@ -732,7 +736,7 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
         print "sigma_H = " + str(sigmaH)
         print "Beta = " + str(Beta)
     
-    StimulusInducedSignal = computeFit(m_H, m_A, X, J, N)
+    StimulusInducedSignal = vt.computeFit(m_H, m_A, X, J, N)
     SNR = 20 * np.log( np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL) )
     SNR /= np.log(10.)
     print 'SNR comp =', SNR
