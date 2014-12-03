@@ -9,8 +9,8 @@ from pyhrf import FmriData
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.jde.models import simulate_bold
 from pyhrf.ui.vb_jde_analyser_compMod import JDEVEMAnalyser
-from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained, Main_vbjde_Python_constrained
-from pyhrf.vbjde.vem_bold import Main_vbjde_Extension, Main_vbjde_Python, Main_vbjde
+from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained,Main_vbjde_Python_constrained
+from pyhrf.vbjde.vem_bold import Main_vbjde_Extension,Main_vbjde_Extension_stable,Main_vbjde_Python,Main_vbjde
 from pyhrf.boldsynth.hrf import getCanoHRF
 try:
     from collections import OrderedDict
@@ -91,6 +91,24 @@ class VEMBOLDTest(unittest.TestCase):
                                             Thrf=25.,K=2,TR=1.,
                                             beta=1.0,dt=.5, 
                                             NitMax=2,NitMin=2)
+    
+    
+    def test_vem_bold_chaari(self):
+        """ Test BOLD VEM function.
+        Estimation accuracy is not tested.
+        """
+        pyhrf.verbose.set_verbosity(0)
+        data = self.data_simu
+        graph = data.get_graph()
+        Onsets = data.get_joined_onsets()
+        
+        ni,m_A,m_H,q_Z,sigma_epsilone, \
+        mu_M,sigma_M,Beta,L,PL,CONTRAST, \
+        CONTRASTVAR,cA,cH,cZ,cAH,cTime,cTimeMean, \
+        Sigma_A = Main_vbjde_Extension_stable(graph,data.bold,Onsets,
+                                              Thrf=25.,K=2,TR=1.,
+                                              beta=1.0,dt=.5, 
+                                              NitMax=2,NitMin=2)
     
     
     @unittest.skipIf(not tools.is_importable('cvxpy'),

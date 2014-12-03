@@ -6,8 +6,9 @@ import shutil
 import pyhrf
 import pyhrf.tools as tools
 from pyhrf import FmriData
+from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.jde.models import simulate_bold
-import pyhrf.vbjde.vem_tools as vt
+import pyhrf.vbjde.Utils as vt
 from pyhrf.boldsynth.hrf import getCanoHRF
 try:
     from collections import OrderedDict
@@ -328,7 +329,7 @@ class VEMToolsTest(unittest.TestCase):
         m_H = np.array(m_h)
         Sigma_H = np.ones((D,D),dtype=float)
         m_A = np.zeros((J,M),dtype=np.float64)
-        Sigma_A = np.ones((M,M,J),np.float64)
+        Sigma_A = np.zeros((M,M,J),np.float64)
         for j in xrange(0,J):
             Sigma_A[:,:,j] = 0.01*np.identity(M)
         mu_M = np.zeros((M,K),dtype=np.float64)

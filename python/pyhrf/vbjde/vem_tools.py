@@ -118,6 +118,7 @@ def expectation_A(Y,Sigma_H,m_H,m_A,X,Gamma,PL,sigma_MK,q_Z,mu_MK,D,N,J,M,K,y_ti
             Delta = np.diag( q_Z[:,k,i]/(sigma_MK[:,k] + eps) )
             tmp += np.dot(Delta,mu_MK[:,k])
             Sigma_A[:,:,i] += Delta
+        #print Sigma_A[:,:,i]
         tmp2 = np.linalg.inv(Sigma_A[:,:,i])
         Sigma_A[:,:,i] = tmp2
         m_A[i,:] = np.dot(Sigma_A[:,:,i],tmp)
@@ -252,6 +253,29 @@ def maximization_sigma_noise(Y,X,m_A,m_H,Sigma_H,Sigma_A,PL,sigma_epsilone,M,zer
         sigma_epsilone[i] /= N
     return sigma_epsilone
 
+def gradient(q_Z,Z_tilde,J,m,K,graph,beta,gamma):
+    Gr = gamma
+    for i in xrange(0,J):
+        tmp2 = beta * sum(Z_tilde[m,:,graph[i]],0)
+        Emax = max(tmp2)
+        Sum = sum( np.exp( tmp2 - Emax ) )
+        for k in xrange(0,K):
+            tmp = sum(Z_tilde[m,k,graph[i]],0)
+            energy = beta * tmp
+            Pzmi = np.exp(energy - Emax)
+            Pzmi /= (Sum + eps)
+            Gr += tmp * (-q_Z[m,k,i] + Pzmi)
+    return Gr
+
+def maximization_beta(beta,q_Z,Z_tilde,J,K,m,graph,gamma,neighbour,maxNeighbours):
+    Gr = 100
+    step = 0.005
+    ni = 1
+    while ((abs(Gr) > 0.0001) and (ni < 200)):
+        Gr = gradient(q_Z,Z_tilde,J,m,K,graph,beta,gamma)
+        beta -= step * Gr
+        ni+= 1
+    return max(beta,eps)
        
 # Entropy functions
 ##############################################################

@@ -394,7 +394,7 @@ def Main_vbjde_Extension_constrained(graph,Y,Onsets,Thrf,K,TR,beta,
             mu1_array[m,i] = mu1[m][i]
             h_norm_array[i] = h_norm[i]
 
-    if PLOT:
+    if PLOT and 0:
         import matplotlib.pyplot as plt
         import matplotlib
         font = {'size'   : 15}
@@ -629,9 +629,9 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
         if estimateBeta:
             pyhrf.verbose(3,"estimating beta")
             for m in xrange(0,M):
-                Beta[m] = maximization_beta(Beta[m],q_Z,Z_tilde,J,K,m,graph,gamma,neighboursIndexes,maxNeighbours)
+                Beta[m] = vt.maximization_beta(Beta[m],q_Z,Z_tilde,J,K,m,graph,gamma,neighboursIndexes,maxNeighbours)
             pyhrf.verbose(3,"End estimating beta")
-            pyhrf.verbose(3,Beta)
+            #pyhrf.verbose(3,Beta)
         
         # Sigma noise
         pyhrf.verbose(3,"M sigma noise step ...")
@@ -680,7 +680,7 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     sigma_M *= Norm
     sigma_M = np.sqrt(sigma_M)
     
-    if PLOT:
+    if PLOT and 0:
         import matplotlib.pyplot as plt
         import matplotlib
         font = {'size'   : 15}
@@ -706,8 +706,6 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
             plt.plot(SUM_q_Z_array[m])
             plt.hold(True)
         plt.hold(False)
-        #plt.legend( ('m=0','m=1', 'm=2', 'm=3') )
-        #plt.legend( ('m=0','m=1') ) 
         plt.savefig('./Sum_q_Z_Iter_CompMod.png')
         
         plt.figure(5)
@@ -742,3 +740,305 @@ def Main_vbjde_Python_constrained(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estim
     print 'SNR comp =', SNR
     return m_A,m_H, q_Z , sigma_epsilone, mu_M , sigma_M, Beta, L, PL
 
+
+def Main_vbjde_Extension_constrained_stable(graph,Y,Onsets,Thrf,K,TR,beta,
+                                            dt,scale=1,estimateSigmaH=True,
+                                            sigmaH = 0.05,NitMax = -1,
+                                            NitMin = 1,estimateBeta=True,
+                                            PLOT=False,contrasts=[],
+                                            computeContrast=False,
+                                            gamma_h=0):    
+    """ Version modified by Lofti from Christine's version """
+    pyhrf.verbose(1,"Fast EM with C extension started ... Here is the stable version !")
+
+    np.random.seed(6537546)
+    
+    #Initialize parameters
+    S = 100
+    if NitMax < 0:
+        NitMax = 100
+    gamma = 7.5#7.5
+    gradientStep = 0.003
+    MaxItGrad = 200
+    Thresh = 1e-5
+    
+    # Initialize sizes vectors
+    D = np.int(np.ceil(Thrf/dt)) + 1
+    M = len(Onsets)
+    N = Y.shape[0]
+    J = Y.shape[1]
+    l = np.int(np.sqrt(J))
+    condition_names = []
+    
+    # Neighbours
+    maxNeighbours = max([len(nl) for nl in graph])
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
+    neighboursIndexes -= 1
+    for i in xrange(J):
+        neighboursIndexes[i,:len(graph[i])] = graph[i]
+    # Conditions
+    X = OrderedDict([])
+    for condition,Ons in Onsets.iteritems():
+        X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
+        condition_names += [condition]
+    XX = np.zeros((M,N,D),dtype=np.int32)
+    nc = 0
+    for condition,Ons in Onsets.iteritems():
+        XX[nc,:,:] = X[condition]
+        nc += 1  
+    # Covariance matrix
+    order = 2
+    D2 = vt.buildFiniteDiffMatrix(order,D)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
+    
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
+
+    Crit_H = 1
+    Crit_Z = 1
+    Crit_A = 1
+    Crit_AH = 1
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
+    Crit_FreeEnergy = 1
+    cTime = []
+    cA = []
+    cH = []
+    cZ = []
+    cAH = []
+    
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    m1 = 0
+    for k1 in X: # Loop over the M conditions
+        m2 = 0
+        for k2 in X:
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
+            m2 += 1
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        m1 += 1
+    
+    sigma_epsilone = np.ones(J)
+    pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z[:,1,:] = 1
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)   
+    Z_tilde = q_Z.copy()
+    
+    TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
+    m_h = m_h[:D]
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
+    sigmaH1 = sigmaH
+    Sigma_H = np.ones((D,D),dtype=np.float64)
+
+    Beta = beta * np.ones((M),dtype=np.float64)
+    P = vt.PolyMat( N , 4 , TR)
+    L = vt.polyFit(Y, TR, 4,P)
+    PL = np.dot(P,L)
+    y_tilde = Y - PL
+    Ndrift = L.shape[0]
+
+    sigma_M = np.ones((M,K),dtype=np.float64)
+    sigma_M[:,0] = 0.5
+    sigma_M[:,1] = 0.6
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    for k in xrange(1,K):
+        mu_M[:,k] = 1#InitMean
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    for j in xrange(0,J):
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)    
+    for j in xrange(0,J):
+        for m in xrange(0,M):
+            for k in xrange(0,K):
+                m_A[j,m] += np.random.normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+    m_A1 = m_A       
+    
+    t1 = time.time()
+    
+    #######################################################################################################################
+    ####################################################################################    VBJDE num. iter. minimum
+    
+    ni = 0
+    
+    while ((ni < NitMin+1) or ((Crit_AH > Thresh) and (ni < NitMax))):
+
+        pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
+        
+        #####################
+        # EXPECTATION
+        #####################
+        
+        # A
+        pyhrf.verbose(3, "E A step ...")
+        UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
+                
+        # crit. A
+        DIFF = np.reshape( m_A - m_A1,(M*J) )
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+        cA += [Crit_A]
+        m_A1[:,:] = m_A[:,:]
+        
+        # HRF h
+        UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
+        #m_H[0] = 0
+        #m_H[-1] = 0
+        # Constrain with optimization strategy
+        import cvxpy as cvx
+        m,n = Sigma_H.shape    
+        Sigma_H_inv = np.linalg.inv(Sigma_H)
+        zeros_H = np.zeros_like(m_H[:,np.newaxis])
+        # Construct the problem. PRIMAL
+        h = cvx.Variable(n)
+        expression = cvx.quad_form(h - m_H[:,np.newaxis], Sigma_H_inv) 
+        objective = cvx.Minimize(expression)
+        #constraints = [h[0] == 0, h[-1]==0, h >= zeros_H, cvx.square(cvx.norm(h,2))<=1]    
+        constraints = [h[0] == 0, h[-1]==0, cvx.square(cvx.norm(h,2))<=1]    
+        prob = cvx.Problem(objective, constraints)
+        result = prob.solve(verbose=0,solver=cvx.CVXOPT)            
+        # Now we update the mean of h 
+        m_H_old = m_H  
+        Sigma_H_old = Sigma_H
+        m_H = np.squeeze(np.array((h.value)))            
+        Sigma_H = np.zeros_like(Sigma_H)    
+        # and the norm
+        h_norm += [np.linalg.norm(m_H)]
+        
+        # crit. h
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+        cH += [Crit_H]
+        m_H1[:] = m_H[:]
+
+        # crit. AH
+        for d in xrange(0,D):
+            AH[:,:,d] = m_A[:,:]*m_H[d]
+        DIFF = np.reshape( AH - AH1,(M*J*D) )
+        Crit_AH = (np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(AH1,(M*J*D)) ) + eps))**2
+        cAH += [Crit_AH]
+        AH1[:,:,:] = AH[:,:,:]
+        
+        # Z labels
+        pyhrf.verbose(3, "E Z step ...")
+        UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)       
+        
+        # crit. Z 
+        DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
+        Crit_Z = ( np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ) + eps))**2
+        cZ += [Crit_Z]
+        q_Z1[:,:,:] = q_Z[:,:,:]
+        
+        #####################
+        # MAXIMIZATION
+        #####################
+        
+        # HRF: Sigma_h
+        if estimateSigmaH:
+            pyhrf.verbose(3,"M sigma_H step ...")
+            if gamma_h > 0:
+                sigmaH = vt.maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h)
+            else:
+                sigmaH = vt.maximization_sigmaH(D,Sigma_H,R,m_H)
+            pyhrf.verbose(3,'sigmaH = ' + str(sigmaH))
+        
+        # (mu,sigma)
+        pyhrf.verbose(3,"M (mu,sigma) step ...")
+        mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+        
+        # Drift L
+        UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(np.int32),J,D,M,Ndrift,N)
+        PL = np.dot(P,L)
+        y_tilde = Y - PL
+        
+        # Beta
+        if estimateBeta:
+            pyhrf.verbose(3,"estimating beta")
+            for m in xrange(0,M):
+                Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+            pyhrf.verbose(3,"End estimating beta")
+            pyhrf.verbose.printNdarray(3, Beta)
+            
+        # Sigma noise
+        pyhrf.verbose(3,"M sigma noise step ...")
+        UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N)
+
+
+        t02 = time.time()
+        cTime += [t02-t1]
+
+    t2 = time.time()
+    
+    #######################################################################################################################
+    ####################################################################################    PLOTS and SNR computation
+
+    if PLOT and 0:
+        font = {'size'   : 15}
+        matplotlib.rc('font', **font)
+        savefig('./HRF_Iter_CompMod.png')
+        hold(False)
+        figure(2)
+        plot(cAH[1:-1],'lightblue')
+        hold(True)
+        plot(cFE[1:-1],'m')
+        hold(False)
+        legend( ('CAH', 'CFE') )
+        grid(True)
+        savefig('./Crit_CompMod.png')
+        figure(3)
+        plot(FreeEnergyArray)
+        grid(True)
+        savefig('./FreeEnergy_CompMod.png')
+
+        figure(4)
+        for m in xrange(M):
+            plot(SUM_q_Z_array[m])
+            hold(True)
+        hold(False)
+        savefig('./Sum_q_Z_Iter_CompMod.png')
+        
+        figure(5)
+        for m in xrange(M):
+            plot(mu1_array[m])
+            hold(True)
+        hold(False) 
+        savefig('./mu1_Iter_CompMod.png')
+        
+        figure(6)
+        plot(h_norm_array)
+        savefig('./HRF_Norm_CompMod.png')
+        
+        Data_save = xndarray(h_norm_array, ['Iteration'])
+        Data_save.save('./HRF_Norm_Comp.nii')
+
+    CompTime = t2 - t1
+    cTimeMean = CompTime/ni
+    
+    """
+    Norm = np.linalg.norm(m_H)
+    m_H /= Norm
+    Sigma_H /= Norm**2
+    sigmaH /= Norm**2
+    m_A *= Norm
+    Sigma_A *= Norm**2
+    mu_M *= Norm
+    sigma_M *= Norm**2
+    sigma_M = np.sqrt(np.sqrt(sigma_M))
+    """
+    pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
+    pyhrf.verbose(1, "Computational time = " + str(np.int( CompTime//60 ) ) + " min " + str(np.int(CompTime%60)) + " s")
+    if pyhrf.verbose.verbosity > 1:
+        print 'mu_M:', mu_M
+        print 'sigma_M:', sigma_M
+        print "sigma_H = " + str(sigmaH)
+        print "Beta = " + str(Beta)
+        
+    StimulusInducedSignal = vt.computeFit(m_H, m_A, X, J, N)
+    SNR = 20 * np.log( np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL) )
+    SNR /= np.log(10.)
+    print 'SNR comp =', SNR
+    return ni,m_A,m_H,q_Z,sigma_epsilone,mu_M,sigma_M,Beta,L,PL,CONTRAST,CONTRASTVAR,cA[2:],cH[2:],cZ[2:],cAH[2:],cTime[2:],cTimeMean,Sigma_A,StimulusInducedSignal

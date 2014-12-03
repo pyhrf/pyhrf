@@ -20,6 +20,7 @@ import pyhrf
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 import os.path as op
+
 def change_dim(labels):
     '''
     Change labels dimension from

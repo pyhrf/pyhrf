@@ -5,7 +5,7 @@ from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.ndarray import xndarray
 #from pyhrf.vbjde.Utils_b import Main_vbjde_Extension_constrained
 from pyhrf.vbjde.Utils import classify,roc_curve,Main_vbjde_Python #,Main_vbjde_Extension
-from pyhrf.vbjde.vem_bold import Main_vbjde_Extension
+from pyhrf.vbjde.vem_bold import Main_vbjde_Extension, Main_vbjde_Extension_stable
 from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained, Main_vbjde_Python_constrained
 #from pyhrf.vbjde.Utils import Main_vbjde, Main_vbjde_Fast, Main_vbjde_Extension,Main_vbjde_Extension_NoDrifts
 from scipy.linalg import norm
@@ -171,9 +171,8 @@ class JDEVEMAnalyser(JDEAnalyser):
                 NbIter, nrls, estimated_hrf, \
                 labels, noiseVar, mu_k, sigma_k, \
                 Beta, L, PL, CONTRAST, CONTRASTVAR, \
-                cA,cH,cZ,cAH,cTime,cTimeMean, \
-                Sigma_nrls, StimuIndSignal,\
-                FreeEnergy = Main_vbjde_Extension(graph,data,Onsets, \
+                cA,cH,cZ,cAH,cTime,cTimeMean, Sigma_nrls, \
+                StimuIndSignal = Main_vbjde_Extension_stable(graph,data,Onsets, \
                                         self.hrfDuration, self.nbClasses,TR,
                                         beta,self.dt,scale,self.estimateSigmaH,
                                         self.sigmaH,self.nItMax, self.nItMin,
@@ -207,6 +206,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             # if not self.fast
             if self.estimateDrifts:
                 pyhrf.verbose(2, "not fast VEM")
+                pyhrf.verbose(2, "NOT WORKING")
                 nrls, estimated_hrf, \
                 labels, noiseVar, mu_k, \
                 sigma_k, Beta, L, \
@@ -223,128 +223,129 @@ class JDEVEMAnalyser(JDEAnalyser):
                           %format_duration(self.analysis_duration))
 
 
-        ### OUTPUTS: Pack all outputs within a dict
-        outputs = {}
-        hrf_time = np.arange(len(estimated_hrf)) * self.dt
+        if self.fast:
+            ### OUTPUTS: Pack all outputs within a dict
+            outputs = {}
+            hrf_time = np.arange(len(estimated_hrf)) * self.dt
+                
+            axes_names = ['iteration']
+            """axes_domains = {'iteration':np.arange(FreeEnergy.shape[0])}
+            outputs['FreeEnergy'] = xndarray(FreeEnergy,
+                                        axes_names=axes_names,
+                                        axes_domains=axes_domains)
+            """
+            outputs['hrf'] = xndarray(estimated_hrf, axes_names=['time'],
+                                axes_domains={'time':hrf_time},
+                                value_label="HRF")
+
+            domCondition = {'condition':cNames}
+            outputs['nrls'] = xndarray(nrls.transpose(),value_label="NRLs",
+                                    axes_names=['condition','voxel'],
+                                    axes_domains=domCondition)
             
-        axes_names = ['iteration']
-        axes_domains = {'iteration':np.arange(FreeEnergy.shape[0])}
-        outputs['FreeEnergy'] = xndarray(FreeEnergy,
-                                    axes_names=axes_names,
-                                    axes_domains=axes_domains)
-
-        outputs['hrf'] = xndarray(estimated_hrf, axes_names=['time'],
-                            axes_domains={'time':hrf_time},
-                            value_label="HRF")
-
-        domCondition = {'condition':cNames}
-        outputs['nrls'] = xndarray(nrls.transpose(),value_label="NRLs",
-                                 axes_names=['condition','voxel'],
-                                 axes_domains=domCondition)
+            ad = {'condition':cNames,'condition2':Onsets.keys()}
+            
+            outputs['Sigma_nrls'] = xndarray(Sigma_nrls,value_label="Sigma_NRLs",
+                                            axes_names=['condition','condition2','voxel'],
+                                            axes_domains=ad)
+            
+            outputs['NbIter'] = xndarray(np.array([NbIter]),value_label="NbIter")
         
-        ad = {'condition':cNames,'condition2':Onsets.keys()}
+            outputs['beta'] = xndarray(Beta,value_label="beta",
+                                    axes_names=['condition'],
+                                    axes_domains=domCondition)
 
-        outputs['Sigma_nrls'] = xndarray(Sigma_nrls,value_label="Sigma_NRLs",
-                                        axes_names=['condition','condition2','voxel'],
-                                        axes_domains=ad)
+            nbc, nbv = len(cNames), nrls.shape[0]
+            repeatedBeta = np.repeat(Beta, nbv).reshape(nbc, nbv)
+            outputs['beta_mapped'] = xndarray(repeatedBeta,value_label="beta",
+                                            axes_names=['condition','voxel'],
+                                            axes_domains=domCondition)
+
+            outputs['roi_mask'] = xndarray(np.zeros(nbv)+roiData.get_roi_id(),
+                                        value_label="ROI",
+                                        axes_names=['voxel'])
+
+            h = estimated_hrf
+            nrls = nrls.transpose()
+
+            nvox = nrls.shape[1]
+            nbconds = nrls.shape[0]
+            ah = np.zeros((h.shape[0], nvox, nbconds))
+
+            mixtp = np.zeros((roiData.nbConditions, self.nbClasses, 2))
+            mixtp[:, :, 0] = mu_k
+            mixtp[:, :, 1] = sigma_k**2
         
-        outputs['NbIter'] = xndarray(np.array([NbIter]),value_label="NbIter")
-    
-        outputs['beta'] = xndarray(Beta,value_label="beta",
-                                 axes_names=['condition'],
-                                 axes_domains=domCondition)
+            an = ['condition','Act_class','component']
+            ad = {'Act_class':['inactiv','activ'],
+                'condition': cNames,
+                'component':['mean','var']}
+            outputs['mixt_p'] = xndarray(mixtp, axes_names=an, axes_domains=ad)
 
-        nbc, nbv = len(cNames), nrls.shape[0]
-        repeatedBeta = np.repeat(Beta, nbv).reshape(nbc, nbv)
-        outputs['beta_mapped'] = xndarray(repeatedBeta,value_label="beta",
-                                        axes_names=['condition','voxel'],
-                                        axes_domains=domCondition)
+            ad = {'class' : ['inactiv','activ'],
+                'condition': cNames,
+                }
+            outputs['labels'] = xndarray(labels,value_label="Labels",
+                                    axes_names=['condition','class','voxel'],
+                                    axes_domains=ad)
+            outputs['noiseVar'] = xndarray(noiseVar,value_label="noiseVar",
+                                        axes_names=['voxel'])
+            if self.estimateDrifts:
+                outputs['drift_coeff'] = xndarray(L,value_label="Drift",
+                                axes_names=['coeff','voxel'])
+                outputs['drift'] = xndarray(PL,value_label="Delta BOLD",
+                            axes_names=['time','voxel'])
+            if (len(self.contrasts) >0) and self.computeContrast:
+                #keys = list((self.contrasts[nc]) for nc in self.contrasts)
+                domContrast = {'contrast':self.contrasts.keys()}
+                outputs['contrasts'] = xndarray(CONTRAST, value_label="Contrast",
+                                            axes_names=['voxel','contrast'],
+                                            axes_domains=domContrast)
+                #print 'contrast output:'
+                #print outputs['contrasts'].descrip()
 
-        outputs['roi_mask'] = xndarray(np.zeros(nbv)+roiData.get_roi_id(),
-                                     value_label="ROI",
-                                     axes_names=['voxel'])
+                c = xndarray(CONTRASTVAR, value_label="Contrasts_Variance",
+                        axes_names=['voxel','contrast'],
+                        axes_domains=domContrast)
+                outputs['contrasts_variance'] = c
 
-        h = estimated_hrf
-        nrls = nrls.transpose()
+                outputs['ncontrasts'] = xndarray(CONTRAST/CONTRASTVAR**.5,
+                                            value_label="Normalized Contrast",
+                                            axes_names=['voxel','contrast'],
+                                            axes_domains=domContrast)
 
-        nvox = nrls.shape[1]
-        nbconds = nrls.shape[0]
-        ah = np.zeros((h.shape[0], nvox, nbconds))
-
-        mixtp = np.zeros((roiData.nbConditions, self.nbClasses, 2))
-        mixtp[:, :, 0] = mu_k
-        mixtp[:, :, 1] = sigma_k**2
-       
-        an = ['condition','Act_class','component']
-        ad = {'Act_class':['inactiv','activ'],
-              'condition': cNames,
-              'component':['mean','var']}
-        outputs['mixt_p'] = xndarray(mixtp, axes_names=an, axes_domains=ad)
-
-        ad = {'class' : ['inactiv','activ'],
-              'condition': cNames,
-              }
-        outputs['labels'] = xndarray(labels,value_label="Labels",
-                                   axes_names=['condition','class','voxel'],
-                                   axes_domains=ad)
-        outputs['noiseVar'] = xndarray(noiseVar,value_label="noiseVar",
-                                     axes_names=['voxel'])
-        if self.estimateDrifts:
-            outputs['drift_coeff'] = xndarray(L,value_label="Drift",
-                            axes_names=['coeff','voxel'])
-            outputs['drift'] = xndarray(PL,value_label="Delta BOLD",
-                        axes_names=['time','voxel'])
-        if (len(self.contrasts) >0) and self.computeContrast:
-            #keys = list((self.contrasts[nc]) for nc in self.contrasts)
-            domContrast = {'contrast':self.contrasts.keys()}
-            outputs['contrasts'] = xndarray(CONTRAST, value_label="Contrast",
-                                          axes_names=['voxel','contrast'],
-                                          axes_domains=domContrast)
-            #print 'contrast output:'
-            #print outputs['contrasts'].descrip()
-
-            c = xndarray(CONTRASTVAR, value_label="Contrasts_Variance",
-                       axes_names=['voxel','contrast'],
-                       axes_domains=domContrast)
-            outputs['contrasts_variance'] = c
-
-            outputs['ncontrasts'] = xndarray(CONTRAST/CONTRASTVAR**.5,
-                                           value_label="Normalized Contrast",
-                                           axes_names=['voxel','contrast'],
-                                           axes_domains=domContrast)
-
-        ################################################################################
-        # CONVERGENCE
-        
-        axes_names = ['duration']
-        outName = 'Convergence_Labels'
-        ax = np.arange(self.nItMax)*cTimeMean
-        ax[:len(cTime)] = cTime
-        ad = {'duration':ax}
-        c = np.zeros(self.nItMax) #-.001 #
-        c[:len(cZ)] = cZ
-        outputs[outName] = xndarray(c, axes_names=axes_names,
-                                    axes_domains=ad,
-                                    value_label='Conv_Criterion_Z')
-        outName = 'Convergence_HRF'
-        #ad = {'Conv_Criterion':np.arange(len(cH))}
-        c = np.zeros(self.nItMax) #-.001 #
-        c[:len(cH)] = cH
-        outputs[outName] = xndarray(c, axes_names=axes_names,
-                                    axes_domains=ad,
-                                    value_label='Conv_Criterion_H')
-        outName = 'Convergence_NRL'
-        c = np.zeros(self.nItMax)# -.001 #
-        c[:len(cA)] = cA
-        #ad = {'Conv_Criterion':np.arange(len(cA))}
-        outputs[outName] = xndarray(c, axes_names=axes_names,
-                                    axes_domains=ad,
-                                    value_label='Conv_Criterion_A')
-                                
+            ################################################################################
+            # CONVERGENCE
+            
+            axes_names = ['duration']
+            outName = 'Convergence_Labels'
+            ax = np.arange(self.nItMax)*cTimeMean
+            ax[:len(cTime)] = cTime
+            ad = {'duration':ax}
+            c = np.zeros(self.nItMax) #-.001 #
+            c[:len(cZ)] = cZ
+            outputs[outName] = xndarray(c, axes_names=axes_names,
+                                        axes_domains=ad,
+                                        value_label='Conv_Criterion_Z')
+            outName = 'Convergence_HRF'
+            #ad = {'Conv_Criterion':np.arange(len(cH))}
+            c = np.zeros(self.nItMax) #-.001 #
+            c[:len(cH)] = cH
+            outputs[outName] = xndarray(c, axes_names=axes_names,
+                                        axes_domains=ad,
+                                        value_label='Conv_Criterion_H')
+            outName = 'Convergence_NRL'
+            c = np.zeros(self.nItMax)# -.001 #
+            c[:len(cA)] = cA
+            #ad = {'Conv_Criterion':np.arange(len(cA))}
+            outputs[outName] = xndarray(c, axes_names=axes_names,
+                                        axes_domains=ad,
+                                        value_label='Conv_Criterion_A')
+                                    
         ################################################################################
         # SIMULATION
         
-        if self.simulation:
+        if self.simulation and self.fast:
             from pyhrf.stats import compute_roc_labels
             labels_vem_audio = roiData.simulation['labels'][0]
             labels_vem_video = roiData.simulation['labels'][1]
@@ -437,13 +438,13 @@ class JDEVEMAnalyser(JDEAnalyser):
         
         # END SIMULATION
         ##########################################################################
+        if self.fast:
+            d = {'parcel_size':np.array([nvox])}
+            outputs['analysis_duration'] = xndarray(np.array([self.analysis_duration]),
+                                                axes_names=['parcel_size'],
+                                                axes_domains=d)
 
-        d = {'parcel_size':np.array([nvox])}
-        outputs['analysis_duration'] = xndarray(np.array([self.analysis_duration]),
-                                              axes_names=['parcel_size'],
-                                              axes_domains=d)
-
-        return outputs
+        return #outputs
 
 
 

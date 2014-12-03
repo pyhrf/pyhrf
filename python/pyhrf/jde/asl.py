@@ -1827,8 +1827,7 @@ class ASLSampler(xmlio.XmlInitable, GibbsSampler):
 
 from pyhrf.boldsynth.scenarios import *
 
-def simulate_asl(output_dir=None, noise_scenario='high_snr',
-                 spatial_size='tiny'):
+def simulate_asl(output_dir=None, noise_scenario='high_snr',spatial_size='tiny'):
     from pyhrf import Condition
     from pyhrf.tools import Pipeline
 
@@ -1920,7 +1919,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
     simulation = simu_graph.get_values()
 
     if output_dir is not None:
-        simu_graph.save_graph_plot(op.join(output_dir, 'simulation_graph.png'))
+        #simu_graph.save_graph_plot(op.join(output_dir, 'simulation_graph.png'))
 
         simulation_save_vol_outputs(simulation, output_dir)
 

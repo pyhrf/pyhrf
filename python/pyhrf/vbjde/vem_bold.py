@@ -23,6 +23,7 @@ try:
 except ImportError:
     from pyhrf.tools.backports import OrderedDict
 
+eps = 1e-4
 
 def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0,estimateHRF=True,TrueHrfFlag=False,HrfFilename='hrf.nii',estimateLabels=True,LabelsFilename='labels.nii',MFapprox=False,InitVar=0.5,InitMean=2.0,MiniVEMFlag=False,NbItMiniVem=5):    
     # VEM BOLD classic, using extension in C
@@ -30,11 +31,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     pyhrf.verbose(1,"Fast EM with C extension started ...")
     np.random.seed(6537546)
 
+    # TODO: Take out
     tau1 = 0.0
     tau2 = 0.0
     S = 100
-    Init_sigmaH = sigmaH
-
+    
     Nb2Norm = 1
     NormFlag = False    
     
@@ -72,7 +73,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     for condition,Ons in Onsets.iteritems():
         XX[nc,:,:] = X[condition]
         nc += 1
-        
+   
     order = 2
     D2 = vt.buildFiniteDiffMatrix(order,D)
     R = np.dot(D2,D2) / pow(dt,2*order)
@@ -82,6 +83,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     Gamma = np.identity(N)
     Det_Gamma = np.linalg.det(Gamma)
 
+    # TODO: Take out p_Wtilde
     p_Wtilde = np.zeros((M,K),dtype=np.float64)
     p_Wtilde1 = np.zeros((M,K),dtype=np.float64)
     p_Wtilde[:,1] = 1
@@ -93,7 +95,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     AH = np.zeros((J,M,D),dtype=np.float64)
     AH1 = np.zeros((J,M,D),dtype=np.float64)
     Crit_FreeEnergy = 1
-    
     cA = []
     cH = []
     cZ = []
@@ -123,34 +124,15 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         pyhrf.verbose(1,"MiniVEM to choose the best initialisation...")
         InitVar, InitMean, gamma_h = vt.MiniVEM_CompMod(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,Det_invR,Gamma,Det_Gamma,p_Wtilde,scale,Q_barnCond,XGamma,tau1,tau2,NbItMiniVem,sigmaH,estimateHRF)
 
-    sigmaH = Init_sigmaH
     sigma_epsilone = np.ones(J)
-    if 0:
-        pyhrf.verbose(3,"Labels are initialized by setting active probabilities to zeros ...")
-        q_Z = np.ones((M,K,J),dtype=np.float64)
-        q_Z[:,1,:] = 0
-    if 0:
-        pyhrf.verbose(3,"Labels are initialized randomly ...")
-        q_Z = np.zeros((M,K,J),dtype=np.float64)
-        nbVoxInClass = J/K
-        for j in xrange(M) :
-            if J%2==0:
-                l = []
-            else:
-                l = [0]
-            for c in xrange(K) :
-                l += [c] * nbVoxInClass
-            q_Z[j,0,:] = np.random.permutation(l)
-            q_Z[j,1,:] = 1. - q_Z[j,0,:]
-    if 1:
-        pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
-        q_Z = np.zeros((M,K,J),dtype=np.float64)
-        q_Z[:,1,:] = 1
+
+    pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z[:,1,:] = 1
         
     q_Z1 = np.zeros((M,K,J),dtype=np.float64)   
     Z_tilde = q_Z.copy()
     
-    #TT,m_h = getCanoHRF(Thrf-dt,dt) #TODO: check
     TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
     m_h = m_h[:D]
     m_H = np.array(m_h).astype(np.float64)
@@ -190,13 +172,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     for ni in xrange(0,NitMin):
         pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
         pyhrf.verbose(3, "E A step ...")
-        #t01 = time.time()
         UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
         
         val = np.reshape(m_A,(M*J))
         val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
         val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
-        #m_A = np.reshape(val, (J,M))
         
         if estimateHRF:
             UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
@@ -221,7 +201,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 plt.hold(True)
         else:
             if TrueHrfFlag:
-                #TrueVal, head = read_volume(HrfFilename)
                 TrueVal, head = read_volume(HrfFilename)[:,0,0,0]
                 print TrueVal
                 print TrueVal.shape
@@ -249,11 +228,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         
         if estimateLabels:
             pyhrf.verbose(3, "E Z step ...")
-            if MFapprox:
-                UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
-            if not MFapprox:
-                UtilsC.expectation_Z_ParsiMod_RVM_and_CompMod(Sigma_A,m_A,sigma_M,Beta,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
-                #UtilsC.expectation_Z_ParsiMod_3(Sigma_A,m_A,sigma_M,Beta,p_Wtilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
+            UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
         else:
             pyhrf.verbose(3, "Using True Z ...")
             TrueZ = read_volume(LabelsFilename)
@@ -263,7 +238,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         
         val = np.reshape(q_Z,(M*K*J))
         val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
-        #q_Z = np.reshape(val, (M,K,J))
         
         DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
@@ -271,12 +245,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
-        
-        #DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
-        #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-        #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
-        #cZ += [Crit_Z]
-        #q_Z1[:,:,:] = q_Z[:,:,:]
         
         if estimateHRF:
             if estimateSigmaH:
@@ -301,11 +269,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         if estimateBeta:
             pyhrf.verbose(3,"estimating beta")
             for m in xrange(0,M):
-                if MFapprox:
-                    Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
-                if not MFapprox:
-                    #Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
-                    Beta[m] = UtilsC.maximization_beta_CB(beta,q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
             pyhrf.verbose(3,"End estimating beta")
             pyhrf.verbose.printNdarray(3, Beta)
         pyhrf.verbose(3,"M sigma noise step ...")
@@ -322,13 +286,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         
         t02 = time.time()
         cTime += [t02-t1]
-        
-        #print 'sigma_noise =',sigma_epsilone
-        #t02 = time.time()
-        #cTime += [t02-t1]
-    #m_H1[:] = m_H[:]
-    #q_Z1[:,:,:] = q_Z[:,:,:]
-    #m_A1[:,:] = m_A[:,:]
 
     pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
     UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
@@ -363,8 +320,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             TrueVal, head = read_volume(HrfFilename)[:,0,0,0]
             m_H = TrueVal
     
-    #DIFF = abs(np.reshape(m_A,(M*J)) - np.reshape(m_A1,(M*J)))
-    #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
     DIFF = np.reshape( m_A - m_A1,(M*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
@@ -373,7 +328,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     m_A1[:,:] = m_A[:,:]    
         
     Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
-    #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
     cH += [Crit_H]
     m_H1[:] = m_H[:]
 
@@ -400,7 +354,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     
     val = np.reshape(q_Z,(M*K*J))
     val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
-    #q_Z = np.reshape(val, (M,K,J))
     
     DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
@@ -408,12 +361,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
     cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
-    
-    #DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
-    #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-    #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
-    #cZ += [Crit_Z]
-    #q_Z1[:,:,:] = q_Z[:,:,:]
+
     
     if estimateHRF:
         if estimateSigmaH:
@@ -436,11 +384,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     if estimateBeta:
         pyhrf.verbose(3,"estimating beta")
         for m in xrange(0,M):
-            if MFapprox:
-                Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
-            if not MFapprox:    
-                #Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
-                Beta[m] = UtilsC.maximization_beta_CB(beta,q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+            Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
         pyhrf.verbose(3,"End estimating beta")
         pyhrf.verbose.printNdarray(3, Beta)
     UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N)
@@ -460,13 +404,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     if ((Crit_FreeEnergy > Thresh_FreeEnergy) or (Crit_AH > Thresh)):
         while ( ((Crit_FreeEnergy > Thresh_FreeEnergy) or (Crit_AH > Thresh)) and (ni < NitMax) ):
             pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
-            #t01 = time.time()
             UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
             
             val = np.reshape(m_A,(M*J))
             val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
             val[ np.where((val>=-1e-50) & (val<0.0)) ] = 0.0
-            #m_A = np.reshape(val, (J,M))
             
             if estimateHRF:
                 UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
@@ -492,8 +434,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                     TrueVal, head = read_volume(HrfFilename)[:,0,0,0]
                     m_H = TrueVal
             
-            #DIFF = abs(np.reshape(m_A,(M*J)) - np.reshape(m_A1,(M*J)))
-            #Crit_A = sum(DIFF) / len(np.where(DIFF != 0))
             DIFF = np.reshape( m_A - m_A1,(M*J) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
@@ -502,7 +442,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             cA += [Crit_A]       
                     
             Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
-            #Crit_H = abs(np.mean(m_H - m_H1) / np.mean(m_H))
             cH += [Crit_H]
             m_H1[:] = m_H[:]
 
@@ -526,23 +465,9 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 for m in xrange(M):
                     q_Z[m,1,:] = np.reshape(TrueZ[0][:,:,:,m],J)
                     q_Z[m,0,:] = 1 - q_Z[m,1,:]
-            #ion()
-            #figure(6).clf()
-            #for m in range(0,M):
-                #for k in range(0,K):
-                    #z1 = q_Z[m,k,:]
-                    #z2 = np.reshape(z1,(l,l))
-                    #figure(6)
-                    #subplot(M,K,1 + m*K + k)
-                    #imshow(z2,interpolation='nearest')
-                    #title("m = " + str(m) +"k = " + str(k))
-                    #colorbar()
-                    #hold(False)
-            #draw()
 
             val = np.reshape(q_Z,(M*K*J))
             val[ np.where((val<=1e-50) & (val>0.0)) ] = 0.0
-            #q_Z = np.reshape(val, (M,K,J))
 
             DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
@@ -550,12 +475,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
-
-            #DIFF = abs(np.reshape(q_Z,(M*K*J)) - np.reshape(q_Z1,(M*K*J)))
-            #DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
-            #Crit_Z = (sum(DIFF) / len(np.where(DIFF != 0)))**2
-            #cZ += [Crit_Z]
-            #q_Z1[:,:,:] = q_Z[:,:,:]
             
             if estimateHRF:
                 if estimateSigmaH:
@@ -566,7 +485,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                         sigmaH = vt.maximization_sigmaH(D,Sigma_H,R,m_H)
                     pyhrf.verbose(3,'sigmaH = ' + str(sigmaH))
                     
-            mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+            mu_M,sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
             
             for m in xrange(M):
                 SUM_q_Z[m] += [sum(q_Z[m,1,:])]
@@ -578,11 +497,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             if estimateBeta:
                 pyhrf.verbose(3,"estimating beta")
                 for m in xrange(0,M):
-                    if MFapprox:
-                        Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
-                    if not MFapprox:
-                        #Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
-                        Beta[m] = UtilsC.maximization_beta_CB(beta,q_Z[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                    Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
                 pyhrf.verbose(3,"End estimating beta")
                 pyhrf.verbose.printNdarray(3,Beta)
             UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N)
@@ -599,15 +514,9 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             cTime += [t02-t1]
     t2 = time.time()
     
-    #FreeEnergyArray = np.zeros((NitMax+1),dtype=np.float64)
     FreeEnergyArray = np.zeros((ni),dtype=np.float64)
     for i in xrange(ni):
         FreeEnergyArray[i] = FreeEnergy_Iter[i]
-    #for i in xrange(ni-1,NitMax+1):
-        #FreeEnergyArray[i] = FreeEnergy_Iter[ni-1]
-
-    #SUM_q_Z_array = np.zeros((M,NitMax+1),dtype=np.float64)
-    #mu1_array = np.zeros((M,NitMax+1),dtype=np.float64)
     SUM_q_Z_array = np.zeros((M,ni),dtype=np.float64)
     mu1_array = np.zeros((M,ni),dtype=np.float64)
     h_norm_array = np.zeros((ni),dtype=np.float64)
@@ -616,10 +525,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             SUM_q_Z_array[m,i] = SUM_q_Z[m][i]
             mu1_array[m,i] = mu1[m][i]
             h_norm_array[i] = h_norm[i]
-        #for i in xrange(ni-1,NitMax+1):
-            #SUM_q_Z_array[m,i] = SUM_q_Z[m][ni-1]
-            #mu1_array[m,i] = mu1[m][ni-1]
-
+            
     
     if PLOT:
         import matplotlib.pyplot as plt
@@ -629,17 +535,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         plt.savefig('./HRF_Iter_CompMod.png')
         plt.hold(False)
         plt.figure(2)
-        #plot(cA[1:-1],'r')
-        #hold(True)
-        #plot(cH[1:-1],'b')
-        #hold(True)
-        #plot(cZ[1:-1],'k')
-        #hold(True)
         plt.plot(cAH[1:-1],'lightblue')
         plt.hold(True)
         plt.plot(cFE[1:-1],'m')
         plt.hold(False)
-        #plt.legend( ('CA','CH', 'CZ', 'CAH', 'CFE') )
         plt.legend( ('CAH', 'CFE') )
         plt.grid(True)
         plt.savefig('./Crit_CompMod.png')
@@ -653,8 +552,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             plt.plot(SUM_q_Z_array[m])
             plt.hold(True)
         plt.hold(False)
-        #plt.legend( ('m=0','m=1', 'm=2', 'm=3') )
-        #plt.legend( ('m=0','m=1') ) 
         plt.savefig('./Sum_q_Z_Iter_CompMod.png')
         
         plt.figure(5)
@@ -683,8 +580,8 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         Sigma_A *= Norm**2
         mu_M *= Norm
         sigma_M *= Norm**2
-        
     sigma_M = np.sqrt(np.sqrt(sigma_M))
+    
     #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
     if computeContrast:
         if len(contrasts) >0:
@@ -692,9 +589,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             nrls_conds = dict([(str(cn), m_A[:,ic]) \
                                    for ic,cn in enumerate(condition_names)] )
             n = 0
-            #print contrasts
-            #print nrls_conds
-            #raw_input('')
             for cname in contrasts:
                 #------------ contrasts ------------#
                 contrast_expr = AExpr(contrasts[cname], **nrls_conds)
@@ -714,8 +608,6 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                     ind_conds[condition_names[m]] = 1.0
                     ContrastCoef[m] = eval(contrasts[cname],ind_conds)
                 ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
-                #print ContrastCoef
-                #print ActiveContrasts
                 AC = ActiveContrasts*ContrastCoef
                 for j in xrange(0,J):
                     S_tmp = Sigma_A[:,:,j]
@@ -724,10 +616,9 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
         #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
+    
     pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
     pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
-    #print "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s"
-    #print "sigma_H = " + str(sigmaH)
     if pyhrf.verbose.verbosity > 1:
         print 'mu_M:', mu_M
         print 'sigma_M:', sigma_M
@@ -738,7 +629,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     SNR = 20 * np.log( np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL) )
     SNR /= np.log(10.)
     print 'SNR comp =', SNR
-    return ni,m_A,m_H, q_Z , sigma_epsilone, mu_M , sigma_M, Beta, L, PL, CONTRAST, CONTRASTVAR, cA[2:],cH[2:],cZ[2:],cAH[2:],cTime[2:],cTimeMean,Sigma_A,StimulusInducedSignal,FreeEnergyArray
+    return ni,m_A,m_H,q_Z,sigma_epsilone,mu_M,sigma_M,Beta,L,PL,CONTRAST, CONTRASTVAR,cA[2:],cH[2:],cZ[2:],cAH[2:],cTime[2:],cTimeMean,Sigma_A,StimulusInducedSignal #,FreeEnergyArray
 
 
 def Main_vbjde_Python(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.1,NitMax = -1,NitMin = 1,estimateBeta=False,PLOT=False):
@@ -1091,3 +982,384 @@ def Main_vbjde(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigm
     pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
     return m_A, m_H, q_Z , sigma_epsilone, (np.array(Hist_sigmaH)).transpose()
 
+
+def Main_vbjde_Extension_stable(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH=True,sigmaH = 0.05,NitMax = -1,NitMin = 1,estimateBeta=True,PLOT=False,contrasts=[],computeContrast=False,gamma_h=0):    
+    """ Version modified by Lofti from Christine's version """
+    pyhrf.verbose(1,"Fast EM with C extension started ... Here is the stable version !")
+
+    np.random.seed(6537546)
+    S = 100
+    if NitMax < 0:
+        NitMax = 100
+    gamma = 7.5#7.5
+    gradientStep = 0.003
+    MaxItGrad = 200
+    Thresh = 1e-5
+    
+    # Initialize sizes vectors
+    D = np.int(np.ceil(Thrf/dt)) + 1
+    M = len(Onsets)
+    N = Y.shape[0]
+    J = Y.shape[1]
+    l = np.int(np.sqrt(J))
+    condition_names = []
+    
+    maxNeighbours = max([len(nl) for nl in graph])
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
+    neighboursIndexes -= 1
+    for i in xrange(J):
+        neighboursIndexes[i,:len(graph[i])] = graph[i]
+    #-----------------------------------------------------------------------#
+    
+    X = OrderedDict([])
+    for condition,Ons in Onsets.iteritems():
+        X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
+        condition_names += [condition]
+    XX = np.zeros((M,N,D),dtype=np.int32)
+    nc = 0
+    for condition,Ons in Onsets.iteritems():
+        XX[nc,:,:] = X[condition]
+        nc += 1  
+        
+    order = 2
+    D2 = vt.buildFiniteDiffMatrix(order,D)
+    R = np.dot(D2,D2) / pow(dt,2*order)
+    invR = np.linalg.inv(R)
+    Det_invR = np.linalg.det(invR)
+    
+    Gamma = np.identity(N)
+    Det_Gamma = np.linalg.det(Gamma)
+
+    Crit_H = 1
+    Crit_Z = 1
+    Crit_A = 1
+    Crit_AH = 1
+    AH = np.zeros((J,M,D),dtype=np.float64)
+    AH1 = np.zeros((J,M,D),dtype=np.float64)
+    Crit_FreeEnergy = 1
+    cTime = []
+    cA = []
+    cH = []
+    cZ = []
+    cAH = []
+    
+    CONTRAST = np.zeros((J,len(contrasts)),dtype=np.float64)
+    CONTRASTVAR = np.zeros((J,len(contrasts)),dtype=np.float64)
+    Q_barnCond = np.zeros((M,M,D,D),dtype=np.float64)
+    XGamma = np.zeros((M,D,N),dtype=np.float64)
+    m1 = 0
+    for k1 in X: # Loop over the M conditions
+        m2 = 0
+        for k2 in X:
+            Q_barnCond[m1,m2,:,:] = np.dot(np.dot(X[k1].transpose(),Gamma),X[k2])
+            m2 += 1
+        XGamma[m1,:,:] = np.dot(X[k1].transpose(),Gamma)
+        m1 += 1
+    
+    sigma_epsilone = np.ones(J)
+   
+    pyhrf.verbose(3,"Labels are initialized by setting active probabilities to ones ...")
+    q_Z = np.zeros((M,K,J),dtype=np.float64)
+    q_Z[:,1,:] = 1
+        
+    q_Z1 = np.zeros((M,K,J),dtype=np.float64)   
+    Z_tilde = q_Z.copy()
+    
+    TT,m_h = getCanoHRF(Thrf,dt) #TODO: check
+    m_h = m_h[:D]
+    m_H = np.array(m_h).astype(np.float64)
+    m_H1 = np.array(m_h)
+    sigmaH1 = sigmaH
+    Sigma_H = np.ones((D,D),dtype=np.float64)
+
+    
+    Beta = beta * np.ones((M),dtype=np.float64)
+    P = vt.PolyMat( N , 4 , TR)
+    L = vt.polyFit(Y, TR, 4,P)
+    PL = np.dot(P,L)
+    y_tilde = Y - PL
+    Ndrift = L.shape[0]
+
+    sigma_M = np.ones((M,K),dtype=np.float64)
+    sigma_M[:,0] = 0.5
+    sigma_M[:,1] = 0.6
+    mu_M = np.zeros((M,K),dtype=np.float64)
+    for k in xrange(1,K):
+        mu_M[:,k] = 1#InitMean
+    Sigma_A = np.zeros((M,M,J),np.float64)
+    for j in xrange(0,J):
+        Sigma_A[:,:,j] = 0.01*np.identity(M)    
+    m_A = np.zeros((J,M),dtype=np.float64)
+    m_A1 = np.zeros((J,M),dtype=np.float64)    
+    for j in xrange(0,J):
+        for m in xrange(0,M):
+            for k in xrange(0,K):
+                m_A[j,m] += np.random.normal(mu_M[m,k], np.sqrt(sigma_M[m,k]))*q_Z[m,k,j]
+    m_A1 = m_A       
+    
+    t1 = time.time()
+    
+    for ni in xrange(0,NitMin):
+        pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
+        pyhrf.verbose(3, "E A step ...")
+        UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
+        UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
+        m_H[0] = 0
+        m_H[-1] = 0
+                
+        DIFF = np.reshape( m_A - m_A1,(M*J) )
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+        cA += [Crit_A]
+        m_A1[:,:] = m_A[:,:]
+        
+        Crit_H = (np.linalg.norm( m_H - m_H1 ) / np.linalg.norm( m_H1 ))**2
+        cH += [Crit_H]
+        m_H1[:] = m_H[:]
+
+        for d in xrange(0,D):
+            AH[:,:,d] = m_A[:,:]*m_H[d]
+        DIFF = np.reshape( AH - AH1,(M*J*D) )
+        Crit_AH = (np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(AH1,(M*J*D)) ) + eps))**2
+        cAH += [Crit_AH]
+        AH1[:,:,:] = AH[:,:,:]
+        
+        pyhrf.verbose(3, "E Z step ...")
+        UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)       
+        
+        DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
+        Crit_Z = ( np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ) + eps))**2
+        cZ += [Crit_Z]
+        q_Z1[:,:,:] = q_Z[:,:,:]
+        
+        if estimateSigmaH:
+            pyhrf.verbose(3,"M sigma_H step ...")
+            if gamma_h > 0:
+                sigmaH = vt.maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h)
+            else:
+                sigmaH = vt.maximization_sigmaH(D,Sigma_H,R,m_H)
+            pyhrf.verbose(3,'sigmaH = ' + str(sigmaH))
+        
+        pyhrf.verbose(3,"M (mu,sigma) step ...")
+        mu_M , sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+        
+        UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(np.int32),J,D,M,Ndrift,N)
+        
+        PL = np.dot(P,L)
+        y_tilde = Y - PL
+        if estimateBeta:
+            pyhrf.verbose(3,"estimating beta")
+            for m in xrange(0,M):
+                Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+            pyhrf.verbose(3,"End estimating beta")
+            pyhrf.verbose.printNdarray(3, Beta)
+        pyhrf.verbose(3,"M sigma noise step ...")
+        UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N)
+
+        t02 = time.time()
+        cTime += [t02-t1]
+
+    pyhrf.verbose(2,"------------------------------ Iteration n° " + str(ni+2) + " ------------------------------")
+    UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
+    UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
+    m_H[0] = 0
+    m_H[-1] = 0
+
+    DIFF = np.reshape( m_A - m_A1,(M*J) )
+    Crit_A = (np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(m_A1,(M*J)) ) + eps))**2
+    cA += [Crit_A]
+    m_A1[:,:] = m_A[:,:]    
+        
+    Crit_H = (np.linalg.norm( m_H - m_H1 ) / (np.linalg.norm( m_H1 ) + eps))**2
+    cH += [Crit_H]
+    m_H1[:] = m_H[:]
+    DIFF = np.reshape( AH - AH1,(M*J*D) )
+    Crit_AH = (np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(AH1,(M*J*D)) ) + eps))**2
+    cAH += [Crit_AH]
+    AH1[:,:,:] = AH[:,:,:]
+    
+    UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
+    
+    DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
+    Crit_Z = ( np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ) + eps))**2
+    cZ += [Crit_Z]
+    q_Z1[:,:,:] = q_Z[:,:,:]
+    
+    if estimateSigmaH:
+        pyhrf.verbose(3,"M sigma_H step ...")
+        if gamma_h > 0:
+            sigmaH = vt.maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h)
+        else:
+            sigmaH = vt.maximization_sigmaH(D,Sigma_H,R,m_H)
+        pyhrf.verbose(3,'sigmaH = ' + str(sigmaH))
+            
+    mu_M,sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+
+    UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(np.int32),J,D,M,Ndrift,N)
+    PL = np.dot(P,L)
+    y_tilde = Y - PL
+    if estimateBeta:
+        pyhrf.verbose(3,"estimating beta")
+        for m in xrange(0,M):
+            Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+            pyhrf.verbose(3,"End estimating beta")
+        pyhrf.verbose.printNdarray(3, Beta)
+    UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N)
+
+    t02 = time.time()
+    cTime += [t02-t1]
+    ni += 2
+    if (Crit_AH > Thresh):
+        while ( (Crit_AH > Thresh) and (ni < NitMax) ):
+            pyhrf.verbose(1,"------------------------------ Iteration n° " + str(ni+1) + " ------------------------------")
+            UtilsC.expectation_A(q_Z,mu_M,sigma_M,PL,sigma_epsilone,Gamma,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,K)
+            UtilsC.expectation_H(XGamma,Q_barnCond,sigma_epsilone,Gamma,R,Sigma_H,Y,y_tilde,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N,scale,sigmaH)
+            m_H[0] = 0
+            m_H[-1] = 0
+                
+            DIFF = np.reshape( m_A - m_A1,(M*J) )
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+            m_A1[:,:] = m_A[:,:]
+            cA += [Crit_A]       
+                    
+            Crit_H = (np.linalg.norm( m_H - m_H1 ) / (np.linalg.norm( m_H1 ) + eps))**2
+            cH += [Crit_H]
+            m_H1[:] = m_H[:]
+            DIFF = np.reshape( AH - AH1,(M*J*D) )
+            Crit_AH = (np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(AH1,(M*J*D)) ) + eps))**2
+            cAH += [Crit_AH]
+            AH1[:,:,:] = AH[:,:,:]
+            
+            UtilsC.expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,neighboursIndexes.astype(np.int32),M,J,K,maxNeighbours)
+            DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
+            Crit_Z = ( np.linalg.norm(DIFF) / (np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ) + eps))**2
+            cZ += [Crit_Z]
+            q_Z1[:,:,:] = q_Z[:,:,:]
+
+            if estimateSigmaH:
+                pyhrf.verbose(3,"M sigma_H step ...")
+                if gamma_h > 0:
+                    sigmaH = vt.maximization_sigmaH_prior(D,Sigma_H,R,m_H,gamma_h)
+                else:
+                    sigmaH = vt.maximization_sigmaH(D,Sigma_H,R,m_H)
+                pyhrf.verbose(3,'sigmaH = ' + str(sigmaH))
+                    
+            mu_M,sigma_M = vt.maximization_mu_sigma(mu_M,sigma_M,q_Z,m_A,K,M,Sigma_A)
+            
+            UtilsC.maximization_L(Y,m_A,m_H,L,P,XX.astype(np.int32),J,D,M,Ndrift,N)
+            PL = np.dot(P,L)
+            y_tilde = Y - PL
+            if estimateBeta:
+                pyhrf.verbose(3,"estimating beta")
+                for m in xrange(0,M):
+                    Beta[m] = UtilsC.maximization_beta(beta,q_Z[m,:,:].astype(np.float64),Z_tilde[m,:,:].astype(np.float64),J,K,neighboursIndexes.astype(np.int32),gamma,maxNeighbours,MaxItGrad,gradientStep)
+                pyhrf.verbose(3,"End estimating beta")
+                pyhrf.verbose.printNdarray(3,Beta)
+            UtilsC.maximization_sigma_noise(Gamma,PL,sigma_epsilone,Sigma_H,Y,m_A,m_H,Sigma_A,XX.astype(np.int32),J,D,M,N)
+            
+            ni +=1
+            t02 = time.time()
+            cTime += [t02-t1]
+    t2 = time.time()
+    
+
+    if PLOT:
+        font = {'size'   : 15}
+        matplotlib.rc('font', **font)
+        savefig('./HRF_Iter_CompMod.png')
+        hold(False)
+        figure(2)
+        plot(cAH[1:-1],'lightblue')
+        hold(True)
+        plot(cFE[1:-1],'m')
+        hold(False)
+        legend( ('CAH', 'CFE') )
+        grid(True)
+        savefig('./Crit_CompMod.png')
+        figure(3)
+        plot(FreeEnergyArray)
+        grid(True)
+        savefig('./FreeEnergy_CompMod.png')
+
+        figure(4)
+        for m in xrange(M):
+            plot(SUM_q_Z_array[m])
+            hold(True)
+        hold(False)
+        savefig('./Sum_q_Z_Iter_CompMod.png')
+        
+        figure(5)
+        for m in xrange(M):
+            plot(mu1_array[m])
+            hold(True)
+        hold(False) 
+        savefig('./mu1_Iter_CompMod.png')
+        
+        figure(6)
+        plot(h_norm_array)
+        savefig('./HRF_Norm_CompMod.png')
+        
+        Data_save = xndarray(h_norm_array, ['Iteration'])
+        Data_save.save('./HRF_Norm_Comp.nii')
+
+    CompTime = t2 - t1
+    cTimeMean = CompTime/ni
+    
+    Norm = np.linalg.norm(m_H)
+    m_H /= Norm
+    Sigma_H /= Norm**2
+    sigmaH /= Norm**2
+    m_A *= Norm
+    Sigma_A *= Norm**2
+    mu_M *= Norm
+    sigma_M *= Norm**2
+    sigma_M = np.sqrt(np.sqrt(sigma_M))
+    
+    #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
+    if computeContrast:
+        if len(contrasts) >0:
+            pyhrf.verbose(3, 'Compute contrasts ...')
+            nrls_conds = dict([(str(cn), m_A[:,ic]) \
+                                   for ic,cn in enumerate(condition_names)] )
+            n = 0
+            for cname in contrasts:
+                #------------ contrasts ------------#
+                contrast_expr = AExpr(contrasts[cname], **nrls_conds)
+                contrast_expr.check()
+                contrast = contrast_expr.evaluate()
+                CONTRAST[:,n] = contrast
+                #------------ contrasts ------------#
+
+                #------------ variance -------------#
+                ContrastCoef = np.zeros(M,dtype=float)
+                ind_conds0 = {}
+                for m in xrange(0,M):
+                    ind_conds0[condition_names[m]] = 0.0
+                for m in xrange(0,M):
+                    ind_conds = ind_conds0.copy()
+                    ind_conds[condition_names[m]] = 1.0
+                    ContrastCoef[m] = eval(contrasts[cname],ind_conds)
+                ActiveContrasts = (ContrastCoef != 0) * np.ones(M,dtype=float)
+                #print ContrastCoef
+                #print ActiveContrasts
+                AC = ActiveContrasts*ContrastCoef
+                for j in xrange(0,J):
+                    S_tmp = Sigma_A[:,:,j]
+                    CONTRASTVAR[j,n] = np.dot(np.dot(AC,S_tmp),AC)
+                #------------ variance -------------#
+                n +=1
+                pyhrf.verbose(3, 'Done contrasts computing.')
+        #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
+
+    pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
+    pyhrf.verbose(1, "Computational time = " + str(np.int( CompTime//60 ) ) + " min " + str(np.int(CompTime%60)) + " s")
+    if pyhrf.verbose.verbosity > 1:
+        print 'mu_M:', mu_M
+        print 'sigma_M:', sigma_M
+        print "sigma_H = " + str(sigmaH)
+        print "Beta = " + str(Beta)
+        
+    StimulusInducedSignal = vt.computeFit(m_H, m_A, X, J, N)
+    SNR = 20 * np.log( np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL) )
+    SNR /= np.log(10.)
+    print 'SNR comp =', SNR
+    return ni,m_A,m_H,q_Z,sigma_epsilone,mu_M,sigma_M,Beta,L,PL,CONTRAST,CONTRASTVAR,cA[2:],cH[2:],cZ[2:],cAH[2:],cTime[2:],cTimeMean,Sigma_A,StimulusInducedSignal#,FreeEnergyArray
