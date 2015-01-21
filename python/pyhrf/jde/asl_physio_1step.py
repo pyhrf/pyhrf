@@ -247,7 +247,7 @@ class ResponseSampler(GibbsSamplerVariable):
         self.resp_norm = sqrt((np.dot(fv,fv)).sum())
         #self.resp_norm = sum(fv**2)**0.5
         fv /= self.resp_norm
-        print 'norm response = ', self.resp_norm
+        #print 'norm response = ', self.resp_norm
 
         if self.zc:
             # Append and prepend zeros
@@ -286,20 +286,19 @@ class ResponseSampler(GibbsSamplerVariable):
         # print 'self.finalValue.shape:', self.finalValue.shape
         # print 'self.trueValue.shape:', self.trueValue.shape
 
-        pyhrf.verbose(4, '%s finalValue :' %self.name)
+        pyhrf.verbose(4, '%s finalValue :' % self.name)
         pyhrf.verbose.printNdarray(4, self.finalValue)
-
 
     def getOutputs(self):
 
         outputs = GibbsSamplerVariable.getOutputs(self)
         if self.trueValue is not None:
-            err = ((self.finalValue - self.trueValue)**2).sum()**.5
+            err = ((self.finalValue - self.trueValue) ** 2).sum() ** .5
             err = xndarray([err], axes_names=['err'])
             outputs[self.name + '_norm_error'] = err
 
         return outputs
-        
+
 
 class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
@@ -329,7 +328,6 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         #                             self.name + '_new_factor_mean',
         #                             axes_names=['time'])
 
-
     def computeYTilde(self):
         """ y - \sum cWXg - Pl - wa """
 
@@ -340,12 +338,13 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         wa = bl_sampler.wa
         y = self.dataInput.varMBY
 
-        if ('deterministic' in self.get_variable('prf').prior_type) and not ('hack' in self.get_variable('prf').prior_type):
+        if ('deterministic' in self.get_variable('prf').prior_type) and \
+        not ('hack' in self.get_variable('prf').prior_type):
             ytilde = y - Pl - wa
         else:
             ytilde = y - sumcXg - Pl - wa
 
-        if 0 and self.dataInput.simulData is not None: #hack
+        if 0 and self.dataInput.simulData is not None:  # hack
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
             brl_sampler = self.get_variable('brl')
@@ -354,7 +353,8 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
             if not prl_sampler.sampleFlag and not prf_sampler.sampleFlag and\
                     prl_sampler.useTrueValue and prf_sampler.useTrueValue:
-                perf = np.dot(self.dataInput.W, sd['perf_stim_induced'][0:-1:osf])
+                perf = np.dot(self.dataInput.W, \
+                              sd['perf_stim_induced'][0:-1:osf])
                 assert_almost_equal(sumcXg, perf)
 
             if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
@@ -729,7 +729,7 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             assert isinstance(self.dataInput.simulData[0], dict)
             sd = dataInput.simulData[0]
             #sd = dataInput.simulData
-            print sd
+            #print sd
             if sd.has_key('noise'):
                 # self.trueValue = np.array([sd['v_gnoise']])
                 # pyhrf.verbose(3, 'True noise variance = %1.3f' \
@@ -1131,10 +1131,10 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         respnorm = self.response_sampler.resp_norm
         
         #print fv
-        print fv.shape
-        print fv[0,:].sum()
-        print 'respnorm', respnorm
-        print '------------------------------------------'
+        #print fv.shape
+        #print fv[0,:].sum()
+        #print 'respnorm', respnorm
+        #print '------------------------------------------'
         
         self.finalValue = fv * respnorm
         
@@ -1884,7 +1884,8 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
+        parametersToShow = ['nb_its', 'response_levels', 
+                            'hrf', 'hrf_var']
 
     def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1., glob_obs_hist_pace=-1,
@@ -1892,14 +1893,16 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  callback=GSDefaultCallbackHandler(),
                  bold_response_levels=BOLDResponseLevelSampler(),
                  perf_response_levels=PerfResponseLevelSampler(),
-                 labels=LabelSampler(), noise_var=NoiseVarianceSampler(),
+                 labels=LabelSampler(), 
+                 noise_var=NoiseVarianceSampler(),
                  brf=PhysioBOLDResponseSampler(),
                  brf_var=PhysioBOLDResponseVarianceSampler(),
                  prf=PhysioPerfResponseSampler(),
                  prf_var=PhysioPerfResponseVarianceSampler(),
                  bold_mixt_params=BOLDMixtureSampler(),
                  perf_mixt_params=PerfMixtureSampler(),
-                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
+                 drift=DriftCoeffSampler(), 
+                 drift_var=DriftVarianceSampler(),
                  perf_baseline=PerfBaselineSampler(),
                  perf_baseline_var=PerfBaselineVarianceSampler(),
                  check_final_value=None,
@@ -1939,12 +1942,39 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         self.cmp_ftval = False #TODO: remove this, check final value has been
                                # factored in GibbsSamplerVariable
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
-                              obsHistPace, nbSweeps,
-                              callbackObj,
+                              obsHistPace, nbSweeps, callbackObj,
                               globalObsHistoryPace=globalObsHistPace,
-                              check_ftval=check_ftval)
+                              check_ftval=check_ftval,
+                              output_fit=output_fit)
 
     def finalizeSampling(self):
+        
+        # Loglikelihood
+        var_noise = self.get_variable('noise_var').finalValue
+        hrf = self.get_variable('brf').finalValue
+        Pl = self.get_variable('drift_coeff').P
+        wa = self.get_variable('perf_baseline').finalValue
+        r = bold - jde_fit
+        
+        loglh = 0
+        N = r.shape[0]
+        J = r.shape[1]
+        for j in np.arange(0., J):
+            loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
+                np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
+        self.loglikelihood = loglh
+        
+        # BIC
+        if len(hrf.shape)>1:
+            M = hrf.shape[1]
+        else:
+            M=1
+        D = hrf.shape[0]
+        Q = Pl.shape[1]
+        p = M * J * 2 + 2 * (D-1) + J*Q + J
+        n = N * J
+        self.bic = loglh + p/2 * np.log(n) 
+        
         if self.cmp_ftval:
 
             msg = []
@@ -2051,8 +2081,15 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
     def getGlobalOutputs(self):
         outputs = GibbsSampler.getGlobalOutputs(self)
-
         
+        #tp = time.time()
+        d = {'parcel_size':np.array([self.dataInput.nbVoxels])}
+        outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]),
+                                              axes_names=['parcel_size'],
+                                              axes_domains=d)
+        outputs['bic'] = xndarray(np.array([self.bic]),
+                                              axes_names=['parcel_size'],
+                                              axes_domains=d)
         bf = outputs.pop('bold_fit', None)
         if bf is not None and self.output_fit:
             cdict = bf.split('stype')

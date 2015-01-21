@@ -189,24 +189,24 @@ class FMRITreatment(xmlio.XmlInitable):
             pyhrf.verbose(1, 'Input data description:')
             pyhrf.verbose(1, self.data.getSummary(long=False))
 
-        pyhrf.verbose(1,'All data loaded !')
-        pyhrf.verbose(1,'running estimation ...')
+        pyhrf.verbose(1, 'All data loaded !')
+        pyhrf.verbose(1, 'running estimation ...')
         #TODO : print summary of analyser setup.
-        pyhrf.verbose(1,'Estimation start date is : %s'
-                      %time.strftime('%c'))
+        pyhrf.verbose(1, 'Estimation start date is : %s'
+                      % time.strftime('%c'))
         tIni = time.time()
         result = self.analyser.analyse(self.data, self.output_dir)
 
-        pyhrf.verbose(1,'Estimation done, total time : %s'
-                      %format_duration(time.time()-tIni))
-        pyhrf.verbose(1,'End date is : '+time.strftime('%c'))
+        pyhrf.verbose(1, 'Estimation done, total time : %s'
+                          % format_duration(time.time() - tIni))
+        pyhrf.verbose(1, 'End date is : ' + time.strftime('%c'))
 
         return result
 
 
     def run(self, parallel=None, n_jobs=None):
         """
-        Run the the analysis: load data, run estimation, output results
+        Run the analysis: load data, run estimation, output results
         """
         if parallel is None:
             result = self.execute()

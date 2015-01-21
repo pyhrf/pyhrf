@@ -1882,9 +1882,9 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',spatial_size='tiny')
         'labels_vol' : create_labels_vol,
         'labels' : flatten_labels_vol,
         'nb_voxels': lambda labels: labels.shape[1],
-        # Brls
+        # BRLs
         'brls' : create_time_invariant_gaussian_brls,
-        # Prls
+        # PRLs
         'prls' : create_time_invariant_gaussian_prls,
         # BRF
         'primary_brf' : create_canonical_hrf,

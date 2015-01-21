@@ -20,12 +20,6 @@ DEFAULT_CFG_FILE = 'detectestim.xml'
 
 distribName = 'pyhrf'
 
-log_file = 'results_models_audio2.log'
-def log(msg):
-    print msg
-    f = open(log_file, 'a')
-    f.write(msg + '\n')
-    f.close()
     
 class JDEAnalyser(FMRIAnalyser):
 
@@ -91,8 +85,8 @@ class JDEAnalyser(FMRIAnalyser):
 class JDEMCMCAnalyser(JDEAnalyser):
     """
     Class that wraps a JDE Gibbs Sampler to launch an fMRI analysis
-    TODO: remove parameters about dt and osf (should go in HRF Sampler class),
-    drift (should go in Drift Sampler class)
+    TODO: remove parameters about dt and osf (should go in HRF Sampler
+    class), drift (should go in Drift Sampler class)
     """
     P_SAMPLER = 'sampler'
     P_OSFMAX = 'osfMax'         # over-sampling factor
@@ -150,8 +144,6 @@ class JDEMCMCAnalyser(JDEAnalyser):
         Returns:
             JDE sampler object
         """
-        #print 'atomData:', atomData
-
         if self.copy_sampler:
             sampler = copyModule.deepcopy(self.sampler)
         else:
@@ -167,59 +159,12 @@ class JDEMCMCAnalyser(JDEAnalyser):
         #         return None
 
         pyhrf.verbose(1, 'Treating region %d' %(atomData.get_roi_id()))
-        sampler.runSampling()
-        pyhrf.verbose(1, 'Computing fit')
-        #print atomData
-        jde_fit = sampler.computeFit()
-        var_noise = sampler.get_variable('noise_var').finalValue
-        hrf = sampler.get_variable('brf').finalValue
-        Pl = sampler.get_variable('drift_coeff').P
-        wa = sampler.get_variable('perf_baseline').finalValue
-        r = atomData.bold - jde_fit
-        rec_error_j = np.sum(r**2,0)
-        bold2 = np.sum(atomData.bold**2,0)
-        
-        rec_error_2 = np.mean(rec_error_j/bold2)
-        rec_error_3 = np.mean(rec_error_j)/np.mean(bold2)
-        rec_error = np.mean(rec_error_j)
-        log(' - reconstruction error = '+str(rec_error))
-        log(' - relative reconstruction error = '+str(rec_error_2))
-        log(' - relative reconstruction error 2 = '+str(rec_error_3))
-        #print 'reconstruction error = ', rec_error
-        #print np.mean(r**2,0)
-        log('    . RecError mean = '+str(np.mean(np.sum(r**2,0))))
-        log('    . RecError var = '+str(np.var(np.sum(r**2,0))))
-        log('    . BOLD mean = '+str(np.mean(np.sum(atomData.bold**2,0))))
-        log('    . BOLD var = '+str(np.var(np.sum(atomData.bold**2,0))))
-        log('    . Percentage (of the mean) = '+str(100*np.mean(np.sum(r**2,0))/np.mean(np.sum(atomData.bold**2,0))))
-        #print 'RE mean = ', np.mean(np.mean(r**2,0))
-        #print 'RE var = ', np.var(np.mean(r**2,0))
-        #print 'BOLD mean = ', np.mean(atomData.bold)
-        
-        loglh = 0
-        N = r.shape[0]
-        J = r.shape[1]
-        for j in np.arange(0., J):
-            loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
-                np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
-        log(' - loglikelihood = '+str(loglh))
-        #print 'loglikelihood = ', loglh
-        
-        if len(hrf.shape)>1:
-            M = hrf.shape[1]
-        else:
-            M=1
-        D = hrf.shape[0]
-        Q = Pl.shape[1]
-        p = M * J * 2 + 2 * (D-1) + J*Q + J
-        n = N * J
-        bic = loglh + p/2 * np.log(n) 
-        log(' - bic = '+str(bic))
-        #print 'bic = ', bic
+        sampler.runSampling(atomData.bold)        
         
         pyhrf.verbose(1, 'Cleaning memory ...')
         sampler.dataInput.cleanMem()
-        return (sampler)#, rec_error, loglh, bic
+
+        return (sampler)
 
 
     def packSamplerInput(self, roiData):

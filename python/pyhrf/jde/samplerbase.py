@@ -27,7 +27,6 @@ class VariableTypeException(Exception):
         self.variableClass = vClass
 
 class GibbsSampler:
-
     """
     Generic class of a Gibbs sampler with gathers common operations for any
     gibbs sampling: variable initialisation, observables updates (posterior mean),
@@ -150,7 +149,7 @@ class GibbsSampler:
     def stop_criterion(self, it):
         return False
 
-    def runSampling(self):
+    def runSampling(self, bold):
         #np.seterr(all='raise')
         """
         Launch a complete sampling process by calling the function
@@ -214,12 +213,14 @@ class GibbsSampler:
             if self.smplHistoryPace != -1 :
                 pyhrf.verbose(3, 'Saving init value of %s' %(v.name))
                 v.saveCurrentValue(-1)
-
+        
+        rerror = np.array([])
+        
         for it in self.iterate_sampling():
             iv = 0
 
             for v in self.variables :
-            #for v in np.random.permutation(self.variables): # permutation of Gibbs steps
+                #for v in np.random.permutation(self.variables): # permutation of Gibbs steps
                 tIniv = time.time()
 
                 if not v.sampleFlag:
@@ -272,10 +273,18 @@ class GibbsSampler:
             #     except NotImplementedError:
             #         pass
 
+            jde_fit = self.computeFit()
+            r = bold - jde_fit
+            rec_error_j = np.sum(r**2,0)
+            bold2 = np.sum(bold**2,0)
+            #rec_error = np.mean(rec_error_j/bold2)   # Univariate analysis
+            rec_error = np.mean(rec_error_j)/np.mean(bold2)
+            rerror = np.append(rerror, rec_error)
+
             # Some verbose about online profiling :
             now = time.time()
             self.loop_timing = (now - tLoopIni)
-
+                        
             if not tLoopShown and it>=nbIt2EstimTime-1:
                 tLoop = self.loop_timing/nbIt2EstimTime
                 tSampling = tLoop*(self.nbIterations-nbIt2EstimTime)
@@ -286,20 +295,23 @@ class GibbsSampler:
                 pyhrf.verbose(1, 'Sampling should end at : '+
                               time.strftime('%c',time.localtime(now+tSampling)))
                 tLoopShown = True
-
+                        
             # measure the time spent in sampling only :
             tFin = time.time()
             self.tSamplingOnly += tFin - tIni
+
 
             # launch callback function after each sample step :
             pyhrf.verbose(3, 'calling callback ...')
             self.callbacker(it, self.variables, self)
             tIni = time.time()
+            
         self.final_iteration = it
         pyhrf.verbose(1,'##- Sampling done, final iteration=%d -##' \
                           %self.final_iteration)
-
-
+        
+        self.converror = rerror
+        
         #HACK
         #pyhrf.verbose.set_verbosity(6)
 
@@ -322,9 +334,12 @@ class GibbsSampler:
         pyhrf.verbose(3, 'Finalizing overall sampling ...')
 
         self.finalizeSampling()
+        #outputs = self.getGlobalOutputs()
         # measure time for sampling and callback :
         self.analysis_duration = time.time() - tGlobIni
         #print self.getTinyProfile()
+        
+        return 
 
     def finalizeSampling(self):
         pass
@@ -339,14 +354,17 @@ class GibbsSampler:
         pyhrf.verbose(4, 'get output of global observables ...')
         outputs.update(self.getGlobalOutputs())
 
+        #tp = time.time()
         d = {'parcel_size':np.array([self.dataInput.nbVoxels])}
         outputs['analysis_duration'] = xndarray(np.array([self.analysis_duration]),
                                               axes_names=['parcel_size'],
                                               axes_domains=d)
+        outputs['conv_error'] = xndarray(np.array(self.converror),
+                                              axes_names=['iteration']) 
         # for on, o in outputs.iteritems():
         #     #print 'on:', o
         #     yield (on,o)
-
+        
         return outputs
 
     def getShortProfile(self):
@@ -397,6 +415,7 @@ class GibbsSampler:
 
 
     def getGlobalOutputs(self):
+        
         outputs = {}
         axes_domains = {'time' : np.arange(self.dataInput.ny)*self.dataInput.tr}
         if pyhrf.__usemode__ == pyhrf.DEVEL:
@@ -465,6 +484,7 @@ class GibbsSampler:
                 pass
     
         return outputs
+        
 
     #def initGlobalObservablesOutputs(self, outputs, nbROI):
         #if self.fit is not None:
