@@ -215,6 +215,7 @@ class GibbsSampler:
                 v.saveCurrentValue(-1)
         
         rerror = np.array([])
+        loglkhd = np.array([])
         
         for it in self.iterate_sampling():
             iv = 0
@@ -272,7 +273,8 @@ class GibbsSampler:
             #         pyhrf.verbose.printNdarray(6, err)
             #     except NotImplementedError:
             #         pass
-
+            
+            # relative reconstruction error
             jde_fit = self.computeFit()
             r = bold - jde_fit
             rec_error_j = np.sum(r**2,0)
@@ -281,6 +283,17 @@ class GibbsSampler:
             rec_error = np.mean(rec_error_j)/np.mean(bold2)
             rerror = np.append(rerror, rec_error)
 
+            # Loglikelihood
+            var_noise = self.get_variable('noise_var').currentValue
+            loglh = 0
+            N = r.shape[0]
+            J = r.shape[1]
+            for j in np.arange(0., J):
+                loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
+                    np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
+            
+            loglkhd = np.append(loglkhd, loglh) 
+        
             # Some verbose about online profiling :
             now = time.time()
             self.loop_timing = (now - tLoopIni)
@@ -311,7 +324,8 @@ class GibbsSampler:
                           %self.final_iteration)
         
         self.converror = rerror
-        
+        self.loglikelihood = loglkhd
+
         #HACK
         #pyhrf.verbose.set_verbosity(6)
 
@@ -361,6 +375,8 @@ class GibbsSampler:
                                               axes_domains=d)
         outputs['conv_error'] = xndarray(np.array(self.converror),
                                               axes_names=['iteration']) 
+        outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]),
+                                              axes_names=['iteration'])
         # for on, o in outputs.iteritems():
         #     #print 'on:', o
         #     yield (on,o)

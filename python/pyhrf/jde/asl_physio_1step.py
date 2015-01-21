@@ -1949,7 +1949,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
     def finalizeSampling(self):
         
-        # Loglikelihood
+        """# Loglikelihood
         var_noise = self.get_variable('noise_var').finalValue
         hrf = self.get_variable('brf').finalValue
         Pl = self.get_variable('drift_coeff').P
@@ -1962,7 +1962,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         for j in np.arange(0., J):
             loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
                 np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
-        self.loglikelihood = loglh
+        self.loglikelihood = loglh"""
         
         # BIC
         if len(hrf.shape)>1:
@@ -2084,9 +2084,9 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         
         #tp = time.time()
         d = {'parcel_size':np.array([self.dataInput.nbVoxels])}
-        outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]),
+        """outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]),
                                               axes_names=['parcel_size'],
-                                              axes_domains=d)
+                                              axes_domains=d)"""
         outputs['bic'] = xndarray(np.array([self.bic]),
                                               axes_names=['parcel_size'],
                                               axes_domains=d)
