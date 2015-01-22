@@ -325,6 +325,8 @@ class GibbsSampler:
         
         self.converror = rerror
         self.loglikelihood = loglkhd
+        hrf = self.get_variable('brf').currentValue
+        Pl = self.get_variable('drift_coeff').P
         if len(hrf.shape)>1:
             M = hrf.shape[1]
         else:
