@@ -325,6 +325,16 @@ class GibbsSampler:
         
         self.converror = rerror
         self.loglikelihood = loglkhd
+        if len(hrf.shape)>1:
+            M = hrf.shape[1]
+        else:
+            M = 1
+        D = hrf.shape[0]
+        Q = Pl.shape[1]
+        p = 2 * M * J + 2 * (D-1) + J * Q + J
+        n = N * J
+        self.bic = loglh + p/2 * np.log(n) 
+        
 
         #HACK
         #pyhrf.verbose.set_verbosity(6)
@@ -373,10 +383,11 @@ class GibbsSampler:
         outputs['analysis_duration'] = xndarray(np.array([self.analysis_duration]),
                                               axes_names=['parcel_size'],
                                               axes_domains=d)
-        outputs['conv_error'] = xndarray(np.array(self.converror),
-                                              axes_names=['iteration']) 
-        outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]),
-                                              axes_names=['iteration'])
+        outputs['conv_error'] = xndarray(np.array(self.converror)) 
+        outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]))
+        outputs['bic'] = xndarray(np.array([self.bic]),
+                                            axes_names=['parcel_size'],
+                                            axes_domains=d)
         # for on, o in outputs.iteritems():
         #     #print 'on:', o
         #     yield (on,o)

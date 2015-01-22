@@ -1962,9 +1962,11 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         for j in np.arange(0., J):
             loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
                 np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
-        self.loglikelihood = loglh"""
+        self.loglikelihood = loglh
         
         # BIC
+        loglh = self.loglikelihood[end]
+        print loglh
         if len(hrf.shape)>1:
             M = hrf.shape[1]
         else:
@@ -1974,6 +1976,8 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         p = M * J * 2 + 2 * (D-1) + J*Q + J
         n = N * J
         self.bic = loglh + p/2 * np.log(n) 
+        
+        print self.bic"""
         
         if self.cmp_ftval:
 
