@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
+
 import unittest
+import logging
+
 import numpy as np
 
 import pyhrf
 from pyhrf.sandbox.design_and_ui import Initable, UiNode
 from numpy.testing import assert_array_equal, assert_almost_equal
 from optparse import OptionParser
+
+
+logger = logging.getLogger(__name__)
+
 
 class Dummy(Initable):
 
