@@ -1,13 +1,10 @@
 #! /bin/env python
 # -*- coding: utf-8 -*-
-import os, sys, string
-from optparse import OptionParser
 
-from pyhrf import xmlio
-from pyhrf._verbose import dictToString
 from pyhrf.ui.treatment import run_pyhrf_cmd_treatment
 from pyhrf.ui.rfir_ui import DEFAULT_CFG_FILE
 
 PROFILE_FILE = 'hrfestim.prf'
 
-run_pyhrf_cmd_treatment('pyhrf_rfir_buildcfg', 'pyhrf_rfir_estim', DEFAULT_CFG_FILE, PROFILE_FILE,'HRF')
+run_pyhrf_cmd_treatment('pyhrf_rfir_buildcfg', 'pyhrf_rfir_estim',
+                        DEFAULT_CFG_FILE, PROFILE_FILE, 'HRF')

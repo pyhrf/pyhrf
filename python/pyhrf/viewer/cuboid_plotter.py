@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+
 import sys
+import logging
+
 import numpy as np
 from PyQt4 import QtCore, QtGui
 
@@ -7,28 +10,20 @@ from matplotlib.figure import Figure
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as \
-     NavigationToolbarQt
-
-
-# from matplotlib.backends.backend_qt4 import FigureCanvasQT as FigureCanvas
-# from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as \
-#      NavigationToolbarQt
-
+    NavigationToolbarQt
 
 from matplotlib.backends.qt4_compat import _getSaveFileName
 from matplotlib.colors import Normalize
 
-import pyhrf
+import pyhrf.viewer.ui_base as uib
 from pyhrf.ndarray import xndarray
 from pyhrf.tools import set_leaf
-#from pyhrf.plot import plot_cub_as_curve, plot_cub_as_image
+from pyhrf.viewer.plotter_toolbar_ui import Ui_PlotterToolbar
+from pyhrf.viewer.domain_color_selector import DomainColorSelector
+from pyhrf.viewer.mpl_cmap_editor import MplCmapEditor
 
-#from plotter_toolbar import PlotterToolbar #TODO
-from plotter_toolbar_ui import Ui_PlotterToolbar
-from domain_color_selector import DomainColorSelector
-from mpl_cmap_editor import MplCmapEditor
 
-import ui_base as uib
+logger = logging.getLogger(__name__)
 
 
 def plot_cub_as_curve(axes, c, colors=None, plot_kwargs=None, legend_prefix='',
@@ -77,8 +72,8 @@ def plot_cub_as_curve(axes, c, colors=None, plot_kwargs=None, legend_prefix='',
             axes.legend()
 
     else:
-        raise Exception('xndarray has too many dims (%d), expected at most 2' \
-                        %c.get_ndims())
+        raise Exception('xndarray has too many dims (%d), expected at most 2'
+                        % c.get_ndims())
 
     if show_axis_labels:
         if c.get_ndims() == 1:
@@ -87,21 +82,22 @@ def plot_cub_as_curve(axes, c, colors=None, plot_kwargs=None, legend_prefix='',
             axes.set_xlabel(c.axes_names[1])
         axes.set_ylabel(c.value_label)
 
+
 def set_int_tick_labels(axis, labels, fontsize=None, rotation=None):
     """
     Redefine labels of visible ticks at integer positions for the given axis.
     """
     # get the tick positions:
-    tickPos = axis.get_ticklocs()#.astype(int)
+    tickPos = axis.get_ticklocs()  # .astype(int)
     dvMax = len(labels)
     tLabels = []
-    #if debug: print '%%%% tickPos :', tickPos
+    # if debug: print '%%%% tickPos :', tickPos
     for tp in tickPos:
         if tp < 0. or int(tp) != tp or tp >= dvMax:
             tLabels.append('')
         else:
             tLabels.append(labels[int(tp)])
-    #if debug: print '%%%% Setting labels:', tLabels
+    # if debug: print '%%%% Setting labels:', tLabels
     axis.set_ticklabels(tLabels)
     for label in axis.get_ticklabels():
         if fontsize is not None:
@@ -116,9 +112,9 @@ def plot_cub_as_image(axes, c, cmap=None, norm=None, show_axes=True,
     axes = axes
     data = c.data
     if data.ndim == 1:
-        data = data[:,np.newaxis]
+        data = data[:, np.newaxis]
 
-    ms = axes.matshow(data, cmap=cmap, norm=norm)#, origin='lower')
+    ms = axes.matshow(data, cmap=cmap, norm=norm)  # , origin='lower')
     if show_tick_labels:
         set_int_tick_labels(axes.yaxis, c.axes_domains[c.axes_names[0]])
         if len(c.axes_domains) > 1:
@@ -145,8 +141,7 @@ def plot_cub_as_image(axes, c, cmap=None, norm=None, show_axes=True,
         axes.figure.colorbar(ms)
 
 
-
-#artist.figure.canvas.draw()
+# artist.figure.canvas.draw()
 
 class NavigationToolbar(NavigationToolbarQt):
     """
@@ -187,10 +182,10 @@ class NavigationToolbar(NavigationToolbarQt):
         filters = ';;'.join(filters)
 
         fname = _getSaveFileName(self, "Choose a filename to save to",
-                                        start, filters, selectedFilter)
+                                 start, filters, selectedFilter)
         if fname:
             try:
-                self.canvas.print_figure( unicode(fname) )
+                self.canvas.print_figure(unicode(fname))
             except Exception, e:
                 QtGui.QMessageBox.critical(
                     self, "Error saving file", str(e),
@@ -198,9 +193,9 @@ class NavigationToolbar(NavigationToolbarQt):
 
 
 def is_range_domain(d):
-    #print 'd:', d.dtype
-    if not (np.issubsctype(d.dtype, np.unicode) or \
-            np.issubsctype(d.dtype, np.str) or (d.size==1)):
+    # print 'd:', d.dtype
+    if not (np.issubsctype(d.dtype, np.unicode) or
+            np.issubsctype(d.dtype, np.str) or (d.size == 1)):
         delta = np.diff(d)
         return (delta == delta[0]).all()
     else:
@@ -217,28 +212,27 @@ class xndarrayPlotter(QtGui.QWidget):
     value_label_changed = QtCore.pyqtSignal(str, name='ValueLabelChanged')
     norm_changed = QtCore.pyqtSignal(float, float, name='NormChanged')
 
-
     def __init__(self, cuboid, slice_def, orientation, cuboid_name='data',
                  parent=None):
 
         QtGui.QWidget.__init__(self, parent)
 
         self.options = {
-            'view_mode' : uib.IMAGE_MODE,
-            'show_axes' : True,
-            'show_axis_labels' : True,
-            'image' : {
-                'show_colorbar' : False,
-                'show_mask' : False,
+            'view_mode': uib.IMAGE_MODE,
+            'show_axes': True,
+            'show_axis_labels': True,
+            'image': {
+                'show_colorbar': False,
+                'show_mask': False,
                 'cmaps': {},
                 'norms': {},
-                },
+            },
             'curve': {
-                'show_legend' : False,
-                'colors':{},
+                'show_legend': False,
+                'colors': {},
                 'single_color': uib.DEFAULT_COLORS[0],
-                }
             }
+        }
         self.cuboid_name = cuboid_name
 
         self.file_name_hint = [self.cuboid_name + '.']
@@ -249,7 +243,6 @@ class xndarrayPlotter(QtGui.QWidget):
         self.create_color_dialogs()
 
         self.set_new_cuboid(cuboid, slice_def, orientation)
-
 
     def set_new_cuboid(self, c, slice_def, orientation):
         """
@@ -266,19 +259,18 @@ class xndarrayPlotter(QtGui.QWidget):
         #     else:
         #         return False
 
-        self.is_range_domain = dict((an, is_range_domain(d)) \
-                                    for an,d in self.cuboid.axes_domains.items())
+        self.is_range_domain = dict((an, is_range_domain(d))
+                                    for an, d in self.cuboid.axes_domains.items())
 
         if not self.options['image']['norms'].has_key(self.cuboid.value_label):
             self.options['image']['norms'][self.cuboid.value_label] = \
-              Normalize(self.cuboid.min(), self.cuboid.max())
+                Normalize(self.cuboid.min(), self.cuboid.max())
 
         self.value_label_changed.emit(self.cuboid.value_label)
         self.norm_changed.emit(self.cuboid.min(), self.cuboid.max())
 
         self.update_current_cuboid()
         self.on_draw()
-
 
     def set_slice(self, slice_def, orientation):
 
@@ -290,7 +282,7 @@ class xndarrayPlotter(QtGui.QWidget):
 
         # check that something acctually changed:
         need_update = False
-        for k,v in slice_def.iteritems():
+        for k, v in slice_def.iteritems():
             if self.slice_def.get(k, None) != v:
                 need_update = True
                 break
@@ -311,13 +303,13 @@ class xndarrayPlotter(QtGui.QWidget):
         print 'current_cuboid:', self.current_cuboid
         if np.isscalar(self.current_cuboid):
             self.current_cuboid = xndarray(np.array([self.current_cuboid]),
-                                         axes_names=[''])
+                                           axes_names=[''])
             self.orientation = self.current_cuboid.axes_names
         self.current_cuboid.set_orientation(self.orientation)
         doms = self.current_cuboid.axes_domains
         self.current_domains = [doms[an] for an in self.orientation]
-        self.file_name_hint[0] = '_'.join([self.cuboid_name] + \
-            ['_'.join([k,str(v)]) for k,v in sdef.items()]) + '.'
+        self.file_name_hint[0] = '_'.join([self.cuboid_name] +
+                                          ['_'.join([k, str(v)]) for k, v in sdef.items()]) + '.'
 
         self.domain_colors_changed.emit(*self.get_current_domain_colors())
 
@@ -357,18 +349,18 @@ class xndarrayPlotter(QtGui.QWidget):
                 DomainValue (float|string), value index (int)
 
             """
-            if self.orientation[dom_idx] == '': #no dims
-                return 0,0
+            if self.orientation[dom_idx] == '':  # no dims
+                return 0, 0
             nb_dom_vals = len(self.current_domains[dom_idx])
             if self.is_range_domain[self.orientation[dom_idx]]:
                 search_in = self.current_domains[dom_idx]
-            else: #search by major tick position -> integers
+            else:  # search by major tick position -> integers
                 search_in = np.arange(nb_dom_vals)
-            dv_ix = (np.abs(search_in-pos)).argmin()
+            dv_ix = (np.abs(search_in - pos)).argmin()
             # ix = search_in.searchsorted([pos])[0]
             # dv_ix  = int(np.floor(search_in[min(ix,nb_dom_vals-1)]))
-            return  self.current_domains[dom_idx][min(dv_ix,nb_dom_vals-1)],\
-              dv_ix
+            return  self.current_domains[dom_idx][min(dv_ix, nb_dom_vals - 1)],\
+                dv_ix
 
         x, y = event.xdata, event.ydata
 
@@ -377,18 +369,18 @@ class xndarrayPlotter(QtGui.QWidget):
 
         if self.options['view_mode'] == uib.CURVE_MODE:
             if self.current_cuboid.get_ndims() == 1:
-                #x axis is mapped to domain values of 1st axis
+                # x axis is mapped to domain values of 1st axis
                 dv, dv_idx = get_dval_from_pos(x, 0)
                 self.slice_def[self.orientation[0]] = dv
                 val = self.current_cuboid.data[dv_idx]
             else:
-                #x axis is mapped to domain values of 2nd axis
+                # x axis is mapped to domain values of 2nd axis
                 dv = get_dval_from_pos(x, 1)
                 self.slice_def[self.orientation[1]] = dv
                 val = 'N/A'
 
         elif self.options['view_mode'] == uib.IMAGE_MODE:
-            #y axis is mapped to domain values of 1st axis
+            # y axis is mapped to domain values of 1st axis
             dv, dv_i = get_dval_from_pos(y, 0)
             self.slice_def[self.orientation[0]] = dv
             if self.current_cuboid.get_ndims() == 1:
@@ -400,10 +392,9 @@ class xndarrayPlotter(QtGui.QWidget):
 
         self.slice_def[self.cuboid.value_label] = val
         slice_items = self.slice_def.items()
-        info = ' '.join('%s:%s'%(an,uib.format_dval(dval)) \
-                        for an,dval in slice_items)
+        info = ' '.join('%s:%s' % (an, uib.format_dval(dval))
+                        for an, dval in slice_items)
         self.slice_info.setText(info)
-
 
     def on_draw(self):
         """
@@ -413,15 +404,14 @@ class xndarrayPlotter(QtGui.QWidget):
         print 'options show_colorbar:'
         print self.options['image']['show_colorbar']
 
-        if pyhrf.verbose.verbosity > 5:
-            pyhrf.verbose(6, 'on_draw ..., cubdoid: %s' %self.cuboid.descrip())
+        logger.debug('on_draw ..., cubdoid: %s', self.cuboid.descrip())
 
         # Clear axes and create new subplot
-        #self.fig.delaxes(self.axes)
+        # self.fig.delaxes(self.axes)
         self.fig.clear()
         self.axes = self.fig.add_subplot(111)
 
-        #self.axes.clear()
+        # self.axes.clear()
 
         if self.options['view_mode'] == uib.IMAGE_MODE:
             options = self.options['image']
@@ -429,23 +419,24 @@ class xndarrayPlotter(QtGui.QWidget):
             cm = options['cmaps'].get(self.cuboid.value_label)
             norm = options['norms'].get(self.cuboid.value_label)
             plot_cub_as_image(self.axes, self.current_cuboid, cmap=cm, norm=norm,
-                              show_axis_labels=self.options['show_axis_labels'],
+                              show_axis_labels=self.options[
+                                  'show_axis_labels'],
                               show_colorbar=options['show_colorbar'])
 
-        else: #curve mode
+        else:  # curve mode
             options = self.options['curve']
             single_curve_color = options['single_color']
             plot_cub_as_curve(self.axes, self.current_cuboid,
                               colors=self.get_current_domain_colors()[1],
                               show_legend=options['show_legend'],
-                              show_axis_labels=self.options['show_axis_labels'],
-                              plot_kwargs={'color':single_curve_color})
+                              show_axis_labels=self.options[
+                                  'show_axis_labels'],
+                              plot_kwargs={'color': single_curve_color})
 
         if not self.options['show_axes']:
             self.axes.set_axis_off()
 
         self.canvas.draw()
-
 
     def get_current_domain_colors(self):
         d0 = self.current_domains[0]
@@ -455,7 +446,6 @@ class xndarrayPlotter(QtGui.QWidget):
 
         return (self.orientation[0],
                 self.options['curve']['colors'][self.orientation[0]])
-
 
     def create_color_dialogs(self):
 
@@ -477,13 +467,13 @@ class xndarrayPlotter(QtGui.QWidget):
         ssc = self.set_single_curve_color
         self.single_color_dialog.currentColorChanged.connect(ssc)
 
-
     def set_cmap(self, aname, cmap):
         self.options['image']['cmaps'][str(aname)] = cmap
         self.on_draw()
 
     def set_normalize(self, aname, min_val, max_val):
-        self.options['image']['norms'][str(aname)] = Normalize(min_val, max_val)
+        self.options['image']['norms'][
+            str(aname)] = Normalize(min_val, max_val)
         self.on_draw()
 
     def set_domain_color(self, aname, dval, color):
@@ -527,8 +517,8 @@ class xndarrayPlotter(QtGui.QWidget):
         # self.textbox.editingFinished.connect(self.on_draw)
 
         self.toolbar = PlotterToolbar(self.options, parent=self)
-        #self.toolbar.option_changed.connect(self.set_option)
-        #self.toolbar.color_button_clicked.connect(self.show_color_dialog)
+        # self.toolbar.option_changed.connect(self.set_option)
+        # self.toolbar.color_button_clicked.connect(self.show_color_dialog)
         #
         # Layout with box sizers
         #
@@ -549,15 +539,15 @@ class xndarrayPlotter(QtGui.QWidget):
 
         self.splitter.addWidget(self.top)
         self.splitter.addWidget(self.bottom)
-        #vbox.addWidget()
-        #vbox.addLayout(hbox)
-        #self.main_frame.addWidget(splitter)
+        # vbox.addWidget()
+        # vbox.addLayout(hbox)
+        # self.main_frame.addWidget(splitter)
         self.mainbox = QtGui.QVBoxLayout()
         self.mainbox.addWidget(self.splitter)
         self.slice_info = QtGui.QLabel('')
         self.mainbox.addWidget(self.slice_info)
         self.main_frame.setLayout(self.mainbox)
-        #self.setCentralWidget(self.main_frame)
+        # self.setCentralWidget(self.main_frame)
 
     def show_color_dialog(self):
         if self.options['view_mode'] == uib.IMAGE_MODE:
@@ -569,16 +559,15 @@ class xndarrayPlotter(QtGui.QWidget):
             if len(self.orientation) == 1:
                 self.domain_color_dialog.hide()
                 self.single_color_dialog.show()
-            else: #2D
+            else:  # 2D
                 self.domain_color_dialog.show()
                 self.single_color_dialog.hide()
 
-
     def switch_color_dialog(self):
         if self.domain_color_dialog.isVisible() or \
-            self.single_color_dialog.isVisible() or \
-            self.cmap_dialog.isVisible():
-          self.show_color_dialog()
+                self.single_color_dialog.isVisible() or \
+                self.cmap_dialog.isVisible():
+            self.show_color_dialog()
 
     @QtCore.pyqtSlot(tuple, object)
     def set_option(self, option_def, option_value):
@@ -587,6 +576,7 @@ class xndarrayPlotter(QtGui.QWidget):
             self.switch_color_dialog()
 
         self.on_draw()
+
 
 class PlotterToolbar(QtGui.QWidget):
 
@@ -598,38 +588,35 @@ class PlotterToolbar(QtGui.QWidget):
         self.ui.setupUi(self)
 
 
-
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
 
-    if 1: #3D case
-        sh = (10,10,3)
-        conds = np.array(['audio1','audio2', 'video'])
+    if 1:  # 3D case
+        sh = (10, 10, 3)
+        conds = np.array(['audio1', 'audio2', 'video'])
         c1 = xndarray(np.arange(np.prod(sh)).reshape(sh),
-                    axes_names=['sagittal','coronal', 'condition'],
-                    axes_domains={'condition':conds})
+                      axes_names=['sagittal', 'coronal', 'condition'],
+                      axes_domains={'condition': conds})
 
-        cp = xndarrayPlotter(c1, {'sagittal':0,
-                                 'condition':'video',
-                                 'coronal':0},
-                                 ['condition','coronal'])
+        cp = xndarrayPlotter(c1, {'sagittal': 0,
+                                  'condition': 'video',
+                                  'coronal': 0},
+                             ['condition', 'coronal'])
         cp.show()
     else:
-        sh = (3,) #1D case
-        conds = np.array(['audio1','audio2', 'video'])
+        sh = (3,)  # 1D case
+        conds = np.array(['audio1', 'audio2', 'video'])
         c2 = xndarray(np.arange(np.prod(sh)).reshape(sh),
-                    axes_names=['condition'],
-                    axes_domains={'condition':conds})
+                      axes_names=['condition'],
+                      axes_domains={'condition': conds})
 
-        cp = xndarrayPlotter(c2, {'condition':'audio2'}, ['condition'])
+        cp = xndarrayPlotter(c2, {'condition': 'audio2'}, ['condition'])
         cp.show()
 
     cp.closing.connect(uib.SignalPrinter('plotter closing'))
     cp.focus_in.connect(uib.SignalPrinter('plotter gained focus'))
 
-    if 0: #save image of widget non interactively
+    if 0:  # save image of widget non interactively
         uib.render_widget_in_doc(cp)
     else:
         sys.exit(app.exec_())
-
-

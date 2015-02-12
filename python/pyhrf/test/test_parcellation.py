@@ -1,25 +1,32 @@
 # -*- coding: utf-8 -*-
-import unittest, os
+
+import unittest
+import os
 import os.path as op
-import pyhrf
-from pyhrf.ndarray import xndarray
 import shutil
+import logging
 
 import numpy as np
-from pyhrf.graph import graph_from_lattice, kerMask3D_6n
-import pyhrf.parcellation as pm
-from pyhrf import tools
-
 import numpy.testing as npt
 
+import pyhrf
+import pyhrf.parcellation as pm
+
+from pyhrf.ndarray import xndarray
+from pyhrf.graph import graph_from_lattice, kerMask3D_6n
+from pyhrf import tools
+
+
+logger = logging.getLogger(__name__)
 debug = False
+
 
 class SpatialTest(unittest.TestCase):
 
     def test_split_parcel(self):
-        shape = (5,5,5)
+        shape = (5, 5, 5)
         mask = np.zeros(shape, dtype=int)
-        mask[1:-1,1:-1,1:-1] = 1
+        mask[1:-1, 1:-1, 1:-1] = 1
         mask_labels = mask[np.where(mask)]
         g = graph_from_lattice(mask, kerMask3D_6n)
         if 0:
@@ -31,34 +38,35 @@ class SpatialTest(unittest.TestCase):
             print g
 
         nparcels = 2
-        pm.split_parcel(mask_labels, {1:g}, 1, nparcels, inplace=True,
-                     verbosity=0)
+        pm.split_parcel(mask_labels, {1: g}, 1, nparcels, inplace=True,
+                        verbosity=0)
 
     def test_balanced_parcellation(self):
         """
         Test if balanced partitioning returns parcels with almost equal
         sizes (tolerance=1) on a 3D rectangular mask
         """
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         np.random.seed(56437)
-        shape = (5,5,5)
+        shape = (5, 5, 5)
         mask = np.zeros(shape, dtype=int)
-        mask[1:-1,1:-1,1:-1] = 1
+        mask[1:-1, 1:-1, 1:-1] = 1
 
         nb_parcels = 3
         p = pm.parcellate_balanced_vol(mask, nb_parcels)
 
         expected_psize = mask.sum() / nb_parcels
-        for iparcel in xrange(1,nb_parcels+1):
-            npt.assert_allclose((p==iparcel).sum(), expected_psize, atol=1)
-
+        for iparcel in xrange(1, nb_parcels + 1):
+            npt.assert_allclose((p == iparcel).sum(), expected_psize, atol=1)
 
     def test_voronoi_parcellation(self):
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
 
-        shape = (5,5,5)
+        shape = (5, 5, 5)
         mask = np.zeros(shape, dtype=int)
-        mask[1:-1,1:-1,1:-1] = 1
+        mask[1:-1, 1:-1, 1:-1] = 1
 
         nb_parcels = 3
         p = pm.parcellate_voronoi_vol(mask, nb_parcels)
@@ -67,47 +75,46 @@ class SpatialTest(unittest.TestCase):
 
 from numpy.testing import assert_array_equal
 
+
 class MeasureTest(unittest.TestCase):
 
     def setUp(self):
-        self.p1 = np.array([[1,1,0,3],
-                            [1,1,3,3],
-                            [0,1,2,2],
-                            [0,2,2,2],
-                            [0,0,2,0]], dtype=np.int32)
+        self.p1 = np.array([[1, 1, 0, 3],
+                            [1, 1, 3, 3],
+                            [0, 1, 2, 2],
+                            [0, 2, 2, 2],
+                            [0, 0, 2, 0]], dtype=np.int32)
         self.mask = np.where(self.p1 != 0)
         self.fp1 = self.p1[self.mask]
 
-        self.p2 = np.array([[1,1,0,3],
-                            [3,3,3,3],
-                            [0,2,2,3],
-                            [0,2,2,2],
-                            [0,0,2,0]], dtype=np.int32)
+        self.p2 = np.array([[1, 1, 0, 3],
+                            [3, 3, 3, 3],
+                            [0, 2, 2, 3],
+                            [0, 2, 2, 2],
+                            [0, 0, 2, 0]], dtype=np.int32)
         self.fp2 = self.p2[self.mask]
-
 
     def test_intersection_matrix(self):
 
         from pyhrf.cparcellation import compute_intersection_matrix
 
-        im = np.zeros((self.fp1.max()+1, self.fp2.max()+1),
+        im = np.zeros((self.fp1.max() + 1, self.fp2.max() + 1),
                       dtype=np.int32)
 
         compute_intersection_matrix(self.fp1, self.fp2, im)
 
-        assert_array_equal(im, np.array([[0,0,0,0],
-                                         [0,2,1,2],
-                                         [0,0,5,1],
-                                         [0,0,0,3]],dtype=np.int32),
+        assert_array_equal(im, np.array([[0, 0, 0, 0],
+                                         [0, 2, 1, 2],
+                                         [0, 0, 5, 1],
+                                         [0, 0, 0, 3]], dtype=np.int32),
                            "Intersection graph not OK", 1)
-
 
     @unittest.skipIf(not tools.is_importable('munkres'),
                      'munkres (optional dep) is N/A')
     def test_parcellation_distance(self):
 
         from pyhrf.parcellation import parcellation_dist
-        #dist = 4 (cost method: intersection size)
+        # dist = 4 (cost method: intersection size)
 
         # print 'p1:'
         # print self.p1
@@ -123,23 +130,21 @@ class MeasureTest(unittest.TestCase):
         self.assertEqual(dist, 4)
 
 
-
-
 class ParcellationMethodTest(unittest.TestCase):
 
     def setUp(self):
-        self.p1 = np.array([[1,1,3,3],
-                            [1,0,0,0],
-                            [0,0,2,2],
-                            [0,2,2,2],
-                            [0,0,2,4]], dtype=np.int32)
+        self.p1 = np.array([[1, 1, 3, 3],
+                            [1, 0, 0, 0],
+                            [0, 0, 2, 2],
+                            [0, 2, 2, 2],
+                            [0, 0, 2, 4]], dtype=np.int32)
 
     @unittest.skipIf(not tools.is_importable('sklearn') or
                      not tools.is_importable('munkres'),
                      'scikit-learn or munkres (optional deps) is N/A')
     def test_ward_spatial_scikit(self):
         from pyhrf.parcellation import parcellation_dist, \
-               parcellation_ward_spatial
+            parcellation_ward_spatial
         from pyhrf.graph import graph_from_lattice, kerMask2D_4n
 
         X = np.reshape(self.p1, (-1, 1))
@@ -148,13 +153,14 @@ class ParcellationMethodTest(unittest.TestCase):
         labels = parcellation_ward_spatial(X, n_clusters=5, graph=graph)
 
         labels = np.reshape(labels, self.p1.shape)
-        #print 'data:'
-        #print self.p1
-        #print ''
+        # print 'data:'
+        # print self.p1
+        # print ''
 
-        #print 'labels:'
-        #print labels
-        dist = parcellation_dist(self.p1+1, labels+1)[0] #+1 because parcellation_dist sees 0 as background
+        # print 'labels:'
+        # print labels
+        # +1 because parcellation_dist sees 0 as background
+        dist = parcellation_dist(self.p1 + 1, labels + 1)[0]
         self.assertEqual(dist, 0)
 
     @unittest.skipIf(not tools.is_importable('sklearn') or
@@ -173,19 +179,17 @@ class ParcellationMethodTest(unittest.TestCase):
         mask = self.p1 != 0
         graph = graph_from_lattice(mask, kerMask2D_4n)
 
-        X = self.p1[np.where(mask)].reshape(-1,1)
+        X = self.p1[np.where(mask)].reshape(-1, 1)
 
         labels = parcellation_ward_spatial(X, n_clusters=4, graph=graph)
 
         labels = expand_array_in_mask(labels, mask)
 
-
-
         # print 'labels:'
         # print labels
 
         #+1 because parcellation_dist sees 0 as background:
-        dist = parcellation_dist(self.p1+1, labels+1)[0]
+        dist = parcellation_dist(self.p1 + 1, labels + 1)[0]
         self.assertEqual(dist, 0)
 
 
@@ -195,21 +199,21 @@ class CmdParcellationTest(unittest.TestCase):
         from pyhrf.ndarray import MRI3Daxes
         self.tmp_dir = pyhrf.get_tmp_path()
 
-        self.p1 = np.array([[[1,1,1,3],
-                             [1,1,3,3],
-                             [0,1,2,2],
-                             [0,2,2,2],
-                             [0,0,2,4]]], dtype=np.int32)
+        self.p1 = np.array([[[1, 1, 1, 3],
+                             [1, 1, 3, 3],
+                             [0, 1, 2, 2],
+                             [0, 2, 2, 2],
+                             [0, 0, 2, 4]]], dtype=np.int32)
 
-        self.p1_fn = op.join(self.tmp_dir,'p1.nii')
+        self.p1_fn = op.join(self.tmp_dir, 'p1.nii')
         xndarray(self.p1, axes_names=MRI3Daxes).save(self.p1_fn)
 
-        self.p2 = self.p1*4.5
-        self.p2_fn = op.join(self.tmp_dir,'p2.nii')
+        self.p2 = self.p1 * 4.5
+        self.p2_fn = op.join(self.tmp_dir, 'p2.nii')
         xndarray(self.p2, axes_names=MRI3Daxes).save(self.p2_fn)
 
-        self.mask = (self.p1>0).astype(np.int32)
-        self.mask_fn = op.join(self.tmp_dir,'mask.nii')
+        self.mask = (self.p1 > 0).astype(np.int32)
+        self.mask_fn = op.join(self.tmp_dir, 'mask.nii')
         xndarray(self.mask, axes_names=MRI3Daxes).save(self.mask_fn)
 
     def tearDown(self):
@@ -221,31 +225,28 @@ class CmdParcellationTest(unittest.TestCase):
     def test_ward_spatial_cmd(self):
         from pyhrf.parcellation import parcellation_dist
 
-        #pyhrf.verbose.verbosity = 2
-        output_file = op.join(self.tmp_dir,'parcellation_output_test.nii')
+        output_file = op.join(self.tmp_dir, 'parcellation_output_test.nii')
 
         nparcels = 4
         cmd = 'pyhrf_parcellate_glm -m %s %s %s -o %s -v %d ' \
             '-n %d -t ward_spatial ' \
-        %(self.mask_fn, self.p1_fn, self.p2_fn, output_file,
-          pyhrf.verbose.verbosity, nparcels)
-        if os.system(cmd) != 0 :
+            % (self.mask_fn, self.p1_fn, self.p2_fn, output_file,
+               logger.getEffectiveLevel(), nparcels)
+        if os.system(cmd) != 0:
             raise Exception('"' + cmd + '" did not execute correctly')
-        pyhrf.verbose(1, 'cmd: %s' %cmd)
+        logger.info('cmd: %s', cmd)
 
         labels = xndarray.load(output_file).data
-        pyhrf.verbose(2, 'labels.dtype:%s' %str(labels.dtype))
+        logger.info('labels.dtype:%s', str(labels.dtype))
         dist = parcellation_dist(self.p1, labels)[0]
-        pyhrf.verbose(2, 'dist:%d' %dist)
+        logger.info('dist:%d', dist)
         self.assertEqual(dist, 0)
-
 
     @unittest.skipIf(not tools.is_importable('sklearn') or
                      not tools.is_importable('munkres'),
                      'scikit-learn or munkres (optional deps) is N/A')
     def test_ward_spatial_real_data(self):
         from pyhrf.glm import glm_nipy_from_files
-        #pyhrf.verbose.verbosity = 2
 
         fn = 'subj0_parcellation.nii.gz'
         mask_file = pyhrf.get_data_file_name(fn)
@@ -258,27 +259,26 @@ class CmdParcellationTest(unittest.TestCase):
         output_file = op.join(output_dir,
                               'parcellation_output_test_real_data.nii')
 
-        tr=2.4
+        tr = 2.4
         bet = glm_nipy_from_files(bold_file, tr,
-                                paradigm_csv_file, output_dir,
-                                mask_file, session=0,
-                                contrasts=None,
-                                hrf_model='Canonical',
-                                drift_model='Cosine', hfcut=128,
-                                residuals_model='spherical',
-                                fit_method='ols', fir_delays=[0])[0]
+                                  paradigm_csv_file, output_dir,
+                                  mask_file, session=0,
+                                  contrasts=None,
+                                  hrf_model='Canonical',
+                                  drift_model='Cosine', hfcut=128,
+                                  residuals_model='spherical',
+                                  fit_method='ols', fir_delays=[0])[0]
 
-        pyhrf.verbose(2, 'betas_files: %s' %' '.join(bet))
+        logger.info('betas_files: %s', ' '.join(bet))
 
         cmd = 'pyhrf_parcellate_glm -m %s %s -o %s -v %d -n %d '\
             '-t ward_spatial ' \
-        %(mask_file, ' '.join(bet), output_file,
-          pyhrf.verbose.verbosity, 10)
+            % (mask_file, ' '.join(bet), output_file,
+               logger.getEffectiveLevel(), 10)
 
-        if os.system(cmd) != 0 :
+        if os.system(cmd) != 0:
             raise Exception('"' + cmd + '" did not execute correctly')
-        pyhrf.verbose(1, 'cmd: %s' %cmd)
-
+        logger.info('cmd: %s', cmd)
 
     def test_voronoi_with_seeds(self):
 
@@ -289,9 +289,10 @@ class CmdParcellationTest(unittest.TestCase):
         mask_file = pyhrf.get_data_file_name(fn)
 
         orientation = ['axial', 'coronal', 'sagittal']
-        seeds = xndarray.xndarray_like(xndarray.load(mask_file)).reorient(orientation)
+        seeds = xndarray.xndarray_like(
+            xndarray.load(mask_file)).reorient(orientation)
 
-        seed_coords = np.array([[24, 35, 8], #axial, coronal, sagittal
+        seed_coords = np.array([[24, 35, 8],  # axial, coronal, sagittal
                                 [27, 35, 5],
                                 [27, 29, 46],
                                 [31, 28, 46]])
@@ -304,12 +305,12 @@ class CmdParcellationTest(unittest.TestCase):
 
         output_file = op.join(self.tmp_dir, 'voronoi_parcellation.nii')
         cmd = 'pyhrf_parcellate_spatial %s -m voronoi -c %s -o %s -v %d' \
-            %(mask_file, seed_file, output_file, pyhrf.verbose.verbosity)
+            % (mask_file, seed_file, output_file, logger.getEffectiveLevel())
 
-        if os.system(cmd) != 0 :
+        if os.system(cmd) != 0:
             raise Exception('"' + cmd + '" did not execute correctly')
 
-        pyhrf.verbose(1, 'cmd: %s', cmd)
+        logger.info('cmd: %s', cmd)
 
         assert op.exists(output_file)
         parcellation = xndarray.load(output_file)

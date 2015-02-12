@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
-import sys
-import re
+
+import logging
+
 import os.path as op
-from inspect import currentframe, getargvalues, getouterframes
-from inspect import ismethod, isfunction, isclass
-import pickle
+
 import numpy as np
+
 from PyQt4 import QtGui, QtCore, QtXml
 
-import pyhrf
-from pyhrf.xmlio import getargspec
 from pyhrf.tools import PickleableStaticMethod
-from copy import copy
-
+from pyhrf.xmlio import UiNode as UiNodeBase
 try:
     from collections import OrderedDict
 except ImportError:
     from pyhrf.tools.backports import OrderedDict
 
 
+logger = logging.getLogger(__name__)
+
+
 debug = False
 debug2 = False
+
 
 def numpy_array_from_string(s, sdtype, sshape=None):
     if sdtype[:3] == 'str':
@@ -34,13 +35,11 @@ def numpy_array_from_string(s, sdtype, sshape=None):
 
     a = np.array(data, dtype=np.typeDict[sdtype])
     if sshape is not None:
-        if debug: print 'sshape:', sshape
-        a.shape = tuple( int(e) for e in sshape.strip('(),').split(',') )
+        if debug:
+            print 'sshape:', sshape
+        a.shape = tuple(int(e) for e in sshape.strip('(),').split(','))
     return a
 
-
-from pyhrf.xmlio import Initable
-from pyhrf.xmlio import UiNode as UiNodeBase
 
 class UiNode(UiNodeBase):
 
@@ -95,15 +94,14 @@ class UiNode(UiNodeBase):
 
         return doc.toString(indent=4)
 
-
     def _recurse_to_xml_qt(self, doc, parent):
-        pyhrf.verbose(6, '_recurse_to_xml ...')
+        logger.debug('_recurse_to_xml ...')
 
         children = self.get_children()
         if len(children) > 0:
             node = doc.createElement(self.label())
-        else: #leaf node -> use QTextNode
-            pyhrf.verbose(6, 'text node: %s' %self.label())
+        else:  # leaf node -> use QTextNode
+            logger.debug('text node: %s', self.label())
             node = doc.createTextNode(self.label())
 
         parent.appendChild(node)
@@ -135,7 +133,7 @@ class UiNode(UiNodeBase):
     def _recurse_from_xml_qt(self, qnode):
         a = qnode.attributes()
         attributes = dict((str(a.item(i).nodeName()),
-                           str(a.item(i).nodeValue()))\
+                           str(a.item(i).nodeValue()))
                           for i in range(a.count()))
         attributes = self.unserialize_attributes(attributes)
         node_name = str(qnode.nodeName())
@@ -145,14 +143,13 @@ class UiNode(UiNodeBase):
             n = UiNode(qnode.nodeValue(), attributes=attributes)
 
         child_nodes = qnode.childNodes()
-        pyhrf.verbose(6, 'create new node %s from QDom (-> %d children)' \
-                      %(node_name, child_nodes.count()))
-        pyhrf.verbose(6, 'node value: %s' %str(qnode.nodeValue()))
+        logger.debug('create new node %s from QDom (-> %d children)',
+                     node_name, child_nodes.count())
+        logger.debug('node value: %s', str(qnode.nodeValue()))
         for i in range(child_nodes.count()):
             n.add_child(self._recurse_from_xml_qt(child_nodes.item(i)))
 
         return n
-
 
     ########################################
     #Methods to interact with Qt ItemModel #
@@ -186,16 +183,19 @@ class UiNode(UiNodeBase):
 
     def data(self, column):
 
-        if   column is 0: return self._label
-        elif column is 1: return self.attributes
+        if column is 0:
+            return self._label
+        elif column is 1:
+            return self.attributes
 
     def setData(self, column, value):
-        if   column is 0: self._label = value.toPyObject() #toString?
-        elif column is 1: pass
+        if column is 0:
+            self._label = value.toPyObject()  # toString?
+        elif column is 1:
+            pass
 
     def resource(self):
         return None
-
 
     def get_actions(self, parent):
         node_type = self.get_attribute('type')
@@ -219,7 +219,7 @@ class UiModel(QtCore.QAbstractItemModel):
         self._rootNode = root
 
         self._icons = {}
-        self._default_icon  = QtGui.QPixmap('./pics/xml_element.png')
+        self._default_icon = QtGui.QPixmap('./pics/xml_element.png')
 
         if debug:
             print "UiModel - default icon:", self._default_icon
@@ -232,40 +232,37 @@ class UiModel(QtCore.QAbstractItemModel):
 
         return parentNode.childCount()
 
-
     def data(self, index, role):
-         if not index.isValid():
-             return None
+        if not index.isValid():
+            return None
 
-         node = index.internalPointer()
+        node = index.internalPointer()
 
-         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
-            if index.column() == 0: # column should always be 0,
+        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
+            if index.column() == 0:  # column should always be 0,
                                     # expected in some rare cases ...
                 return node.label()
-         if role == QtCore.Qt.DecorationRole:
-             print 'DecorationRole ...'
-             if index.column() == 0:
-                 icon = self._icons.get(node.type_info(), self._default_icon)
-                 print 'icon:', icon
-                 if icon is not None:
-                     return QtGui.QIcon(icon)
-
+        if role == QtCore.Qt.DecorationRole:
+            print 'DecorationRole ...'
+            if index.column() == 0:
+                icon = self._icons.get(node.type_info(), self._default_icon)
+                print 'icon:', icon
+                if icon is not None:
+                    return QtGui.QIcon(icon)
 
     def headerData(self, section, orientation, role):
         if role == QtCore.Qt.DisplayRole:
             if section == 0:
-                return "UiModel" #...
+                return "UiModel"  # ...
             else:
-                return "type_info" #...
-
+                return "type_info"  # ...
 
     def flags(self, index):
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | \
-          QtCore.Qt.ItemIsEditable
+            QtCore.Qt.ItemIsEditable
 
     def index(self, row, column, parent):
-        if not parent.isValid(): #if root node
+        if not parent.isValid():  # if root node
             parentNode = self._rootNode
         else:
             parentNode = parent.internalPointer()
@@ -277,33 +274,31 @@ class UiModel(QtCore.QAbstractItemModel):
             # may happen rarely ...
             return QtCore.QModelIndex()
 
-
     def setData(self, index, value, role=QtCore.Qt.EditRole):
 
         if index.isValid():
             if role == QtCore.Qt.EditRole:
                 node = index.internalPointer()
-                #try:
+                # try:
                 return node.set_label(value)
                 # except Exception, e:
                 #     QMessageBox.critical(self,
                 #                          "Could not set data. Error: %s" %str(e))
-                #return True
+                # return True
         return False
-
 
     def parent(self, index):
         """ index: QModelIndex instance """
-        #index.row()
-        #index.column()
+        # index.row()
+        # index.column()
 
-        node = index.internalPointer() #get the actual node
+        node = index.internalPointer()  # get the actual node
         parentNode = node.parent()
         if parentNode == self._rootNode:
-            return QtCore.QModelIndex() #emtpy because root does not have a parent
+            # emtpy because root does not have a parent
+            return QtCore.QModelIndex()
 
         return self.createIndex(parentNode.row(), 0, parentNode)
 
     def columnCount(self, parent):
         return 1
-

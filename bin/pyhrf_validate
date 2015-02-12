@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import sys
 import unittest
+
 from optparse import OptionParser
+from pprint import pformat
+
 import matplotlib
 
 import pyhrf
-from pyhrf.validation import *
-from pyhrf._verbose import dictToString
+from pyhrf.validation import *  # FIXME: no wildcard imports (define __all__ in pyhrf/validation/__init__.py)
 
 from pyhrf.validation import config
 
@@ -14,51 +16,52 @@ usage = 'usage: %prog [options]'
 
 description = 'Numerical validation of implemented methods in PyHRF.\n' \
     'Processes launched by this command are not only code validation but also '\
-    'assert method consistency and rightness. Therefore, tey are likely to '\
+    'assert method consistency and rightness. Therefore, they are likely to '\
     'take some time to execute. For quick code validation see pyhrf_maketests.'
 
 
 parser = OptionParser(usage=usage, description=description)
 
-parser.add_option('-v','--verbose',dest='verbose',metavar='INTEGER',
-                  type='int',default=0,
-                  help=dictToString(pyhrf.verboseLevels))
+parser.add_option('-v', '--verbose', dest='verbose', metavar='INTEGER',
+                  type='int', default=0,
+                  help=pformat(pyhrf.verbose_levels))
 
-parser.add_option('-p','--plots',dest='savePlots', action='store_true',
+parser.add_option('-p', '--plots', dest='savePlots', action='store_true',
                   default=False,
-                  help='Enable plot saving. See -d option to define '\
-                      'target path' )
+                  help='Enable plot saving. See -d option to define '
+                  'target path')
 
-parser.add_option('-d','--plot-dir',dest='saveDir', metavar='PATH', 
+parser.add_option('-d', '--plot-dir', dest='saveDir', metavar='PATH',
                   default='./',
                   help='Define path where to save plots. Default: %default')
 
-parser.add_option('-e','--plot-ext',dest='plotExt', metavar='STRING', 
+parser.add_option('-e', '--plot-ext', dest='plotExt', metavar='STRING',
                   default='png',
                   help='Figure file extension. Default: %default')
 
-parser.add_option('-x','--clean-cache',dest='cleanCache', 
+parser.add_option('-x', '--clean-cache', dest='cleanCache',
                   default=False, action='store_true',
                   help='Clean cache before launching validation tests')
 
-parser.add_option('-u','--update-cache',dest='updateCache', 
+parser.add_option('-u', '--update-cache', dest='updateCache',
                   default=False, action='store_true',
                   help='Update cache for validation tests')
 
 
-parser.add_option('-c','--cache-dir', dest='cacheDir', metavar='PATH', 
+parser.add_option('-c', '--cache-dir', dest='cacheDir', metavar='PATH',
                   default=config.cacheDir,
                   help='Path where to save cache files. Default: %default')
 
 
-(options,args) = parser.parse_args()
+(options, args) = parser.parse_args()
 
-pyhrf.verbose.set_verbosity(options.verbose)
+# pyhrf.verbose.set_verbosity(options.verbose)
+pyhrf.logger.setLevel(options.verbose)
 
 minArgs = 0
 maxArgs = -1
-nba = len(args) 
-if  nba<minArgs or (maxArgs>0 and nba>maxArgs):
+nba = len(args)
+if nba < minArgs or (maxArgs > 0 and nba > maxArgs):
     parser.print_help()
     sys.exit(1)
 

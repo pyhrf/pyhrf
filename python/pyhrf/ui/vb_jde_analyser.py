@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+import logging
+
 import numpy as np
 from time import time
 from pyhrf.ui.analyser_ui import FMRIAnalyser
@@ -12,6 +15,9 @@ import pyhrf
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 import os.path as op
+
+
+logger = logging.getLogger(__name__)
 
 
 def change_dim(labels):
@@ -130,13 +136,14 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.hyper_prior_sigma_H = hyper_prior_sigma_H
         self.constrained = constrained
 
-        pyhrf.verbose(2, "VEM analyzer:")
-        pyhrf.verbose(2, " - estimate sigma H: %s" %str(self.estimateSigmaH))
-        pyhrf.verbose(2, " - init sigma H: %f" %self.sigmaH)
-        pyhrf.verbose(2, " - hyper_prior_sigma_H: %f" %self.hyper_prior_sigma_H)
-        pyhrf.verbose(2, " - estimate drift: %s" %str(self.estimateDrifts))
 
-        
+        logger.info("VEM analyzer:")
+        logger.info(" - JPDE: %s", str(self.jpde))
+        logger.info(" - estimate sigma H: %s", str(self.estimateSigmaH))
+        logger.info(" - init sigma H: %f", self.sigmaH)
+        logger.info(" - hyper_prior_sigma_H: %f", self.hyper_prior_sigma_H)
+        logger.info(" - estimate drift: %s", str(self.estimateDrifts))
+
     def analyse_roi(self, roiData):
         #roiData is of type FmriRoiData, see pyhrf.core.FmriRoiData
         # roiData.bold : numpy array of shape
@@ -153,8 +160,8 @@ class JDEVEMAnalyser(JDEAnalyser):
         if self.scale:
             scale = nvox
         rid = roiData.get_roi_id()
-        pyhrf.verbose(1,"JDE VEM - roi %d, nvox=%d, nconds=%d, nItMax=%d" \
-                          %(rid, nvox, len(Onsets),self.nItMax))
+        logger.info("JDE VEM - roi %d, nvox=%d, nconds=%d, nItMax=%d", rid,
+                    nvox, len(Onsets), self.nItMax)
 
         self.contrasts.pop('dummy_example', None)
         cNames = roiData.paradigm.get_stimulus_names()
@@ -164,7 +171,7 @@ class JDEVEMAnalyser(JDEAnalyser):
 
         if self.fast:
             if not self.constrained:
-                pyhrf.verbose(2, "fast VEM with drift estimation")
+                logger.info("fast VEM with drift estimation")
                 
                 NbIter, nrls, estimated_hrf, \
                 labels, noiseVar, mu_k, sigma_k, \
@@ -182,7 +189,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         self.MFapprox,self.InitVar,self.InitMean,
                                         self.MiniVemFlag,self.NbItMiniVem)
             else:
-                pyhrf.verbose(2, "fast VEM with drift estimation and a constraint")
+                logger.info("fast VEM with drift estimation and a constraint")
                 
                 NbIter, nrls, estimated_hrf, \
                 labels, noiseVar, mu_k, sigma_k, \
@@ -203,8 +210,8 @@ class JDEVEMAnalyser(JDEAnalyser):
         else:
             # if not self.fast
             if self.estimateDrifts:
-                pyhrf.verbose(2, "not fast VEM")
-                pyhrf.verbose(2, "NOT WORKING")
+                logger.info("not fast VEM")
+                logger.info("NOT WORKING")
                 nrls, estimated_hrf, \
                 labels, noiseVar, mu_k, \
                 sigma_k, Beta, L, \
@@ -217,8 +224,8 @@ class JDEVEMAnalyser(JDEAnalyser):
         
         # Plot analysis duration
         self.analysis_duration = time() - t_start
-        pyhrf.verbose(1, 'JDE VEM analysis took: %s' \
-                          %format_duration(self.analysis_duration))
+        logger.info('JDE VEM analysis took: %s',
+                    format_duration(self.analysis_duration))
 
 
         if self.fast:
@@ -448,12 +455,11 @@ class JDEVEMAnalyser(JDEAnalyser):
 
 # Function to use directly in parallel computation
 def run_analysis(**params):
-    # from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
-    # import pyhrf
-    pyhrf.verbose.set_verbosity(1)
+    # pyhrf.verbose.set_verbosity(1)
+    pyhrf.logger.setLevel(logging.INFO)
     fdata = params.pop('roi_data')
     # print 'doing params:'
     # print params
     vem_analyser = JDEVEMAnalyser(**params)
-    return (dict([('ROI',fdata.get_roi_id())] + params.items()), \
-                vem_analyser.analyse_roi(fdata))
+    return (dict([('ROI', fdata.get_roi_id())] + params.items()),
+            vem_analyser.analyse_roi(fdata))

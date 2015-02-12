@@ -1,30 +1,32 @@
 # -*- coding: utf-8 -*-
+
 import sys
 import os
 import os.path as op
 import time
 import itertools
-
 import shutil
 import cPickle
+import logging
+
 import numpy as np
 
 import pyhrf
-from pyhrf.ndarray import xndarray, stack_cuboids, TIME_AXIS, MRI3Daxes
-from pyhrf.sandbox.design_and_ui import Initable
-
-from pyhrf.tools import PickleableStaticMethod, stack_trees, unstack_trees, \
-     format_duration
 import pyhrf.tools._io as pio
 
-
+from pyhrf.ndarray import xndarray, stack_cuboids, TIME_AXIS, MRI3Daxes
+from pyhrf.sandbox.design_and_ui import Initable
+from pyhrf.tools import (PickleableStaticMethod, stack_trees, unstack_trees,
+                         format_duration)
 from pyhrf.paradigm import Paradigm, builtin_paradigms
 from pyhrf.graph import parcels_to_graphs, kerMask3D_6n
-
 try:
     from collection import OrderedDict
 except ImportError:
     from pyhrf.tools.backports import OrderedDict
+
+
+logger = logging.getLogger(__name__)
 
 
 class FmriData(): #Initable?
@@ -144,7 +146,7 @@ class FmriData(): #Initable?
     def _compute_graph(self):
         if self.data_type != 'volume':
             raise Exception('Can only compute graph for volume data')
-        pyhrf.verbose(6, 'FmriData._compute_graph() ...')
+        logger.debug('FmriData._compute_graph() ...')
         to_discard = [self.backgroundLabel]
         self._graph = parcels_to_graphs(self.roiMask, kerMask3D_6n,
                                         toDiscard=to_discard)
@@ -209,12 +211,12 @@ class MultiSessionsDataUI(Initable):
             raise Exception('Only CSV file format support for paradigm')
 
         fns = self.func_data_files
-        pyhrf.verbose(1, 'Load functional data from: %s' %',\n'.join(fns))
+        logger.info('Load functional data from: %s', ',\n'.join(fns))
         fdata = stack_cuboids([xndarray.load(fn) for fn in fns], 'session')
 
         fdata = np.concatenate(fdata.data) #scan sessions along time axis
         pio.discard_bad_data(fdata, mask)
-        pyhrf.verbose(1, 'Functional data shape %s' %str(fdata.shape))
+        logger.info('Functional data shape %s', str(fdata.shape))
 
         return {'stim_onsets': onsets, 'stim_durations':durations,
                 'func_data': fdata}
@@ -281,12 +283,12 @@ class SessionDataUI(Initable):
         params = stack_trees([sd.to_dict() for sd in sessions_data])
 
         fns = params.pop('func_data_file')
-        pyhrf.verbose(1, 'Load functional data from: %s' %',\n'.join(fns))
+        logger.info('Load functional data from: %s', ',\n'.join(fns))
         fdata = stack_cuboids([xndarray.load(fn) for fn in fns], 'session')
 
         fdata = np.concatenate(fdata.data) #scan sessions along time axis
         pio.discard_bad_data(fdata, mask)
-        pyhrf.verbose(1, 'Functional data shape %s' %str(fdata.shape))
+        logger.info('Functional data shape %s', str(fdata.shape))
         params['func_data'] = fdata
 
         return params
@@ -315,11 +317,11 @@ class MaskUI(Initable):
         return m
 
     def load_and_get_fdata_params(self):
-        pyhrf.verbose(1,'Load mask from: %s' %self.mask_file)
+        logger.info('Load mask from: %s', self.mask_file)
         if self.data_type == 'surface':
-            pyhrf.verbose(2,'Read mesh from: %s' %self.mesh_file)
+            logger.info('Read mesh from: %s', self.mesh_file)
         p = {'mask' : xndarray.load(self.mask_file).data}
-        pyhrf.verbose(1, 'Mask shape %s' %str(p['mask'].shape))
+        logger.info('Mask shape %s', str(p['mask'].shape))
 
         if self.data_type == 'surface':
             p['graph'] = graph_from_mesh(read_mesh(self.mesh_file))
@@ -483,20 +485,19 @@ class TreatmentUI(Initable):
         if self.analyser is None:
             self.analyser = self.analyser_ui.get_analyser()
 
-        lg = pyhrf.verbose.verbosity >= 2
-        pyhrf.verbose(2, self.data.get_summary(long=lg))
+        lg = logger.getEffectiveLevel() <= logging.INFO
+        logger.info(self.data.get_summary(long=lg))
 
-        pyhrf.verbose(1,'All data loaded !')
-        pyhrf.verbose(1,'running estimation ...')
+        logger.info('All data loaded !')
+        logger.info('running estimation ...')
         #TODO : print summary of analyser setup.
-        pyhrf.verbose(1,'Estimation start date is : %s'
-                      %time.strftime('%c'))
+        logger.info('Estimation start date is : %s', time.strftime('%c'))
         tIni = time.time()
         result = self.analyser.analyse(self.data)
 
-        pyhrf.verbose(1,'Estimation done, total time : %s'
-                      %format_duration(time.time()-tIni))
-        pyhrf.verbose(1,'End date is : '+time.strftime('%c'))
+        logger.info('Estimation done, total time : %s',
+                    format_duration(time.time()-tIni))
+        logger.info('End date is : %s', time.strftime('%c'))
 
         return result
 
@@ -515,8 +516,8 @@ class TreatmentUI(Initable):
                     'parallel processing on a local machine.'
                 sys.exit(1)
 
-            parallel_verb = pyhrf.verbose.verbosity
-            if pyhrf.verbose.verbosity == 6:
+            parallel_verb = pyhrf.verbose.verbosity # TODO: replace that
+            if logger.getEffectiveLevel() == logging.DEBUG:
                 parallel_verb = 10
 
             if n_jobs is None:
@@ -548,11 +549,11 @@ class TreatmentUI(Initable):
                 remote_writeable = True
                 tmpDir = remoteDir
             else:
-                pyhrf.verbose(1, 'Remote dir is not writeable -> using tmp ' \
-                                  'dir to store splitted data & then upload.')
+                logger.info('Remote dir is not writeable -> using tmp '
+                            'dir to store splitted data & then upload.')
 
             #2. split roi data
-            pyhrf.verbose(1, 'Path to store sub treatments: %s' %tmpDir)
+            logger.info('Path to store sub treatments: %s', tmpDir)
             treatments_dump_files = []
             self.split(dump_sub_results=True, output_dir=tmpDir,
                        make_sub_outputs=False,
@@ -561,7 +562,7 @@ class TreatmentUI(Initable):
             #3. copy data to remote directory
             if not remote_writeable:
                 host = cfg_parallel['remote_host']
-                pyhrf.verbose(1, 'Uploading data to %s ...' %(remoteDir))
+                logger.info('Uploading data to %s ...', remoteDir)
                 remote_input_files = pio.remote_copy(treatments_dump_files,
                                                      host, remoteUser, remoteDir)
 
@@ -572,17 +573,16 @@ class TreatmentUI(Initable):
                 nice = cfg_parallel['niceness']
                 tasks_list.append('nice -n %d %s -v%d -t "%s"' \
                                       %(nice,'pyhrf_jde_estim',
-                                        pyhrf.verbose.verbosity,f))
+                                        logger.getEffectiveLevel(),f))
             mode = 'dispatch'
             tasks = grid.read_tasks(';'.join(tasks_list), mode)
             timeslot = grid.read_timeslot('allday')
             hosts = grid.read_hosts(cfg_parallel['hosts'])
             brokenfile = op.join(tmpDir, 'pyhrf-broken_cmd.batch')
             logfile = op.join(self.output_dir, 'pyhrf-parallel.log')
-            pyhrf.verbose(1, 'Log file for process dispatching: %s' \
-                              %logfile)
+            logger.info('Log file for process dispatching: %s', logfile)
             #3. launch them
-            pyhrf.verbose(1, 'Dispatching processes ...')
+            logger.info('Dispatching processes ...')
             try:
                 grid.run_grid(mode, hosts, 'rsa', tasks, timeslot, brokenfile,
                             logfile, user=remoteUser)
@@ -591,8 +591,7 @@ class TreatmentUI(Initable):
                 grid.quit(None, None)
 
             if len(open(brokenfile).readlines()) > 0:
-                pyhrf.verbose(1, 'There are some broken commands, '\
-                                  'trying again ...')
+                logger.info('There are some broken commands, trying again ...')
                 try:
                     tasks = grid.read_tasks(brokenfile, mode)
                     grid.run_grid(mode, hosts, 'rsa', tasks, timeslot, brokenfile,
@@ -614,10 +613,10 @@ class TreatmentUI(Initable):
             nb_treatments = len(treatments_dump_files)
             remote_result_files = [op.join(remoteDir, 'result_%04d.pck' %i) \
                                     for i in range(nb_treatments)]
-            pyhrf.verbose(1,'remote_result_files: %s', str(remote_result_files))
+            logger.info('remote_result_files: %s', str(remote_result_files))
             nres = len(filter(op.exists,remote_result_files))
             if nres == nb_treatments:
-                pyhrf.verbose(1, 'Grabbing results ...')
+                logger.info('Grabbing results ...')
                 for fnresult in remote_result_files:
                     fresult = open(fnresult)
                     result.append(cPickle.load(fresult))
@@ -627,17 +626,17 @@ class TreatmentUI(Initable):
                     %(nres, nb_treatments)
                 print 'Something went wrong, check the log files'
             if not remote_writeable:
-                pyhrf.verbose(1, 'Cleaning tmp dir (%s)...' %tmpDir)
+                logger.info('Cleaning tmp dir (%s)...', tmpDir)
                 shutil.rmtree(tmpDir)
-                pyhrf.verbose(1, 'Cleaning up remote dir (%s) through ssh ...' \
-                                %remoteDir)
+                logger.info('Cleaning up remote dir (%s) through ssh ...',
+                            remoteDir)
                 cmd = 'ssh %s@%s rm -f "%s" "%s" "%s"' \
                     %(remoteUser, host, ' '.join(remote_result_files),
                       ' '.join(remote_input_files))
-                pyhrf.verbose(2, cmd)
+                logger.info(cmd)
                 os.system(cmd)
             else:
-                pyhrf.verbose(1, 'Cleaning up remote dir (%s)...' %remoteDir)
+                logger.info('Cleaning up remote dir (%s)...', remoteDir)
                 for f in os.listdir(remoteDir):
                     os.remove(op.join(remoteDir,f))
 
@@ -648,7 +647,7 @@ class TreatmentUI(Initable):
             #create tmp remote path:
             date_now = time.strftime('%c').replace(' ','_').replace(':','_')
             remote_path = op.join(cfg['remote_path'], date_now)
-            pyhrf.verbose(1,'Create tmp remote dir: %s' %remote_path)
+            logger.info('Create tmp remote dir: %s', remote_path)
             pio.remote_mkdir(cfg['server'], cfg['user'], remote_path)
             #if self.result_dump_file
             t_name = 'default_treatment'
@@ -668,7 +667,7 @@ class TreatmentUI(Initable):
         else:
             raise Exception('Parallel mode "%s" not available' %parallel)
 
-        pyhrf.verbose(1, 'Retrieved %d results' %len(result))
+        logger.info('Retrieved %d results', len(result))
         return self.output(result, (self.result_dump_file is not None),
                            self.make_outputs)
 

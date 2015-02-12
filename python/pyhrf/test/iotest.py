@@ -19,16 +19,17 @@ import shutil
 import pyhrf.tools._io as pio
 from pyhrf.ndarray import xndarray
 
+
 class RxCopyTest(unittest.TestCase):
 
     def setUp(self,):
         self.tmp_dir = pyhrf.get_tmp_path()
 
     def tearDown(self):
-       shutil.rmtree(self.tmp_dir)
+        shutil.rmtree(self.tmp_dir)
 
     def _create_tmp_files(self, fns):
-        for fn in [op.join(self.tmp_dir,fn) for fn in fns]:
+        for fn in [op.join(self.tmp_dir, fn) for fn in fns]:
             d = op.dirname(fn)
             if not op.exists(d):
                 os.makedirs(d)
@@ -36,12 +37,12 @@ class RxCopyTest(unittest.TestCase):
 
     def assert_file_exists(self, fn, test_exists=True):
         if test_exists and not op.exists(fn):
-                raise Exception('File %s does not exist' %fn)
+            raise Exception('File %s does not exist' % fn)
         elif not test_exists and op.exists(fn):
-            raise Exception('File %s exists' %fn)
+            raise Exception('File %s exists' % fn)
 
     def test_basic(self):
-        self._create_tmp_files([op.join('./raw_data', f) \
+        self._create_tmp_files([op.join('./raw_data', f)
                                 for f in ['AC0832_anat.nii', 'AC0832_asl.nii',
                                           'AC0832_bold.nii', 'PK0612_asl.nii',
                                           'PK0612_bold.nii', 'dummy.nii']])
@@ -51,16 +52,16 @@ class RxCopyTest(unittest.TestCase):
         dest_basename = 'data.nii'
         pio.rx_copy(src, src_folder, dest_basename, dest_folder)
 
-        for fn in [op.join(self.tmp_dir, 'export', f) \
-                       for f in ['AC0832/bold/data.nii',
-                                 'AC0832/anat/data.nii',
-                                 'AC0832/asl/data.nii',
-                                 'PK0612/bold/data.nii',
-                                 'PK0612/asl/data.nii']]:
+        for fn in [op.join(self.tmp_dir, 'export', f)
+                   for f in ['AC0832/bold/data.nii',
+                             'AC0832/anat/data.nii',
+                             'AC0832/asl/data.nii',
+                             'PK0612/bold/data.nii',
+                             'PK0612/asl/data.nii']]:
             self.assert_file_exists(fn)
 
     def test_advanced(self):
-        self._create_tmp_files([op.join('./raw_data', f) \
+        self._create_tmp_files([op.join('./raw_data', f)
                                 for f in ['ASL mt_TG_PASL_s004a001.nii',
                                           'ASL mt_TG_PASL_s008a001.nii',
                                           'ASL mt_PK_PASL_s064a001.nii',
@@ -72,28 +73,25 @@ class RxCopyTest(unittest.TestCase):
         dest_basename = 'ASL_session_{session}.nii'
         pio.rx_copy(src, src_folder, dest_basename, dest_folder)
 
-        for fn in [op.join(self.tmp_dir, 'export', f) \
-                       for f in ['TG/PASL/ASL_session_004.nii',
-                                 'TG/PASL/ASL_session_008.nii',
-                                 'PK/PASL/ASL_session_064.nii',
-                                 'PK/PASL/ASL_session_003.nii']]:
+        for fn in [op.join(self.tmp_dir, 'export', f)
+                   for f in ['TG/PASL/ASL_session_004.nii',
+                             'TG/PASL/ASL_session_008.nii',
+                             'PK/PASL/ASL_session_064.nii',
+                             'PK/PASL/ASL_session_003.nii']]:
             self.assert_file_exists(fn)
 
-
-
     def test_with_subfolders(self):
-        self._create_tmp_files([op.join('./raw_data/ASL', f) \
+        self._create_tmp_files([op.join('./raw_data/ASL', f)
                                 for f in ['mt_TG_PASL_s004a001.nii',
                                           'mt_TG_PASL_s008a001.nii',
                                           'mt_PK_PASL_s064a001.nii',
                                           'mt_PK_PASL_s003a001.nii']])
 
-        self._create_tmp_files([op.join('./raw_data/BOLD', f) \
+        self._create_tmp_files([op.join('./raw_data/BOLD', f)
                                 for f in ['mt_TG_BOLDepi_s003a001.nii',
                                           'mt_TG_BOLDepi_s005a001.nii',
                                           'mt_PK_BOLDepi_s022a001.nii',
                                           'mt_PK_BOLDepi_s007a001.nii']])
-
 
         src = '(?P<modality_folder>[a-zA-Z]+)/mt_(?P<subject>[A-Z]{2})_' \
               '(?P<modality>[a-zA-Z]+)_'\
@@ -103,17 +101,16 @@ class RxCopyTest(unittest.TestCase):
         dest_basename = '{modality}_session_{session}.nii'
         pio.rx_copy(src, src_folder, dest_basename, dest_folder)
 
-        for fn in [op.join(self.tmp_dir, 'export', f) \
-                       for f in ['TG/PASL/PASL_session_004.nii',
-                                 'TG/PASL/PASL_session_008.nii',
-                                 'TG/BOLDepi/BOLDepi_session_003.nii',
-                                 'TG/BOLDepi/BOLDepi_session_005.nii',
-                                 'PK/PASL/PASL_session_064.nii',
-                                 'PK/PASL/PASL_session_003.nii',
-                                 'PK/BOLDepi/BOLDepi_session_022.nii',
-                                 'PK/BOLDepi/BOLDepi_session_007.nii']]:
+        for fn in [op.join(self.tmp_dir, 'export', f)
+                   for f in ['TG/PASL/PASL_session_004.nii',
+                             'TG/PASL/PASL_session_008.nii',
+                             'TG/BOLDepi/BOLDepi_session_003.nii',
+                             'TG/BOLDepi/BOLDepi_session_005.nii',
+                             'PK/PASL/PASL_session_064.nii',
+                             'PK/PASL/PASL_session_003.nii',
+                             'PK/BOLDepi/BOLDepi_session_022.nii',
+                             'PK/BOLDepi/BOLDepi_session_007.nii']]:
             self.assert_file_exists(fn)
-
 
     def test_missing_tags_dest_folder(self):
         self._create_tmp_files(['AK98_T1_s01.nii'])
@@ -123,8 +120,8 @@ class RxCopyTest(unittest.TestCase):
                        '{session}')
         dest_basename = '{subject}.nii'
         self.assertRaisesRegexp(pio.MissingTagError,
-                                "Tags in dest_folder not defined in src: "\
-                                "study, session",  pio.rx_copy,
+                                "Tags in dest_folder not defined in src: "
+                                "study, session", pio.rx_copy,
                                 src, src_folder, dest_basename, dest_folder)
 
     def test_missing_tags_dest_basename(self):
@@ -134,7 +131,7 @@ class RxCopyTest(unittest.TestCase):
         dest_folder = (self.tmp_dir, 'export', '{modality}')
         dest_basename = '{subject}_{session}.nii'
         self.assertRaisesRegexp(pio.MissingTagError,
-                                "Tags in dest_basename not defined in src: "\
+                                "Tags in dest_basename not defined in src: "
                                 "(subject, session)|(session, subject)",
                                 pio.rx_copy, src, src_folder,
                                 dest_basename, dest_folder)
@@ -148,8 +145,7 @@ class RxCopyTest(unittest.TestCase):
         pio.rx_copy(src, src_folder, dest_basename, dest_folder, dry=True)
         fn = op.join(self.tmp_dir, 'export', 'T1', 'data.nii')
         if op.exists(fn):
-            raise Exception('File %s should not exist' %fn)
-
+            raise Exception('File %s should not exist' % fn)
 
     def test_duplicates_targets(self):
         self._create_tmp_files(['AK98_T1_s01.nii', 'AK98_T1_s02.nii'])
@@ -166,7 +162,7 @@ class RxCopyTest(unittest.TestCase):
                                 dest_basename, dest_folder)
 
     def test_replacement(self):
-        self._create_tmp_files([op.join('./raw_data', f) \
+        self._create_tmp_files([op.join('./raw_data', f)
                                 for f in ['ASL mt_TG_PASL_s004a001.nii',
                                           'ASL mt_TG_T1_s008a001.nii',
                                           'ASL mt_PK_PASL_s064a001.nii',
@@ -177,23 +173,22 @@ class RxCopyTest(unittest.TestCase):
         dest_folder = (self.tmp_dir, 'export', '{subject}', '{modality}')
         dest_basename = '{modality}_session_{session}.nii'
         pio.rx_copy(src, src_folder, dest_basename, dest_folder,
-                replacements=[('T1','anat'),('PASL','aslf')])
-        for fn in [op.join(self.tmp_dir, 'export', f) \
-                       for f in ['TG/aslf/aslf_session_004.nii',
-                                 'TG/anat/anat_session_008.nii',
-                                 'PK/aslf/aslf_session_064.nii',
-                                 'PK/anat/anat_session_003.nii']]:
+                    replacements=[('T1', 'anat'), ('PASL', 'aslf')])
+        for fn in [op.join(self.tmp_dir, 'export', f)
+                   for f in ['TG/aslf/aslf_session_004.nii',
+                             'TG/anat/anat_session_008.nii',
+                             'PK/aslf/aslf_session_064.nii',
+                             'PK/anat/anat_session_003.nii']]:
             self.assert_file_exists(fn)
 
-
     def test_callback(self):
-        def filter_odd_session(s,d):
+        def filter_odd_session(s, d):
             if (int(d[-5]) % 2) != 0:
                 return None
             else:
                 return d
 
-        self._create_tmp_files([op.join('./raw_data', f) \
+        self._create_tmp_files([op.join('./raw_data', f)
                                 for f in ['ASL mt_TG_PASL_s004a001.nii',
                                           'ASL mt_TG_T1_s008a001.nii',
                                           'ASL mt_PK_PASL_s064a001.nii',
@@ -204,12 +199,12 @@ class RxCopyTest(unittest.TestCase):
         dest_folder = (self.tmp_dir, 'export', '{subject}', '{modality}')
         dest_basename = '{modality}_session_{session}.nii'
         pio.rx_copy(src, src_folder, dest_basename, dest_folder,
-                replacements=[('T1','anat'),('PASL','aslf')],
-                callback=filter_odd_session)
-        for fn in [op.join(self.tmp_dir, 'export', f) \
-                       for f in ['TG/aslf/aslf_session_004.nii',
-                                 'TG/anat/anat_session_008.nii',
-                                 'PK/aslf/aslf_session_064.nii']]:
+                    replacements=[('T1', 'anat'), ('PASL', 'aslf')],
+                    callback=filter_odd_session)
+        for fn in [op.join(self.tmp_dir, 'export', f)
+                   for f in ['TG/aslf/aslf_session_004.nii',
+                             'TG/anat/anat_session_008.nii',
+                             'PK/aslf/aslf_session_064.nii']]:
             self.assert_file_exists(fn)
 
         self.assert_file_exists('PK/anat/anat_session_003.nii', False)
@@ -226,20 +221,20 @@ class NiftiTest(unittest.TestCase):
         if 1:
             shutil.rmtree(self.tmp_dir)
 
-
     def test_process_history_extension(self):
-        nii_fn = pyhrf.get_data_file_name('real_data_vol_4_regions_mask.nii.gz')
+        nii_fn = pyhrf.get_data_file_name(
+            'real_data_vol_4_regions_mask.nii.gz')
 
         nii_fn_out = op.join(self.tmp_dir, 'proc_ext_test.nii')
-        #print 'nii_fn_out:', nii_fn_out
+        # print 'nii_fn_out:', nii_fn_out
         input_pname = 'dummy_proc_test'
-        input_pparams = {'my_param' : 5.5, 'input_file':'/home/blh'}
+        input_pparams = {'my_param': 5.5, 'input_file': '/home/blh'}
 
         pio.append_process_info(nii_fn, input_pname, input_pparams,
                                 img_output_fn=nii_fn_out)
 
-        i2,(aff,header) = pio.read_volume(nii_fn_out)
-        #print 'Loaded extensions:', header.extensions
+        i2, (aff, header) = pio.read_volume(nii_fn_out)
+        # print 'Loaded extensions:', header.extensions
 
         reloaded_pinfo = pio.get_process_info(nii_fn_out)
         self.assertNotEqual(reloaded_pinfo, None)
@@ -248,21 +243,21 @@ class NiftiTest(unittest.TestCase):
         self.assertEqual(reloaded_pinfo[0]['process_version'], None)
         self.assertEqual(reloaded_pinfo[0]['process_id'], None)
 
+
 class DataLoadTest(unittest.TestCase):
 
     def test_paradigm_csv(self):
         pfn = get_data_file_name('paradigm_loc_av.csv')
-        o,d = pio.load_paradigm_from_csv(pfn)
+        o, d = pio.load_paradigm_from_csv(pfn)
         if 0:
             print 'onsets:'
             print o
             print 'durations:'
             print d
 
-
     def test_paradigm_csv2(self):
         pfn = get_data_file_name('paradigm_loc_av.csv')
-        o,d = pio.load_paradigm_from_csv(pfn, " ")
+        o, d = pio.load_paradigm_from_csv(pfn, " ")
         if 0:
             print 'onsets:'
             print o
@@ -271,11 +266,11 @@ class DataLoadTest(unittest.TestCase):
 
     def test_paradigm_csv3(self):
         pfn = get_data_file_name('paradigm_loc_av_comma.csv')
-        o,d = pio.load_paradigm_from_csv(pfn)
+        o, d = pio.load_paradigm_from_csv(pfn)
 
     def test_paradigm_csv4(self):
         pfn = get_data_file_name('paradigm_loc_av_comma.csv')
-        o,d = pio.load_paradigm_from_csv(pfn ,",")
+        o, d = pio.load_paradigm_from_csv(pfn, ",")
 
     def test_frmi_vol(self):
         """ Test volumic data loading
@@ -291,34 +286,30 @@ class DataLoadTest(unittest.TestCase):
             print h
 
 
-
-
 class xndarrayIOTest(unittest.TestCase):
 
     def setUp(self):
-        self.cub0 = xndarray(_np.random.rand(10,10))
-        self.cub3DVol = xndarray(_np.random.rand(10,10,10),
-                               axes_names=MRI3Daxes)
-        d4D = _np.zeros((2,2,2,3))
+        self.cub0 = xndarray(_np.random.rand(10, 10))
+        self.cub3DVol = xndarray(_np.random.rand(10, 10, 10),
+                                 axes_names=MRI3Daxes)
+        d4D = _np.zeros((2, 2, 2, 3))
         for c in xrange(3):
-            d4D[:,:,:,c] = _np.ones((2,2,2))*(c-2)
+            d4D[:, :, :, c] = _np.ones((2, 2, 2)) * (c - 2)
 
-        self.cub4DVol = xndarray(d4D, axes_names=['condition']+MRI3Daxes)
+        self.cub4DVol = xndarray(d4D, axes_names=['condition'] + MRI3Daxes)
 
-        self.cub4DTimeVol = xndarray(_np.random.rand(100,10,10,10),
-                               axes_names=['time']+MRI3Daxes)
-        self.cubNDVol = xndarray(_np.random.rand(10,2,2,2,3),
-                               axes_names=['time']+MRI3Daxes+['condition'],
-                               axes_domains={'condition':['audio','video','na']})
+        self.cub4DTimeVol = xndarray(_np.random.rand(100, 10, 10, 10),
+                                     axes_names=['time'] + MRI3Daxes)
+        self.cubNDVol = xndarray(_np.random.rand(10, 2, 2, 2, 3),
+                                 axes_names=['time'] +
+                                 MRI3Daxes + ['condition'],
+                                 axes_domains={'condition': ['audio', 'video', 'na']})
 
         self.tmp_dir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                         dir=pyhrf.cfg['global']['tmp_path'])
 
-
-
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
-
 
     def test_save_nii_3D(self):
         fn = op.join(self.tmp_dir, 'test3D.nii')
@@ -387,14 +378,14 @@ class FileHandlingTest(unittest.TestCase):
     def test_split_ext(self):
         bfn = pyhrf.get_data_file_name('subj0_bold_session0.nii.gz')
         pio.split_ext_safe(bfn)
-        #print 's:', s
+        # print 's:', s
 
     def test_split4DVol(self):
         s = 'subj0_bold_session0.nii.gz'
         bfn = pyhrf.get_data_file_name(s)
         bold_files = pio.split4DVol(bfn, output_dir=self.tmp_dir)
-        #print bold_files
-        i,meta = pio.read_volume(bold_files[0])
+        # print bold_files
+        i, meta = pio.read_volume(bold_files[0])
 
         if 0:
             from pprint import pprint
@@ -421,7 +412,7 @@ class GiftiTest(unittest.TestCase):
     def test_read_tex_gii_label(self):
         tex_fn = 'real_data_surf_tiny_parcellation.gii'
         tex_fn = pyhrf.get_data_file_name(tex_fn)
-        t,tgii = pio.read_texture(tex_fn)
+        t, tgii = pio.read_texture(tex_fn)
 
     def test_read_default_real_data_tiny(self):
         mesh_file = pyhrf.get_data_file_name('real_data_surf_tiny_mesh.gii')
@@ -439,7 +430,6 @@ class GiftiTest(unittest.TestCase):
             print 'bold:', bold.shape, bold.dtype
             print 'parcellation:', parcellation.shape, parcellation.dtype
 
-
     def test_load_fmri_surf_data(self):
         """ Test surfacic data loading
         """
@@ -451,12 +441,11 @@ class GiftiTest(unittest.TestCase):
         # boldFn = pyhrf.get_data_file_name('localizer_surface_bold.tex')
         # roiMaskFn = pyhrf.get_data_file_name('roimask_gyrii.tex')
         # meshFn = pyhrf.get_data_file_name('right_hemisphere.mesh')
-        #g, b, ss, m, h = load_fmri_surf_data([boldFn, boldFn],  meshFn,
+        # g, b, ss, m, h = load_fmri_surf_data([boldFn, boldFn],  meshFn,
         #                                     roiMaskFn)
 
-
         # graph, bold, session_scans, mask, edge lengthes
-        #pyhrf.verbose.set_verbosity(3)
+        # pyhrf.verbose.set_verbosity(3)
         g, b, ss, m, el = pio.load_fmri_surf_data([bold_file, bold_file],
                                                   mesh_file,
                                                   parcel_file)
@@ -464,21 +453,20 @@ class GiftiTest(unittest.TestCase):
 
         if 0:
             first_parcel = g.keys()[0]
-            print len(g), 'g[%d]:'%first_parcel, len(g[first_parcel])
-            print 'edge lengthes of roi %d:' %first_parcel
+            print len(g), 'g[%d]:' % first_parcel, len(g[first_parcel])
+            print 'edge lengthes of roi %d:' % first_parcel
             print el[first_parcel]
             print b[first_parcel].shape
-            print ss[0][0],'-',ss[0][-1],',',ss[1][0],'-',ss[1][-1]
+            print ss[0][0], '-', ss[0][-1], ',', ss[1][0], '-', ss[1][-1]
             print m.shape, _np.unique(m)
 
-
     def test_write_tex_gii_labels(self):
-        labels = np.random.randint(0,2,10)
+        labels = np.random.randint(0, 2, 10)
         # print 'labels:', labels.dtype
         # print labels
         tex_fn = op.join(self.tmp_dir, 'labels.gii')
         pio.write_texture(labels, tex_fn)
-        t,tgii = pio.read_texture(tex_fn)
+        t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == labels.dtype
         assert (t == labels).all()
         # print 'labels loaded:', labels.dtype
@@ -490,35 +478,33 @@ class GiftiTest(unittest.TestCase):
         # print values
         tex_fn = op.join(self.tmp_dir, 'float_values.gii')
         pio.write_texture(values, tex_fn)
-        t,tgii = pio.read_texture(tex_fn)
+        t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == values.dtype
-        assert np.allclose(t,values)
+        assert np.allclose(t, values)
         # print 'loaded values:', t.dtype
         # print t
 
-
     def test_write_tex_gii_time_series(self):
-        values = np.random.randn(120,10).astype(np.float32)
+        values = np.random.randn(120, 10).astype(np.float32)
         # print 'values:', values.dtype
         # print values
         tex_fn = op.join(self.tmp_dir, 'time_series.gii')
         pio.write_texture(values, tex_fn, intent='time series')
-        t,tgii = pio.read_texture(tex_fn)
+        t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == values.dtype
-        assert np.allclose(t,values)
+        assert np.allclose(t, values)
         # print 'loaded values:', t.dtype
         # print t
 
-
     def test_write_tex_gii_2D_float(self):
-        values = np.random.randn(2,10).astype(np.float32)
+        values = np.random.randn(2, 10).astype(np.float32)
         # print 'values:', values.dtype
         # print values
         tex_fn = op.join(self.tmp_dir, 'floats_2d.gii')
         pio.write_texture(values, tex_fn)
-        t,tgii = pio.read_texture(tex_fn)
+        t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == values.dtype
-        assert np.allclose(t,values)
+        assert np.allclose(t, values)
         # print 'loaded values:', t.dtype
         # print t
 
@@ -530,8 +516,8 @@ class SPMIOTest(unittest.TestCase):
 
     def _test_load_regnames(self, spm_ver):
         spm_file = op.join(pyhrf.get_tmp_path(), 'SPM.mat')
-        pio.gunzip(pyhrf.get_data_file_name('SPM_v%d.mat.gz' %spm_ver),
-               outFileName=spm_file)
+        pio._zip.gunzip(pyhrf.get_data_file_name('SPM_v%d.mat.gz' % spm_ver),
+                        outFileName=spm_file)
         expected = ['Sn(1) audio*bf(1)', 'Sn(1) video*bf(1)',
                     'Sn(2) audio*bf(1)', 'Sn(2) video*bf(1)',
                     'Sn(1) constant', 'Sn(2) constant']
@@ -545,46 +531,3 @@ class SPMIOTest(unittest.TestCase):
 
     def test_load_regnames_SPM12(self):
         self._test_load_regnames(12)
-
-    # def test_set_contrasts(self):
-
-    #     spm_mat_fn = "/home/tom/Projects/PyHRF/ShippedData/SPM.mat"
-    #     if not op.exists(spm_mat_fn):
-    #         return
-
-    #     try:
-    #         from scipy.io.mio import loadmat
-    #     except:
-    #         from scipy.io.matlab import loadmat
-    #     from pprint import pprint
-
-    #     d = loadmat(spm_mat_fn)
-    #     if 0:
-    #         print 'd:'
-    #         pprint(d)
-    #         print ''
-
-    #     spm = d['SPM']
-
-
-    #     if isinstance(spm, np.ndarray):
-    #         spm = spm[0]
-    #     if isinstance(spm, np.ndarray):
-    #         spm = spm[0]
-
-    #     if isinstance(spm, np.void):
-    #         if len(spm['xCon']) > 0:
-    #             cons = spm['xCon'][0]
-    #             print [ (c['name'], c['c'].squeeze(), c['STAT']) for c in cons ]
-    #         else:
-    #             print []
-    #     elif isinstance(spm, np.ndarray):
-    #         cons = spm.xCon[0]
-    #         return [ (c.name, c.c.squeeze(), c.STAT) for c in cons ]
-    #     else:
-    #         raise Exception("Type of input (%s) is unsupported" \
-    #                             %str(spm.__class__))
-
-
-
-

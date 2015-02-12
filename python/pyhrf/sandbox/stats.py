@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
-import pyhrf
-import numpy as np
-from pyhrf.ndarray import xndarray
 
+import logging
+
+import numpy as np
+
+import pyhrf
+
+from pyhrf.ndarray import xndarray
 from pyhrf.tools import array_summary
+
+
+logger = logging.getLogger(__name__)
 
 
 class Trajectory:
@@ -42,12 +49,13 @@ class Trajectory:
 
         if history_pace > 0:
             nsamples_max = (max_iterations - history_start) / history_pace + \
-                           (((max_iterations - history_start) % history_pace) > 0)
+                           (((max_iterations - history_start) %
+                             history_pace) > 0)
         else:
             nsamples_max = 0
 
         if init_iteration is not None:
-            nsamples_max += 1 #+1 because of init
+            nsamples_max += 1  # +1 because of init
 
         self.history = np.zeros((nsamples_max,) + variable.shape,
                                 dtype=variable.dtype)
@@ -63,22 +71,21 @@ class Trajectory:
     def update(self, iteration):
         """ Record the current variable value """
         if self.hist_pace > 0 and iteration >= self.hist_start and \
-          ((iteration-self.hist_start)%self.hist_pace)==0 :
-            pyhrf.verbose(6, '-> record: %s (sample_count: %d, hist shape: %s)' \
-                          %(str(self.variable), self.sample_count,
-                            str(self.history.shape)))
+                ((iteration - self.hist_start) % self.hist_pace) == 0:
+            logger.debug('-> record: %s (sample_count: %d, hist shape: %s)',
+                         str(self.variable), self.sample_count,
+                         str(self.history.shape))
             self.history[self.sample_count] = self.variable[:]
             self.saved_iterations.append(iteration)
             self.sample_count += 1
         else:
-            pyhrf.verbose(6, "-> don't record (self.hist_pace: %d, "\
-                          "self.hist_start: %d)" \
-                          %(self.hist_pace, self.hist_start))
+            logger.debug("-> don't record (self.hist_pace: %d, "
+                         "self.hist_start: %d)", self.hist_pace, self.hist_start)
 
     def get_last(self):
         """ Return the last saved element """
         if self.sample_count > 0:
-            return self.history[self.sample_count-1]
+            return self.history[self.sample_count - 1]
         else:
             raise Exception('No recorded value')
 
@@ -90,7 +97,7 @@ class Trajectory:
                 an = ['iteration'] + self.axes_names
             else:
                 an = ['iteration'] + \
-                  ['axis_%02d'%i for i in xrange(self.variable.ndim)]
+                    ['axis_%02d' % i for i in xrange(self.variable.ndim)]
 
             if self.axes_domains is not None:
                 ad = self.axes_domains.copy()
@@ -100,8 +107,7 @@ class Trajectory:
             c = xndarray(self.history, axes_names=an, axes_domains=ad)
             return c
         else:
-            return None #raise Exception ?
-
+            return None  # raise Exception ?
 
 
 ### Gibbs Sampler ###
@@ -145,16 +151,16 @@ class GSVariable:
         self.true_value = None
 
     def check_initialization_arg(self, ia):
-        if not (isinstance(ia, (str, np.ndarray)) or\
+        if not (isinstance(ia, (str, np.ndarray)) or
                 np.isscalar(ia)):
-            raise Exception('Wrong type %s for initialization argument.'\
-                            'Allowed: str, npumpy.ndarray, scalar' %ia.__class__)
+            raise Exception('Wrong type %s for initialization argument.'
+                            'Allowed: str, npumpy.ndarray, scalar' % ia.__class__)
 
         if isinstance(ia, str):
-            choices = ['random','custom', 'truth']
+            choices = ['random', 'custom', 'truth']
             if not ia in choices:
-                raise Exception('Wrong choice for initialization argument: %s. '\
-                                'Allowed: %s' %(ia, ','.join(choices)))
+                raise Exception('Wrong choice for initialization argument: %s. '
+                                'Allowed: %s' % (ia, ','.join(choices)))
 
     def enable_sampling(self, flag=True):
         self.do_sampling = flag
@@ -179,7 +185,7 @@ class GSVariable:
         """
         return self.sampler.get_variable_value(vname)
 
-    #Initialization methods
+    # Initialization methods
 
     def set_init_value(self):
         """ Set the initial value of self.current_value, depending on the
@@ -193,24 +199,24 @@ class GSVariable:
                 self.current_value = self.get_custom_init()
             elif self.initialization == 'truth':
                 if self.true_value is None:
-                    raise Exception('Missing true value to init variable %s' \
-                                    %(self.name))
+                    raise Exception('Missing true value to init variable %s'
+                                    % (self.name))
                 self.current_value = self.true_value
         elif isinstance(self.initialization, np.ndarray) or \
-          np.isscalar(self.initialization):
+                np.isscalar(self.initialization):
             self.current_value = self.initialization
 
         if np.isscalar(self.current_value):
             self.current_value = np.array([self.current_value])
 
         if not isinstance(self.current_value, np.ndarray):
-            raise Exception('Initialization of variable "%s" '\
+            raise Exception('Initialization of variable "%s" '
                             'with scenario "%s" did not returned a '
-                            'a numpy.ndarray, but: %s' \
-                            %(self.name, self.initialization, \
-                              str(self.current_value)))
+                            'a numpy.ndarray, but: %s'
+                            % (self.name, self.initialization,
+                               str(self.current_value)))
 
-        if self.current_value.ndim == 0: #don't handle 0-d arrays
+        if self.current_value.ndim == 0:  # don't handle 0-d arrays
             self.current_value = self.current_value[np.newaxis]
 
         if self.axes_names is not None:
@@ -244,20 +250,21 @@ class GSVariable:
             self.cumul_disp = np.zeros(self.current_value.shape, dtype=float)
             self.obs_mean = np.zeros(self.current_value.shape, dtype=float)
             self.obs_var = np.zeros(self.current_value.shape, dtype=float)
-            self.nb_its_obs = 0. # to compute obs mean and var during sampling
+            self.nb_its_obs = 0.  # to compute obs mean and var during sampling
 
             self.init_observables()
 
             # Enable tracking of samples, mean and variance:
-            self.track_sampled_quantity(self.name+'_hist_smpl',
+            self.track_sampled_quantity(self.name + '_hist_smpl',
                                         self.current_value)
-            self.track_obs_quantity(self.name+'_hist_obs_mean', self.obs_mean)
-            self.track_obs_quantity(self.name+'_hist_obs_var', self.obs_var)
+            self.track_obs_quantity(
+                self.name + '_hist_obs_mean', self.obs_mean)
+            self.track_obs_quantity(self.name + '_hist_obs_var', self.obs_var)
 
             self.init_sampling()
 
     def track_sampled_quantity(self, name, quantity, history_pace=None,
-                           axes_names=None, axes_domains=None):
+                               axes_names=None, axes_domains=None):
 
         self.sampler.track_sampled_quantity(name, quantity, history_pace,
                                             axes_names, axes_domains)
@@ -288,15 +295,15 @@ class GSVariable:
             if np.isscalar(v):
                 v = np.array([v])
             if v.shape != self.current_value.shape:
-                raise Exception('Method *sample* returned an array of shape '\
-                                'inconsistent with previous value: got %s,'\
-                                'expected %s' %(str(v.shape),
-                                                str(self.current_value.shape)))
+                raise Exception('Method *sample* returned an array of shape '
+                                'inconsistent with previous value: got %s,'
+                                'expected %s' % (str(v.shape),
+                                                 str(self.current_value.shape)))
             # inplace modification so that current_value can be trackable
             # by Trajectory object
             self.current_value[:] = v
-            pyhrf.verbose(5, 'sample of %s: %s' \
-                          %(self.name, str(self.current_value)))
+            logger.debug(
+                'sample of %s: %s', self.name, str(self.current_value))
 
     def sample(self):
         """
@@ -313,7 +320,7 @@ class GSVariable:
         self.nb_its_obs += 1.
         self.cumul += self.current_value
         np.divide(self.cumul, self.nb_its_obs, self.obs_mean)
-        self.cumul_disp += (self.current_value - self.obs_mean)**2
+        self.cumul_disp += (self.current_value - self.obs_mean) ** 2
         np.divide(self.cumul_disp, self.nb_its_obs, self.obs_var)
 
         self.update_observables()
@@ -321,7 +328,6 @@ class GSVariable:
     def update_observables(self):
         """ Update quantities after the burnin period """
         pass
-
 
     # End of sampling
 
@@ -350,43 +356,38 @@ class GSVariable:
         tv = self.get_true_value_for_check()
 
         if tv is None:
-            pyhrf.verbose(4, 'Warning: no true val to check against for %s' \
-                          %self.name)
-        elif self.do_sampling: #when sampling is off, assume there is no need
+            logger.info(
+                'Warning: no true val to check against for %s', self.name)
+        elif self.do_sampling:  # when sampling is off, assume there is no need
                                # to check against truth
 
             abs_error = np.abs(tv - fv)
-            rel_error = abs_error/np.maximum(np.abs(tv),np.abs(fv))
+            rel_error = abs_error / np.maximum(np.abs(tv), np.abs(fv))
 
             acc = self.get_accuracy_against_truth(abs_error, rel_error, fv, tv,
                                                   atol, rtol)
             is_accurate = acc[1].all()
-            pyhrf.verbose(3, 'Check error for "%s" -> estim: %s, '\
-                          'truth: %s, atol=%f, rtol=%f'
-                          %(self.name, str(fv), str(tv), atol, rtol))
+            logger.info('Check error for "%s" -> '
+                        'estim: %s, truth: %s, atol=%f, rtol=%f', self.name,
+                        str(fv), str(tv), atol, rtol)
 
-            pyhrf.verbose(2, 'Fit error for "%s": avg aerr=%f, avg rerr=%f, '\
-                          'is_accurate=%s' %(self.name, abs_error.mean(),
-                                             rel_error.mean(),
-                                             is_accurate))
+            logger.info('Fit error for "%s": avg aerr=%f, avg rerr=%f, '
+                        'is_accurate=%s', self.name, abs_error.mean(),
+                        rel_error.mean(), is_accurate)
             if not is_accurate:
                 m = "Final value of %s is not close to " \
-                "true value.\n -> aerror: %s\n -> rerror: %s\n" \
-                " Final value:\n %s\n True value:\n %s\n" \
-                %(self.name, array_summary(abs_error),
-                  array_summary(rel_error), str(fv), str(tv))
+                    "true value.\n -> aerror: %s\n -> rerror: %s\n" \
+                    " Final value:\n %s\n True value:\n %s\n" \
+                    % (self.name, array_summary(abs_error),
+                       array_summary(rel_error), str(fv), str(tv))
                 if inaccuracy_handling == 'raise':
                     raise Exception(m)
                 elif inaccuracy_handling == 'print':
-                    print '\n'.join(['!! '+ s for s in m.split('\n')])
-
-
+                    print '\n'.join(['!! ' + s for s in m.split('\n')])
 
             self.truth_checking_report = {
-                'abs_error' : abs_error,
-                'rel_error' : rel_error}
-
-
+                'abs_error': abs_error,
+                'rel_error': rel_error}
 
     def _get_outputs(self, output_type='ndarray'):
         """
@@ -399,14 +400,14 @@ class GSVariable:
         on = self.name + '_obs_mean'
         if output_type == 'cuboid':
             outputs[on] = xndarray(self.obs_mean, axes_names=self.axes_names,
-                                 axes_domains=self.axes_domains)
+                                   axes_domains=self.axes_domains)
         else:
             outputs[on] = self.obs_mean
 
         on = self.name + '_obs_var'
         if output_type == 'cuboid':
             outputs[on] = xndarray(self.obs_var, axes_names=self.axes_names,
-                                 axes_domains=self.axes_domains)
+                                   axes_domains=self.axes_domains)
         else:
             outputs[on] = self.obs_var
 
@@ -424,6 +425,7 @@ class GSVariable:
         """
         pass
 
+
 class GibbsSampler:
 
     def __init__(self, sampled_variables, nb_its_max, obs_pace=1, burnin=.3,
@@ -436,7 +438,7 @@ class GibbsSampler:
             self.set_variable(v.name, v)
 
         def get_fraction_or_nb(nb, tot):
-            if nb>0. and nb<1.:
+            if nb > 0. and nb < 1.:
                 return int(round(tot * nb))
             else:
                 return nb
@@ -447,18 +449,17 @@ class GibbsSampler:
         self.obs_hist_pace = get_fraction_or_nb(obs_hist_pace, nb_its_max)
         self.tracked_quantities = {}
 
-        pyhrf.verbose(1, 'GibbsSampler init. Burnin: %d, nb_its_max: %d, '\
-                      'smpl_hist_pace: %d, obs_hist_pace: %d,'\
-                      %(self.burnin, self.nb_its_max, self.smpl_hist_pace,
-                        self.obs_hist_pace))
+        logger.info('GibbsSampler init. Burnin: %d, nb_its_max: %d, '
+                    'smpl_hist_pace: %d, obs_hist_pace: %d,', self.burnin,
+                    self.nb_its_max, self.smpl_hist_pace, self.obs_hist_pace)
 
-        #TODO: global hist pace
+        # TODO: global hist pace
 
     def set_variable(self, name, var):
         if not (isinstance(var, (np.ndarray, GSVariable)) or
                 np.isscalar(var)):
-            raise Exception('Wrong variable type: %s. Allowed: numpy.ndarray, '\
-                            'GSVariable or scalar' %var.__class__)
+            raise Exception('Wrong variable type: %s. Allowed: numpy.ndarray, '
+                            'GSVariable or scalar' % var.__class__)
 
         if self.variables.has_key(name):
             raise Exception('Variable %s already registered')
@@ -466,13 +467,13 @@ class GibbsSampler:
         self.variables[name] = var
 
     def set_variables(self, var_dict):
-        for k,v in var_dict.iteritems():
-            self.set_variable(k,v)
+        for k, v in var_dict.iteritems():
+            self.set_variable(k, v)
 
     def get_variable(self, vname):
         v = self.variables.get(vname, None)
         if v is None:
-            raise Exception('Unregistered variable %s' %vname)
+            raise Exception('Unregistered variable %s' % vname)
         else:
             return v
 
@@ -520,7 +521,7 @@ class GibbsSampler:
                                     axes_names, axes_domains)
             self.tracked_quantities[name] = trajectory
         else:
-            raise Exception('Quantity %s already tracked' %name)
+            raise Exception('Quantity %s already tracked' % name)
 
     def track_sampled_quantity(self, name, q, history_pace=None, axes_names=None,
                                axes_domains=None):
@@ -553,8 +554,7 @@ class GibbsSampler:
                     v._update_observables()
 
             for tname, trajectory in self.tracked_quantities.iteritems():
-                pyhrf.verbose(5, 'Update Trajectory "%s" (it=%d) ...'\
-                              %(tname, it))
+                logger.debug('Update Trajectory "%s" (it=%d) ...', tname, it)
                 trajectory.update(it)
 
             #self.callback(it, self)
@@ -573,11 +573,10 @@ class GibbsSampler:
             var_specific_atol = {}
 
         for v in self.sampled_variables:
-            atol = var_specific_atol.get(v.name,default_atol)
-            rtol = var_specific_rtol.get(v.name,default_rtol)
+            atol = var_specific_atol.get(v.name, default_atol)
+            rtol = var_specific_rtol.get(v.name, default_rtol)
             v.check_against_truth(atol=atol, rtol=rtol,
                                   inaccuracy_handling=inaccuracy_handling)
-
 
     def get_outputs(self, output_type='ndarray'):
         """
@@ -595,7 +594,7 @@ class GibbsSampler:
                 if ctrajectory is not None:
                     self._add_output(outputs, qname, ctrajectory)
                 else:
-                    pyhrf.verbose(4, "Trajectory '%s' -> no output")
+                    logger.info("Trajectory '%s' -> no output")
             else:
                 self._add_output(outputs, qname, q.history)
 
@@ -603,10 +602,10 @@ class GibbsSampler:
 
     def _add_output(self, cur_outputs, new_output_name, new_output_value):
         if cur_outputs.has_key(new_output_name):
-            raise Exception('Output %s already defined' %new_output_name)
+            raise Exception('Output %s already defined' % new_output_name)
         else:
             cur_outputs[new_output_name] = new_output_value
 
     def _update_outputs(self, cur_outputs, new_outputs):
-        for k,v in new_outputs.iteritems():
+        for k, v in new_outputs.iteritems():
             self._add_output(cur_outputs, k, v)

@@ -1,28 +1,33 @@
 # -*- coding: utf-8 -*-
-import numpy
 
-import numpy as np
-from numpy import array,int32, float32 ,fix, sqrt, eye, dot, linalg, kron, newaxis, log, array2string
-from numpy import zeros
-import scipy.stats
+import logging
+
 from time import time
+from collections import defaultdict
+from pprint import pformat
 
-from pyhrf.tools import array_summary
+import numpy
+import numpy as np
+import scipy.stats
+
+from numpy import (array, int32, float32, fix, sqrt, eye, dot, linalg, kron,
+                   newaxis, log, array2string)
+from numpy import zeros
 
 import pyhrf
+
+from pyhrf.tools import array_summary
 from pyhrf import xmlio
 from pyhrf.tools import format_duration
-
 from pyhrf.ndarray import xndarray, stack_cuboids
 from pyhrf.boldsynth.hrf import getCanoHRF
 
-from collections import defaultdict
+
+logger = logging.getLogger(__name__)
+
 
 def init_dict():
     return defaultdict(list)
-
-
-#from pyhrf.rfir_c import compute_XSigmaX #, compute_h_MAP
 
 
 class RFIREstim(xmlio.XmlInitable):
@@ -35,12 +40,12 @@ class RFIREstim(xmlio.XmlInitable):
     """
 
     parametersComments = {
-        'hrf_nb_coeffs' : 'Number of values in the discrete HRF. ' \
-            'Discretization is homogeneous HRF time length is then: ' \
-            ' nb_hrf_coeffs * hrf_dt ',
-        'hrf_dt' : 'Required HRF temporal resolution',
-        'drift_type' : 'Basis type in the drift model. Either "cosine" or "poly"',
-        }
+        'hrf_nb_coeffs': 'Number of values in the discrete HRF. '
+        'Discretization is homogeneous HRF time length is then: '
+        ' nb_hrf_coeffs * hrf_dt ',
+        'hrf_dt': 'Required HRF temporal resolution',
+        'drift_type': 'Basis type in the drift model. Either "cosine" or "poly"',
+    }
 
     if pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_stop_crit1 = 0.0001
@@ -58,7 +63,6 @@ class RFIREstim(xmlio.XmlInitable):
                  nb_its_max=5, nb_iterations=default_nb_its, nb_its_min=1,
                  average_bold=False, taum=0.01, lambda_reg=100., fixed_taum=False,
                  discarded_scan_indexes=None, output_fit=False):
-
         """
            'discarded_scan_indexes' : None if no subsampling done, else give position that were removed after temporal subsampling as a 2d numpy array
 
@@ -71,7 +75,7 @@ class RFIREstim(xmlio.XmlInitable):
         self.DeltaT = hrf_dt
         self.nbItMax = nb_its_max
         self.nbItMin = nb_its_min
-        self.nbIt =  nb_iterations
+        self.nbIt = nb_iterations
         self.emStop1 = stop_crit1
         self.emStop2 = stop_crit2
 
@@ -87,7 +91,7 @@ class RFIREstim(xmlio.XmlInitable):
 
         self.pos_removed = discarded_scan_indexes or np.array(([0]))
         self.output_fit = output_fit
-        
+
     def linkToData(self, data):
 
         self.M = data.nbConditions
@@ -100,9 +104,8 @@ class RFIREstim(xmlio.XmlInitable):
         if not self.avg_bold:
             self.bold = data.bold
         else:
-            self.bold = data.bold.mean(1)[:,np.newaxis]
-            pyhrf.verbose(2, 'BOLD is averaged -> shape: %s' \
-                              %str(self.bold.shape))
+            self.bold = data.bold.mean(1)[:, np.newaxis]
+            logger.info('BOLD is averaged -> shape: %s', str(self.bold.shape))
 
         self.sscans = data.sessionsScans
         self.nbSessions = data.nbSessions
@@ -111,96 +114,62 @@ class RFIREstim(xmlio.XmlInitable):
         self.TR = data.tr
 
         self.Ni = array([len(ss) for ss in self.sscans])
-        self.OnsetList = [[o[i] for o in self.onsets] \
-                              for i in xrange(self.nbSessions)]
+        self.OnsetList = [[o[i] for o in self.onsets]
+                          for i in xrange(self.nbSessions)]
         self.Qi = zeros(self.nbSessions, dtype=int) + 2
 
         self.history = defaultdict(init_dict)
-
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def run(self):
         """
         function to launch the analysis
         """
-        pyhrf.verbose(1, 'Starting voxel-wise HRF estimation ...')
-        pyhrf.verbose(1, 'nvox=%d, ncond=%d, nscans=%d' \
-                          %(self.nbVoxels,self.M,self.ImagesNb))
-        #initialization of the matrices that will store all voxel resuls
-        pyhrf.verbose(3,"Init storage ...")
+        logger.info('Starting voxel-wise HRF estimation ...')
+        logger.info('nvox=%d, ncond=%d, nscans=%d', self.nbVoxels, self.M,
+                    self.ImagesNb)
+        # initialization of the matrices that will store all voxel resuls
+        logger.info("Init storage ...")
         self.InitStorageMat()
-        pyhrf.verbose(3,"Compute onset matrix ...")
+        logger.info("Compute onset matrix ...")
         self.Compute_onset_matrix3()
 
         self.stop_iterations = np.zeros(self.bold.shape[1], dtype=int)
 
-        #voxelwise analysis. This loop handles the currently analyzed voxels.
+        # voxelwise analysis. This loop handles the currently analyzed voxels.
         for POI in xrange(self.bold.shape[1]):  # POI = point of interest
             t0 = time()
-            pyhrf.verbose(3,"Point "+str(POI)+" / "+str(self.nbVoxels))
+            logger.info("Point %s / %s", str(POI), str(self.nbVoxels))
             self.ReadPointOfInterestData(POI)
-            #print "Signal in point " , POI , "read"
 
-#             if hasattr(self, 'X'):
-#                 prevX = copyModule.deepcopy(self.X)
-#             else:
-#                 prevX = None
-
-            #initialize with zeros or ones all matrix and vector used in
-            #the class
-            pyhrf.verbose(4, "Init matrix and vectors ...")
+            # initialize with zeros or ones all matrix and vector used in
+            # the class
+            logger.info("Init matrix and vectors ...")
             self.InitMatrixAndVectors(POI)
-            #print "Matrix and vectors initialized"
 
-            #compute onset matrix
+            # compute onset matrix
 
-#             print "Onset matrix computed"
-#             if prevX is not None:
-#                 for i,x in enumerate(self.X):
-#                     print 'sess %d ->' %i, (prevX[i]!=x).any()
-#                     if 0:
-#                         for m in xrange(prevX[i].shape[0]):
-#                             for n in xrange(prevX[i].shape[1]):
-#                                 for k in xrange(prevX[i].shape[2]):
-#                                     print int(prevX[i][m,n,k]),'',
-#                                 print ''
-#                             print ''
-#                             print ''
-
-#                         for m in xrange(x.shape[0]):
-#                             for n in xrange(x.shape[1]):
-#                                 for k in xrange(x.shape[2]):
-#                                     print int(x[m,n,k]),
-#                                 print ''
-#                             print ''
-#                             print ''
-
-            #compute low frequency basis
-            pyhrf.verbose(4, 'build low freq mat ...')
+            # compute low frequency basis
+            logger.info('build low freq mat ...')
             self.buildLowFreqMat()
-            #print "Low frequency matrix generated"
 
-            #precompute usefull data
-            pyhrf.verbose(4, 'Compute inv R ...')
+            # precompute usefull data
+            logger.info('Compute inv R ...')
             self.Compute_INV_R_and_R_and_DET_R()
-            #print "R^{-1} and det(R) precomputed"
 
-            #solve find response functions and hyperparameters
-            pyhrf.verbose(4, 'EM solver ...')
+            # solve find response functions and hyperparameters
+            logger.info('EM solver ...')
             self.EM_solver(POI)
 
-            #store current results in matrices initialized in 'InitStoringMat'
-            pyhrf.verbose(4, 'Store res ...')
+            # store current results in matrices initialized in 'InitStoringMat'
+            logger.info('Store res ...')
             self.StoreRes(POI)
-            pyhrf.verbose(3,"Done in %s" %format_duration(time() - t0) )
+            logger.info("Done in %s", format_duration(time() - t0))
 
         self.clean_memory()
 
-        pyhrf.verbose(1, 'Nb of iterations to reach stop crit: %s' \
-                      %array_summary(self.stop_iterations))
-
-        #save all stored results
-        #self.SaveStoredResults()
+        logger.info('Nb of iterations to reach stop crit: %s',
+                    array_summary(self.stop_iterations))
 
     def clean_memory(self):
         """ Clean all objects that are useless for outputs
@@ -213,8 +182,6 @@ class RFIREstim(xmlio.XmlInitable):
         # del self.InvR
         # del self.h
 
-
-
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def InitStorageMat(self):
         """
@@ -223,50 +190,57 @@ class RFIREstim(xmlio.XmlInitable):
             input signals must have been read (in ReadRealSignal)
         """
         npos = self.bold.shape[1]
-        self.Pvalues = -0.1*numpy.ones((self.M,npos),dtype=float)
-        self.ResponseFunctionsEvaluated = numpy.zeros((self.M,self.K+1,npos),dtype=np.float32)
+        self.Pvalues = -0.1 * numpy.ones((self.M, npos), dtype=float)
+        self.ResponseFunctionsEvaluated = numpy.zeros(
+            (self.M, self.K + 1, npos), dtype=np.float32)
         if self.compute_pct_change:
-            self.ResponseFunctionsEvaluated_PctChgt=numpy.zeros((self.M,self.K+1,npos),dtype=np.float32)
-        self.StdValEvaluated=numpy.zeros((self.M,self.K+1,npos),dtype=np.float32)  #sqrt of the diagonal of the covariance matrix
+            self.ResponseFunctionsEvaluated_PctChgt = numpy.zeros(
+                (self.M, self.K + 1, npos), dtype=np.float32)
+        # sqrt of the diagonal of the covariance matrix
+        self.StdValEvaluated = numpy.zeros(
+            (self.M, self.K + 1, npos), dtype=np.float32)
         if self.compute_pct_change:
-            self.StdValEvaluated_PctChgt=numpy.zeros((self.M,self.K+1,npos),dtype=np.float32)  #sqrt of the diagonal of the covariance matrix
-        self.SignalEvaluated=numpy.zeros((self.ImagesNb,npos),dtype=np.float32)
+            # sqrt of the diagonal of the covariance matrix
+            self.StdValEvaluated_PctChgt = numpy.zeros(
+                (self.M, self.K + 1, npos), dtype=np.float32)
+        self.SignalEvaluated = numpy.zeros(
+            (self.ImagesNb, npos), dtype=np.float32)
 
-        #orthonormal basis ('P') initialization: self.P[i][n,q] -> n^th value of the q^th function of the orthonormal basis for session i
+        # orthonormal basis ('P') initialization: self.P[i][n,q] -> n^th value
+        # of the q^th function of the orthonormal basis for session i
         self.P = range(self.I)
         for i in xrange(self.I):
-            self.P[i] = numpy.zeros((self.Ni[i],self.Qi[i]),dtype=np.float32)
+            self.P[i] = numpy.zeros((self.Ni[i], self.Qi[i]), dtype=np.float32)
 
-        #drifts coefs ('l') initialization: self.l[i][q] -> q^th coefficient for the the orthormal basis for session i
+        # drifts coefs ('l') initialization: self.l[i][q] -> q^th coefficient for the the orthormal basis for session i
         # self.l = range(self.I)
         # for i in xrange(self.I):
         #     self.l[i] = numpy.zeros((self.Qi[i]),dtype=float)
 
-        self.l = numpy.zeros((self.I, self.Qi[i], npos),dtype=np.float32)
+        self.l = numpy.zeros((self.I, self.Qi[i], npos), dtype=np.float32)
 
-        #inverse of R
-        self.InvR = numpy.zeros((self.K-1,self.K-1),dtype=np.float32)
-
+        # inverse of R
+        self.InvR = numpy.zeros((self.K - 1, self.K - 1), dtype=np.float32)
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    def ReadPointOfInterestData(self,POI):
+    def ReadPointOfInterestData(self, POI):
         """
         Initialize the parameters for a voxel analysis. The voxel ID is 'POI' in 'ConsideredCoord'
         initialized in 'ReadRealSignal'
         requires:
             input signals must have been read (in ReadRealSignal)
         """
-        #initialization
-
+        # initialization
 
         #self.Qi = []
         self.y = []
 
-        #analysis paradigm parameters linked to the sessions...
-        for i in xrange(self.nbSessions):  #the point of interest POI is considered on all sessions
+        # analysis paradigm parameters linked to the sessions...
+        # the point of interest POI is considered on all sessions
+        for i in xrange(self.nbSessions):
             #self.OnsetList.append([o[i] for o in self.onsets])
             self.y.append(self.bold[self.sscans[i], POI])
-            #self.Qi.append((int)(2))
+            # self.Qi.append((int)(2))
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def InitMatrixAndVectors(self, POI):
@@ -277,43 +251,46 @@ class RFIREstim(xmlio.XmlInitable):
             I / Ni / K /  M / Qi
         """
 
-        pyhrf.verbose(3,'InitMatrixAndVectors ...')
+        logger.info('InitMatrixAndVectors ...')
 
-        #HRFs (h) initialization: self.h[m][k] -> k^{th} HRF estimation value
+        # HRFs (h) initialization: self.h[m][k] -> k^{th} HRF estimation value
         # for the condition m  (oversampled time)
-        #Warning: since the first and the last values of the HRFs = 0,
+        # Warning: since the first and the last values of the HRFs = 0,
         # the nb of HRFs coefs allocated is K-1
-        self.h = numpy.zeros((self.M,self.K-1),dtype=np.float32)
+        self.h = numpy.zeros((self.M, self.K - 1), dtype=np.float32)
         hcano = getCanoHRF(dt=self.DeltaT,
-                           duration=self.K*self.DeltaT)[1]
+                           duration=self.K * self.DeltaT)[1]
         self.h[:] = hcano[1:self.K]
 
-        pyhrf.verbose(4,'self.h:')
-        pyhrf.verbose.printNdarray(4, self.h)
+        logger.info('self.h:')
+        logger.info(pformat(self.h))
 
         for i in xrange(self.I):
-            self.P[i][:,:] = 0.
+            self.P[i][:, :] = 0.
 
-        #drifts coefs ('l') initialization: self.l[i][q] -> q^th coefficient for the the orthormal basis for session i
-        #for i in xrange(self.I):
+        # drifts coefs ('l') initialization: self.l[i][q] -> q^th coefficient for the the orthormal basis for session i
+        # for i in xrange(self.I):
         #    self.l[i,:] = 0.
-        self.l[:,:,POI] = 0.
+        self.l[:, :, POI] = 0.
 
-        #inverse of R
-        self.InvR[:,:] = 0.
+        # inverse of R
+        self.InvR[:, :] = 0.
 
-        #Sigma -> block matix => self.Sigma[m*SBS:(m+1)*SBS,n*SBS:(n+1)*SBS]] -> (m,n)^th block of Sigma (variance a posteriori)
-        SBS = self.K-1   #Sigma Block Size
-        self.Sigma=numpy.zeros((self.M*SBS,self.M*SBS), dtype=np.float32)
-        self.InvSigma=numpy.zeros((self.M*SBS,self.M*SBS), dtype=np.float32)
+        # Sigma -> block matix => self.Sigma[m*SBS:(m+1)*SBS,n*SBS:(n+1)*SBS]]
+        # -> (m,n)^th block of Sigma (variance a posteriori)
+        SBS = self.K - 1  # Sigma Block Size
+        self.Sigma = numpy.zeros(
+            (self.M * SBS, self.M * SBS), dtype=np.float32)
+        self.InvSigma = numpy.zeros(
+            (self.M * SBS, self.M * SBS), dtype=np.float32)
 
-        #TauM initialization: TauM[m] -> specific dynamics for condition m
-        self.TauM = numpy.zeros(self.M,dtype=np.float32) + self.taum_init
-        self.OldTauM=numpy.ones(self.M,dtype=np.float32)/100.
+        # TauM initialization: TauM[m] -> specific dynamics for condition m
+        self.TauM = numpy.zeros(self.M, dtype=np.float32) + self.taum_init
+        self.OldTauM = numpy.ones(self.M, dtype=np.float32) / 100.
 
-        #rb initialization: self.rb[i] -> noise variance for i^th session
-        self.rb=numpy.ones(self.I,dtype=np.float32)
-        self.Old_rb=numpy.ones(self.I,dtype=np.float32)
+        # rb initialization: self.rb[i] -> noise variance for i^th session
+        self.rb = numpy.ones(self.I, dtype=np.float32)
+        self.Old_rb = numpy.ones(self.I, dtype=np.float32)
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def Compute_INV_R_and_R_and_DET_R(self):
@@ -324,41 +301,41 @@ class RFIREstim(xmlio.XmlInitable):
             * InvR initialized
         """
 
-        #for compactness
-        SBS=self.K-1
+        # for compactness
+        SBS = self.K - 1
 
-        #computes the 2nd order derivative matrix in the finite differences senses
-        D2=-2*eye(SBS).astype(np.float32)
+        # computes the 2nd order derivative matrix in the finite differences
+        # senses
+        D2 = -2 * eye(SBS).astype(np.float32)
 
         for i in xrange(SBS):
-            if i>0 :
-                D2[i,i-1]=1
-            if i<SBS-1 :
-                D2[i,i+1]=1
+            if i > 0:
+                D2[i, i - 1] = 1
+            if i < SBS - 1:
+                D2[i, i + 1] = 1
 
-        #removes the conditions h[0]=0. and h[-1]=0.
-        #D2[0,0]=1.  # !!!
-        #D2[0,1]=-2.  # !!!
-        #D2[0,2]=1.  # !!!
-        #D2[-1,-1]=1.  # !!!
-        #D2[-1,-2]=-2.  # !!!
-        #D2[-1,-3]=1.  # !!!
+        # removes the conditions h[0]=0. and h[-1]=0.
+        # D2[0,0]=1.  # !!!
+        # D2[0,1]=-2.  # !!!
+        # D2[0,2]=1.  # !!!
+        # D2[-1,-1]=1.  # !!!
+        # D2[-1,-2]=-2.  # !!!
+        # D2[-1,-3]=1.  # !!!
 
-        #removes the a priori
-        #D2=eye(SBS)  # !!!
+        # removes the a priori
+        # D2=eye(SBS)  # !!!
 
-        #Computes InvR
-        self.InvR=dot(D2.T,D2)
+        # Computes InvR
+        self.InvR = dot(D2.T, D2)
 
-        #Compute R
+        # Compute R
         self.R = linalg.inv(self.InvR)
 
-        #computes det(InvR)
-        det_InvR=linalg.det(self.InvR)
+        # computes det(InvR)
+        det_InvR = linalg.det(self.InvR)
 
-        #computes det(R)
-        self.DetR=1./det_InvR
-
+        # computes det(R)
+        self.DetR = 1. / det_InvR
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def Compute_onset_matrix3(self):
@@ -380,81 +357,88 @@ class RFIREstim(xmlio.XmlInitable):
             * data nb n (\in 0:Ni[i]-1)
             * hrf coef nb k (\in 0:K-2)
         """
-        #Onset matrix ('X') initialization: self.X[i][m,n,k] -> binary value of the onset matrix for session i / condition m / data nb n (real time) / hrf coef nb k (oversampled time)
-        #Warning: since the first and the last values of the HRFs = 0, the nb of HRFs coefs allocated is K-1
-        self.X=[]
+        # Onset matrix ('X') initialization: self.X[i][m,n,k] -> binary value of the onset matrix for session i / condition m / data nb n (real time) / hrf coef nb k (oversampled time)
+        # Warning: since the first and the last values of the HRFs = 0, the nb
+        # of HRFs coefs allocated is K-1
+        self.X = []
 
-        #if subsampling done, change Ni to compute design matrix X (gives the real nb of scans in normal case)
+        # if subsampling done, change Ni to compute design matrix X (gives the
+        # real nb of scans in normal case)
         self.pos_removed = np.array(self.pos_removed)
-        #print 'pos removed:', self.pos_removed, type(self.pos_removed)
-        #print 'Ni:', self.Ni
-        if numpy.size(self.pos_removed) >1:
+        # print 'pos removed:', self.pos_removed, type(self.pos_removed)
+        # print 'Ni:', self.Ni
+        if numpy.size(self.pos_removed) > 1:
             nb_removed = numpy.size(self.pos_removed)
             print 'nb of removed pos:', nb_removed
-            #print self.sscans
-            self.Ni = array([len(ss)+nb_removed for ss in self.sscans])
-            #print self.Ni
+            # print self.sscans
+            self.Ni = array([len(ss) + nb_removed for ss in self.sscans])
+            # print self.Ni
 
         for i in xrange(self.I):
-            self.X.append(numpy.zeros((self.M,self.Ni[i],self.K-1),dtype=np.float32))
+            self.X.append(
+                numpy.zeros((self.M, self.Ni[i], self.K - 1), dtype=np.float32))
 
-        #print np.array(self.X).shape, self.Ni[0]
-        #tests consistency between 'OnsetList' and the size of 'X'
-        I=len(self.X)
-        M=self.X[0].shape[0]
-        K=self.X[0].shape[2]+1
-        Ni=numpy.zeros(I).astype(int32)
+        # print np.array(self.X).shape, self.Ni[0]
+        # tests consistency between 'OnsetList' and the size of 'X'
+        I = len(self.X)
+        M = self.X[0].shape[0]
+        K = self.X[0].shape[2] + 1
+        Ni = numpy.zeros(I).astype(int32)
         for i in xrange(I):
-            Ni[i]=self.X[i].shape[1]
+            Ni[i] = self.X[i].shape[1]
 
-
-        if K!=self.K or I!=self.I or M!=self.M or sum(abs(Ni-self.Ni))>0.01:
+        if K != self.K or I != self.I or M != self.M or sum(abs(Ni - self.Ni)) > 0.01:
             print 'OnsetList is not consitent with X'
 
-        #computes the onset matrix X
-        if (self.LengthOnsets[0][0][0]>self.DeltaT):   #BLOCK DESIGNED STIMULI
-          for i in xrange(I):
-            for m in xrange(self.X[i].shape[0]):
-              for j in xrange(self.OnsetList[i][m].shape[0]):
-                #j^th onset of [session i / parameter m] is considered
-                CurrentOnset=self.OnsetList[i][m][j]
-                for n in xrange(Ni[i]):
-                  for k in xrange(K-1):
-                    if CurrentOnset<=(n*self.TR-(k+1.0)*self.DeltaT+0.001) and CurrentOnset>((n-1.)*self.TR-(k+1.)*self.DeltaT-self.LengthOnsets[m][i][j]):
-                      self.X[i][m][n,k]=(self.DeltaT/self.TR)
+        # computes the onset matrix X
+        # BLOCK DESIGNED STIMULI
+        if (self.LengthOnsets[0][0][0] > self.DeltaT):
+            for i in xrange(I):
+                for m in xrange(self.X[i].shape[0]):
+                    for j in xrange(self.OnsetList[i][m].shape[0]):
+                        # j^th onset of [session i / parameter m] is considered
+                        CurrentOnset = self.OnsetList[i][m][j]
+                        for n in xrange(Ni[i]):
+                            for k in xrange(K - 1):
+                                if CurrentOnset <= (n * self.TR - (k + 1.0) * self.DeltaT + 0.001) and CurrentOnset > ((n - 1.) * self.TR - (k + 1.) * self.DeltaT - self.LengthOnsets[m][i][j]):
+                                    self.X[i][m][n, k] = (
+                                        self.DeltaT / self.TR)
 
-        else:   #EVENT DESIGNED STIMULI
-          for i in xrange(I):
-            for m in xrange(self.X[i].shape[0]):
-              for j in xrange(self.OnsetList[i][m].shape[0]):
-                #j^th onset of [session i / parameter m] is considered
-                CurrentOnset=self.OnsetList[i][m][j]
-                #print 'onset:', CurrentOnset, CurrentOnset.shape
-                for n in xrange(Ni[i]):
-                  for k in xrange(K-1):
-                    if CurrentOnset<=(n*self.TR-(k)*self.DeltaT+0.001) and CurrentOnset>((n)*self.TR-(k+1.)*self.DeltaT):
-                      self.X[i][m][n,k]=1.
-                      #print 'cond ok'
-                      #print '(n)*self.TR-(k+1.)*self.DeltaT:', (n)*self.TR-(k+1.)*self.DeltaT
-                      #print 'n*self.TR-(k)*self.DeltaT+0.001:', n*self.TR-(k)*self.DeltaT+0.001
+        else:  # EVENT DESIGNED STIMULI
+            for i in xrange(I):
+                for m in xrange(self.X[i].shape[0]):
+                    for j in xrange(self.OnsetList[i][m].shape[0]):
+                        # j^th onset of [session i / parameter m] is considered
+                        CurrentOnset = self.OnsetList[i][m][j]
+                        # print 'onset:', CurrentOnset, CurrentOnset.shape
+                        for n in xrange(Ni[i]):
+                            for k in xrange(K - 1):
+                                if CurrentOnset <= (n * self.TR - (k) * self.DeltaT + 0.001) and CurrentOnset > ((n) * self.TR - (k + 1.) * self.DeltaT):
+                                    self.X[i][m][n, k] = 1.
+                                    # print 'cond ok'
+                                    # print '(n)*self.TR-(k+1.)*self.DeltaT:', (n)*self.TR-(k+1.)*self.DeltaT
+                                    # print 'n*self.TR-(k)*self.DeltaT+0.001:',
+                                    # n*self.TR-(k)*self.DeltaT+0.001
 
-
-        #Then remove the lines in X corresponding to removed positions
-        #assuming same nb of scans per session and samed removed positions over sessions
-        if numpy.size(self.pos_removed) >1:
+        # Then remove the lines in X corresponding to removed positions
+        # assuming same nb of scans per session and samed removed positions
+        # over sessions
+        if numpy.size(self.pos_removed) > 1:
             pos_kept = np.arange(self.Ni[0])
-            pos_kept[self.pos_removed]=-1 #put 0 where positions were removed!
-            pos_kept_final = np.array([pos_kept[i] for i in xrange(self.Ni[0]) if pos_kept[i]>-1])
+            # put 0 where positions were removed!
+            pos_kept[self.pos_removed] = -1
+            pos_kept_final = np.array(
+                [pos_kept[i] for i in xrange(self.Ni[0]) if pos_kept[i] > -1])
             print 'pos kept:', pos_kept_final
-            X_true = np.array(self.X)[:,:,pos_kept_final,:]
+            X_true = np.array(self.X)[:, :, pos_kept_final, :]
             print 'X_true:', X_true, X_true.shape
             print 'self.X:', self.X, np.array(self.X).shape
 
             self.X = X_true
 
-            #put Ni again at its true value   with the actual nb of scans after subsampling
+            # put Ni again at its true value   with the actual nb of scans
+            # after subsampling
             self.Ni = array([len(ss) for ss in self.sscans])
-
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def buildLowFreqMat(self):
@@ -468,15 +452,15 @@ class RFIREstim(xmlio.XmlInitable):
             * self.I
         """
         for i in xrange(self.I):
-            if self.OrthoBtype=='cosine':
-                self.P[i]=self.buildCosMat(self.Qi[i],self.TR,self.Ni[i])
+            if self.OrthoBtype == 'cosine':
+                self.P[i] = self.buildCosMat(self.Qi[i], self.TR, self.Ni[i])
             else:
-                self.P[i]=self.buildPolyMat(self.Qi[i],self.TR,self.Ni[i])
-                self.Qi[i]=self.P[i].shape[1]  #the output columns number is not always as expected
-
+                self.P[i] = self.buildPolyMat(self.Qi[i], self.TR, self.Ni[i])
+                # the output columns number is not always as expected
+                self.Qi[i] = self.P[i].shape[1]
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    def buildPolyMat(self,fctNb,tr,ny):
+    def buildPolyMat(self, fctNb, tr, ny):
         """
         build a polynomial low frequency basis in P (adapted from samplerbase.py)
         requires:
@@ -487,19 +471,20 @@ class RFIREstim(xmlio.XmlInitable):
             * there may have no constant column in the orthogonal matrix (the algorithm suppose there is one such column)
             * the columns number is not always as expected
         """
-        paramLFD=fctNb-1       #order of the orthonormal basis for the drift component for the current session
-        regressors = tr*numpy.arange(0,ny)
-        timePower = numpy.arange(0,paramLFD+1, dtype=int)
-        regMat = numpy.zeros((len(regressors),paramLFD+1),dtype=np.float32)
-        for v in xrange(paramLFD+1):
-            regMat[:,v] = regressors[:]
+        paramLFD = fctNb - \
+            1  # order of the orthonormal basis for the drift component for the current session
+        regressors = tr * numpy.arange(0, ny)
+        timePower = numpy.arange(0, paramLFD + 1, dtype=int)
+        regMat = numpy.zeros((len(regressors), paramLFD + 1), dtype=np.float32)
+        for v in xrange(paramLFD + 1):
+            regMat[:, v] = regressors[:]
         tPowerMat = numpy.matlib.repmat(timePower, ny, 1)
-        lfdMat = numpy.power(regMat,tPowerMat)
+        lfdMat = numpy.power(regMat, tPowerMat)
         lfdMat = numpy.array(scipy.linalg.orth(lfdMat))
         return lfdMat
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    def buildCosMat(self,fctNb,tr,ny):
+    def buildCosMat(self, fctNb, tr, ny):
         """
         build a cosine low frequency basis in P (adapted from samplerbase.py)
         requires:
@@ -507,17 +492,18 @@ class RFIREstim(xmlio.XmlInitable):
             * tr: the time resolution of the BOLD data (in second)
             * ny: number of data for the current session
         """
-        paramLFD=fix(2*(ny*tr)/(fctNb-1.))   #order of the orthonormal basis for the drift component for the current session / +1 stands for the mean/cst regressor
-        n = numpy.arange(0,ny)
-        lfdMat = numpy.zeros( (ny, fctNb), dtype=np.float32)
-        lfdMat[:,0] = numpy.ones( (1,ny), dtype=np.float32)/sqrt(ny) #lfdMat[:,0] is actually lfdMat[:,0]' with matlab norms
-        samples = 1 + numpy.arange(fctNb-1, dtype=int)
+        paramLFD = fix(2 * (ny * tr) / (fctNb - 1.)
+                       )  # order of the orthonormal basis for the drift component for the current session / +1 stands for the mean/cst regressor
+        n = numpy.arange(0, ny)
+        lfdMat = numpy.zeros((ny, fctNb), dtype=np.float32)
+        # lfdMat[:,0] is actually lfdMat[:,0]' with matlab norms
+        lfdMat[:, 0] = numpy.ones((1, ny), dtype=np.float32) / sqrt(ny)
+        samples = 1 + numpy.arange(fctNb - 1, dtype=int)
 
         for k in samples:
-            lfdMat[:,k] = numpy.sqrt(2./ny) * \
-              numpy.cos( numpy.pi*(2.*n+1.)*k / (2.*ny) )
+            lfdMat[:, k] = numpy.sqrt(2. / ny) * \
+                numpy.cos(numpy.pi * (2. * n + 1.) * k / (2. * ny))
         return lfdMat
-
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def CptSigma(self):
@@ -533,32 +519,35 @@ class RFIREstim(xmlio.XmlInitable):
             self.Sigma[m*SBS:(m+1)*SBS,n*SBS:(n+1)*SBS]] -> (m,n)^th block of Sigma in session i
         """
         # 0 ) for compactness
-        SBS = self.K-1
+        SBS = self.K - 1
 
         # 1 ) computes InvSigma
-        self.InvSigma[:,:] = 0.
+        self.InvSigma[:, :] = 0.
 
         for m in xrange(self.M):
             if not self.fixed_taum:
-                self.InvSigma[m*SBS:(m+1)*SBS,m*SBS:(m+1)*SBS] = self.InvR/self.TauM[m]
+                self.InvSigma[
+                    m * SBS:(m + 1) * SBS, m * SBS:(m + 1) * SBS] = self.InvR / self.TauM[m]
             else:
-                self.InvSigma[m*SBS:(m+1)*SBS,m*SBS:(m+1)*SBS] = self.InvR * self.lambda_reg
-
+                self.InvSigma[
+                    m * SBS:(m + 1) * SBS, m * SBS:(m + 1) * SBS] = self.InvR * self.lambda_reg
 
         for i in xrange(self.I):
             for m in xrange(self.M):
                 for n in xrange(self.M):
                     if not self.fixed_taum:
-                        self.InvSigma[m*SBS:(m+1)*SBS,n*SBS:(n+1)*SBS]+=dot(self.X[i][m].T,self.X[i][n])/self.rb[i]
+                        self.InvSigma[
+                            m * SBS:(m + 1) * SBS, n * SBS:(n + 1) * SBS] += dot(self.X[i][m].T, self.X[i][n]) / self.rb[i]
                     else:
-                        self.InvSigma[m*SBS:(m+1)*SBS,n*SBS:(n+1)*SBS]+=dot(self.X[i][m].T,self.X[i][n])
+                        self.InvSigma[
+                            m * SBS:(m + 1) * SBS, n * SBS:(n + 1) * SBS] += dot(self.X[i][m].T, self.X[i][n])
 
         # 2 ) computes Sigma
-        #TODO: use system solving instead of matrix inversion
+        # TODO: use system solving instead of matrix inversion
         self.Sigma = linalg.inv(self.InvSigma)
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    def CptFctQ(self,CptType):
+    def CptFctQ(self, CptType):
         """
         Computes the function Q(\Theta',\tilde{\Theta};y) at a given iteration
         requires:
@@ -568,7 +557,7 @@ class RFIREstim(xmlio.XmlInitable):
             * CptType = 'K_Km1' or 'K_K'
         """
         # 0 ) Initialisation
-        SBS = self.K-1
+        SBS = self.K - 1
         result = 0.
 
         # 1 ) first part -> \sum_{i=1}^{I} Q_{Y_i|H}
@@ -578,87 +567,85 @@ class RFIREstim(xmlio.XmlInitable):
         # 2 ) second part -> Q_{H}
         # 2.1 ) First term
         for m in xrange(self.M):
-            result -= ((float)(self.K-1))*log(self.TauM[m])/2.
+            result -= ((float)(self.K - 1)) * log(self.TauM[m]) / 2.
 
         # 2.2 ) second term
         for m in xrange(self.M):
             # 2.2.1 ) ...
-            result -= self.TauM[m]*dot(self.h[m], dot(self.R,self.h[m]))/2.
+            result -= self.TauM[m] * \
+                dot(self.h[m], dot(self.R, self.h[m])) / 2.
 
             # 2.2.2 ) ...
-            if self.OrthoBtype=='cosine':
-                result -= ((self.OldTauM[m]*self.TauM[m]*dot(self.R,self.R)).trace())/2
+            if self.OrthoBtype == 'cosine':
+                result -= ((self.OldTauM[m] * self.TauM[m]
+                            * dot(self.R, self.R)).trace()) / 2
             else:
-                result -=( (self.TauM[m]*self.TauM[m]*dot(self.R,self.R)).trace())/2
-
+                result -= ((self.TauM[m] * self.TauM[m]
+                            * dot(self.R, self.R)).trace()) / 2
 
         # 2.3 ) third term
-        result -= ((float)(self.M)/2.)*log(self.DetR)
+        result -= ((float)(self.M) / 2.) * log(self.DetR)
 
         return result
 
-
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    def StoreRes(self,POI):
+    def StoreRes(self, POI):
         """
         Store results computed in the voxel defined in POI
         requires:
             * the estimation at this voxel must have been performed
         """
 
-
         for m in xrange(self.M):
-            #print 'self.bold:', self.bold.shape
-            meanLoc=abs(self.bold[:,POI].mean())
-            pyhrf.verbose(4, 'Final HRF cond %d, POI %d:' %(m, POI))
-            pyhrf.verbose.printNdarray(4, self.h[m])
+            meanLoc = abs(self.bold[:, POI].mean())
+            logger.info('Final HRF cond %d, POI %d:', m, POI)
+            logger.info(pformat(self.h[m]))
 
-            #store evaluated response function (percentage of signal change)
+            # store evaluated response function (percentage of signal change)
             if self.compute_pct_change:
-                self.ResponseFunctionsEvaluated_PctChgt[m,1:self.K,POI]=self.h[m]*100/meanLoc
+                self.ResponseFunctionsEvaluated_PctChgt[
+                    m, 1:self.K, POI] = self.h[m] * 100 / meanLoc
 
-            #store evaluated response function (without normalization)
-            self.ResponseFunctionsEvaluated[m,1:self.K,POI]=self.h[m]
+            # store evaluated response function (without normalization)
+            self.ResponseFunctionsEvaluated[m, 1:self.K, POI] = self.h[m]
 
-            #store the P-value
-            SBS=self.K-1
-            chi2=dot(self.h[m],dot(self.InvSigma[m*SBS:(m+1)*SBS,m*SBS:(m+1)*SBS],self.h[m]))
-            Pvalue= 1 - scipy.stats.chi2.cdf(chi2,self.h[m].shape[0])
-            self.Pvalues[m,POI]=Pvalue
+            # store the P-value
+            SBS = self.K - 1
+            chi2 = dot(self.h[m], dot(
+                self.InvSigma[m * SBS:(m + 1) * SBS, m * SBS:(m + 1) * SBS], self.h[m]))
+            Pvalue = 1 - scipy.stats.chi2.cdf(chi2, self.h[m].shape[0])
+            self.Pvalues[m, POI] = Pvalue
 
-            #store the sqrt of the diagonal of the covariance matrix (percentage of signal change)
-            errors=numpy.zeros(self.K+1,dtype=np.float32)
-            for i in xrange(self.K-1):
-                errors[i+1]=sqrt(self.Sigma[m*SBS+i][m*SBS+i])
+            # store the sqrt of the diagonal of the covariance matrix
+            # (percentage of signal change)
+            errors = numpy.zeros(self.K + 1, dtype=np.float32)
+            for i in xrange(self.K - 1):
+                errors[i + 1] = sqrt(self.Sigma[m * SBS + i][m * SBS + i])
             if self.compute_pct_change:
-                self.StdValEvaluated_PctChgt[m,:,POI]=errors*100/meanLoc
-            self.StdValEvaluated[m,:,POI]=errors
+                self.StdValEvaluated_PctChgt[
+                    m, :, POI] = errors * 100 / meanLoc
+            self.StdValEvaluated[m, :, POI] = errors
 
-        #print 'POI:', POI
-        #print 'self.compute_fit(POI).shape:', self.compute_fit(POI).shape
-        #print 'self.SignalEvaluated[:,POI].shape', self.SignalEvaluated[:,POI].shape
-
-        if self.compute_fit(POI).shape < self.SignalEvaluated[:,POI].shape:
-            #there are more than one session
-            #print 'More than one session'
-            self.SignalEvaluated[0:self.compute_fit(POI).shape[0],POI] = self.compute_fit(POI)
+        if self.compute_fit(POI).shape < self.SignalEvaluated[:, POI].shape:
+            # there are more than one session
+            # print 'More than one session'
+            self.SignalEvaluated[
+                0:self.compute_fit(POI).shape[0], POI] = self.compute_fit(POI)
         else:
-            #only one session
-            self.SignalEvaluated[:,POI] = self.compute_fit(POI)
-
+            # only one session
+            self.SignalEvaluated[:, POI] = self.compute_fit(POI)
 
     def compute_fit(self, POI):
-        #store the signal evaluated in the first session
+        # store the signal evaluated in the first session
         # (drift + convolution between evluated HRF and Onset matrix)
-        #print 'self.P[0].shape:', self.P[0].shape
-        EvalSignal=dot(self.P[0],self.l[0, :, POI]) #fit calculated only for the first session
-        #print 'EvalSignal.shape:', EvalSignal.shape
+        # print 'self.P[0].shape:', self.P[0].shape
+        # fit calculated only for the first session
+        EvalSignal = dot(self.P[0], self.l[0, :, POI])
+        # print 'EvalSignal.shape:', EvalSignal.shape
         for m in xrange(self.M):
-            EvalSignal += dot(self.X[0][m],self.h[m])
+            EvalSignal += dot(self.X[0][m], self.h[m])
 
         return EvalSignal
-
-
 
     def getOutputs(self):
         outputs = {}
@@ -668,20 +655,21 @@ class RFIREstim(xmlio.XmlInitable):
         if self.avg_bold:
             pvals = np.repeat(self.Pvalues, self.nbVoxels, axis=1)
 
-        #outputs['pvalue'] = xndarray(pvals.astype(np.float32),
-                                   #axes_names=['condition','voxel'],
-                                   #axes_domains={'condition':self.condition_names})
+        # outputs['pvalue'] = xndarray(pvals.astype(np.float32),
+            # axes_names=['condition','voxel'],
+            # axes_domains={'condition':self.condition_names})
 
         hrf_time_axis = np.arange(self.ResponseFunctionsEvaluated.shape[1]) * \
             self.DeltaT
         if self.compute_pct_change:
-            hrf_pct_change = self.ResponseFunctionsEvaluated_PctChgt.astype(float32)
+            hrf_pct_change = self.ResponseFunctionsEvaluated_PctChgt.astype(
+                float32)
             if self.avg_bold:
                 hrf_pct_change = np.repeat(hrf_pct_change, self.nbVoxels,
                                            axis=2)
-            chpc = xndarray(hrf_pct_change, axes_names=['condition','time', 'voxel'],
-                          axes_domains={'condition':self.condition_names,
-                                        'time':hrf_time_axis})
+            chpc = xndarray(hrf_pct_change, axes_names=['condition', 'time', 'voxel'],
+                            axes_domains={'condition': self.condition_names,
+                                          'time': hrf_time_axis})
         # hrf_pct_change_errors = self.StdValEvaluated_PctChgt.astype(float32)
         # chpc_errors = xndarray(hrf_pct_change_errors,
         #                      axes_names=['condition','time','voxel'])
@@ -697,12 +685,12 @@ class RFIREstim(xmlio.XmlInitable):
             rfe = np.repeat(rfe, self.nbVoxels, axis=2)
 
         ch = xndarray(rfe.astype(float32),
-                      axes_names=['condition','time','voxel'],
-                      axes_domains={'condition':self.condition_names,
-                                    'time':hrf_time_axis})
+                      axes_names=['condition', 'time', 'voxel'],
+                      axes_domains={'condition': self.condition_names,
+                                    'time': hrf_time_axis})
 
         ch_errors = xndarray(self.StdValEvaluated.astype(float32),
-                             axes_names=['condition','time','voxel'])
+                             axes_names=['condition', 'time', 'voxel'])
         outputs['ehrf_error'] = ch_errors
 
         # c = stack_cuboids([ch, ch_errors], axis='error',
@@ -712,17 +700,16 @@ class RFIREstim(xmlio.XmlInitable):
         if 0:
             print 'ehrf:',
             print ch.descrip()
-            print 'ehrf for cond 0', ch.data[0,:,:].shape
+            print 'ehrf for cond 0', ch.data[0, :, :].shape
             for ih in xrange(ch.data.shape[2]):
-                print array2string(ch.data[0,:,ih])
+                print array2string(ch.data[0, :, ih])
 
         outputs['ehrf'] = ch
 
-        ad = {'condition':self.condition_names}
-        outputs['ehrf_norm'] = xndarray((rfe**2).sum(1)**.5,
-                                        axes_names=['condition','voxel'],
+        ad = {'condition': self.condition_names}
+        outputs['ehrf_norm'] = xndarray((rfe ** 2).sum(1) ** .5,
+                                        axes_names=['condition', 'voxel'],
                                         axes_domains=ad)
-
 
         se = self.SignalEvaluated
         if self.avg_bold:
@@ -730,47 +717,46 @@ class RFIREstim(xmlio.XmlInitable):
 
         if self.output_fit:
             cfit = xndarray(se.astype(float32),
-                            axes_names=['time','voxel'])
+                            axes_names=['time', 'voxel'])
             bold = self.bold
             if self.avg_bold:
                 bold = np.repeat(bold, self.nbVoxels, axis=1)
 
             cbold = xndarray(self.bold.astype(np.float32),
-                             axes_names=['time','voxel'])
+                             axes_names=['time', 'voxel'])
 
             outputs['fit'] = stack_cuboids([cfit, cbold], axis="type",
-                                           domain=['fit','bold'])
+                                           domain=['fit', 'bold'])
 
-            fit_error = sqrt((self.SignalEvaluated-self.bold)**2).astype(float32)
+            fit_error = sqrt(
+                (self.SignalEvaluated - self.bold) ** 2).astype(float32)
             if self.avg_bold:
                 fit_error = np.repeat(fit_error, self.nbVoxels, axis=1)
                 outputs['fit_error'] = xndarray(fit_error,
-                                                axes_names=['time','voxel'])
+                                                axes_names=['time', 'voxel'])
 
-        #save matrix X
+        # save matrix X
         outputs['matX'] = xndarray(self.X[0].astype(float32),
-                                   axes_names=['cond', 'time','P'],
+                                   axes_names=['cond', 'time', 'P'],
                                    value_label='value')
 
-        #print 'self.P[0].transpose().shape:', self.P[0].transpose().shape
-        #print 'self.bold.shape:', self.bold.shape
+        # print 'self.P[0].transpose().shape:', self.P[0].transpose().shape
+        # print 'self.bold.shape:', self.bold.shape
         #l = dot(self.P[0].transpose(), self.bold)
 
         #fu = (self.SignalEvaluated - dot(self.P[0],l)).astype(float32)
-        #if self.avg_bold:
-            #fu = np.repeat(fu, self.nbVoxels, axis=1)
+        # if self.avg_bold:
+        #fu = np.repeat(fu, self.nbVoxels, axis=1)
         #outputs['fit_undrift'] = xndarray(fu, axes_names=['time','voxel'])
 
+        outputs['drift'] = xndarray(dot(self.P[0], self.l[0]).astype(float32),
+                                    axes_names=['time', 'voxel'])
 
-
-        outputs['drift'] = xndarray(dot(self.P[0],self.l[0]).astype(float32),
-                                    axes_names=['time','voxel'])
-
-        rmse = sqrt((self.SignalEvaluated-self.bold)**2).mean(0).astype(float32)
+        rmse = sqrt(
+            (self.SignalEvaluated - self.bold) ** 2).mean(0).astype(float32)
         if self.avg_bold:
             rmse = np.repeat(rmse, self.nbVoxels, axis=0)
         outputs['rmse'] = xndarray(rmse, axes_names=['voxel'])
-
 
         if self.save_history:
             h = self.ResponseFunctionsEvaluated
@@ -780,16 +766,16 @@ class RFIREstim(xmlio.XmlInitable):
             h_history = np.zeros(sh, dtype=np.float32)
             for POI in xrange(npos):
                 # print 'h_history[:,:,:,POI]:', h_history[:,:,:,POI].shape
-                # print 'np.array(self.history["h"][POI]):', np.array(self.history['h'][POI]).shape
-                h_history[:,:,:,POI] = np.array(self.history['h'][POI])
+                # print 'np.array(self.history["h"][POI]):',
+                # np.array(self.history['h'][POI]).shape
+                h_history[:, :, :, POI] = np.array(self.history['h'][POI])
             if self.avg_bold:
                 h_history = np.repeat(h_history, self.nbVoxels, axis=3)
             outputs['ehrf_history'] = xndarray(h_history,
-                                             axes_names=['iteration','condition',
-                                                         'time','voxel'])
+                                               axes_names=['iteration', 'condition',
+                                                           'time', 'voxel'])
 
         return outputs
-
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # def SaveStoredResults(self):
@@ -827,14 +813,12 @@ class RFIREstim(xmlio.XmlInitable):
     #     PtSaveName= self.OutputID + "_EstimatedSignal.nii"
     #     writeImageWithPynifti(self.SignalEvaluated[:],PtSaveName)
 
-
-
     def cpt_XSigmaX(self, tempTerm2i, SBS, i):
         for m in xrange(self.M):
             for n in xrange(self.M):
                 tempTerm2i += dot(self.X[i][m],
-                                  dot(self.Sigma[m*SBS:(m+1)*SBS,
-                                                 n*SBS:(n+1)*SBS],
+                                  dot(self.Sigma[m * SBS:(m + 1) * SBS,
+                                                 n * SBS:(n + 1) * SBS],
                                       self.X[i][n].T))
                 # nb_cond**2*(nscans*nb_hrf_coeffs**2 + nscans**2*nb_hrf_coeffs)
                 # 10**2 * (125 * 40**2 + 125**2 * 40) ~ 8e7
@@ -846,46 +830,45 @@ class RFIREstim(xmlio.XmlInitable):
         requires:
             * everything in the class is supposed initialized
         """
-        #initialization
-        SBS = self.K-1
+        # initialization
+        SBS = self.K - 1
         self.CptSigma()
         FctQ_K_K = 1000000000.0
         iteration = 1
         StopTest1 = 1.0
         StopTest2 = 1.0
 
-        BigVector = numpy.zeros(self.Sigma.shape[1],dtype=float)
-        templi = [numpy.zeros(self.Ni[i],dtype=float) for i in xrange(self.I)]
-        tempTerm2 = [numpy.zeros((self.X[i][0].shape[0],self.X[i][0].shape[0]),
+        BigVector = numpy.zeros(self.Sigma.shape[1], dtype=float)
+        templi = [numpy.zeros(self.Ni[i], dtype=float) for i in xrange(self.I)]
+        tempTerm2 = [numpy.zeros((self.X[i][0].shape[0], self.X[i][0].shape[0]),
                                  dtype=np.float32) for i in xrange(self.I)]
         delta_h = 1.
         self.epsilon = 1e-4
 
-        #Main loop.
+        # Main loop.
         def stop_crit(it, StopTest1, StopTest2):
             if self.nbIt is not None:
-                return it<self.nbIt
+                return it < self.nbIt
             else:
-                return it<self.nbItMin or ((it<self.nbItMax) and \
-                                               ((StopTest1>self.emStop1) or \
-                                                    (StopTest2>self.emStop2)))
+                return it < self.nbItMin or ((it < self.nbItMax) and
+                                             ((StopTest1 > self.emStop1) or
+                                              (StopTest2 > self.emStop2)))
 
         def stop_crit_fixed_taum(it):
             if self.nbIt is not None:
-                return it<self.nbIt
+                return it < self.nbIt
             else:
-                return it<self.nbItMin or ((it<self.nbItMax) and \
-                        delta_h>self.epsilon)
+                return it < self.nbItMin or ((it < self.nbItMax) and
+                                             delta_h > self.epsilon)
 
         if self.save_history:
             # Store initial values
-            z = np.zeros((self.M,1))
-            self.history['h'][POI].append(np.hstack((z,self.h,z)))
-            self.history['l'][POI].append(self.l[:,:,POI].copy())
+            z = np.zeros((self.M, 1))
+            self.history['h'][POI].append(np.hstack((z, self.h, z)))
+            self.history['l'][POI].append(self.l[:, :, POI].copy())
             self.history['rb'][POI].append(self.rb.copy())
             self.history['tau'][POI].append(self.TauM.copy())
             self.history['fit'][POI].append(self.compute_fit(POI))
-
 
         if not self.fixed_taum:
             while stop_crit(iteration, StopTest1, StopTest2):
@@ -896,47 +879,47 @@ class RFIREstim(xmlio.XmlInitable):
                     print 'nbItMin:', self.nbItMin
                 # 1 ) estimation of \hat{h^{MAP}}
 
-                #compute_h_MAP(self.y, self.P, ...)
+                # compute_h_MAP(self.y, self.P, ...)
 
                 BigVector[:] = 0.
                 for i in xrange(self.I):
-                    temp = self.y[i] - dot(self.P[i],self.l[i,:,POI])
+                    temp = self.y[i] - dot(self.P[i], self.l[i, :, POI])
                     for m in xrange(self.M):
-                        BigVector[m*SBS:(m+1)*SBS] += dot(self.X[i][m].T,temp) / \
-                            self.rb[i] # nb_sess*nb_cond*nscans*nb_hrf_coeffs
-                                       # 1*10*125*40 = 5e4
+                        BigVector[m * SBS:(m + 1) * SBS] += dot(self.X[i][m].T, temp) / \
+                            self.rb[i]  # nb_sess*nb_cond*nscans*nb_hrf_coeffs
+                        # 1*10*125*40 = 5e4
 
-                BigVector2 = dot(self.Sigma,BigVector) #(nb_cond*nb_hrf_coeffs)**3
-                                                       #(10*40)**3 = 7e6
+                # (nb_cond*nb_hrf_coeffs)**3
+                BigVector2 = dot(self.Sigma, BigVector)
+                #(10*40)**3 = 7e6
 
                 for m in xrange(self.M):
-                    pyhrf.verbose(4, 'it %d, h^MAP cond %d:' %(iteration, m))
-                    self.h[m,:] = BigVector2[m*SBS:(m+1)*SBS]
-                    pyhrf.verbose.printNdarray(4, self.h[m,:])
+                    logger.info('it %d, h^MAP cond %d:', iteration, m)
+                    self.h[m, :] = BigVector2[m * SBS:(m + 1) * SBS]
+                    logger.info(pformat(self.h[m, :]))
 
                 if self.save_history:
-                    z = np.zeros((self.M,1))
-                    self.history['h'][POI].append(np.hstack((z,self.h,z)))
+                    z = np.zeros((self.M, 1))
+                    self.history['h'][POI].append(np.hstack((z, self.h, z)))
 
                 # 2 ) estimation of \hat{l_i}
                 for i in xrange(self.I):
                     templi[i][:] = 0.
                     for m in xrange(self.M):
-                        templi[i] += dot(self.X[i][m],self.h[m])
+                        templi[i] += dot(self.X[i][m], self.h[m])
                         # nb_sess * nb_cond * nscans * nb_hrf_coeffs ~ 5e4
-                    self.l[i,:,POI] = dot(self.P[i].T, self.y[i] - templi[i])
+                    self.l[i, :, POI] = dot(self.P[i].T, self.y[i] - templi[i])
                     # nb_sess * n_preg * nscans
 
                 if self.save_history:
-                    self.history['l'][POI].append(self.l[:,:,POI].copy())
-
+                    self.history['l'][POI].append(self.l[:, :, POI].copy())
 
                 # 3 ) estimation of \hat{rb}...
                 for i in xrange(self.I):
                     # 3.1 ) ...first term
-                    temp = self.y[i] - dot(self.P[i],self.l[i,:,POI])
+                    temp = self.y[i] - dot(self.P[i], self.l[i, :, POI])
                     for m in xrange(self.M):
-                        temp -= dot(self.X[i][m],self.h[m])
+                        temp -= dot(self.X[i][m], self.h[m])
 
                     term1 = dot(temp, temp)
 
@@ -947,19 +930,18 @@ class RFIREstim(xmlio.XmlInitable):
                     term2 = tempTerm2[i].trace()
 
                     # 3.3 ) ...total
-                    self.Old_rb[i]=self.rb[i]
-                    self.rb[i]=(term1+term2)/((float)(self.Ni[i]))
-
+                    self.Old_rb[i] = self.rb[i]
+                    self.rb[i] = (term1 + term2) / ((float)(self.Ni[i]))
 
                 if self.save_history:
                     self.history['rb'][POI].append(self.rb.copy())
 
-                ##... if rb is the same for all sessions, uncomment these lines...
-                #temp=0.
-                #for i in xrange(self.I):
+                # ... if rb is the same for all sessions, uncomment these lines...
+                # temp=0.
+                # for i in xrange(self.I):
                 #    temp=self.rb[i]*((float)(self.Ni[i]))
                 #
-                #self.rb[:]=temp/((float)(self.Ni[:].sum()))
+                # self.rb[:]=temp/((float)(self.Ni[:].sum()))
 
                 # 4 ) reestimation of sigma
                 self.CptSigma()
@@ -967,37 +949,38 @@ class RFIREstim(xmlio.XmlInitable):
                 # 5 ) estimation of \TauM
                 for m in xrange(self.M):
                     self.OldTauM[m] = self.TauM[m].copy()
-                    temp = dot(kron(self.h[m][:,newaxis],self.h[m])+ \
-                                   self.Sigma[m*SBS:(m+1)*SBS,m*SBS:(m+1)*SBS],
+                    temp = dot(kron(self.h[m][:, newaxis], self.h[m]) +
+                               self.Sigma[
+                                   m * SBS:(m + 1) * SBS, m * SBS:(m + 1) * SBS],
                                self.InvR)
-                    self.TauM[m] = (temp.trace())/(self.K-1)
+                    self.TauM[m] = (temp.trace()) / (self.K - 1)
 
                 if self.save_history:
                     self.history['tau'][POI].append(self.TauM.copy())
 
-
                 if self.save_history:
                     self.history['fit'][POI].append(self.compute_fit(POI))
 
-                # 6 ) Q function estimation at the current iteration and previous
+                # 6 ) Q function estimation at the current iteration and
+                # previous
                 FctQ_Km1_Km1 = FctQ_K_K
                 FctQ_K_K = self.CptFctQ('K_K')
                 FctQ_K_Km1 = self.CptFctQ('K_Km1')
 
                 # 7 ) Stopping criterion
-                iteration = iteration+1
+                iteration = iteration + 1
 
-                StopTest1 = linalg.norm(FctQ_K_Km1-FctQ_Km1_Km1) / \
+                StopTest1 = linalg.norm(FctQ_K_Km1 - FctQ_Km1_Km1) / \
                     linalg.norm(FctQ_K_Km1)
 
                 StopTest2 = 0.0
                 for i in xrange(self.I):
-                    tempCalc = sqrt(linalg.norm(self.TauM-self.OldTauM)**2.0 + \
-                                        (self.Old_rb[i]-self.rb[i])**2.0) / \
-                                        sqrt(linalg.norm(self.TauM)**2.0 + \
-                                                 self.rb[i]**2.0)
-                    if StopTest2<tempCalc:
-                        StopTest2=tempCalc
+                    tempCalc = sqrt(linalg.norm(self.TauM - self.OldTauM) ** 2.0 +
+                                    (self.Old_rb[i] - self.rb[i]) ** 2.0) / \
+                        sqrt(linalg.norm(self.TauM) ** 2.0 +
+                             self.rb[i] ** 2.0)
+                    if StopTest2 < tempCalc:
+                        StopTest2 = tempCalc
         else:
             h_prev = np.ones(self.M * SBS)
 
@@ -1009,60 +992,53 @@ class RFIREstim(xmlio.XmlInitable):
                     print 'nbItMin:', self.nbItMin
                 # 1 ) estimation of \hat{h^{MAP}}
 
-                #compute_h_MAP(self.y, self.P, ...)
+                # compute_h_MAP(self.y, self.P, ...)
 
                 BigVector[:] = 0.
                 for i in xrange(self.I):
-                    temp = self.y[i] - dot(self.P[i],self.l[i,:,POI])
+                    temp = self.y[i] - dot(self.P[i], self.l[i, :, POI])
                     for m in xrange(self.M):
-                        #print self.X[i][m].T.shape, temp.shape
-                        BigVector[m*SBS:(m+1)*SBS] += dot(self.X[i][m].T,temp)
-                                       # nb_sess*nb_cond*nscans*nb_hrf_coeffs
-                                       # 1*10*125*40 = 5e4
+                        BigVector[
+                            m * SBS:(m + 1) * SBS] += dot(self.X[i][m].T, temp)
+                        # nb_sess*nb_cond*nscans*nb_hrf_coeffs
+                        # 1*10*125*40 = 5e4
 
-                BigVector2 = dot(self.Sigma,BigVector) #(nb_cond*nb_hrf_coeffs)**3
-                                                       #(10*40)**3 = 7e6
+                # (nb_cond*nb_hrf_coeffs)**3
+                BigVector2 = dot(self.Sigma, BigVector)
+                #(10*40)**3 = 7e6
 
                 for m in xrange(self.M):
-                    pyhrf.verbose(4, 'it %d, h^MAP cond %d:' %(iteration, m))
-                    self.h[m,:] = BigVector2[m*SBS:(m+1)*SBS]
-                    pyhrf.verbose.printNdarray(4, self.h[m,:])
+                    logger.info('it %d, h^MAP cond %d:', iteration, m)
+                    self.h[m, :] = BigVector2[m * SBS:(m + 1) * SBS]
+                    logger.info(pformat(self.h[m, :]))
 
                 if self.save_history:
-                    z = np.zeros((self.M,1))
-                    self.history['h'][POI].append(np.hstack((z,self.h,z)))
+                    z = np.zeros((self.M, 1))
+                    self.history['h'][POI].append(np.hstack((z, self.h, z)))
 
                 # 2 ) estimation of \hat{l_i}
                 for i in xrange(self.I):
                     templi[i][:] = 0.
                     for m in xrange(self.M):
-                        templi[i] += dot(self.X[i][m],self.h[m])
-                        # nb_sess * nb_cond * nscans * nb_hrf_coeffs ~ 5e4
-                    self.l[i,:,POI] = dot(self.P[i].T, self.y[i] - templi[i])
-                    # nb_sess * n_preg * nscans
+                        templi[i] += dot(self.X[i][m], self.h[m])
+                    self.l[i, :, POI] = dot(self.P[i].T, self.y[i] - templi[i])
 
                 if self.save_history:
-                    self.history['l'][POI].append(self.l[:,:,POI].copy())
-
+                    self.history['l'][POI].append(self.l[:, :, POI].copy())
 
                 if self.save_history:
                     self.history['fit'][POI].append(self.compute_fit(POI))
 
-
                 # 7 ) Stopping criterion
-                iteration = iteration+1
+                iteration = iteration + 1
 
-
-                delta_h = ((h_prev - BigVector2)**2).sum()**.5
+                delta_h = ((h_prev - BigVector2) ** 2).sum() ** .5
                 h_prev = BigVector2.copy()
-
 
         self.stop_iterations[POI] = iteration
 
-        pyhrf.verbose(3,"iteration: " + str(iteration) + \
-                          " -> delta_h=" + str(delta_h))
-
-
+        logger.info(
+            "iteration: %s -> delta_h=%s", str(iteration), str(delta_h))
 
 
 def rfir(func_data, fir_duration=42, fir_dt=.6, nb_its_max=100,
@@ -1100,15 +1076,15 @@ def rfir(func_data, fir_duration=42, fir_dt=.6, nb_its_max=100,
 
 
     """
-    rfir_estimator = RFIREstim(hrf_nb_coeffs=int(np.round(fir_duration/fir_dt)),
+    rfir_estimator = RFIREstim(hrf_nb_coeffs=int(np.round(fir_duration / fir_dt)),
                                hrf_dt=fir_dt, nb_its_max=nb_its_max,
                                nb_its_min=nb_its_min, fixed_taum=fixed_taum,
                                lambda_reg=lambda_reg)
     rfir_estimator.linkToData(func_data)
     rfir_estimator.run()
     outputs = rfir_estimator.getOutputs()
-    to_return = {'fir':outputs["ehrf"], 'fir_error':outputs["ehrf_error"],
-                 'drift':outputs["drift"]}
+    to_return = {'fir': outputs["ehrf"], 'fir_error': outputs["ehrf_error"],
+                 'drift': outputs["drift"]}
     if outputs.has_key('fit'):
         to_return['fit'] = outputs['fits']
     return to_return

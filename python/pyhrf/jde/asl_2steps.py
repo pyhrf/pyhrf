@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 import os
 import os.path as op
+import logging
+
 import numpy as np
-import pyhrf
-import copy
 
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.ui.jde import JDEMCMCAnalyser
 
 
+logger = logging.getLogger(__name__)
+
+
 def jde_analyse_2steps_v1(output_dir, fmri_data, dt, nb_iterations, brf_var=None,
-                 do_sampling_brf_var=False, prf_var=None, do_sampling_prf_var=False):
+                          do_sampling_brf_var=False, prf_var=None,
+                          do_sampling_prf_var=False):
     """
     #Return:
     #    dict of outputs
-    """    
+    """
     nb_iterations_m1 = nb_iterations_m2 = nb_iterations
 
     jde_output_dir = op.join(output_dir, 'bold_only')
@@ -22,31 +26,23 @@ def jde_analyse_2steps_v1(output_dir, fmri_data, dt, nb_iterations, brf_var=None
         os.makedirs(jde_output_dir)
 
     dummy_sampler = dummy_jde(fmri_data, dt)
-    
+
     prf_ini_m1 = np.zeros_like(dummy_sampler.get_variable('prf').finalValue)
     prls_ini_m1 = np.zeros_like(dummy_sampler.get_variable('prl').finalValue)
-    #perf_bl_ini_m1 = np.zeros_like(dummy_sampler.get_variable('perf_baseline').finalValue)
+    jde_mcmc_sampler_m1 = physio_build_jde_mcmc_sampler(
+        nb_iterations_m1, 'basic_regularized', prf_ini=prf_ini_m1,
+        do_sampling_prf=False, prls_ini=prls_ini_m1, do_sampling_prls=False,
+        brf_var_ini=brf_var, do_sampling_brf_var=do_sampling_brf_var,
+        prf_var_ini=brf_var, do_sampling_prf_var=False, flag_zc = False)
 
-    jde_mcmc_sampler_m1 = \
-      physio_build_jde_mcmc_sampler(nb_iterations_m1, 'basic_regularized',
-                                    prf_ini=prf_ini_m1,
-                                    do_sampling_prf=False,
-                                    prls_ini=prls_ini_m1,
-                                    do_sampling_prls=False,
-                                    brf_var_ini=brf_var,
-                                    do_sampling_brf_var=do_sampling_brf_var,
-                                    prf_var_ini=brf_var,
-                                    do_sampling_prf_var=False,
-                                    flag_zc = False)
-
-    pyhrf.verbose(2, 'JDE first pass -> BOLD fit')
+    logger.info('JDE first pass -> BOLD fit')
     analyser_m1 = JDEMCMCAnalyser(jde_mcmc_sampler_m1, copy_sampler=False,
                                   dt=dt)
     analyser_m1.set_pass_errors(False)
     tjde_mcmc_m1 = FMRITreatment(fmri_data, analyser_m1,
                                  output_dir=jde_output_dir)
     outputs_m1, fns_m1 = tjde_mcmc_m1.run()
-    
+
     jde_output_dir = op.join(output_dir, 'perf_only_from_res')
     if not op.exists(jde_output_dir):
         os.makedirs(jde_output_dir)
@@ -57,13 +53,13 @@ def jde_analyse_2steps_v1(output_dir, fmri_data, dt, nb_iterations, brf_var=None
     print np.concatenate(([0],[0],[0],brf_m1,[0],[0],[0])).shape
     #prf_m2 = np.dot(omega, brf_m1)
     prf_m2 = np.dot(omega, np.concatenate(([0],[0],[0],brf_m1,[0],[0],[0])))[3:-3]
-    
+
     if 0:
         import matplotlib.pyplot as plt
         plt.plot(brf_m1)
         plt.plot(prf_m2)
         plt.show()
-        
+
     if 0:
         import matplotlib.pyplot as plt
         f, axarr = plt.subplots(2, 2)
@@ -77,7 +73,7 @@ def jde_analyse_2steps_v1(output_dir, fmri_data, dt, nb_iterations, brf_var=None
         axarr[1, 0].matshow(omega2)
         axarr[1, 1].plot(prf_m2)
         plt.show()
-    
+
     #print 'PRF M2 shape = ', prf_m2.shape
     #force begin & end to be zero
     #XXX TODO: rather fix omega to avoid this kind of thing or use zero-contrainst again
@@ -90,9 +86,9 @@ def jde_analyse_2steps_v1(output_dir, fmri_data, dt, nb_iterations, brf_var=None
     drift_var_m1 = jde_mcmc_sampler_m1.get_variable('drift_var').finalValue
     noise_var_m1 = jde_mcmc_sampler_m1.get_variable('noise_var').finalValue
 
-    pyhrf.verbose(2, 'ASL JDE second pass -> Perfusion fit')
-    pyhrf.verbose(1, 'Physiological prior stochastic regularized')
-    
+    logger.info('ASL JDE second pass -> Perfusion fit')
+    logger.info('Physiological prior stochastic regularized')
+
     jde_mcmc_sampler_m2 = \
       physio_build_jde_mcmc_sampler(nb_iterations_m2, 'physio_stochastic_not_regularized',
                                     #prf_ini=prf_m2,
@@ -114,13 +110,13 @@ def jde_analyse_2steps_v1(output_dir, fmri_data, dt, nb_iterations, brf_var=None
                                     noise_var_ini=noise_var_m1,
                                     labels_ini=labels_m1,
                                     do_sampling_labels=True)
-                                    
+
     """ available_priors = ['physio_stochastic_regularized',
                             'physio_stochastic_not_regularized',
                             'physio_deterministic',
                             'physio_deterministic_hack',
-                            'basic_regularized']                """                        
-                            
+                            'basic_regularized']                """
+
     analyser_m2 = JDEMCMCAnalyser(jde_mcmc_sampler_m2, dt=dt)
     analyser_m2.set_pass_errors(False)
     tjde_mcmc_m2 = FMRITreatment(fmri_data, analyser_m2,
@@ -135,18 +131,18 @@ def jde_analyse_2steps_v1(output_dir, fmri_data, dt, nb_iterations, brf_var=None
     for o in ['prf_pm', 'prl_pm', 'label_pm']:
         outputs[o] = outputs_m2[o]
     outputs['noise_var_pm_m2'] = outputs_m2['noise_var_pm']
-    
+
     return outputs_m1
-    
-    
-"""    
+
+
+"""
 def jde_analyse_2steps(output_dir, fmri_data, dt, nb_iterations, brf_var=None,
                        do_sampling_brf_var=False):
 
-    
+
     #Return:
     #    dict of outputs
-    
+
 
     nb_iterations_m1 = nb_iterations_m2 = nb_iterations
 
@@ -168,8 +164,8 @@ def jde_analyse_2steps(output_dir, fmri_data, dt, nb_iterations, brf_var=None,
                                     do_sampling_brf_var=do_sampling_brf_var,
                                     prf_var_ini=brf_var,
                                     do_sampling_prf_var=False)
-                                    
-    pyhrf.verbose(2, 'JDE first pass -> BOLD fit')
+
+    logger.info('JDE first pass -> BOLD fit')
     analyser_m1 = JDEMCMCAnalyser(jde_mcmc_sampler_m1, copy_sampler=False,
                                   dt=dt)
     analyser_m1.set_pass_errors(False)
@@ -202,7 +198,7 @@ def jde_analyse_2steps(output_dir, fmri_data, dt, nb_iterations, brf_var=None,
     drift_var_m1 = jde_mcmc_sampler_m1.get_variable('drift_var').finalValue
     noise_var_m1 = jde_mcmc_sampler_m1.get_variable('noise_var').finalValue
 
-    pyhrf.verbose(2, 'ASL JDE second pass -> Perfusion fit')
+    logger.info('ASL JDE second pass -> Perfusion fit')
     jde_mcmc_sampler_m2 = \
       physio_build_jde_mcmc_sampler(nb_iterations_m2, 'basic_regularized',
                                     flag_zc = True,
@@ -237,18 +233,18 @@ def jde_analyse_2steps(output_dir, fmri_data, dt, nb_iterations, brf_var=None,
         outputs[o] = outputs_m1[o]
 
     outputs['noise_var_pm_m1'] = outputs_m1['noise_var_pm']
-    
+
     for o in ['prf_pm', 'prl_pm', 'label_pm']:
         outputs[o] = outputs_m2[o]
     outputs['noise_var_pm_m2'] = outputs_m2['noise_var_pm']
-    
+
     return outputs
 """
 
 def dummy_jde(fmri_data, dt):
     print 'run dummy_jde ...'
     jde_mcmc_sampler = \
-        physio_build_jde_mcmc_sampler(3, 'basic_regularized', 
+        physio_build_jde_mcmc_sampler(3, 'basic_regularized',
                                         do_sampling_prf=False,
                                         do_sampling_brf=False,
                                         do_sampling_prls=False,

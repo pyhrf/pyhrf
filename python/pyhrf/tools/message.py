@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# -*- coding: iso-8859-1 -*-
 # Copyright CEA and IFR 49 (2000-2005)
 #
 #  This software and supporting documentation were developed by
@@ -45,7 +44,7 @@ This package exists in 3 places, for some very good arguments :
      datamind.tools.message
      soma.wip.message
      pyhrf.tools.message
-     
+
 To use these functionalities, play with 'msg' instance. Here, some classical
 uses :
 

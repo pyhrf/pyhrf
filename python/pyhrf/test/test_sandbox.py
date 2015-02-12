@@ -89,14 +89,14 @@ class InitableTest(unittest.TestCase):
         assert_array_equal(d.array_p, d2.array_p)
 
     def test_to_ui_node_dict(self):
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         subd = Dummy('a', 1.3, 5, np.arange(5), Dummy2('rr'))
         d = Dummy3(d={'subdummy':subd})
         root_node = d.to_ui_node('dummy')
 
-        if pyhrf.verbose.verbosity > 0:
-            print 'root_node:'
-            print root_node.log()
+        logger.info('root_node:')
+        logger.info(root_node.log())
 
         #                dummy.d.subdummy.string_p.string_p_value
         node_subdummy = root_node.child(0).child(0)
@@ -110,7 +110,8 @@ class InitableTest(unittest.TestCase):
 
 
     def test_to_ui_node_complex(self):
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         info = {'test':53}
         treatment = Treatment(FmriData(func_file='blah.nii'),
                               Analyser(nb_iterations=345),
@@ -118,9 +119,8 @@ class InitableTest(unittest.TestCase):
 
         root_node = treatment.to_ui_node('treatment')
 
-        if pyhrf.verbose.verbosity > 0:
-            print 'root_node:'
-            print root_node.log()
+        logger.info('root_node:')
+        logger.info(root_node.log())
 
         #                treatment.fdata.funcfile.funcfile_value
         self.assertEqual(root_node.child(0).child(1).child(0).label(), 'blah.nii')
@@ -156,7 +156,8 @@ class InitableTest(unittest.TestCase):
         self.assertEqual(root_node.child(3).child(0).child(0).label(), '5')
 
     def test_xml_io(self):
-        pyhrf.verbose.set_verbosity(1)
+        # pyhrf.verbose.set_verbosity(1)
+        pyhrf.logger.setLevel(logging.INFO)
 
         info = {'test':53}
         treatment = Treatment(FmriData(func_file='blah.nii'),
@@ -165,34 +166,24 @@ class InitableTest(unittest.TestCase):
 
         root_node = treatment.to_ui_node('treatment')
 
-        if pyhrf.verbose.verbosity > 0:
-            print 'root_node:'
-            print root_node.log()
+        logger.info('root_node:')
+        logger.info(root_node.log())
 
         sxml = root_node.to_xml()
 
-        if pyhrf.verbose.verbosity > 0:
-
-            print 'sxml:'
-            print sxml
-            print ''
-
-
-            print 'from_xml ...'
+        logger.info('sxml:')
+        logger.info(sxml)
+        logger.info('from_xml ...')
         root_node2 = UiNode.from_xml(sxml)
 
-        if pyhrf.verbose.verbosity > 0:
 
-            print 'root_node2:'
-            print root_node2.log()
-            print ''
+        logger.info('root_node2:')
+        logger.info(root_node2.log())
 
         treatment2 = Treatment.from_ui_node(root_node2)
 
-        if pyhrf.verbose.verbosity > 0:
-
-            print 'treatment2:'
-            print treatment2
+        logger.info('treatment2:')
+        logger.info(treatment2)
 
 
 
@@ -244,40 +235,36 @@ class UiNodeTest(unittest.TestCase):
         self.assertEqual(d.__class__, f)
 
     def test_to_xml(self):
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         d = Dummy2()
         n = UiNode.from_py_object('dummy', d)
 
         xml = n.to_xml()
 
-        if pyhrf.verbose.verbosity > 0:
-            print 'xml:'
-            print xml
+        logger.info('xml:')
+        logger.info(xml)
 
 
     def test_from_xml(self):
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
 
         d = Dummy2(p=56)
         n = UiNode.from_py_object('dummy', d)
 
-        if pyhrf.verbose.verbosity > 0:
-            print 'n:'
-            print n.log()
-            print ''
+        logger.info('n:')
+        logger.info(n.log())
 
         xml = n.to_xml()
 
-        if pyhrf.verbose.verbosity > 0:
-            print 'xml:'
-            print xml
+        logger.info('xml:')
+        logger.info(xml)
 
         n2 = UiNode.from_xml(xml)
 
-        if pyhrf.verbose.verbosity > 0:
-            print 'n2:'
-            print n2.log()
-            print ''
+        logger.info('n2:')
+        logger.info(n2.log())
 
 #####################
 # Core data objects #
@@ -313,7 +300,8 @@ class CoreTest(unittest.TestCase):
 
     def test_fmridata_ui_vol(self):
 
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         fdui = xcore.FmriDataUI()
         fd = fdui.get_fmri_data()
         assert_almost_equal(self.bold_flat, fd.fdata)
@@ -321,7 +309,8 @@ class CoreTest(unittest.TestCase):
 
     def test_fmridata_ui_vol_paradigm_csv(self):
         # TODO: check onsets !
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         fdui = xcore.FmriDataUI.from_paradigm_csv()
         fd = fdui.get_fmri_data()
         assert_almost_equal(self.bold_flat, fd.fdata)
@@ -346,7 +335,8 @@ class CoreTest(unittest.TestCase):
             print 'xml:'
             print xml
 
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         fdui2 = xcore.FmriDataUI.from_xml(xml)
 
         self.assertEqual(fdui.mask_ui.data_type, fdui2.mask_ui.data_type)
