@@ -9,6 +9,7 @@ import numpy as np
 from PyQt4 import QtGui, QtCore, QtXml
 
 from pyhrf.tools import PickleableStaticMethod
+from pyhrf.xmlio import Initable
 from pyhrf.xmlio import UiNode as UiNodeBase
 try:
     from collections import OrderedDict
