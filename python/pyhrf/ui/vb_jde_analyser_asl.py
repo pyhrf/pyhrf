@@ -268,8 +268,8 @@ class JDEVEMAnalyser(JDEAnalyser):
               'component': ['mean', 'var']}
         outputs['mixt_pB'] = xndarray(mixtpB, axes_names=an, axes_domains=ad)
         outputs['mixt_pP'] = xndarray(mixtpP, axes_names=an, axes_domains=ad)
-        print 'mixture params BOLD = ', mixtpB
-        print 'mixture params perfusion = ', mixtpP        
+        #print 'mixture params BOLD = ', mixtpB
+        #print 'mixture params perfusion = ', mixtpP        
         
         outputs['labels'] = xndarray(labels, value_label="Labels",
                                 axes_names=['condition', 'class', 'voxel'])
