@@ -151,6 +151,7 @@ def expectation_A(H, m_A, G, m_C, W, X, Gamma, q_Z, mu_Ma, sigma_Ma,
     for i in xrange(0, J):
         Gamma_i = Gamma / max(sigma_epsilone[i], eps)
         for m, k1 in enumerate(X):
+            # from X, we take k1=cond_name, m=index_cond
             y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k1]), G)
             for m2, k2 in enumerate(X):
                 Sigma_A[m, m2, i] = np.dot(np.dot(np.dot(np.dot(H.T, \
@@ -178,7 +179,8 @@ def expectation_C(G, m_C, H, m_A, W, X, Gamma, q_Z, mu_Mc, sigma_Mc,
             for m2, k2 in enumerate(X):
                 Sigma_C[m, m2, i] = np.dot(np.dot(np.dot(np.dot(np.dot(np.dot(\
                                   G.T, X[k1].T), W.T), Gamma_i), W), X[k2]), G)
-            X_tilde[i, m, :] = np.dot(np.dot(Gamma_i, y_tildeG[:, i]).T, X[k1])
+            X_tilde[i, m, :] = np.dot(np.dot(np.dot(Gamma_i, \
+                                    y_tildeG[:, i]).T, W) ,X[k1])
         tmp = np.dot(X_tilde[i, :, :], G)
         for k in xrange(0, K):
             Delta = np.diag(q_Z[:, k, i] / (sigma_Mc[:, k] + eps))
@@ -253,6 +255,77 @@ def constraint_norm1(Ftilde, Sigma_F, positivity=False):
     return np.squeeze(np.array((F.value)))
 
 
+def constraint_norm1_b(Ftilde, Sigma_F, positivity=False):
+    """ Constrain with optimization strategy """
+    from scipy.optimize import minimize, rosen, rosen_der
+    m, n = Sigma_F.shape
+    Sigma_F_inv = np.linalg.inv(Sigma_F)
+    zeros_F = np.zeros_like(Ftilde[:, np.newaxis])
+    F = cvx.Variable(n)      # Construct the problem. PRIMAL
+    expression = cvx.quad_form(F - Ftilde[:, np.newaxis], Sigma_F_inv)
+    expression =     
+    
+    fun = lambda F: np.dot(np.dot((F - Ftilde[:, np.newaxis]).T, Sigma_F_inv),
+                                  (F - Ftilde[:, np.newaxis]))
+
+    cons = ({'type': 'ineq', 'fun': lambda x:  x[0] - 2 * x[1] + 2},
+            {'type': 'ineq', 'fun': lambda x: -x[0] - 2 * x[1] + 6},
+            {'type': 'ineq', 'fun': lambda x: -x[0] + 2 * x[1] + 2})
+
+    bnds = ((0, None), (0, None))
+    res = minimize(fun, (2, 0), method='SLSQP', bounds=bnds, constraints=cons)
+
+
+
+    objective =  minimize(expression, method='L-BFGS-B')
+    if positivity:
+        constraints = [F[0] == 0, F[-1] == 0, F >= zeros_F,
+                       cvx.square(cvx.norm(F, 2)) <= 1]
+    else:
+        constraints = [F[0] == 0, F[-1] == 0, cvx.square(cvx.norm(F, 2)) <= 1]
+    prob = cvx.Problem(objective, constraints)
+    prob.solve(verbose=0, solver=cvx.CVXOPT)
+    return np.squeeze(np.array((F.value)))
+
+
+def expectation_Zb(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+                  mu_Mc, Beta, Z_tilde, q_Z, graph, M, J, K):
+    energy = np.zeros(K)
+    Gauss = energy.copy()
+    # Compute Z_tilde
+    for i in xrange(0, J):
+        for m in xrange(0, M):
+            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
+                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
+            #alpha /= alpha.mean()
+            local_energy = Beta[m] * sum(Z_tilde[m, graph[i]])
+            for k in xrange(0, K):
+                extern_field = alpha[k] \
+                     + np.log(normpdf(m_A[i, m], mu_Ma[m, k], sigma_Ma[m, k]))\
+                     + np.log(normpdf(m_C[i, m], mu_Mc[m, k], sigma_Mc[m, k]))
+                # check if the sigma is sqrt or not!!
+                energy[k] = extern_field + local_energy
+            Probas = np.exp(energy - max(energy))
+            Z_tilde[m, i] = Probas[0] / (sum(Probas))
+    # Compute q_Z
+    for i in xrange(0, J):
+        for m in xrange(0, M):
+            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
+                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
+            alpha /= alpha.mean()
+            local_energy = Beta[m] * sum(Z_tilde[m, graph[i]], 0)
+            for k in xrange(0, K):
+                extern_field = alpha[k]
+                energy[k] = extern_field + local_energy
+                Gauss[k] = normpdf(m_A[i, m], mu_Ma[m, k], sigma_Ma[m, k]) \
+                + normpdf(m_C[i, m], mu_Mc[m, k], sigma_Mc[m, k])
+            Probas = np.exp(energy - max(energy))
+            aux = (Gauss * Probas / sum(Probas))
+            q_Z[m, i] = (aux / sum(aux))[0]
+            q_Z[m, i] /= sum(q_Z[m, i])
+    return q_Z, Z_tilde
+
+
 def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
                   mu_Mc, Beta, Z_tilde, q_Z, graph, M, J, K):
     energy = np.zeros(K)
@@ -267,9 +340,10 @@ def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
             for k in xrange(0, K):
                 extern_field = alpha[k] \
                             + max(np.log(normpdf(m_A[i, m], mu_Ma[m, k],
-                                        np.sqrt(sigma_Ma[m, k])) + eps), -100)\
+                                         sigma_Ma[m, k]) + eps), -100)\
                             + max(np.log(normpdf(m_C[i, m], mu_Mc[m, k],
-                                        np.sqrt(sigma_Mc[m, k])) + eps), -100)
+                                         sigma_Mc[m, k]) + eps), -100)
+                # check if the sigma is sqrt or not!!
                 local_energy = Beta[m] * tmp[k]
                 energy[k] = extern_field + local_energy
             Probas = np.exp(energy - max(energy))

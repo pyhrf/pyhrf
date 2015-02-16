@@ -79,12 +79,11 @@ class JDEVEMAnalyser(JDEAnalyser):
 
     def __init__(self, hrfDuration=25., dt=.6, fast=True, constrained=False,
                  nbClasses=2, PLOT=False, nItMax=1, nItMin=1, scale=False,
-                 beta=1.0, simulation=False, fmri_data=None,
+                 beta=1.0, simulation=None, fmri_data=None,
                  estimateH=True, estimateG=True, estimateSigmaH=True,
-                 estimateSigmaG=True, sigmaH=0.1, sigmaG=0.1,
-                 estimateLabels=True,
-                 estimateMixtParam=True, InitVar=0.5, InitMean=2.0,
-                 estimateA=True, estimateC=True,
+                 estimateSigmaG=True, sigmaH=0.0001, sigmaG=0.0001,
+                 estimateLabels=True, estimateMixtParam=True,
+                 InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True):
 
         XmlInitable.__init__(self)
@@ -152,6 +151,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         t_start = time()
 
         pyhrf.verbose(2, "fast VEM with drift estimation and a constraint")
+        print roiData.simulation
 
         if self.fast:
             NbIter, nrls, estimated_hrf, \
@@ -168,7 +168,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                     NitMax=self.nItMax, NitMin=self.nItMin,
                                     estimateBeta=self.estimateBeta,
                                     PLOT=self.PLOT, idx_first_tag=idx_tag1,
-                                    fmri_data=self.fmri_data,
+                                    simulation=self.roiData.simulation,
                                     estimateH=self.estimateH,
                                     estimateG=self.estimateG,
                                     estimateA=self.estimateA,
@@ -179,7 +179,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                     estimateLA=self.estimateLA)
         else:
             NbIter, brls, estimated_brf, prls, estimated_prf, \
-            labels, noiseVar, cTime, cTimeMean, \
+            labels, noiseVar, cZ, cTime, cTimeMean, \
             mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
             Sigma_brls, Sigma_prls, \
             StimulusInducedSignal = Main_vbjde_constrained(graph, data, Onsets,
@@ -191,7 +191,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                     NitMax=self.nItMax, NitMin=self.nItMin,
                                     estimateBeta=self.estimateBeta,
                                     PLOT=self.PLOT, idx_first_tag=idx_tag1,
-                                    fmri_data=self.fmri_data,
+                                    simulation=roiData.simulation[0],
                                     estimateH=self.estimateH,
                                     estimateG=self.estimateG,
                                     estimateA=self.estimateA,
@@ -255,12 +255,6 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        value_label="ROI",
                                        axes_names=['voxel'])
 
-        #h = estimated_hrf
-        brls = brls.T
-        nvox = brls.shape[1]
-        #nbconds = brls.shape[0]
-        #ah = np.zeros((h.shape[0], nvox, nbconds))
-
         mixtpB = np.zeros((roiData.nbConditions, self.nbClasses, 2))
         mixtpB[:, :, 0] = mu_Ma
         mixtpB[:, :, 1] = sigma_Ma ** 2
@@ -274,13 +268,11 @@ class JDEVEMAnalyser(JDEAnalyser):
               'component': ['mean', 'var']}
         outputs['mixt_pB'] = xndarray(mixtpB, axes_names=an, axes_domains=ad)
         outputs['mixt_pP'] = xndarray(mixtpP, axes_names=an, axes_domains=ad)
-
-        ad = {'class': ['inactiv', 'activ'],
-              'condition': cNames, }
-
+        print 'mixture params BOLD = ', mixtpB
+        print 'mixture params perfusion = ', mixtpP        
+        
         outputs['labels'] = xndarray(labels, value_label="Labels",
-                                axes_names=['condition', 'class', 'voxel'],
-                                axes_domains=ad)
+                                axes_names=['condition', 'class', 'voxel'])
         print outputs['labels']
 
         outputs['noiseVar'] = xndarray(noiseVar, value_label="noiseVar",
@@ -293,7 +285,7 @@ class JDEVEMAnalyser(JDEAnalyser):
 
         #######################################################################
         # CONVERGENCE
-        if 0:
+        if 1:
             axes_names = ['duration']
             outName = 'Convergence_Labels'
             ax = np.arange(self.nItMax) * cTimeMean
@@ -304,6 +296,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs[outName] = xndarray(c, axes_names=axes_names,
                                         axes_domains=ad,
                                         value_label='Conv_Criterion_Z')
+        if 0:
             outName = 'Convergence_BRF'
             #ad = {'Conv_Criterion':np.arange(len(cH))}
             c = np.zeros(self.nItMax)   # -.001 #
@@ -337,21 +330,26 @@ class JDEVEMAnalyser(JDEAnalyser):
         # SIMULATION
 
         if self.simulation:
-            labels_vem_audio = roiData.simulation['labels'][0]
-            labels_vem_video = roiData.simulation['labels'][1]
-
+            labels_vem_audio = roiData.simulation[0]['labels'][0]
+            labels_vem_video = roiData.simulation[0]['labels'][1]
             M = labels.shape[0]
             K = labels.shape[1]
             J = labels.shape[2]
             true_labels = np.zeros((K, J))
-            true_labels[0, :] = np.reshape(labels_vem_audio, (J))
-            true_labels[1, :] = np.reshape(labels_vem_video, (J))
+            #print true_labels.shape
+            true_labels[0, :] = labels_vem_audio.flatten()
+            true_labels[1, :] = labels_vem_video.flatten()
+            #true_labels[0, :] = np.reshape(labels_vem_audio, (J))
+            #true_labels[1, :] = np.reshape(labels_vem_video, (J))
             newlabels = np.reshape(labels[:, 1, :], (M, J))
+            
+            #true_labels = roiData.simulation[0]['labels']
+            #newlabels = labels
+            
             se = []
             sp = []
             size = np.prod(labels.shape)
-
-            for i in xrange(0, M):
+            for i in xrange(0, 2): # (0, M):
                 se0, sp0, auc = roc_curve(newlabels[i, :].tolist(),
                                           true_labels[i, :].tolist())
                 se.append(se0)
@@ -359,20 +357,19 @@ class JDEVEMAnalyser(JDEAnalyser):
                 size = min(size, len(sp0))
             SE = np.zeros((M, size), dtype=float)
             SP = np.zeros((M, size), dtype=float)
-            for i in xrange(0, M):
+            for i in xrange(0, 2):  #M):
                 tmp = np.array(se[i])
                 SE[i, :] = tmp[0:size]
                 tmp = np.array(sp[i])
                 SP[i, :] = tmp[0:size]
-
             sensData, specData = SE, SP
-            axes_names = ['condition', '1-specificity']
+            axes_names = ['1-specificity', 'condition']
             outName = 'ROC_audio'
-            ad = {'1-specificity': specData[0], 'condition': cNames}
-            outputs[outName] = xndarray(sensData, axes_names=axes_names,
-                                        axes_domains=ad,
+            #ad = {'1-specificity': specData[0], 'condition': cNames}
+            outputs[outName] = xndarray(sensData, axes_names=axes_names, \
+                                        #axes_domains=ad, \
                                         value_label='sensitivity')
-
+                                            
             m = specData[0].min()
             import matplotlib.font_manager as fm
             import matplotlib.pyplot as plt
@@ -391,45 +388,20 @@ class JDEVEMAnalyser(JDEAnalyser):
             plt.legend(loc=1, prop=prop)
             plt.axis([0., 1., m, 1.02])
 
-            #from pyhrf.stats import compute_roc_labels
-            if hasattr(roiData.simulation, 'brls'):
-                true_labels = roiData.simulation.brls.labels
-                true_brls = roiData.simulation.brls.data
-            elif isinstance(roiData.simulation, dict) and \
-                    roiData.simulation.has_key('labels') and \
-                    roiData.simulation.has_key('brls'):
-                true_labels = roiData.simulation['labels']
-                true_brls = roiData.simulation['brls']
-            else:
-                raise Exception('Simulation can not be retrieved from %s' \
-                                    % str(roiData.simulation))
+            true_labels = roiData.simulation[0]['labels']
+            true_brls = roiData.simulation[0]['brls']
+            true_prls = roiData.simulation[0]['prls']
+            true_brf = roiData.simulation[0]['brf'][:, 0]
+            true_prf = roiData.simulation[0]['prf'][:, 0]
+            true_drift = roiData.simulation[0]['drift']
+            true_noise = roiData.simulation[0]['noise']
 
-            domCondition = {'condition': cNames}
-            outputs['Truebrls'] = xndarray(true_brls, value_label="True_brls",
-                                           axes_names=['condition', 'voxel'],
-                                           axes_domains=domCondition)
-            M = labels.shape[0]
-            K = labels.shape[1]
-            J = labels.shape[2]
-
-            newlabels = np.reshape(labels[:, 1, :], (M, J))
-
-            for i in xrange(0, M):
-                se0, sp0, auc = roc_curve(newlabels[i, :].tolist(),
-                                          true_labels[i, :].tolist())
-                se.append(se0)
-                sp.append(sp0)
-                size = min(size, len(sp0))
-            SE = np.zeros((M, size), dtype=float)
-            SP = np.zeros((M, size), dtype=float)
-            for i in xrange(0, M):
-                tmp = np.array(se[i])
-                SE[i, :] = tmp[0:size]
-                tmp = np.array(sp[i])
-                SP[i, :] = tmp[0:size]
-            
-            self.finalizeSampling(true_labels, true_brf, true_prf, 
-                                  true_brls, true_prls)
+            self.finalizeEstimation(true_labels, newlabels, nvox,
+                                    true_brf, estimated_brf,
+                                    true_prf, estimated_prf,
+                                    true_brls, brls.T,
+                                    true_prls, prls.T,
+                                    true_drift, PL, L, true_noise, noiseVar)
 
         # END SIMULATION
         #######################################################################
@@ -441,61 +413,85 @@ class JDEVEMAnalyser(JDEAnalyser):
 
         return outputs
 
-
-    def finalizeSampling(self):        
+    def finalizeEstimation(self, true_labels, labels, nvox,
+                           true_brf, estimated_brf, true_prf, estimated_prf,
+                           true_brls, brls, true_prls, prls, true_drift, PL, L,
+                           true_noise, noise):
         msg = []
-        for v in self.variables:
+        tol = .1
+        fv = PL
+        tv = true_drift
+        delta = np.abs((fv - tv) / np.maximum(tv, fv))
+        crit = (delta > tol).any()
+        if  crit:
+            m = "Final value of %s is not close to " \
+                "true value (mean delta=%f).\n" \
+                " Final value:\n %s\n True value:\n %s\n" \
+                % ('drift', delta.mean(), str(fv), str(tv))
+            msg.append(m)
 
-            if v.trueValue is None:
-                print 'Warning; no true val for %s' %v.name
-            else:
-                fv = v.finalValue
-                tv = v.trueValue
-                # tol = .7
-                # if v.name == 'drift_coeff':
-                #     delta = np.abs(np.dot(v.P,
-                #                           v.finalValue - \
-                #                           v.trueValue)).mean()
-                #     crit = detla > tol
-                # else:
-                #     delta = np.abs(v.finalValue - v.trueValue).mean()
-                #     crit = delta > tol
-                tol = .1
-                if self.dataInput.nbVoxels < 10:
-                    if 'var' in v.name:
-                        tol = 1.
+        delta = (((estimated_prf - true_prf) ** 2).sum() / \
+                 (true_prf ** 2).sum()) ** .5
+        tol = 0.05
+        crit = (delta > tol).any()
+        if  crit:
+            m = "Final value of %s is not close to " \
+                "true value (mean delta=%f).\n" \
+                " Final value:\n %s\n True value:\n %s\n" \
+                % ('prf', delta.mean(), str(estimated_prf), str(true_prf))
+            msg.append(m)
 
-                if v.name == 'drift_coeff':
-                    fv = np.dot(v.P, v.finalValue)
-                    tv = np.dot(v.P, v.trueValue)
-                    delta = np.abs( (fv - tv) / np.maximum(tv,fv))
-                elif v.name == 'prf' or v.name == 'brf':
-                    delta = (((v.finalValue - v.trueValue)**2).sum() / \
-                             (v.trueValue**2).sum())**.5
-                    tol = 0.05
-                elif v.name == 'label':
-                    delta = (v.finalValue!=v.trueValue).sum()*1. / v.nbVoxels
-                else:
-                    #delta = (((v.finalValue - v.trueValue)**2).sum() / \
-                    #         (v.trueValue**2).sum())**.5
-                    delta = np.abs((v.finalValue-v.trueValue) / \
-                                   np.maximum(v.trueValue,v.finalValue))
-                crit = (delta > tol).any()
+        delta = (((estimated_brf - true_brf) ** 2).sum() / \
+                 (true_brf ** 2).sum()) ** .5
+        tol = 0.05
+        crit = (delta > tol).any()
+        if  crit:
+            m = "Final value of %s is not close to " \
+                "true value (mean delta=%f).\n" \
+                " Final value:\n %s\n True value:\n %s\n" \
+                % ('brf', delta.mean(), str(estimated_brf), str(true_brf))
+            msg.append(m)
 
-                if  crit:
-                    m = "Final value of %s is not close to " \
-                        "true value (mean delta=%f).\n" \
-                        " Final value:\n %s\n True value:\n %s\n" \
-                        %(v.name, delta.mean(), str(fv), str(tv))
-                    msg.append(m)
-                    #raise Exception(m)
+        tol = .1
+        #print labels
+        #print true_labels
+        delta = ((labels != true_labels)*np.ones(labels.shape)).sum() / nvox
+        crit = (delta > tol).any()
+        if  crit:
+            m = "Final value of %s is not close to " \
+                "true value (mean delta=%f).\n" \
+                " Final value:\n %s\n True value:\n %s\n" \
+                % ('labels', delta.mean(), str(labels), str(true_labels))
+            msg.append(m)
 
-        if len(msg) > 0:
-            if 0:
-                raise Exception("\n".join(msg))
-            else:
-                print "\n".join(msg)
+        delta = np.abs((brls - true_brls) / np.maximum(true_brls, brls))
+        crit = (delta > tol).any()
+        if  crit:
+            m = "Final value of %s is not close to " \
+                "true value (mean delta=%f).\n" \
+                " Final value:\n %s\n True value:\n %s\n" \
+                % ('brls', delta.mean(), str(brls), str(true_brls))
+            msg.append(m)
 
+        delta = np.abs((prls - true_prls) / np.maximum(true_prls, prls))
+        crit = (delta > tol).any()
+        if  crit:
+            m = "Final value of %s is not close to " \
+                "true value (mean delta=%f).\n" \
+                " Final value:\n %s\n True value:\n %s\n" \
+                % ('prls', delta.mean(), str(prls), str(true_prls))
+            msg.append(m)
+
+        true_vnoise = np.var(true_noise, 0)
+        delta = np.abs((noise - true_vnoise) / np.maximum(true_vnoise, noise))
+        crit = (delta > tol).any()
+        if  crit:
+            m = "Final value of %s is not close to " \
+                "true value (mean delta=%f).\n" \
+                " Final value:\n %s\n True value:\n %s\n" \
+                % ('noise', delta.mean(), str(noise), str(true_vnoise))
+            msg.append(m)
+        print "\n".join(msg)
 
 
 # Function to use directly in parallel computation
