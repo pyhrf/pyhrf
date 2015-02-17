@@ -12,7 +12,6 @@ import logging
 
 from itertools import chain
 from collections import defaultdict
-from pprint import pformat
 
 import nibabel
 
@@ -382,7 +381,7 @@ def concat3DVols(files, output):
         img, meta_data = read_volume(f)
         img = img.squeeze()  # remove dim of length=1
         if i == 0:
-            logger.info("Image meta_obj: %s", pformat(meta_data))
+            logger.info("Image meta_obj: %s", meta_data)
             logger.info("Volume size: %s, type: %s", str(img.shape),
                         str(img.dtype))
             img4D = np.zeros(img.shape + (len(files),), img.dtype)
@@ -643,7 +642,7 @@ def discard_bad_data(bold, roiMask, time_axis=None):
     # print 'zeroVarianceVoxels:', zeroVarianceVoxels.shape
     if zeroVarianceVoxels.any():
         logger.debug('discarded voxels (std=0):')
-        logger.debug(pformat(np.where(zeroVarianceVoxels == True)))
+        logger.debug(np.where(zeroVarianceVoxels == True))
         logger.info('!! discarded voxels (std=0): %d/%d',
                     zeroVarianceVoxels.sum(), (m != 0).sum())
 
@@ -664,7 +663,7 @@ def discard_bad_data(bold, roiMask, time_axis=None):
     # print 'nanVoxels:', nanVoxels.shape
     if nanVoxels.any():
         logger.debug('discarded voxels (nan values):')
-        logger.debug(pformat(np.where(nanVoxels == True)))
+        logger.debug(np.where(nanVoxels == True))
         logger.info('!! discarded voxels (nan values): %d/%d', nanVoxels.sum(),
                     (m != 0).sum())
 

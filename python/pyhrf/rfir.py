@@ -4,7 +4,6 @@ import logging
 
 from time import time
 from collections import defaultdict
-from pprint import pformat
 
 import numpy
 import numpy as np
@@ -263,7 +262,7 @@ class RFIREstim(xmlio.XmlInitable):
         self.h[:] = hcano[1:self.K]
 
         logger.info('self.h:')
-        logger.info(pformat(self.h))
+        logger.info(self.h)
 
         for i in xrange(self.I):
             self.P[i][:, :] = 0.
@@ -599,7 +598,7 @@ class RFIREstim(xmlio.XmlInitable):
         for m in xrange(self.M):
             meanLoc = abs(self.bold[:, POI].mean())
             logger.info('Final HRF cond %d, POI %d:', m, POI)
-            logger.info(pformat(self.h[m]))
+            logger.info(self.h[m])
 
             # store evaluated response function (percentage of signal change)
             if self.compute_pct_change:
@@ -896,7 +895,7 @@ class RFIREstim(xmlio.XmlInitable):
                 for m in xrange(self.M):
                     logger.info('it %d, h^MAP cond %d:', iteration, m)
                     self.h[m, :] = BigVector2[m * SBS:(m + 1) * SBS]
-                    logger.info(pformat(self.h[m, :]))
+                    logger.info(self.h[m, :])
 
                 if self.save_history:
                     z = np.zeros((self.M, 1))
@@ -1010,7 +1009,7 @@ class RFIREstim(xmlio.XmlInitable):
                 for m in xrange(self.M):
                     logger.info('it %d, h^MAP cond %d:', iteration, m)
                     self.h[m, :] = BigVector2[m * SBS:(m + 1) * SBS]
-                    logger.info(pformat(self.h[m, :]))
+                    logger.info(self.h[m, :])
 
                 if self.save_history:
                     z = np.zeros((self.M, 1))

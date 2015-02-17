@@ -415,14 +415,14 @@ def restarize_events(events, durations, dt, t_max):
     smpl_durations = np.array(np.round_(np.divide(durations, dt)), dtype=int)
     smpl_events = extend_sampled_events(smpl_events, smpl_durations)
     logger.debug("sampled_onsets: %s", str(smpl_events.shape))
-    logger.debug(pformat(smpl_events))
+    logger.debug(smpl_events)
     if np.allclose(t_max % dt, 0):
         bin_seq = np.zeros(int(t_max / dt) + 1)
     else:
         bin_seq = np.zeros(int(np.round((t_max + dt) / dt)))
     bin_seq[smpl_events] = 1
     logger.debug('bins :')
-    logger.debug(pformat(bin_seq))
+    logger.debug(bin_seq)
 
     return bin_seq
 

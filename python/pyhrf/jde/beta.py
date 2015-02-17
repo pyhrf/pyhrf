@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 import numpy as _np
 import scipy.interpolate
 
@@ -4260,7 +4258,7 @@ class BetaSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.currentAcceptRatio = a
             self.currentValue[cond] = b
             msg = "beta cond %d: %f" % (cond, self.currentValue[cond])
-            logger.debug(pformat(msg))
+            logger.debug(msg)
 
     def get_string_value(self, v):
         return get_2Dtable_string(v, self.dataInput.cNames, ['pm_beta'])

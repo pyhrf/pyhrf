@@ -5,7 +5,6 @@ import time
 import logging
 
 from collections import defaultdict
-from pprint import pformat
 
 import numpy as np
 import scipy
@@ -195,7 +194,7 @@ class Drift_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
                 logger.debug('eta : %f', eta)
                 logger.debug('reps :')
-                logger.debug(pformat(reps))
+                logger.debug(reps)
 
                 v_lj = reps * eta / (reps + eta)
                 mu_lj = v_lj / reps * np.dot(self.P[s].transpose(),
@@ -212,7 +211,7 @@ class Drift_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             #snrls.computeVarYTildeSessionOpt(self.varXh[s], s)
 
         logger.debug('drift params :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
     def sampleNextAlt(self, variables):
         self.updateNorm()
@@ -296,12 +295,12 @@ def sampleHRF_voxelwise_iid(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox,
                             nbSess):
 
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     varInvSigma_h = stLambdaS + nbSess * nbVox * varR / rh
 
@@ -321,12 +320,12 @@ def sampleHRF_single_hrf_hack(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
     varInvSigma_h = stLambdaS / nbVox
 
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -346,12 +345,12 @@ def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
     varInvSigma_h = stLambdaS
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -507,7 +506,7 @@ class HRF_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             hrfValIni = hrfValIni[1:(self.hrfLength - 1)]
 
         logger.info('hrfValIni: %s', str(hrfValIni.shape))
-        logger.debug(pformat(hrfValIni))
+        logger.debug(hrfValIni)
         logger.info('self.hrfLength: %s', str(self.hrfLength))
 
         normHRF = (sum(hrfValIni ** 2)) ** (0.5)
@@ -523,7 +522,7 @@ class HRF_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 * self.eventdt
 
         logger.info('hrfValIni after ZC: %s', str(self.currentValue.shape))
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
         self.updateXh()
@@ -690,7 +689,7 @@ class HRF_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
         # self.currentValue = self.trueValue[1:-1]
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -746,7 +745,7 @@ class HRF_MultiSess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.finalValue = fv
 
         logger.info('HRF finalValue :\n')
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
 
     def getScaleFactor(self):
         if self.finalValue == None:
@@ -1119,7 +1118,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                       self.varYtilde[s], self.sumaXh[s])
 
         logger.debug('varYtilde %s', str(self.varYtilde[s].shape))
-        logger.debug(pformat(self.varYtilde[s]))
+        logger.debug(self.varYtilde[s])
         matPl = self.get_variable('drift').matPl
         self.varYbar[s] = self.varYtilde[s] - matPl[s]
 
@@ -1152,7 +1151,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
         nrls = self.currentValue
         nrl_bar = self.get_variable('nrl').currentValue
         logger.debug('rb %s :', str(rb.shape))
-        logger.debug(pformat(rb))
+        logger.debug(rb)
 
         gTg = np.diag(np.dot(varXh[s].transpose(), varXh[s]))
         varXh_m = varXh[s, :, m]
@@ -1194,10 +1193,10 @@ class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             logger.debug('Generic update Observables for var %s, it=%d ...',
                          self.name, self.nbItObservables)
             logger.debug('CurrentValue:')
-            logger.debug(pformat(self.currentValue))
+            logger.debug(self.currentValue)
 
             logger.debug('Cumul:')
-            logger.debug(pformat(self.cumul))
+            logger.debug(self.cumul)
 
             self.mean = self.cumul / self.nbItObservables
 
@@ -1205,11 +1204,11 @@ class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             # < 1
             self.cumul3 += (self.currentValue - self.mean) ** 2
             logger.debug('Cumul3:')
-            logger.debug(pformat(self.cumul3))
+            logger.debug(self.cumul3)
             self.error = self.cumul3 / self.nbItObservables
 
             logger.debug('Mean')
-            logger.debug(pformat(self.mean))
+            logger.debug(self.mean)
 
             if self.nbItObservables < 2:
                 self.error = np.zeros_like(self.cumul3) + 1e-6
@@ -1225,7 +1224,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             # print 'Case where error is empty and thus put to 0...hack...'
 
             logger.debug('Error:')
-            logger.debug(pformat(self.error))
+            logger.debug(self.error)
 
             if (self.error < 0.).any():
                 raise Exception('neg error on variable %s' % self.name)
@@ -1315,7 +1314,7 @@ class NRL_Multi_Sess_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                                         value_label=self.value_label)
 
         logger.info('%s final value:', self.name)
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
         # if 1 and hasattr(self, 'error'):
         #     err = self.error**.5
         # else:
@@ -2233,7 +2232,7 @@ class BOLDSampler_Multi_SessInput:
         self.stimRepetitions = [len(self.onsets[ind]) for ind in xrange(nbc)]
 
         logger.debug('nb of Trials :')
-        logger.debug(pformat(self.stimRepetitions))
+        logger.debug(self.stimRepetitions)
 
         logger.info('computing sampled binary onset sequences ...')
 
@@ -2267,7 +2266,7 @@ class BOLDSampler_Multi_SessInput:
                 lfdMat = np.zeros((self.nys[iSess], 2))
 
             logger.info('LFD Matrix :')
-            logger.info(pformat(lfdMat))
+            logger.info(lfdMat)
             # print lfdMat
             self.lfdMat.append(lfdMat)
             varPPt = np.dot(lfdMat, lfdMat.transpose())
@@ -2280,7 +2279,7 @@ class BOLDSampler_Multi_SessInput:
             self.varPtP.append(np.dot(lfdMat.transpose(), lfdMat))
 
             logger.debug('varPtP :')
-            logger.debug(pformat(self.varPtP[-1]))
+            logger.debug(self.varPtP[-1])
             if typeLFD != 'None':
                 assert np.allclose(self.varPtP[-1],
                                    np.eye(self.colP, dtype=float),
@@ -2317,7 +2316,7 @@ class BOLDSampler_Multi_SessInput:
 
         logger.info('osf = %1.2f', osf)
         logger.debug('availableDataIndex :')
-        logger.debug(pformat(availableDataIndex))
+        logger.debug(availableDataIndex)
 
         lgt = (self.ny + 2) * osf
         allMatH = []
@@ -2326,9 +2325,9 @@ class BOLDSampler_Multi_SessInput:
             for j in xrange(self.nbConditions):
                 matH[:len(parData[j][iSess]), j] = parData[j][iSess][:]
             logger.debug('matH for Sess %d :', iSess)
-            logger.debug(pformat([matH[a, b]
-                                  for b in xrange(matH.shape[1])
-                                  for a in xrange(matH.shape[0])]))
+            logger.debug([matH[a, b]
+                          for b in xrange(matH.shape[1])
+                          for a in xrange(matH.shape[0])])
 # TODO: check if the previsou is the same that the following
 #            if pyhrf.verbose.verbosity >= 6:
 #                for a in xrange(matH.shape[0]):
@@ -2365,7 +2364,7 @@ class BOLDSampler_Multi_SessInput:
                 col = np.concatenate(([allMatH[iSess][0, j]],
                                       np.zeros(self.hrfLength - 1, dtype=int)))
                 logger.debug(' col :')
-                logger.debug(pformat([col[b] for b in xrange(col.shape[0])]))
+                logger.debug([col[b] for b in xrange(col.shape[0])])
 # TODO: check if the previous is the same that the following
 #                if pyhrf.verbose.verbosity >= 6:
 #                    print ' [',
@@ -2376,9 +2375,9 @@ class BOLDSampler_Multi_SessInput:
                 matTmp = np.array(
                     scipy.linalg.toeplitz(allMatH[iSess][:, j], col), dtype=int)
                 logger.debug(' matTmp :')
-                logger.debug(pformat([matTmp[b, a]
-                                      for a in xrange(matTmp.shape[1])
-                                      for b in xrange(matTmp.shape[0])]))
+                logger.debug([matTmp[b, a]
+                              for a in xrange(matTmp.shape[1])
+                              for b in xrange(matTmp.shape[0])])
 # TODO: check if the previous is the same that the following
 #                if pyhrf.verbose.verbosity >= 6:
 #                    for b in xrange(matTmp.shape[0]):
@@ -2439,22 +2438,22 @@ class BOLDSampler_Multi_SessInput:
 
         vectSOA.sort()
         logger.debug('vectSOA %s:', str(vectSOA.shape))
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         momRT = np.arange(0, vectSOA[-1] + tr, tr)
         logger.debug('momRT %s:', str(momRT.shape))
-        logger.debug(pformat(momRT))
+        logger.debug(momRT)
 
         momVect = np.concatenate((vectSOA, momRT))
         momVect.sort()
 
         varSOA = np.diff(momVect)
         logger.debug('vectSOA diff:')
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         nonZeroSOA = varSOA[np.where(varSOA > 0.0)]
         logger.debug('nonZeroSOA :')
-        logger.debug(pformat(nonZeroSOA))
+        logger.debug(nonZeroSOA)
 
         delta = nonZeroSOA.min()
         logger.debug('delta : %1.3f', delta)

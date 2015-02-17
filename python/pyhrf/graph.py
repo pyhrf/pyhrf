@@ -7,8 +7,6 @@ Base structures :
 
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 import pyhrf
@@ -77,7 +75,7 @@ def graph_from_mesh(polygonList):
     nbPositions = len(indexSet)
 
     logger.debug('indexSet:')
-    logger.debug(pformat(indexSet))
+    logger.debug(indexSet)
 
     neighbourSets = {}
     for triangle in polygonList:

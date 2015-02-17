@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from pyhrf import xmlio
@@ -209,12 +207,12 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.ratioLambdaI_A = (varCA / varCI) ** 0.5
 
         logger.debug('ratioLambdaI_A :')
-        logger.debug(pformat(self.ratioLambdaI_A))
+        logger.debug(self.ratioLambdaI_A)
 
     def computeMeanClassApost(self, j, nrls, varXhj, rb):
 
         logger.debug('self.varXhtQ[%d,:] :', j)
-        logger.debug(pformat(self.varXhtQ[j, :]))
+        logger.debug(self.varXhtQ[j, :])
 
         for i in xrange(self.nbVox):
             eji = self.varYtilde[:, i] + nrls[j, i] * varXhj
@@ -223,13 +221,13 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                   multiply(self.varClassAApost[j, :], self.varXjhtQjeji),
                   self.meanClassAApost[j])
         logger.debug('meanClassAApost cond %d :', j)
-        logger.debug(pformat(self.meanClassAApost[j]))
+        logger.debug(self.meanClassAApost[j])
 
         multiply(self.varClassIApost[j, :],
                  self.varXjhtQjeji,
                  self.meanClassIApost[j])
         logger.debug('meanClassIApost cond %d :', j)
-        logger.debug(pformat(self.meanClassIApost[j]))
+        logger.debug(self.meanClassIApost[j])
 
     def sampleNextInternal(self, variables):
         # TODO : comment
@@ -270,18 +268,18 @@ class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.currentValue[j, :] = multiply(nrlsSamples[j, :], sigApost) + \
                 meanApost
             logger.debug('All nrl cond %d:', j)
-            logger.debug(pformat(self.currentValue[j, :]))
+            logger.debug(self.currentValue[j, :])
             logger.info('nrl cond %d = %1.3f(%1.3f)', j,
                         self.currentValue[j, :].mean(),
                         self.currentValue[j, :].std())
             logger.debug('All nrl activ cond %d:', j)
-            logger.debug(pformat(self.currentValue[j, self.voxIdxCA[j]]))
+            logger.debug(self.currentValue[j, self.voxIdxCA[j]])
 
             logger.info('nrl activ cond %d = %1.3f(%1.3f)', j,
                         self.currentValue[j, self.voxIdxCA[j]].mean(),
                         self.currentValue[j, self.voxIdxCA[j]].std())
             logger.debug('All nrl inactiv cond %d:', j)
-            logger.debug(pformat(self.currentValue[j, self.voxIdxCI[j]]))
+            logger.debug(self.currentValue[j, self.voxIdxCI[j]])
 
             logger.info('nrl inactiv cond %d = %1.3f(%1.3f)', j,
                         self.currentValue[j, self.voxIdxCI[j]].mean(),

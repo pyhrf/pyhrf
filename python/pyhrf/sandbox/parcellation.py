@@ -16,7 +16,6 @@ import warnings
 import logging
 
 from heapq import heapify, heappop, heappush, heappushpop
-from pprint import pformat
 
 import numpy as np
 
@@ -747,14 +746,14 @@ def ward_tree(X, connectivity=None, n_components=None, copy=True, n_clusters=Non
 
     logger.info('Initialization')
     logger.info('A:')
-    logger.info(pformat(A))
-    logger.info('moments_1: %s', pformat(moments_1))
-    logger.info('moments_2: %s', pformat(moments_2))
-    logger.info('coord_row: %s', pformat(coord_row))
-    logger.info('coord_col: %s', pformat(coord_col))
+    logger.info(A)
+    logger.info('moments_1: %s', moments_1)
+    logger.info('moments_2: %s', moments_2)
+    logger.info('coord_row: %s', coord_row)
+    logger.info('coord_col: %s', coord_col)
     if (dist_type == 'mixt') or (dist_type == 'mixt_skgmm'):
         logger.info('cluster_masks:')
-        logger.info(pformat(cluster_masks))
+        logger.info(cluster_masks)
 
     # Compute initial distances:
     if dist_type == 'uward':
@@ -772,7 +771,7 @@ def ward_tree(X, connectivity=None, n_components=None, copy=True, n_clusters=Non
                                 cluster_masks, moments_1, cov_type, inertia)
 
     logger.info('initial inertia:')
-    logger.info(pformat(inertia))
+    logger.info(inertia)
 
     inertia = zip(inertia, coord_row, coord_col)
     heapify(inertia)
@@ -805,7 +804,7 @@ def ward_tree(X, connectivity=None, n_components=None, copy=True, n_clusters=Non
 
         inertia.sort()
         logger.info('remainging inertia heap:')
-        logger.info(pformat(inertia))
+        logger.info(inertia)
 
         if save_history:
             choices = []
@@ -902,9 +901,9 @@ def ward_tree(X, connectivity=None, n_components=None, copy=True, n_clusters=Non
         n_additions = len(coord_row)
         ini = np.empty(n_additions, dtype=np.float)
 
-        logger.info('moments_2 of new cluster: %s', pformat(moments_2[k]))
-        logger.info('coord_row: %s', pformat(coord_row))
-        logger.info('coord_col: %s', pformat(coord_col))
+        logger.info('moments_2 of new cluster: %s', moments_2[k])
+        logger.info('coord_row: %s', coord_row)
+        logger.info('coord_col: %s', coord_col)
 
         if dist_type == 'uward':
             compute_uward_dist(moments_1, moments_2, coord_row, coord_col,

@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from pyhrf import xmlio
@@ -71,7 +69,7 @@ class W_Drift_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.currentValue = np.ones(self.nbConditions, dtype=int)
 
         logger.debug('init W :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
     def saveCurrentValue(self, it):
         GibbsSamplerVariable.saveCurrentValue(self, it)
@@ -271,7 +269,7 @@ class WSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.currentValue = np.ones(self.nbConditions, dtype=int)
 
         logger.debug('init W :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
     def saveCurrentValue(self, it):
         GibbsSamplerVariable.saveCurrentValue(self, it)
@@ -363,7 +361,7 @@ class WSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         self.computeVarXhtQ(h, self.matXQ)
         logger.debug('varXhtQ %s :', str(self.varXhtQ.shape))
-        logger.debug(pformat(self.varXhtQ))
+        logger.debug(self.varXhtQ)
 
         gTQg = np.diag(np.dot(self.varXhtQ, self.varXh))
 

@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 import numpy.matlib
 
 from numpy import *
@@ -91,13 +89,13 @@ class NRLARSampler(NRLSampler):
         varXhj = varXh[:, j]
 
         logger.debug('varInvAutoCorrNoise[:,:,0] :')
-        logger.debug(pformat(varInvAutoCorrNoise[:, :, 0]))
+        logger.debug(varInvAutoCorrNoise[:, :, 0])
         for i in xrange(self.nbVox):
             eji = self.varYtilde[:, i] + nrls[j, i] * varXhj
             varXjhtLambda = dot(varXhj.transpose(),
                                 varInvAutoCorrNoise[:, :, i]) / reps[i]
             logger.debug('varXjhtLambda :')
-            logger.debug(pformat(varXjhtLambda))
+            logger.debug(varXjhtLambda)
 
             self.varXjhtLambdaXjh = dot(varXjhtLambda, varXhj)
             self.varXjhtLambdaeji = dot(varXjhtLambda, eji)
@@ -115,7 +113,7 @@ class NRLARSampler(NRLSampler):
                     self.meanClassApost[c, j, i] = (self.varClassApost[c, j, i] *
                                                     self.varXjhtLambdaeji)
             logger.debug('meanClassApost %d cond %d :', j, i)
-            logger.debug(pformat(self.meanClassApost[:, j, i]))
+            logger.debug(self.meanClassApost[:, j, i])
 
     def sampleNextInternal(self, variables):
         # TODO : comment
@@ -148,14 +146,14 @@ class NRLARSampler(NRLSampler):
                 self.currentValue[j, :])
 
             logger.debug('All nrl cond %d:', j)
-            logger.debug(pformat(self.currentValue[j, :]))
+            logger.debug(self.currentValue[j, :])
             logger.info('nrl cond %d = %1.3f(%1.3f)',
                         j, self.currentValue[j, :].mean(),
                         self.currentValue[j, :].std())
             for c in xrange(self.nbClasses):
                 logger.debug('All nrl %s cond %d:', self.CLASS_NAMES[c], j)
                 ivc = self.voxIdx[c][j]
-                logger.debug(pformat(self.currentValue[j, ivc]))
+                logger.debug(self.currentValue[j, ivc])
 
                 logger.info('nrl %s cond %d = %1.3f(%1.3f)',
                             self.CLASS_NAMES[c], j,

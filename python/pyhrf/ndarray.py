@@ -1541,7 +1541,7 @@ class xndarray:
             extra_info = c_to_save.get_extra_info()
 
             logger.info('Extra info:')
-            logger.info(pformat(extra_info))
+            logger.info(extra_info)
 
             from nibabel.nifti1 import Nifti1Extension, Nifti1Header, \
                 Nifti1Image, extension_codes
@@ -1703,7 +1703,7 @@ class xndarray:
                     cuboid_info.pop('dummy', None)
 
             logger.info('Extra info loaded from extension:')
-            logger.info(pformat(cuboid_info))
+            logger.info(cuboid_info)
 
             meta_data = (i.get_affine(), h)
             cuboid_info = dict((str(k), v) for k, v in cuboid_info.iteritems())

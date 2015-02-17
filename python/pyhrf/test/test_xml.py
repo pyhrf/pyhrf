@@ -6,8 +6,6 @@ import os.path as op
 import shutil
 import logging
 
-from pprint import pformat
-
 import numpy as np
 import numpy.testing as npt
 
@@ -63,7 +61,7 @@ class BaseTest(unittest.TestCase):
     def _test_xml_bijection(self, o):
         xml = to_xml(o)
         logger.debug('xml from %s:', str(o))
-        logger.debug(pformat(xml))
+        logger.debug(xml)
         o2 = from_xml(xml)
         self.assertEqual(o, o2)
 

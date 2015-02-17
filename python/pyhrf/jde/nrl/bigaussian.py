@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from numpy.matlib import repmat
@@ -247,7 +245,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         # print 'self.labels to see', self.labels, self.labels.shape
         logger.debug('init labels :')
-        logger.debug(pformat(self.labels))
+        logger.debug(self.labels)
         self.countLabels(self.labels, self.voxIdx, self.cardClass)
 
     def checkAndSetInitNRL(self, variables):
@@ -493,11 +491,11 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 print self.sum_nrls_both_classes_cond[:, :, 310:316]
 
             logger.debug('Non zeros positions for cumulLabels:\n%s',
-                         pformat(np.where(self.cumulLabels[1, 1, :] > 0)))
+                         np.where(self.cumulLabels[1, 1, :] > 0))
             logger.debug('Non zeros for self.sum_nrls_carr_class_activ_cond '
                          'and self.sum_nrls_class_activ_cond :\n'
                          'Non zeros for labels :\n%s',
-                         pformat(np.where(self.labels[1, :] > 0)))
+                         np.where(self.labels[1, :] > 0))
 
         logger.info('nb of iterations: %d', self.nbItObservables)
         logger.info('computeContrastsFlag: %s', str(self.computeContrastsFlag))
@@ -744,7 +742,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         computeYtilde(varXh, self.currentValue, self.dataInput.varMBY,
                       self.varYtilde, self.sumaXh)
         logger.debug('varYtilde %s', str(self.varYtilde.shape))
-        logger.debug(pformat(self.varYtilde))
+        logger.debug(self.varYtilde)
 
     def sampleNextAlt(self, variables):
         varXh = self.samplerEngine.get_variable('hrf').varXh
@@ -768,41 +766,41 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         logger.debug('gTQg = %f', gTQg[j])
 
         logger.debug('gTQg[%d] %s:', j, str(gTQg[j].shape))
-        logger.debug(pformat(gTQg[j]))
+        logger.debug(gTQg[j])
 
         logger.debug('rb %s :', str(rb.shape))
-        logger.debug(pformat(rb))
+        logger.debug(rb)
 
         logger.debug('gTQgjrb %s :', str(gTQgjrb.shape))
-        logger.debug(pformat(gTQgjrb))
+        logger.debug(gTQgjrb)
 
         ej = self.varYtilde + nrls[j, :] \
             * repmat(varXh[:, j], self.nbVox, 1).transpose()
 
         logger.debug('varYtilde %s :', str((self.varYtilde.shape)))
-        logger.debug(pformat(self.varYtilde))
+        logger.debug(self.varYtilde)
 
         logger.debug('nrls[%d,:] %s :', j, nrls[j, :])
-        logger.debug(pformat(nrls[j, :]))
+        logger.debug(nrls[j, :])
 
         logger.debug('varXh[:,%d] %s :', j, str(varXh[:, j].shape))
-        logger.debug(pformat(varXh[:, j]))
+        logger.debug(varXh[:, j])
 
         logger.debug('repmat(varXh[:,%d],self.nbVox, 1).transpose()%s:', j,
                      str((repmat(varXh[:, j], self.nbVox, 1).transpose().shape)))
-        logger.debug(pformat(repmat(varXh[:, j], self.nbVox, 1).transpose()))
+        logger.debug(repmat(varXh[:, j], self.nbVox, 1).transpose())
 
         logger.debug('ej %s :', str((ej.shape)))
-        logger.debug(pformat(ej))
+        logger.debug(ej)
 
         np.divide(np.dot(self.varXhtQ[j, :], ej), rb, self.varXjhtQjeji)
 
         logger.debug('np.dot(self.varXhtQ[j,:],ej) %s :',
                      str(np.dot(self.varXhtQ[j, :], ej).shape))
-        logger.debug(pformat(np.dot(self.varXhtQ[j, :], ej)))
+        logger.debug(np.dot(self.varXhtQ[j, :], ej))
 
         logger.debug('self.varXjhtQjeji %s :', str(self.varXjhtQjeji.shape))
-        logger.debug(pformat(self.varXjhtQjeji))
+        logger.debug(self.varXjhtQjeji)
 
         for c in xrange(self.nbClasses):
             self.varClassApost[c, j, :] = 1. / (1. / var[c, j] + gTQgjrb)
@@ -819,9 +817,9 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                             self.meanClassApost[c, j, :])
 
             logger.debug('meanClassApost %d cond %d :', c, j)
-            logger.debug(pformat(self.meanClassApost[c, j, :]))
+            logger.debug(self.meanClassApost[c, j, :])
             logger.debug('varClassApost %d cond %d :', c, j)
-            logger.debug(pformat(self.varClassApost[c, j, :]))
+            logger.debug(self.varClassApost[c, j, :])
             logger.debug('shape of self.varClassApost[c,j,:] : %s',
                          str(self.varClassApost.shape))
 
@@ -892,10 +890,10 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
                 logger.info('Sampling labels done!')
                 logger.debug('All labels cond %d:', j)
-                logger.debug(pformat(self.labels[j, :]))
+                logger.debug(self.labels[j, :])
                 if self.trueLabels is not None:
                     logger.debug('All true labels cond %d:', j)
-                    logger.debug(pformat(self.trueLabels[j, :]))
+                    logger.debug(self.trueLabels[j, :])
 
             for c in xrange(self.nbClasses):
                 putmask(self.sigApost[j, :], self.labels[j, :] == c,
@@ -924,13 +922,13 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         varLambda = self.get_variable('mixt_weights').currentValue
 
         logger.debug('varXh %s :', str(varXh.shape))
-        logger.debug(pformat(varXh))
+        logger.debug(varXh)
 
         self.computeVarYTildeOpt(varXh)
 
         self.computeVarXhtQ(h, self.dataInput.matXQ)
         logger.debug('varXhtQ %s :', str(self.varXhtQ.shape))
-        logger.debug(pformat(self.varXhtQ))
+        logger.debug(self.varXhtQ)
 
         self.labelsSamples = np.random.rand(self.nbConditions, self.nbVox)
         self.nrlsSamples = np.random.randn(self.nbConditions, self.nbVox)
@@ -1691,7 +1689,7 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             region_is_active = region_is_active.astype(np.int16)
             logger.debug('mquantiles(self.finalValue.max(0), prob=[.9]):')
             logger.debug(
-                pformat(mquantiles(self.finalValue.max(0), prob=[.9])))
+                mquantiles(self.finalValue.max(0), prob=[.9]))
             logger.debug('self.finalValue.mean(1).max(): %f',
                          self.finalValue.mean(1).max())
             logger.debug('(self.finalValue.max(0) > t).sum(): %d',
@@ -2079,7 +2077,7 @@ class NRLSamplerWithRelVar(NRLSampler):
             self.computeSumWAxh(wa, varXh)
 
             logger.debug('sumWaXh %s', str(self.sumWaXh.shape))
-            logger.debug(pformat(self.sumWaXh))
+            logger.debug(self.sumWaXh)
 
             #np.subtract(self.dataInput.varMBY, self.sumaXh, self.varYtilde)
             self.subtractYtildeWithRelVar()
@@ -2095,7 +2093,7 @@ class NRLSamplerWithRelVar(NRLSampler):
                                     wa.astype(np.float64))
 
         logger.debug('varYtilde %s', str(self.varYtilde.shape))
-        logger.debug(pformat(self.varYtilde))
+        logger.debug(self.varYtilde)
 
     def computeComponentsApostWithRelVar(self, variables, j, gTQg, w):
 
@@ -2120,44 +2118,44 @@ class NRLSamplerWithRelVar(NRLSampler):
             logger.debug('gTQg = %f', gTQg[j])
 
             logger.debug('gTQg[%d] %s:', j, str(gTQg[j].shape))
-            logger.debug(pformat(gTQg[j]))
+            logger.debug(gTQg[j])
 
             logger.debug('rb %s :', str(rb.shape))
-            logger.debug(pformat(rb))
+            logger.debug(rb)
 
             logger.debug('gTQgjrb %s :', str(gTQgjrb.shape))
-            logger.debug(pformat(gTQgjrb))
+            logger.debug(gTQgjrb)
 
             ej = self.varYtilde + nrls[j, :] \
                 * repmat(varXh[:, j], self.nbVox, 1).transpose()
 
             logger.debug('varYtilde %s :', str((self.varYtilde.shape)))
-            logger.debug(pformat(self.varYtilde))
+            logger.debug(self.varYtilde)
 
             logger.debug('nrls[%d,:] %s :', j, nrls[j, :])
-            logger.debug(pformat(nrls[j, :]))
+            logger.debug(nrls[j, :])
 
             logger.debug('varXh[:,%d] %s :', j, str(varXh[:, j].shape))
-            logger.debug(pformat(varXh[:, j]))
+            logger.debug(varXh[:, j])
 
             logger.debug('repmat(varXh[:,%d],self.nbVox, 1).transpose()%s:',
                          j, str((repmat(varXh[:, j],
                                         self.nbVox, 1).transpose().shape)))
             logger.debug(
-                pformat(repmat(varXh[:, j], self.nbVox, 1).transpose()))
+                repmat(varXh[:, j], self.nbVox, 1).transpose())
 
             logger.debug('ej %s :', str((ej.shape)))
-            logger.debug(pformat(ej))
+            logger.debug(ej)
 
             np.divide(np.dot(self.varXhtQ[j, :], ej), rb, self.varXjhtQjeji)
 
             logger.debug('np.dot(self.varXhtQ[j,:],ej) %s :',
                          str(np.dot(self.varXhtQ[j, :], ej).shape))
-            logger.debug(pformat(np.dot(self.varXhtQ[j, :], ej)))
+            logger.debug(np.dot(self.varXhtQ[j, :], ej))
 
             logger.debug(
                 'self.varXjhtQjeji %s :', str(self.varXjhtQjeji.shape))
-            logger.debug(pformat(self.varXjhtQjeji))
+            logger.debug(self.varXjhtQjeji)
 
             for c in xrange(self.nbClasses):
                 self.varClassApost[c, j, :] = 1. / (1. / var[c, j] + gTQgjrb)
@@ -2172,9 +2170,9 @@ class NRLSamplerWithRelVar(NRLSampler):
                                 self.meanClassApost[c, j, :])
 
                 logger.debug('meanClassApost %d cond %d :', c, j)
-                logger.debug(pformat(self.meanClassApost[c, j, :]))
+                logger.debug(self.meanClassApost[c, j, :])
                 logger.debug('varClassApost %d cond %d :', c, j)
-                logger.debug(pformat(self.varClassApost[c, j, :]))
+                logger.debug(self.varClassApost[c, j, :])
 
         else:
 
@@ -2185,9 +2183,9 @@ class NRLSamplerWithRelVar(NRLSampler):
                 self.meanClassApost[c, j, :] = mean[0, j]
 
                 logger.debug('meanClassApost %d cond %d :', c, j)
-                logger.debug(pformat(self.meanClassApost[c, j, :]))
+                logger.debug(self.meanClassApost[c, j, :])
                 logger.debug('varClassApost %d cond %d :', c, j)
-                logger.debug(pformat(self.varClassApost[c, j, :]))
+                logger.debug(self.varClassApost[c, j, :])
 
     def deltaWCorr0(self, nbVox, moyqvoxj, t1, t2):
 
@@ -2321,10 +2319,10 @@ class NRLSamplerWithRelVar(NRLSampler):
 
                 logger.info('Sampling labels done!')
                 logger.debug('All labels cond %d:', j)
-                logger.debug(pformat(self.labels[j, :]))
+                logger.debug(self.labels[j, :])
                 if self.trueLabels is not None:
                     logger.debug('All true labels cond %d:', j)
-                    logger.debug(pformat(self.trueLabels[j, :]))
+                    logger.debug(self.trueLabels[j, :])
 
             for c in xrange(self.nbClasses):
                 putmask(self.sigApost[j, :], self.labels[j, :] == c,
@@ -2421,14 +2419,14 @@ class NRLSamplerWithRelVar(NRLSampler):
         varLambda = self.get_variable('mixt_weights').currentValue
 
         logger.debug('varXh %s :', str(varXh.shape))
-        logger.debug(pformat(varXh))
+        logger.debug(varXh)
 
         self.computeVarYTildeOptWithRelVar(varXh, w)
 
         self.computeVarXhtQ(h, self.dataInput.matXQ)
 
         logger.debug('varXhtQ %s :', str(self.varXhtQ.shape))
-        logger.debug(pformat(self.varXhtQ))
+        logger.debug(self.varXhtQ)
 
         self.labelsSamples = np.random.rand(self.nbConditions, self.nbVox)
         self.nrlsSamples = np.random.randn(self.nbConditions, self.nbVox)
@@ -3065,7 +3063,7 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
                       self.varYtilde[s], self.sumaXh[s])
 
         logger.debug('varYtilde %s', str(self.varYtilde[s].shape))
-        logger.debug(pformat(self.varYtilde[s]))
+        logger.debug(self.varYtilde[s])
         matPl = self.samplerEngine.get_variable('drift').matPl
         self.varYbar[s] = self.varYtilde[s] - matPl[s]
 
@@ -3082,7 +3080,7 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
         nrls = self.currentValue
         nrl_bar = self.samplerEngine.get_variable('nrl').currentValue
         logger.debug('rb %s :', str(rb.shape))
-        logger.debug(pformat(rb))
+        logger.debug(rb)
         logger.debug('var_a %f :', self.var_a[0])
 
         gTg = np.diag(np.dot(varXh[s].transpose(), varXh[s]))
@@ -3100,17 +3098,17 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
                     self.meanApost[s, m, :])
 
         logger.debug("sigApost[s=%d,m=%d,:2]", s, m)
-        logger.debug(pformat(self.sigApost[s, m, :2]))
+        logger.debug(self.sigApost[s, m, :2])
         logger.debug("nrl_bar[m=%d,:2]/var_a", m)
-        logger.debug(pformat((nrl_bar[m, :] / self.var_a)[:2]))
+        logger.debug((nrl_bar[m, :] / self.var_a)[:2])
         logger.debug("ejsm[:2]")
-        logger.debug(pformat(ejsm[:, :2]))
+        logger.debug(ejsm[:, :2])
         logger.debug("ejsm.(Xh)t[:2]")
-        logger.debug(pformat(np.dot(ejsm.transpose(), varXh[s][:, m])[:2]))
+        logger.debug(np.dot(ejsm.transpose(), varXh[s][:, m])[:2])
         logger.debug("egsurrb[:2]")
-        logger.debug(pformat(self.egsurrb[:2]))
+        logger.debug(self.egsurrb[:2])
         logger.debug("meanApost[s=%d,m=%d,:2]", s, m)
-        logger.debug(pformat(self.meanApost[s, m, :2]))
+        logger.debug(self.meanApost[s, m, :2])
 
     def sampleNextInternal(self, variables):
         logger.info('NRL_Multi_Sess_Sampler.sampleNextInternal ...')
@@ -3205,7 +3203,7 @@ class NRL_Multi_Sess_Sampler(GibbsSamplerVariable):
                                         value_label=self.value_label)
 
         logger.info('%s final value:', self.name)
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
         if 1 and hasattr(self, 'error'):
             err = self.error ** .5
         else:

@@ -8,8 +8,6 @@ import string
 import shutil
 import logging
 
-from pprint import pformat
-
 import pyhrf
 
 from pyhrf import (FMRISessionVolumicData, FmriData, FMRISessionSimulationData,
@@ -318,7 +316,7 @@ class MiscCommandTest(unittest.TestCase):
         output = check_output(cmd)
 
         logger.info('output:')
-        logger.info(pformat(output))
+        logger.info(output)
         expected_ouput = """%s:
 %s/subject1:
 %s/subject1/fmri:

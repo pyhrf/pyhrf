@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 from numpy import *
 from scipy.integrate import trapz
 

@@ -6,8 +6,6 @@ TODO: clean to remove stochastic parts
 
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from numpy.testing import assert_almost_equal
@@ -49,7 +47,7 @@ def compute_StS_StY(rls, v_b, mx, mxtx, ybar, rlrl, yaj, ajak_vb):
         for k in xrange(nb_conditions):
             np.divide(rlrl[j, k, :], v_b, ajak_vb)
             logger.debug('ajak/rb :')
-            logger.debug(pformat(ajak_vb))
+            logger.debug(ajak_vb)
             varDeltaS += ajak_vb.sum() * mxtx[j, k, :, :]
 
     return (varDeltaS, varDeltaY)
@@ -80,7 +78,7 @@ def compute_StS_StY_deterministic(brls, prls, v_b, mx, mxtx, mx_perf, mxtx_perf,
         for k in xrange(nb_conditions):
             np.divide(rlrl_bold[j, k, :], v_b, ajak_vb)
             logger.debug('ajak/rb :')
-            logger.debug(pformat(ajak_vb))
+            logger.debug(ajak_vb)
             varDeltaS_bold += ajak_vb.sum() * mxtx[j, k, :, :]
 
             np.divide(rlrl_perf[j, k, :], v_b, cjck_vb)
@@ -189,7 +187,7 @@ class ResponseSampler(GibbsSamplerVariable):
             hrfValIni = hrfValIni[1:(self.hrfLength - 1)]
 
         logger.info('hrfValIni: %s', str(hrfValIni.shape))
-        logger.debug(pformat(hrfValIni))
+        logger.debug(hrfValIni)
         logger.info('self.hrfLength: %s', str(self.hrfLength))
 
         normHRF = (sum(hrfValIni ** 2)) ** (0.5)
@@ -205,7 +203,7 @@ class ResponseSampler(GibbsSamplerVariable):
                 * self.eventdt
 
         logger.info('hrfValIni after ZC: %s', str(self.currentValue.shape))
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
         self.updateXResp()
@@ -269,7 +267,7 @@ class ResponseSampler(GibbsSamplerVariable):
         # print 'self.trueValue.shape:', self.trueValue.shape
 
         logger.info('%s finalValue :', self.name)
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
 
 
 class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
@@ -823,7 +821,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
         v_b = self.samplerEngine.get_variable('noise_var').currentValue
 
         logger.debug('Noise vars :')
-        logger.debug(pformat(v_b))
+        logger.debug(v_b)
 
         for i in xrange(self.nbVoxels):
 
@@ -838,22 +836,22 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             logger.debug('v_l : %f', v_l)
 
         logger.debug('drift params :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         if 0:
             inv_vars_l = (1 / v_b + 1 / v_l) * self.ones_Q_J
             mu_l = 1 / inv_vars_l * np.dot(self.P.transpose(), ytilde)
 
             logger.debug('vars_l :')
-            logger.debug(pformat(1 / inv_vars_l))
+            logger.debug(1 / inv_vars_l)
 
             logger.debug('mu_l :')
-            logger.debug(pformat(mu_l))
+            logger.debug(mu_l)
 
             cur_val = np.random.normal(mu_l, 1 / inv_vars_l)
 
             logger.debug('drift params (alt) :')
-            logger.debug(pformat(cur_val))
+            logger.debug(cur_val)
 
         self.updateNorm()
         self.Pl = np.dot(self.P, self.currentValue)
@@ -1064,7 +1062,7 @@ class BOLDResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
                 assert_almost_equal(sumcXg, perf)
 
         logger.debug('varYtilde %s', str(self.varYtilde.shape))
-        logger.debug(pformat(self.varYtilde))
+        logger.debug(self.varYtilde)
 
         Pl = self.samplerEngine.get_variable('drift_coeff').Pl
         wa = self.samplerEngine.get_variable('perf_baseline').wa
@@ -1152,7 +1150,7 @@ class PerfResponseLevelSampler(ResponseLevelSampler, xmlio.XmlInitable):
         # print 'varYtilde = ', self.varYtilde
 
         logger.debug('varYtilde %s', str(self.varYtilde.shape))
-        logger.debug(pformat(self.varYtilde))
+        logger.debug(self.varYtilde)
 
         if np.isnan(self.varYtilde).any():
             raise Exception('Nan values in ytilde of prf')

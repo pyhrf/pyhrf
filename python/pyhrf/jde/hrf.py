@@ -3,7 +3,6 @@
 import logging
 
 import copy as copyModule  # avoids conflict with copy function from numpy
-from pprint import pformat
 
 import numpy as np
 import scipy.linalg
@@ -73,12 +72,12 @@ def buildDiagGaussianMat(size, width):
 def sampleHRF_voxelwise_iid(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     varInvSigma_h = stLambdaS + nbVox * varR / rh
 
@@ -98,12 +97,12 @@ def sampleHRF_single_hrf_hack(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
     varInvSigma_h = stLambdaS / nbVox
 
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -123,12 +122,12 @@ def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
     varInvSigma_h = stLambdaS
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -280,7 +279,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             hrfValIni = hrfValIni[1:(self.hrfLength - 1)]
 
         logger.info('hrfValIni: %s', str(hrfValIni.shape))
-        logger.debug(pformat(hrfValIni))
+        logger.debug(hrfValIni)
         logger.info('self.hrfLength: %s', str(self.hrfLength))
 
         if self.normalise == 1.:
@@ -297,7 +296,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 * self.eventdt
 
         logger.info('hrfValIni after ZC: %s', str(self.currentValue.shape))
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
         self.updateXh()
@@ -401,14 +400,14 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         if 0:
             logger.debug('deltaS : %s', str(self.varDeltaS.shape))
-            logger.debug(pformat(self.varDeltaS))
+            logger.debug(self.varDeltaS)
             logger.debug('sum StLambdaS :')
-            logger.debug(pformat(self.varStLambdaS.sum(2)))
+            logger.debug(self.varStLambdaS.sum(2))
 
             logger.debug('deltaY : %s', str(self.varDeltaY.shape))
-            logger.debug(pformat(self.varDeltaY))
+            logger.debug(self.varDeltaY)
             logger.debug('StLambdaY :')
-            logger.debug(pformat(self.varStLambdaY.sum(1)))
+            logger.debug(self.varStLambdaY.sum(1))
 
         rh = self.get_variable('hrf_var').currentValue
 
@@ -429,7 +428,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         self.currentValue = h
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -496,9 +495,9 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             return self.signErrorDetected
         else:
             logger.debug('HRF PM:')
-            logger.info(pformat(self.mean))
+            logger.info(self.mean)
             logger.debug('NRLs PM:')
-            logger.info(pformat(self.samplerEngine.get_variable('nrl').mean))
+            logger.info(self.samplerEngine.get_variable('nrl').mean)
             logger.debug('nb negs: %d', (self.mean <= 0.).sum(dtype=float))
             if (self.mean <= 0.).sum(dtype=float) / len(self.mean) > .9 or \
                     self.mean[np.argmax(abs(self.mean))] < -.2:
@@ -536,7 +535,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             logger.info('Warning : sign error on HRF')
 
         logger.info('HRF finalValue :\n')
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
 
     def get_final_value(self):
         """ Used to compare with simulated value """
@@ -851,7 +850,7 @@ class HRFARSampler(HRFSampler):
                     self.varLambdaX += np.dot(tempX,
                                               self.dataInput.varX[k, :, :])
                     logger.debug('ajak :')
-                    logger.debug(pformat(self.ajak_rb))
+                    logger.debug(self.ajak_rb)
                 self.varXtLambdaX += np.dot(
                     self.dataInput.varX[j, :, :].transpose(), self.varLambdaX)
             logger.debug('Computing StLambdaS StLambdaY optim fashion'
@@ -884,14 +883,14 @@ class HRFARSampler(HRFSampler):
 
         if 0:
             logger.debug('deltaS : %s', str(self.varDeltaS.shape))
-            logger.debug(pformat(self.varDeltaS))
+            logger.debug(self.varDeltaS)
             logger.debug('sum StLambdaS :')
-            logger.debug(pformat(self.varStLambdaS.sum(2)))
+            logger.debug(self.varStLambdaS.sum(2))
 
             logger.debug('deltaY : %s', str(self.varDeltaY.shape))
-            logger.debug(pformat(self.varDeltaY))
+            logger.debug(self.varDeltaY)
             logger.debug('StLambdaY :')
-            logger.debug(pformat(self.varStLambdaY.sum(1)))
+            logger.debug(self.varStLambdaY.sum(1))
             iDiffs = (self.varDeltaS != self.varStLambdaS.sum(2))
 
         rh = self.get_variable('hrf_var').currentValue
@@ -901,7 +900,7 @@ class HRFARSampler(HRFSampler):
                                                  self.varR, rh, self.nbColX, self.nbVox)
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -1018,7 +1017,7 @@ class HRFwithHabSampler(HRFSampler):
                                       self.varR, rh, self.nbColX)
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -1161,14 +1160,14 @@ class HRFSamplerWithRelVar(HRFSampler):
 
         if 0:
             logger.debug('deltaS : %s', str(self.varDeltaS.shape))
-            logger.debug(pformat(self.varDeltaS))
+            logger.debug(self.varDeltaS)
             logger.debug('sum StLambdaS :')
-            logger.debug(pformat(self.varStLambdaS.sum(2)))
+            logger.debug(self.varStLambdaS.sum(2))
 
             logger.debug('deltaY : %s', str(self.varDeltaY.shape))
-            logger.debug(pformat(self.varDeltaY))
+            logger.debug(self.varDeltaY)
             logger.debug('StLambdaY :')
-            logger.debug(pformat(self.varStLambdaY.sum(1)))
+            logger.debug(self.varStLambdaY.sum(1))
             iDiffs = (self.varDeltaS != self.varStLambdaS.sum(2))
 
         rh = self.get_variable('hrf_var').currentValue
@@ -1190,7 +1189,7 @@ class HRFSamplerWithRelVar(HRFSampler):
         self.currentValue = h
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -1373,7 +1372,7 @@ class HRF_two_parts_Sampler(HRFSampler):
             hrfValIni = hrfValIni[1:(self.hrfLength - 1)]
 
         logger.info('hrfValIni: %s', str(hrfValIni.shape))
-        logger.debug(pformat(hrfValIni))
+        logger.debug(hrfValIni)
         logger.info('self.hrfLength: %s', str(self.hrfLength))
 
         normHRF = (sum(hrfValIni ** 2)) ** (0.5)
@@ -1389,7 +1388,7 @@ class HRF_two_parts_Sampler(HRFSampler):
                 * self.eventdt
 
         logger.info('hrfValIni after ZC: %s', str(self.currentValue.shape))
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
         self.updateXh()
@@ -1491,14 +1490,14 @@ class HRF_two_parts_Sampler(HRFSampler):
 
         if 0:
             logger.debug('deltaS : %s', str(self.varDeltaS.shape))
-            logger.debug(pformat(self.varDeltaS))
+            logger.debug(self.varDeltaS)
             logger.debug('sum StLambdaS :')
-            logger.debug(pformat(self.varStLambdaS.sum(2)))
+            logger.debug(self.varStLambdaS.sum(2))
 
             logger.debug('deltaY : %s', str(self.varDeltaY.shape))
-            logger.debug(pformat(self.varDeltaY))
+            logger.debug(self.varDeltaY)
             logger.debug('StLambdaY :')
-            logger.debug(pformat(self.varStLambdaY.sum(1)))
+            logger.debug(self.varStLambdaY.sum(1))
 
         rh = self.get_variable('hrf_var').currentValue
 
@@ -1519,7 +1518,7 @@ class HRF_two_parts_Sampler(HRFSampler):
         self.currentValue = h
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -1590,9 +1589,9 @@ class HRF_two_parts_Sampler(HRFSampler):
             return self.signErrorDetected
         else:
             logger.debug('HRF PM:')
-            logger.info(pformat(self.mean))
+            logger.info(self.mean)
             logger.debug('NRLs PM:')
-            logger.info(pformat(self.samplerEngine.get_variable('nrl').mean))
+            logger.info(self.samplerEngine.get_variable('nrl').mean)
             logger.debug('nb negs: %d', (self.mean <= 0.).sum(dtype=float))
             if (self.mean <= 0.).sum(dtype=float) / len(self.mean) > .9 or \
                     self.mean[np.argmax(abs(self.mean))] < -.2:
@@ -1631,7 +1630,7 @@ class HRF_two_parts_Sampler(HRFSampler):
             logger.info('Warning : sign error on HRF')
 
         logger.info('HRF finalValue :\n')
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
 
     def getScaleFactor(self):
         if self.finalValue == None:

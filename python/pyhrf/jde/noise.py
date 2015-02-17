@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from pyhrf.jde.samplerbase import *
@@ -183,7 +181,7 @@ class NoiseVarianceSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 varYtildeTdelta = np.dot(y_tilde[:, i], self.dataInput.delta)
                 self.beta[i] = 0.5 * np.dot(varYtildeTdelta, y_tilde[:, i])
         logger.debug('All betas apost :')
-        logger.debug(pformat(self.beta))
+        logger.debug(self.beta)
         logger.info('betas apost = %1.3f(%1.3f)', self.beta.mean(),
                     self.beta.std())
 
@@ -259,7 +257,7 @@ class NoiseVarianceSamplerWithRelVar(NoiseVarianceSampler):
                                  + aawwXhQXh[i])
 
         logger.debug('All betas apost :')
-        logger.debug(pformat(self.beta))
+        logger.debug(self.beta)
         logger.info('betas apost = %1.3f(%1.3f)', self.beta.mean(),
                     self.beta.std())
 
@@ -328,7 +326,7 @@ class NoiseVariancewithHabSampler(NoiseVarianceSampler):
                                  + aaXhQXhi)
 
         logger.debug('All betas apost :')
-        logger.debug(pformat(self.beta))
+        logger.debug(self.beta)
         logger.debug('betas apost = %1.3f(%1.3f)', self.beta.mean(),
                      self.beta.std())
 
@@ -339,7 +337,7 @@ class NoiseVariancewithHabSampler(NoiseVarianceSampler):
         self.currentValue = np.divide(self.beta, gammaSamples)
 
         logger.debug('All noise vars :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
         logger.info('noise vars = %1.3f(%1.3f)', self.currentValue.mean(),
                     self.currentValue.std())
 
@@ -500,7 +498,7 @@ class NoiseARParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
     def computeInvAutoCorrNoise(self, ARp):
         logger.debug('ARp :')
-        logger.debug(pformat(ARp))
+        logger.debug(ARp)
 
         for v in xrange(self.nbVox):
             DiagAutoCorr = np.repeat(1 + ARp[v] ** 2, self.ny - 2)
@@ -513,7 +511,7 @@ class NoiseARParamsSampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.InvAutoCorrNoise[:, :, v] = InvAutoCorrMatrix
 
         logger.debug('InvAutoCorrNoise :')
-        logger.debug(pformat(self.InvAutoCorrNoise[:, :, 0]))
+        logger.debug(self.InvAutoCorrNoise[:, :, 0])
 
     def MH_ARsampling_gauss_proposal(self, sig2, M):
         ARp = np.zeros(self.nbVox, dtype=float)

@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from numpy.random import randn, rand, permutation
@@ -42,7 +40,7 @@ class NRL_Drift_Sampler(NRLSampler):
         varXh = sHrf.varXh
 
         logger.debug('varXh %s :', str(varXh.shape))
-        logger.debug(pformat(varXh))
+        logger.debug(varXh)
 
         self.computeVarYTildeOpt(varXh)
 
@@ -139,7 +137,7 @@ class NRL_Drift_SamplerWithRelVar(NRLSamplerWithRelVar):
         t2 = self.get_variable('W').t2
 
         logger.debug('varXh %s :', str(varXh.shape))
-        logger.debug(pformat(varXh))
+        logger.debug(varXh)
 
         self.computeVarYTildeOptWithRelVar(varXh, w)
 

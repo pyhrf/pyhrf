@@ -6,8 +6,6 @@ import shutil
 import math
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from numpy.testing import (assert_array_equal, assert_array_almost_equal,
@@ -813,13 +811,13 @@ def create_features(size='2D', feat_contrast='high', noise_var=0.,
                                act_levels).squeeze()
 
     logger.info('features:')
-    logger.info(pformat(features.T))
+    logger.info(features.T)
 
     logger.info('activation levels:')
-    logger.info(pformat(act.T))
+    logger.info(act.T)
 
     logger.info('variances:')
-    logger.info(pformat(var.T))
+    logger.info(var.T)
 
     n_samples, n_features = features.shape
 
@@ -1039,13 +1037,13 @@ class ParcellationTest(unittest.TestCase):
         act = act.squeeze()
 
         logger.info('features:')
-        logger.info(pformat(features.T))
+        logger.info(features.T)
 
         logger.info('activation levels:')
-        logger.info(pformat(act))
+        logger.info(act)
 
         logger.info('variances:')
-        logger.info(pformat(var.T))
+        logger.info(var.T)
 
         n_samples, n_features = features.shape
         graph = pgraph.graph_from_lattice(np.ones((1, n_samples)),
@@ -1107,11 +1105,11 @@ class ParcellationTest(unittest.TestCase):
                                               nb_clusters=2)
         p = ww.labels_
         logger.info('true parcellation:')
-        logger.info(pformat(expand_array_in_mask(true_parcellation, mask)))
+        logger.info(expand_array_in_mask(true_parcellation, mask))
         logger.info('WPU parcellation:')
-        logger.info(pformat(expand_array_in_mask(p, mask)))
+        logger.info(expand_array_in_mask(p, mask))
         logger.info('act labels:')
-        logger.info(pformat(act_labels))
+        logger.info(act_labels)
 
         if 0:
             fn = op.join(self.tmp_path, 'parcellation_tree.png')
@@ -1141,11 +1139,11 @@ class ParcellationTest(unittest.TestCase):
                                               nb_clusters=2, dist_type='mixt')
         p = ww.labels_
         logger.info('true parcellation:')
-        logger.info(pformat(expand_array_in_mask(true_parcellation, mask)))
+        logger.info(expand_array_in_mask(true_parcellation, mask))
         logger.info('MMP parcellation:')
-        logger.info(pformat(expand_array_in_mask(p, mask)))
+        logger.info(expand_array_in_mask(p, mask))
         logger.info('act labels:')
-        logger.info(pformat(act_labels))
+        logger.info(act_labels)
 
         if 0:
             fn = op.join(self.tmp_path, 'parcellation_tree.png')
@@ -1175,13 +1173,13 @@ class ParcellationTest(unittest.TestCase):
         act = act_labels.squeeze()
 
         logger.info('features:')
-        logger.info(pformat(features.T))
+        logger.info(features.T)
 
         logger.info('activation levels:')
-        logger.info(pformat(act))
+        logger.info(act)
 
         logger.info('variances:')
-        logger.info(pformat(var.T))
+        logger.info(var.T)
 
         n_samples, n_features = features.shape
         graph = pgraph.graph_from_lattice(np.ones((1, n_samples)),
@@ -1223,13 +1221,13 @@ class ParcellationTest(unittest.TestCase):
         act = np.ones_like(act_clusters)
 
         logger.info('features %s:', str(features.shape))
-        logger.info(pformat(features.T))
+        logger.info(features.T)
 
         logger.info('activation levels:')
-        logger.info(pformat(act.T))
+        logger.info(act.T)
 
         logger.info('variances :')
-        logger.info(pformat(var.T))
+        logger.info(var.T)
 
         n_samples, n_features = features[:, np.newaxis].shape
         graph = pgraph.graph_from_lattice(mask, pgraph.kerMask2D_4n)
@@ -1244,11 +1242,11 @@ class ParcellationTest(unittest.TestCase):
                                               nb_clusters=2)
         p = ww.labels_
         logger.info('true parcellation:')
-        logger.info(pformat(true_parcellation))
+        logger.info(true_parcellation)
         logger.info('WPU parcellation:')
-        logger.info(pformat(expand_array_in_mask(p, mask)))
+        logger.info(expand_array_in_mask(p, mask))
         logger.info('act labels:')
-        logger.info(pformat(act_clusters))
+        logger.info(act_clusters)
 
         if 0:
             fn = op.join(self.tmp_path, 'parcellation_tree.png')
@@ -1301,7 +1299,7 @@ class ParcellationTest(unittest.TestCase):
         act = np.array([1., 1., 1., 1., 1., 1.])
         i1 = pm.compute_ward_dist(mom_1, features, c_r, c_c, var, act, ini)
         logger.info('inertia:')
-        logger.info(pformat(i1))
+        logger.info(i1)
         assert_equal(len(np.array(np.where(i1 > 0))), 1)
 
     def test_ward_distance_1D_v2(self):
@@ -1318,7 +1316,7 @@ class ParcellationTest(unittest.TestCase):
         act = np.array([1., 1., 0.1, 0.1, 1., 1.])
         i1 = pm.compute_ward_dist(mom_1, features, c_r, c_c, var, act, ini)
         logger.info('inertia:')
-        logger.info(pformat(i1))
+        logger.info(i1)
         assert_equal(np.argmax(i1), 2)
 
     def test_ward_distance_2D(self):
@@ -1342,14 +1340,14 @@ class ParcellationTest(unittest.TestCase):
                        2: ([3.], [40]), }
         features = pm.generate_features(true_parcellation_flat, act_clusters_flat,
                                         feat_levels, noise_var=0.)
-        logger.info(pformat(features[:, 0].T))
+        logger.info(features[:, 0].T)
         var = np.ones_like(features)
         #                  non-act  act
         act_levels = {1: ([.3], [4.]),
                       2: ([.3], [4.]), }
         act = pm.generate_features(true_parcellation_flat, act_clusters_flat,
                                    act_levels).squeeze()
-        logger.info(pformat(act))
+        logger.info(act)
         mom_1 = np.ones_like(act)
         c_r = np.array([1, 2, 3, 4, 5, 5, 6, 6, 7, 7, 8, 9, 9,
                         10, 10, 11, 11, 12, 13, 13, 14, 14, 15, 15])
@@ -1358,7 +1356,7 @@ class ParcellationTest(unittest.TestCase):
         ini = np.zeros((c_r.shape[0], 1))
         i1 = pm.compute_ward_dist(mom_1, features, c_r, c_c, var, act, ini)
         logger.info('inertia:')
-        logger.info(pformat(i1.T))
+        logger.info(i1.T)
         #assert_array_almost_equal(act_clusters(np.where(act_clusters==0)), inertia())
 
     def test_parcellation_spatialWard_5_sklearn(self):
@@ -1411,7 +1409,7 @@ class ParcellationTest(unittest.TestCase):
         method = 'glm_deriv'
         dt = data0.simulation[0]['dt']
         logger.info('fdata:')
-        logger.info(pformat(data0))
+        logger.info(data0)
         time_length = data0.simulation[0]['duration']
         ncond = len(data0.simulation[0]['condition_defs'])
         ampl, feats, bvars = pm.feature_extraction(data0, method, dt,
@@ -1434,11 +1432,11 @@ class ParcellationTest(unittest.TestCase):
         mask = data0.roiMask
         logger.info('true parcellation:')
         logger.info(
-            pformat(expand_array_in_mask(true_parcellation_flat, mask)))
+            expand_array_in_mask(true_parcellation_flat, mask))
         logger.info('WPU parcellation:')
-        logger.info(pformat(expand_array_in_mask(p, mask)))
+        logger.info(expand_array_in_mask(p, mask))
         logger.info('act labels:')
-        logger.info(pformat(expand_array_in_mask(act_clusters_flat, mask)))
+        logger.info(expand_array_in_mask(act_clusters_flat, mask))
         pm.assert_parcellation_equal(p, true_parcellation_flat.astype(int),
                                      tol_pos=act_clusters_flat == 0)
 
@@ -1455,7 +1453,7 @@ class ParcellationTest(unittest.TestCase):
         method = 'glm_deriv'
         dt = data0.simulation[0]['dt']
         logger.debug('fdata:')
-        logger.debug(pformat(data0))
+        logger.debug(data0)
         time_length = data0.simulation[0]['duration']
         ncond = len(data0.simulation[0]['condition_defs'])
         ampl, pvals, feats, bvars = pm.feature_extraction(data0, method, dt,
@@ -1479,11 +1477,11 @@ class ParcellationTest(unittest.TestCase):
         mask = data0.roiMask
         logger.info('true parcellation:')
         logger.info(
-            pformat(expand_array_in_mask(true_parcellation_flat, mask)))
+            expand_array_in_mask(true_parcellation_flat, mask))
         logger.info('MMP parcellation:')
-        logger.info(pformat(expand_array_in_mask(p, mask)))
+        logger.info(expand_array_in_mask(p, mask))
         logger.info('act labels:')
-        logger.info(pformat(expand_array_in_mask(act_clusters_flat, mask)))
+        logger.info(expand_array_in_mask(act_clusters_flat, mask))
 
         if 1:
             self.save_parcellation_outputs(ww, mask)

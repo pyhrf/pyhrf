@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 from numpy import *
 import numpy.matlib
 from numpy.matlib import repmat
@@ -127,7 +125,7 @@ class NRLwithHabSampler(NRLSampler):
                 self.nbGammas[nc][i] = shape(self.Xmask[nc][i])[0]
 
         logger.info('deltaOns :')
-        logger.info(pformat(self.deltaOns))
+        logger.info(self.deltaOns)
 
     def checkAndSetInitValue(self, variables):
 
@@ -171,7 +169,7 @@ class NRLwithHabSampler(NRLSampler):
 
         self.setupTimeNrls()
         logger.info('habituation initiale')
-        logger.debug(pformat(self.habits))
+        logger.debug(self.habits)
 
     def initObservables(self):
         NRLSampler.initObservables(self)
@@ -403,7 +401,7 @@ class NRLwithHabSampler(NRLSampler):
                          self.meanClassApost[c, j, :])
 
             logger.debug('meanClassApost %d cond %d :', c, j)
-            logger.debug(pformat(self.meanClassApost[c, j, :]))
+            logger.debug(self.meanClassApost[c, j, :])
 
     def habitCondSampler(self, j, rb, varHRF):
 
@@ -601,12 +599,12 @@ class NRLwithHabSampler(NRLSampler):
         self.aXh *= self.currentValue
         self.aXh.sum(1, out=self.sumaXh)
         logger.debug('sumaXh %s', str(self.sumaXh.shape))
-        logger.debug(pformat(self.sumaXh))
+        logger.debug(self.sumaXh)
 
         numpy.subtract(self.dataInput.varMBY, self.sumaXh, self.varYtilde)
 
         logger.debug('varYtilde %s', str(self.varYtilde.shape))
-        logger.debug(pformat(self.varYtilde))
+        logger.debug(self.varYtilde)
 
     def sampleNextInternal(self, variables):
         # TODO : comment
@@ -665,18 +663,18 @@ class NRLwithHabSampler(NRLSampler):
         self.computeAA(self.currentValue, self.aa)
 
         logger.info('NRLS current Value: ')
-        logger.info(pformat(self.currentValue))
+        logger.info(self.currentValue)
 
         for j in xrange(self.nbConditions):
             logger.info('All nrl cond %d:', j)
-            logger.info(pformat(self.currentValue[j, :]))
+            logger.info(self.currentValue[j, :])
             logger.info('nrl cond %d = %1.3f(%1.3f)', j,
                         self.currentValue[j, :].mean(),
                         self.currentValue[j, :].std())
             for c in xrange(self.nbClasses):
                 logger.info('All nrl %s cond %d:', self.CLASS_NAMES[c], j)
                 ivc = self.voxIdx[c][j]
-                logger.info(pformat(self.currentValue[j, ivc]))
+                logger.info(self.currentValue[j, ivc])
 
                 logger.info('nrl %s cond %d = %1.3f(%1.3f)', self.CLASS_NAMES[c],
                             j, self.currentValue[j, ivc].mean(),

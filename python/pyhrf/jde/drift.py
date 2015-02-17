@@ -2,8 +2,6 @@
 
 import logging
 
-from pprint import pformat
-
 from numpy import *
 import numpy as np
 
@@ -114,24 +112,24 @@ class DriftSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         logger.debug('eta : %f', eta)
         logger.debug('reps :')
-        logger.debug(pformat(reps))
+        logger.debug(reps)
 
         inv_vars_l = (1 / reps + 1 / eta) * self.ones_Q_J
         mu_l = 1 / inv_vars_l * np.dot(self.P.transpose(), snrls.varYtilde)
 
         logger.debug('vars_l :')
-        logger.debug(pformat(1 / inv_vars_l))
+        logger.debug(1 / inv_vars_l)
 
         logger.debug('mu_l :')
-        logger.debug(pformat(mu_l))
+        logger.debug(mu_l)
 
         cur_val = np.random.normal(mu_l, 1 / inv_vars_l)
 
         logger.debug('drift params :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         logger.debug('drift params (alt) :')
-        logger.debug(pformat(cur_val))
+        logger.debug(cur_val)
 
         #assert np.allclose(cur_val, self.currentValue)
 
@@ -219,24 +217,24 @@ class DriftSamplerWithRelVar(DriftSampler):
 
         logger.debug('eta : %f' % eta)
         logger.debug('reps :')
-        logger.debug(pformat(reps))
+        logger.debug(reps)
 
         inv_vars_l = (1 / reps + 1 / eta) * self.ones_Q_J
         mu_l = 1 / inv_vars_l * np.dot(self.P.transpose(), snrls.varYtilde)
 
         logger.debug('vars_l :')
-        logger.debug(pformat(1 / inv_vars_l))
+        logger.debug(1 / inv_vars_l)
 
         logger.debug('mu_l :')
-        logger.debug(pformat(mu_l))
+        logger.debug(mu_l)
 
         cur_val = np.random.normal(mu_l, 1 / inv_vars_l)
 
         logger.debug('drift params :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         logger.debug('drift params (alt) :')
-        logger.debug(pformat(cur_val))
+        logger.debug(cur_val)
 
         #assert np.allclose(cur_val, self.currentValue)
 

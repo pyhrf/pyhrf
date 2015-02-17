@@ -3,8 +3,6 @@
 import time
 import logging
 
-from pprint import pformat
-
 import numpy as np
 import numpy.matlib
 
@@ -186,9 +184,9 @@ class GibbsSampler:
             logger.info(v.get_summary())
             v.checkAndSetInitValue(self.variables)
             if type(v.currentValue) == numpy.ndarray:
-                logger.debug(pformat(v.currentValue))
+                logger.debug(v.currentValue)
             else:
-                logger.debug(pformat(v.currentValue))
+                logger.debug(v.currentValue)
 
         # Warming up variables to sample (precalculations):
         for v in self.variables:
@@ -237,7 +235,7 @@ class GibbsSampler:
                 v.sampleNext(self.variables)
 
                 logger.debug('current value of %s:', v.name)
-                logger.debug(pformat(v.currentValue))
+                logger.debug(v.currentValue)
                 if v.sampleFlag:
                     logger.info('(it %d) Sampling of %s done !', it, v.name)
                 self.tVars[iv] += time.time() - tIniv
@@ -742,23 +740,23 @@ class GibbsSamplerVariable:
         logger.debug('Generic update Observables for var %s, it=%d ...',
                      self.name, self.nbItObservables)
         logger.debug('CurrentValue:')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.cumul += self.currentValue
         #self.cumul2 += self.currentValue**2
 
         logger.debug('Cumul:')
-        logger.debug(pformat(self.cumul))
+        logger.debug(self.cumul)
 
         self.mean = self.cumul / self.nbItObservables
 
         # Another Computing of error to avoid negative value when cumul is < 1
         self.cumul3 += (self.currentValue - self.mean) ** 2
         logger.debug('Cumul3:')
-        logger.debug(pformat(self.cumul3))
+        logger.debug(self.cumul3)
 
         logger.debug('Mean')
-        logger.debug(pformat(self.mean))
+        logger.debug(self.mean)
 
         if self.nbItObservables < 2:
             self.error = np.zeros_like(self.cumul3) + 1e-6
@@ -771,7 +769,7 @@ class GibbsSamplerVariable:
         self.error[neg_close_to_zero] = tol
 
         logger.debug('Error:')
-        logger.debug(pformat(self.error))
+        logger.debug(self.error)
 
         if (self.error < 0.).any():
             raise Exception('neg error on variable %s' % self.name)
@@ -892,7 +890,7 @@ class GibbsSamplerVariable:
                                             value_label='median')
 
         logger.info('%s final value:', self.name)
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
         if 1 and hasattr(self, 'error'):
             err = self.error ** .5
         else:

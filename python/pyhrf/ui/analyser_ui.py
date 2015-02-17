@@ -7,8 +7,6 @@ import traceback
 import StringIO
 import logging
 
-from pprint import pformat
-
 import numpy as np
 
 from pyhrf import xmlio, FmriData, FmriGroupData
@@ -292,7 +290,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
 
         logger.info('Building outputs from %d results ...', len(results))
         logger.debug('results :')
-        logger.debug(pformat(results))
+        logger.debug(results)
 
         # Handle analyses that crashed
         results = self.filter_crashed_results(results)
@@ -346,7 +344,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
 
         logger.info('Building outputs ...')
         logger.debug('results :')
-        logger.debug(pformat(results))
+        logger.debug(results)
 
         to_pop = []
         for i, r in enumerate(results[:]):

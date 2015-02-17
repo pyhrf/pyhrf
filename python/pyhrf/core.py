@@ -6,8 +6,6 @@ import cPickle
 import tempfile
 import logging
 
-from pprint import pformat
-
 import numpy as np
 from pkg_resources import Requirement, resource_filename, resource_listdir
 import pyhrf
@@ -780,7 +778,7 @@ class FmriData(XmlInitable):
         """
         logger.info('Load volumic data ...')
         logger.info('Input sessions data:')
-        logger.debug(pformat(sessions_data))
+        logger.debug(sessions_data)
         sda = stack_trees([sda.to_dict() for sda in sessions_data])
         onsets = sda['onsets']
         durations = sda['durations']

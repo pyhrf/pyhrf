@@ -3,7 +3,6 @@
 import logging
 
 from collections import defaultdict
-from pprint import pformat
 
 import numpy as np
 
@@ -198,7 +197,7 @@ class BOLDSamplerInput:
         self.stimRepetitions = [len(self.onsets[ind]) for ind in xrange(nbc)]
 
         logger.debug('nb of Trials :')
-        logger.debug(pformat(self.stimRepetitions))
+        logger.debug(self.stimRepetitions)
 
         logger.info('computing sampled binary onset sequences ...')
 
@@ -211,8 +210,8 @@ class BOLDSamplerInput:
             for iCond in xrange(self.nbConditions):
                 m = 'cond:%d -> l=%d' % (iCond,
                                          len(self.paradigmData[iCond][iSess]))
-                logger.debug(pformat(m))
-                logger.debug(pformat(self.paradigmData[iCond][iSess]))
+                logger.debug(m)
+                logger.debug(self.paradigmData[iCond][iSess])
         # paradigm should be zero-expanded to match length of Bold data
 
         logger.info('building paradigm convol matrix ...')
@@ -220,10 +219,10 @@ class BOLDSamplerInput:
         self.buildParadigmConvolMatrix(hrfZc, hrfDuration, availIdx,
                                        self.paradigmData)
         logger.debug('matrix X : %s', str(self.varX.shape))
-        logger.debug(pformat([self.varX[i, j, k]
-                              for k in xrange(self.varX.shape[2])
-                              for j in xrange(self.varX.shape[1])
-                              for i in xrange(self.varX.shape[0])]))
+        logger.debug([self.varX[i, j, k]
+                      for k in xrange(self.varX.shape[2])
+                      for j in xrange(self.varX.shape[1])
+                      for i in xrange(self.varX.shape[0])])
 # TODO: check if the previous if the same that the following
 #        if pyhrf.verbose.verbosity >= 5:
 #            for i in xrange(self.varX.shape[0]):
@@ -245,7 +244,7 @@ class BOLDSamplerInput:
             self.buildParadigmSingleCondMatrix(hrfZc, hrfDuration, availIdx,
                                                self.paradigmData)
             logger.debug('single cond X matrix with incremental trials:')
-            logger.debug(pformat(self.varSingleCondXtrials))
+            logger.debug(self.varSingleCondXtrials)
 
     def setLFDMat(self, paramLFD, typeLFD):  # TODO : factoriser eventuellement
                                             # avec fonction deja presente dans
@@ -278,7 +277,7 @@ class BOLDSamplerInput:
             self.varPtP.append(np.dot(lfdMat.transpose(), lfdMat))
 
             logger.debug('varPtP :')
-            logger.debug(pformat(self.varPtP[-1]))
+            logger.debug(self.varPtP[-1])
             if typeLFD != 'None':
                 assert np.allclose(self.varPtP[-1],
                                    np.eye(self.colP, dtype=float),
@@ -286,7 +285,7 @@ class BOLDSamplerInput:
 
         self.delta = diagBlock(self.delta)
         logger.debug('delta %s :', str(self.delta.shape))
-        logger.debug(pformat(self.delta))
+        logger.debug(self.delta)
 
     def buildPolyMat(self, paramLFD, n):
 
@@ -320,7 +319,7 @@ class BOLDSamplerInput:
 
         logger.info('osf = %1.2f', osf)
         logger.debug('availableDataIndex :')
-        logger.debug(pformat(availableDataIndex))
+        logger.debug(availableDataIndex)
 
         lgt = int((self.ny + 2) * osf)
         allMatH = []
@@ -330,9 +329,9 @@ class BOLDSamplerInput:
                 matH[:len(parData[j][iSess]), j] = parData[j][iSess][:]
 
             logger.debug('matH for Sess %d :', iSess)
-            logger.debug(pformat([matH[a, b]
-                                  for b in xrange(matH.shape[1])
-                                  for a in xrange(matH.shape[0])]))
+            logger.debug([matH[a, b]
+                          for b in xrange(matH.shape[1])
+                          for a in xrange(matH.shape[0])])
 # TODO: check if the previous is the same that the following
 #            if pyhrf.verbose.verbosity >= 6:
 #                for a in xrange(matH.shape[0]):
@@ -369,13 +368,13 @@ class BOLDSamplerInput:
                 col = concatenate(([allMatH[iSess][0, j]],
                                    np.zeros(self.hrfLength - 1, dtype=int)))
                 logger.debug(' col :')
-                logger.debug(pformat([col[b] for b in xrange(col.shape[0])]))
+                logger.debug([col[b] for b in xrange(col.shape[0])])
 
                 matTmp = array(toeplitz(allMatH[iSess][:, j], col), dtype=int)
                 logger.debug(' matTmp :')
-                logger.debug(pformat([matTmp[b, a]
-                                      for a in xrange(matTmp.shape[1])
-                                      for b in xrange(matTmp.shape[0])]))
+                logger.debug([matTmp[b, a]
+                              for a in xrange(matTmp.shape[1])
+                              for b in xrange(matTmp.shape[0])])
 # TODO: check if the previous is the same that the following
 #                if pyhrf.verbose.verbosity >= 6:
 #                    for b in xrange(matTmp.shape[0]):
@@ -480,22 +479,22 @@ class BOLDSamplerInput:
 
         vectSOA.sort()
         logger.debug('vectSOA %s:', str(vectSOA.shape))
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         momRT = arange(0, vectSOA[-1] + tr, tr)
         logger.debug('momRT %s:', str(momRT.shape))
-        logger.debug(pformat(momRT))
+        logger.debug(momRT)
 
         momVect = concatenate((vectSOA, momRT))
         momVect.sort()
 
         varSOA = diff(momVect)
         logger.debug('vectSOA diff:')
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         nonZeroSOA = varSOA[where(varSOA > 0.0)]
         logger.debug('nonZeroSOA :')
-        logger.debug(pformat(nonZeroSOA))
+        logger.debug(nonZeroSOA)
 
         delta = nonZeroSOA.min()
         logger.debug('delta : %1.3f', delta)
@@ -791,7 +790,7 @@ class BOLDSampler_Multi_SessInput:
         logger.debug('nb of Trials :')
         for s in xrange(self.nbSessions):
             logger.debug('- session %d :', s)
-            logger.debug(pformat(self.stimRepetitions[s]))
+            logger.debug(self.stimRepetitions[s])
 
         logger.info('computing sampled binary onset sequences ...')
 
@@ -804,7 +803,7 @@ class BOLDSampler_Multi_SessInput:
             for iCond in xrange(self.nbConditions):
                 logger.debug(
                     'cond:%d -> l=%d', iCond, len(self.paradigmData[iCond][iSess]))
-                logger.debug(pformat(self.paradigmData[iCond][iSess]))
+                logger.debug(self.paradigmData[iCond][iSess])
         # paradigm should be zero-expanded to match length of Bold data
 
         logger.info('building paradigm convol matrix ...')
@@ -816,10 +815,10 @@ class BOLDSampler_Multi_SessInput:
 
         for s in xrange(self.varX.shape[0]):
             logger.debug('------ session %d', s)
-            logger.debug(pformat([self.varX[s, i, j, k]
-                                  for k in xrange(self.varX.shape[3])
-                                  for j in xrange(self.varX.shape[2])
-                                  for i in xrange(self.varX.shape[1])]))
+            logger.debug([self.varX[s, i, j, k]
+                          for k in xrange(self.varX.shape[3])
+                          for j in xrange(self.varX.shape[2])
+                          for i in xrange(self.varX.shape[1])])
 # check if the previous is the same that the following
 #        if pyhrf.verbose.verbosity >= 5:
 #            for s in xrange(self.varX.shape[0]):
@@ -854,7 +853,7 @@ class BOLDSampler_Multi_SessInput:
             elif typeLFD == 'None':
                 lfdMat = np.zeros((self.nys[iSess], 2))
 
-            logger.info(pformat(lfdMat))
+            logger.info(lfdMat)
             print lfdMat
             self.lfdMat.append(lfdMat)
             varPPt = np.dot(lfdMat, lfdMat.transpose())
@@ -866,7 +865,7 @@ class BOLDSampler_Multi_SessInput:
             self.delta.append(np.eye(self.nys[iSess], dtype=float) - varPPt)
             self.varPtP.append(np.dot(lfdMat.transpose(), lfdMat))
 
-            logger.debug(pformat(self.varPtP[-1]))
+            logger.debug(self.varPtP[-1])
             if typeLFD != 'None':
                 assert np.allclose(self.varPtP[-1],
                                    np.eye(self.colP, dtype=float),
@@ -902,7 +901,7 @@ class BOLDSampler_Multi_SessInput:
         osf = self.tr / self.dt
 
         logger.debug('availableDataIndex :')
-        logger.debug(pformat(availableDataIndex))
+        logger.debug(availableDataIndex)
 
         lgt = (self.ny + 2) * osf
         allMatH = []
@@ -911,9 +910,9 @@ class BOLDSampler_Multi_SessInput:
             for j in xrange(self.nbConditions):
                 matH[:len(parData[j][iSess]), j] = parData[j][iSess][:]
             logger.debug('matH for Sess %d :', iSess)
-            logger.debug(pformat([matH[a, b]
-                                  for b in xrange(matH.shape[1])
-                                  for a in xrange(matH.shape[0])]))
+            logger.debug([matH[a, b]
+                          for b in xrange(matH.shape[1])
+                          for a in xrange(matH.shape[0])])
 # TODO: check if the previous is the same that the following
 #            if pyhrf.verbose.verbosity >= 6:
 #                for a in xrange(matH.shape[0]):
@@ -951,13 +950,13 @@ class BOLDSampler_Multi_SessInput:
                 col = concatenate(([allMatH[iSess][0, j]],
                                    zeros(self.hrfLength - 1, dtype=int)))
                 logger.debug(' col :')
-                logger.debug(pformat([col[b] for b in xrange(col.shape[0])]))
+                logger.debug([col[b] for b in xrange(col.shape[0])])
 
                 matTmp = array(toeplitz(allMatH[iSess][:, j], col), dtype=int)
                 logger.debug(' matTmp :')
-                logger.debug(pformat([matTmp[b, a]
-                                      for a in xrange(matTmp.shape[1])
-                                      for b in xrange(matTmp.shape[0])]))
+                logger.debug([matTmp[b, a]
+                              for a in xrange(matTmp.shape[1])
+                              for b in xrange(matTmp.shape[0])])
 # TODO: check if the previous is the same that the following
 #                if pyhrf.verbose.verbosity >= 6:
 #                    for b in xrange(matTmp.shape[0]):
@@ -1016,22 +1015,22 @@ class BOLDSampler_Multi_SessInput:
 
         vectSOA.sort()
         logger.debug('vectSOA %s:', str(vectSOA.shape))
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         momRT = arange(0, vectSOA[-1] + tr, tr)
         logger.debug('momRT %s:', str(momRT.shape))
-        logger.debug(pformat(momRT))
+        logger.debug(momRT)
 
         momVect = concatenate((vectSOA, momRT))
         momVect.sort()
 
         varSOA = diff(momVect)
         logger.debug('vectSOA diff:')
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         nonZeroSOA = varSOA[where(varSOA > 0.0)]
         logger.debug('nonZeroSOA :')
-        logger.debug(pformat(nonZeroSOA))
+        logger.debug(nonZeroSOA)
 
         delta = nonZeroSOA.min()
         logger.debug('delta : %1.3f', delta)

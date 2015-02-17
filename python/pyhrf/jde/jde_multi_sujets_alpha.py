@@ -6,7 +6,6 @@ import os.path as op
 import logging
 
 from collections import defaultdict
-from pprint import pformat
 
 import numpy as np
 import scipy
@@ -181,9 +180,9 @@ class Drift_MultiSubj_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             for s in xrange(self.nbSubj):
                 reps = noise_vars[s, j]
                 logger.debug('eta :')
-                logger.debug(pformat(eta[s]))
+                logger.debug(eta[s])
                 logger.debug('reps :')
-                logger.debug(pformat(reps))
+                logger.debug(reps)
                 v_lj = reps * eta[s] / (reps + eta[s])
                 mu_lj = v_lj / reps * np.dot(self.P.transpose(),
                                              snrls.varYtilde[s, :, j])
@@ -197,7 +196,7 @@ class Drift_MultiSubj_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.matPl[s] = np.dot(self.P, self.currentValue[s])
 
         logger.debug('drift params :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
     def sampleNextAlt(self, variables):
         self.updateNorm()
@@ -307,13 +306,13 @@ def sampleHRF_voxelwise_iid(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox,
                             hgroup, only_hrf_subj, reg, nbsubj):
     varInvSigma_h = stLambdaS
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh over subjects:')
-    logger.info(pformat(rh))
+    logger.info(rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     if reg:
         varInvSigma_h += nbVox * varR / rh
@@ -342,12 +341,12 @@ def sampleHRF_single_hrf_hack(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox, hgr
     varInvSigma_h = stLambdaS / nbVox
 
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
     # if hrf subject NOT regularized
     varInvSigma_h += np.eye(varR.shape[0]) / rh
@@ -367,12 +366,12 @@ def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox, hgroup, 
 
     varInvSigma_h = stLambdaS
     logger.info('stLambdaS:')
-    logger.info(pformat(stLambdaS))
+    logger.info(stLambdaS)
     logger.info('varR:')
-    logger.info(pformat(varR))
+    logger.info(varR)
     logger.info('rh: %f', rh)
     logger.info('varR/rh:')
-    logger.info(pformat(varR / rh))
+    logger.info(varR / rh)
 
 #     if trick == True and nbVox is not None:
 #         varInvSigma_h += varR/rh*nbVox
@@ -527,7 +526,7 @@ class HRF_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             hrfValIni = hrfValIni[:, 1:(self.hrfLength - 1)]
 
         logger.info('hrfValIni: %s', str(hrfValIni.shape))
-        logger.debug(pformat(hrfValIni))
+        logger.debug(hrfValIni)
         logger.info('self.hrfLength: %s', str(self.hrfLength))
 
         for s in xrange(self.nbSubj):
@@ -544,7 +543,7 @@ class HRF_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 * self.eventdt
 
         logger.info('hrfValIni after ZC: %s', str(self.currentValue.shape))
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
         self.updateXh()
@@ -693,7 +692,7 @@ class HRF_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                     smixt_params.currentValue[smixt_params.I_VAR_CA] *= f ** 2
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -751,7 +750,7 @@ class HRF_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.finalValue = fv
 
         logger.info('HRF finalValue :\n')
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
 
     def getScaleFactor(self):
         if self.finalValue == None:
@@ -1326,7 +1325,7 @@ class HRF_Group_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 hrfValIni = hrfValIni[1:(self.hrfLength - 1)]
 
             logger.info('hrfValIni:', str(hrfValIni.shape))
-            logger.debug(pformat(hrfValIni))
+            logger.debug(hrfValIni)
             logger.info('self.hrfLength: %s', str(self.hrfLength))
 
         else:
@@ -1342,7 +1341,7 @@ class HRF_Group_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 * self.eventdt
 
         logger.info('hrfValIni after ZC: %s', str(self.currentValue.shape))
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -1432,7 +1431,7 @@ class HRF_Group_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
             self.currentValue = self.currentValue / f  # /(self.normalise+0.)
 
         logger.debug('All HRF coeffs :')
-        logger.debug(pformat(self.currentValue))
+        logger.debug(self.currentValue)
 
         self.updateNorm()
 
@@ -1471,7 +1470,7 @@ class HRF_Group_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
         self.finalValue = self.finalValue / norm
 
         logger.info('HRF finalValue :\n')
-        logger.info(pformat(self.finalValue))
+        logger.info(self.finalValue)
 
     def getScaleFactor(self):
         if self.finalValue == None:
@@ -1983,7 +1982,7 @@ class NRLs_Sampler(xmlio.XmlInitable, GibbsSamplerVariable):
                       self.varYtilde[s], self.sumaXh[s])
 
         logger.debug('varYtilde %s' % str(self.varYtilde[s].shape))
-        logger.debug(pformat(self.varYtilde[s]))
+        logger.debug(self.varYtilde[s])
         matPl = self.get_variable('drift').matPl
         #self.varYbar[s] = self.varYtilde[s] - matPl[s]
 
@@ -2752,7 +2751,7 @@ class BOLDSampler_MultiSujInput:
         self.stimRepetitions = [len(self.onsets[ind]) for ind in xrange(nbc)]
 
         logger.debug('nb of Trials :')
-        logger.debug(pformat(self.stimRepetitions))
+        logger.debug(self.stimRepetitions)
 
         logger.info('computing sampled binary onset sequences ...')
 
@@ -2784,7 +2783,7 @@ class BOLDSampler_MultiSujInput:
             self.lfdMat = np.zeros((self.nySubj[0], 2))
 
         logger.info('LFD Matrix :')
-        logger.info(pformat(self.lfdMat))
+        logger.info(self.lfdMat)
 
         self.varPPt = np.dot(self.lfdMat, self.lfdMat.transpose())
         if typeLFD is not 'None':
@@ -2796,7 +2795,7 @@ class BOLDSampler_MultiSujInput:
         self.varPtP = np.dot(self.lfdMat.transpose(), self.lfdMat)
 
         logger.debug('varPtP :')
-        logger.debug(pformat(self.varPtP))
+        logger.debug(self.varPtP)
         if typeLFD != 'None':
             assert np.allclose(self.varPtP,
                                np.eye(self.colP, dtype=float),
@@ -2833,16 +2832,16 @@ class BOLDSampler_MultiSujInput:
 
         logger.info('osf = %1.2f', osf)
         logger.debug('availableDataIndex :')
-        logger.debug(pformat(availableDataIndex))
+        logger.debug(availableDataIndex)
 
         # suppose same nb of scans for all subjects
         lgt = (self.nySubj[0] + 2) * osf
         matH = np.zeros((lgt, self.nbConditions), dtype=int)
         for j in xrange(self.nbConditions):
             matH[:len(parData[j]), j] = parData[j][:]
-            logger.debug(pformat([matH[a, b]
-                                  for b in xrange(matH.shape[1])
-                                  for a in xrange(matH.shape[0])]))
+            logger.debug([matH[a, b]
+                          for b in xrange(matH.shape[1])
+                          for a in xrange(matH.shape[0])])
 # TODO: check if the previous is the same that the following
 #            if pyhrf.verbose.verbosity >= 6:
 #                for a in xrange(matH.shape[0]):
@@ -2874,7 +2873,7 @@ class BOLDSampler_MultiSujInput:
             col = np.concatenate(([matH[0, j]],
                                   np.zeros(self.hrfLength - 1, dtype=int)))
             logger.debug(' col :')
-            logger.debug(pformat([col[b] for b in xrange(col.shape[0])]))
+            logger.debug([col[b] for b in xrange(col.shape[0])])
 # TODO: check if the previous is the same that the following
 #            if pyhrf.verbose.verbosity >= 6:
 #                print ' [',
@@ -2885,9 +2884,9 @@ class BOLDSampler_MultiSujInput:
             matTmp = np.array(
                 scipy.linalg.toeplitz(matH[:, j], col), dtype=int)
             logger.debug(' matTmp :')
-            logger.debug(pformat([matTmp[b, a]
-                                  for a in xrange(matTmp.shape[1])
-                                  for b in xrange[matTmp.shape[0]]]))
+            logger.debug([matTmp[b, a]
+                          for a in xrange(matTmp.shape[1])
+                          for b in xrange[matTmp.shape[0]]])
 # TODO: check if the previous is the same that the following
 #            if pyhrf.verbose.verbosity >= 6:
 #                for b in xrange(matTmp.shape[0]):
@@ -2946,22 +2945,22 @@ class BOLDSampler_MultiSujInput:
 
         vectSOA.sort()
         logger.debug('vectSOA %s:', str(vectSOA.shape))
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         momRT = np.arange(0, vectSOA[-1] + tr, tr)
         logger.debug('momRT %s:', str(momRT.shape))
-        logger.debug(pformat(momRT))
+        logger.debug(momRT)
 
         momVect = np.concatenate((vectSOA, momRT))
         momVect.sort()
 
         varSOA = np.diff(momVect)
         logger.debug('vectSOA diff:')
-        logger.debug(pformat(vectSOA))
+        logger.debug(vectSOA)
 
         nonZeroSOA = varSOA[np.where(varSOA > 0.0)]
         logger.debug('nonZeroSOA :')
-        logger.debug(pformat(nonZeroSOA))
+        logger.debug(nonZeroSOA)
 
         delta = nonZeroSOA.min()
         logger.debug('delta : %1.3f', delta)
