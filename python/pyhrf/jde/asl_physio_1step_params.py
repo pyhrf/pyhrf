@@ -2117,8 +2117,8 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
             p_adjusted = p[:,:,np.newaxis] * .15 * signal.ptp('time').data + \
               signal.min('time').data
 
-            ad = {'time':fit.get_domain('time'),
-                  'condition':self.dataInput.cNames}
+            ad = {'time': fit.get_domain('time'),
+                  'condition': self.dataInput.cNames}
 
             c_paradigm = xndarray(p_adjusted,
                                 axes_names=['condition', 'time', 'voxel'],
@@ -2129,15 +2129,15 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                                              fitted_bold,
                                              c_paradigm.sum('condition'),
                                              fitted_perf_baseline], 'stype',
-                                             ['signal','fit','perf',
-                                              'bold','paradigm',
+                                             ['signal', 'fit', 'perf',
+                                              'bold', 'paradigm',
                                               'perf_baseline'])
         return outputs
 
 
 import pyhrf.jde.models
-pyhrf.jde.models.allModels['ASL_PHYSIO0'] = {'class' : ASLPhysioSampler,
-    'doc' : 'BOLD and perfusion component, physiological prior on responses,'
+pyhrf.jde.models.allModels['ASL_PHYSIO0'] = {'class': ASLPhysioSampler,
+    'doc': 'BOLD and perfusion component, physiological prior on responses,'
     'BiGaussian prior on stationary response levels, iid white noise, '\
     'explicit drift'
     }

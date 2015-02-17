@@ -558,6 +558,11 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             Ht, Sigma_H = EM.expectation_H(Sigma_A, m_A, m_C, G, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
                                            R, sigmaH)
+            H = EM.constraint_norm1_b(Ht, Sigma_H)
+            #H = Ht / np.linalg.norm(Ht)
+            print 'BRF ERROR = ', EM.error(H, simulation['brf'][:, 0])
+            h_norm = np.append(h_norm, np.linalg.norm(H))
+            print 'h_norm = ', h_norm
 
         # PRF G
         pyhrf.verbose(3, "E G step ...")
@@ -566,19 +571,9 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             Gt, Sigma_G = EM.expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
                                            R, sigmaG)
-            #H = EM.constraint_norm1(Ht, Sigma_H)
-            H = Ht / np.linalg.norm(Ht)
-            print 'BRF ERROR = ', EM.error(H, simulation['brf'][:, 0])
-            
-            G = EM.constraint_norm1(Gt, Sigma_G, positivity=True)
-            #G = Gt
-            #G[np.where(Gt<0)] = 0            
-            G = G / np.linalg.norm(G)
+            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=True)
             #G = Gt / np.linalg.norm(Gt)
             print 'PRF ERROR = ', EM.error(G, simulation['prf'][:, 0])
-            
-            h_norm = np.append(h_norm, np.linalg.norm(H))
-            print 'h_norm = ', h_norm
             g_norm = np.append(g_norm, np.linalg.norm(G))
             print 'g_norm = ', g_norm
 

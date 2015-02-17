@@ -257,36 +257,57 @@ def constraint_norm1(Ftilde, Sigma_F, positivity=False):
 
 def constraint_norm1_b(Ftilde, Sigma_F, positivity=False):
     """ Constrain with optimization strategy """
-    from scipy.optimize import minimize, rosen, rosen_der
-    m, n = Sigma_F.shape
+    from scipy.optimize import minimize, fmin_l_bfgs_b, fmin_slsqp
     Sigma_F_inv = np.linalg.inv(Sigma_F)
-    zeros_F = np.zeros_like(Ftilde[:, np.newaxis])
-    F = cvx.Variable(n)      # Construct the problem. PRIMAL
-    expression = cvx.quad_form(F - Ftilde[:, np.newaxis], Sigma_F_inv)
-    expression =     
+    zeros_F = np.zeros_like(Ftilde)
+    #print 'm_H = ', Ftilde
+    #print 'Sigma_H = ', Sigma_F_inv
+
+    def fun(F):
+        'function to minimize'
+        return np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde))
+
+    def fung(F):
+        'function to minimize'
+        return np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde))*0.5, \
+                      np.dot(Sigma_F_inv, (F - Ftilde))
+
+    def ec1(F):
+        'Norm2(F)==1'
+        return 1 - np.linalg.norm(F, 2)
+
+    print 'SLSQP method: '
+    y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], bounds=[(None, None)] * (len(zeros_F)))
+    print y
+    if 0:    
+        print y
+        print len(y)
+        print fun(y)
+        print "Feasibility residue: %g" % ec1(y)
+        print "Random perturbations of optimal point"
+        for _ in xrange(20):
+            z = y + np.random.randn(*y.shape) * 1e-3
+            print "fun(z) = %g" % fun(z)    
     
-    fun = lambda F: np.dot(np.dot((F - Ftilde[:, np.newaxis]).T, Sigma_F_inv),
-                                  (F - Ftilde[:, np.newaxis]))
-
-    cons = ({'type': 'ineq', 'fun': lambda x:  x[0] - 2 * x[1] + 2},
-            {'type': 'ineq', 'fun': lambda x: -x[0] - 2 * x[1] + 6},
-            {'type': 'ineq', 'fun': lambda x: -x[0] + 2 * x[1] + 2})
-
-    bnds = ((0, None), (0, None))
-    res = minimize(fun, (2, 0), method='SLSQP', bounds=bnds, constraints=cons)
-
-
-
-    objective =  minimize(expression, method='L-BFGS-B')
-    if positivity:
-        constraints = [F[0] == 0, F[-1] == 0, F >= zeros_F,
-                       cvx.square(cvx.norm(F, 2)) <= 1]
-    else:
-        constraints = [F[0] == 0, F[-1] == 0, cvx.square(cvx.norm(F, 2)) <= 1]
-    prob = cvx.Problem(objective, constraints)
-    prob.solve(verbose=0, solver=cvx.CVXOPT)
-    return np.squeeze(np.array((F.value)))
-
+        print 'L-BFGS-B method: '
+        y2 = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+        print y2[0]
+        print len(y2)
+        print fung(y2[0])
+        print "Feasibility residue: %g" % ec1(y2[0])
+        print "Random perturbations of optimal point"
+        for _ in xrange(20):
+            z = y2[0] + np.random.randn(*y2[0].shape) * 1e-3
+            w = fung(z)
+            print "fung(z) = %g" % w[0]    
+    return y
+    #fun = lambda F: np.dot(np.dot((F - Ftilde).T, Sigma_F_inv),
+    #                              (F - Ftilde))
+    #cons = ({'type': 'ineq', 'fun': lambda F: - np.linalg.norm(F, 2) + 1})
+    #res = fmin_slsqp(fun, zeros_F, constraints=cons)
+    #res = minimize(fun, zeros_F, constraints=cons)
+    #print res.message
+    #return res.x
 
 def expectation_Zb(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
                   mu_Mc, Beta, Z_tilde, q_Z, graph, M, J, K):

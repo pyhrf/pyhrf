@@ -209,7 +209,12 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = np.reshape( m_A - m_A1,(M*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+        
+        if np.linalg.norm( np.reshape(m_A1,(M*J)) )>0:
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+        else:
+            ### TODO: norm shouldn't be 0
+            Crit_A = None
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
@@ -222,7 +227,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = np.reshape( AH - AH1,(M*J*D) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
+        if np.linalg.norm( np.reshape(AH1,(M*J*D)) )>0:        
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
+        else:
+            ### TODO: norm shouldn't be 0
+            Crit_AH = None
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -242,7 +251,12 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
+        
+        if np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ) > 0:
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
+        else:
+            ### TODO: norm shouldn't be 0
+            Crit_Z = None
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -323,7 +337,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     DIFF = np.reshape( m_A - m_A1,(M*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+    if np.linalg.norm( np.reshape(m_A1,(M*J)) ) > 0:
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+    else:
+        ### TODO: norm shouldn't be 0
+        Crit_A = None
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]    
         
@@ -336,7 +354,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     DIFF = np.reshape( AH - AH1,(M*J*D) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
+    if np.linalg.norm( np.reshape(AH1,(M*J*D)) ) > 0:
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
+    else:
+        ### TODO: norm shouldn't be 0
+        Crit_AH = None    
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -358,8 +380,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
-    cZ += [Crit_Z]
+    if np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ) > 0:
+        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
+    else:    
+        ### TODO: norm shouldn't be 0
+        cZ += [Crit_Z]
     q_Z1[:,:,:] = q_Z[:,:,:]
 
     
@@ -437,7 +462,12 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             DIFF = np.reshape( m_A - m_A1,(M*J) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+            
+            if np.linalg.norm( np.reshape(m_A1,(M*J)) ) > 0:
+                Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(m_A1,(M*J)) ))**2
+            else:
+                ### TODO: norm shouldn't be 0
+                Crit_A = None
             m_A1[:,:] = m_A[:,:]
             cA += [Crit_A]       
                     
@@ -450,7 +480,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             DIFF = np.reshape( AH - AH1,(M*J*D) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
+            if np.linalg.norm( np.reshape(AH1,(M*J*D)) ) > 0:
+                Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(AH1,(M*J*D)) ))**2
+            else:
+                ### TODO: norm shouldn't be 0
+                Crit_AH = None
             cAH += [Crit_AH]
             AH1[:,:,:] = AH[:,:,:]
             
@@ -472,7 +506,12 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
             DIFF = np.reshape( q_Z - q_Z1,(M*K*J) )
             DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
             DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
+            
+            if np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ) > 0:
+                Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( np.reshape(q_Z1,(M*K*J)) ))**2
+            else:
+                ### TODO: norm shouldn't be 0
+                Crit_Z = None            
             cZ += [Crit_Z]
             q_Z1[:,:,:] = q_Z[:,:,:]
             

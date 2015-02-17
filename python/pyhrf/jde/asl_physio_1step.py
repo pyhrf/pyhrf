@@ -1948,37 +1948,44 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                               output_fit=output_fit)
 
     def finalizeSampling(self):
-        
-        """# Loglikelihood
-        var_noise = self.get_variable('noise_var').finalValue
-        hrf = self.get_variable('brf').finalValue
-        Pl = self.get_variable('drift_coeff').P
-        wa = self.get_variable('perf_baseline').finalValue
-        r = bold - jde_fit
-        
-        loglh = 0
-        N = r.shape[0]
-        J = r.shape[1]
-        for j in np.arange(0., J):
-            loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
-                np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
-        self.loglikelihood = loglh
-        
-        # BIC
-        loglh = self.loglikelihood[end]
-        print loglh
-        if len(hrf.shape)>1:
-            M = hrf.shape[1]
-        else:
-            M=1
-        D = hrf.shape[0]
-        Q = Pl.shape[1]
-        p = M * J * 2 + 2 * (D-1) + J*Q + J
-        n = N * J
-        self.bic = loglh + p/2 * np.log(n) 
-        
-        print self.bic"""
-        
+
+        if 0:
+            # Reconstruction error
+            rerror = np.array([])
+            for it in xrange(0, self.final_iteration):
+                jde_fit = self.jde_fit_vec[it]
+                r = bold - jde_fit
+                rec_error_j = np.sum(r ** 2, 0)
+                bold2 = np.sum(bold ** 2, 0)
+                #rec_error = np.mean(rec_error_j/bold2)   # Univariate analysis
+                rec_error = np.mean(rec_error_j) / np.mean(bold2)
+                rerror = np.append(rerror, rec_error)
+    
+            # Loglikelihood
+            var_noise = self.get_variable('noise_var').finalValue
+            hrf = self.get_variable('brf').finalValue
+            Pl = self.get_variable('drift_coeff').P
+            wa = self.get_variable('perf_baseline').finalValue
+            loglh = 0
+            N = r.shape[0]
+            J = r.shape[1]
+            for j in np.arange(0., J):
+                loglh -= (np.log(np.abs(2 * np.pi * var_noise[j] * N)) + \
+                            np.dot(r[:, j].T, r[:, j]) / var_noise[j] / 2)
+            self.loglikelihood = loglh
+    
+            # BIC
+            if len(hrf.shape) > 1:
+                M = hrf.shape[1]
+            else:
+                M = 1
+            D = hrf.shape[0]
+            Q = Pl.shape[1]
+            p = 2 * M * J + 2 * (D - 1) + J * Q + J
+            n = N * J
+            self.bic = loglh + p / 2 * np.log(n)
+            print self.bic
+
         if self.cmp_ftval:
 
             msg = []
@@ -2088,12 +2095,12 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         
         #tp = time.time()
         d = {'parcel_size':np.array([self.dataInput.nbVoxels])}
-        """outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]),
-                                              axes_names=['parcel_size'],
-                                              axes_domains=d)"""
+        outputs['conv_error'] = xndarray(np.array(self.converror)) 
+        outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]))
         outputs['bic'] = xndarray(np.array([self.bic]),
-                                              axes_names=['parcel_size'],
-                                              axes_domains=d)
+                                            axes_names = ['parcel_size'],
+                                            axes_domains = d)
+
         bf = outputs.pop('bold_fit', None)
         if bf is not None and self.output_fit:
             cdict = bf.split('stype')

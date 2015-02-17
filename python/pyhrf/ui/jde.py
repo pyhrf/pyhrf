@@ -81,7 +81,6 @@ class JDEAnalyser(FMRIAnalyser):
     #             return fmri_data.roi_split(parcellation)
 
 
-    
 class JDEMCMCAnalyser(JDEAnalyser):
     """
     Class that wraps a JDE Gibbs Sampler to launch an fMRI analysis
@@ -131,10 +130,9 @@ class JDEMCMCAnalyser(JDEAnalyser):
         self.driftLfdParam = driftParam
         self.driftLfdType = driftType
         self.copy_sampler = copy_sampler
-        
+
     def enable_draft_testing(self):
         self.sampler.set_nb_iterations(3)
-
 
     def analyse_roi(self, atomData):
         """
@@ -150,22 +148,17 @@ class JDEMCMCAnalyser(JDEAnalyser):
             sampler = self.sampler
         sInput = self.packSamplerInput(atomData)
         sampler.linkToData(sInput)
-        
         #if self.parameters[self.P_RANDOM_SEED] is not None:
         #    np.random.seed(self.parameters[self.P_RANDOM_SEED])
         # #HACK:
         # if len(self.roi_ids) > 0:
         #     if atomData.get_roi_id() not in self.roi_ids:
         #         return None
-
-        pyhrf.verbose(1, 'Treating region %d' %(atomData.get_roi_id()))
-        sampler.runSampling(atomData.bold)        
-        
+        pyhrf.verbose(1, 'Treating region %d' % (atomData.get_roi_id()))
+        sampler.runSampling(atomData)
         pyhrf.verbose(1, 'Cleaning memory ...')
         sampler.dataInput.cleanMem()
-
         return (sampler)
-
 
     def packSamplerInput(self, roiData):
 
@@ -179,8 +172,8 @@ class JDEMCMCAnalyser(JDEAnalyser):
 
         simu = None
 
-        if simu != None and shrf.sampleFlag==0:
-            hrfDuration = (len(simu.hrf.get_hrf(0,0))-1)*simu.hrf.dt
+        if simu != None and shrf.sampleFlag == 0:
+            hrfDuration = (len(simu.hrf.get_hrf(0, 0)) - 1) * simu.hrf.dt
             pyhrf.verbose(6,'Found simulation data and hrf is '\
                           'not sampled, setting hrfDuration to:' \
                           +str(hrfDuration))
