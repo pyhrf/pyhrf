@@ -74,7 +74,19 @@ def create_neighbours(graph, J):
         neighboursIndexes[i, :len(graph[i])] = graph[i]
     return maxNeighbours, neighboursIndexes
 
+def _trap_area( p1, p2 ):
+    """
+    Calculate the area of the trapezoid defined by points
+    p1 and p2
 
+    `p1` - left side of the trapezoid
+    `p2` - right side of the trapezoid
+    """
+    base = abs( p2[ 0 ] - p1[ 0 ] )
+    avg_ht = ( p1[ 1 ] + p2[ 1 ] ) / 2.0
+
+    return base * avg_ht
+    
 def roc_curve(dvals, labels, rocN=None, normalize=True):
     """
     Compute ROC curve coordinates and area
@@ -387,6 +399,7 @@ def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
         for m in xrange(0, M):
             alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
                     - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
+            print 'alpha mean = ', alpha.mean()
             alpha /= alpha.mean()
             tmp = sum(Z_tilde[m, :, graph[i]], 0)
             for k in xrange(0, K):

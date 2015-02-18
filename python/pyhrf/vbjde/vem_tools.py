@@ -25,7 +25,7 @@ except ImportError:
 # Tools
 ##############################################################
 
-eps = 1e-4
+eps = 1e-6
 
 def mult(v1,v2):
     matrix = np.zeros((len(v1),len(v2)),dtype=float)
@@ -95,6 +95,19 @@ def buildFiniteDiffMatrix(order, size):
     b = a[len(a)/2:]
     diffMat = toeplitz(np.concatenate((b, np.zeros(size-len(b)))))
     return diffMat
+
+def _trap_area(p1, p2):
+    """
+    Calculate the area of the trapezoid defined by points
+    p1 and p2
+
+    `p1` - left side of the trapezoid
+    `p2` - right side of the trapezoid
+    """
+    base = abs( p2[ 0 ] - p1[ 0 ] )
+    avg_ht = ( p1[ 1 ] + p2[ 1 ] ) / 2.0
+
+    return base * avg_ht
 
 def roc_curve(dvals, labels, rocN=None, normalize=True):
     """
@@ -221,10 +234,7 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            print 'ALPHA: '            
-            print alpha
-            print np.mean(alpha)
-            alpha /= np.mean(alpha)
+            alpha /= np.mean(alpha) + eps
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
                 extern_field = alpha[k] + max(np.log( normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k])) + eps) ,-100 )
@@ -237,7 +247,7 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            alpha /= np.mean(alpha)
+            alpha /= np.mean(alpha) + eps
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
                 extern_field = alpha[k]
