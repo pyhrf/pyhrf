@@ -77,7 +77,10 @@ if not check_pyqt3():
 
 # disable some setuptools' magic that prevents exclusion of submodule
 from setuptools.command import sdist
-del sdist.finders[:]
+try:
+    del sdist.finders[:]
+except AttributeError:
+    pass
 
 setup(
     name="pyhrf", author='Thomas VINCENT, Philippe CIUCIU, Solveig BADILLO',

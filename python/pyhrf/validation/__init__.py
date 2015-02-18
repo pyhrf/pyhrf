@@ -7,5 +7,6 @@ from valid_beta_estim import *
 
 from valid_jde_asl import *
 from valid_jde_asl_physio import *
+from valid_jde_vem_asl import *
 
 

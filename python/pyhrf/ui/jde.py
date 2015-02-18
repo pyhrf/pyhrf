@@ -20,6 +20,7 @@ DEFAULT_CFG_FILE = 'detectestim.xml'
 
 distribName = 'pyhrf'
 
+    
 class JDEAnalyser(FMRIAnalyser):
 
     def __init__(self, outputPrefix='jde_', pass_error=True):
@@ -83,8 +84,8 @@ class JDEAnalyser(FMRIAnalyser):
 class JDEMCMCAnalyser(JDEAnalyser):
     """
     Class that wraps a JDE Gibbs Sampler to launch an fMRI analysis
-    TODO: remove parameters about dt and osf (should go in HRF Sampler class),
-    drift (should go in Drift Sampler class)
+    TODO: remove parameters about dt and osf (should go in HRF Sampler
+    class), drift (should go in Drift Sampler class)
     """
     P_SAMPLER = 'sampler'
     P_OSFMAX = 'osfMax'         # over-sampling factor
@@ -129,7 +130,7 @@ class JDEMCMCAnalyser(JDEAnalyser):
         self.driftLfdParam = driftParam
         self.driftLfdType = driftType
         self.copy_sampler = copy_sampler
-        
+
     def enable_draft_testing(self):
         self.sampler.set_nb_iterations(3)
 
@@ -141,8 +142,6 @@ class JDEMCMCAnalyser(JDEAnalyser):
         Returns:
             JDE sampler object
         """
-        #print 'atomData:', atomData
-
         if self.copy_sampler:
             sampler = copyModule.deepcopy(self.sampler)
         else:
@@ -155,12 +154,11 @@ class JDEMCMCAnalyser(JDEAnalyser):
         # if len(self.roi_ids) > 0:
         #     if atomData.get_roi_id() not in self.roi_ids:
         #         return None
-
-        pyhrf.verbose(1, 'Treating region %d' %(atomData.get_roi_id()))
-        sampler.runSampling()
+        pyhrf.verbose(1, 'Treating region %d' % (atomData.get_roi_id()))
+        sampler.runSampling(atomData)
         pyhrf.verbose(1, 'Cleaning memory ...')
         sampler.dataInput.cleanMem()
-        return sampler
+        return (sampler)
 
     def packSamplerInput(self, roiData):
 
@@ -174,8 +172,8 @@ class JDEMCMCAnalyser(JDEAnalyser):
 
         simu = None
 
-        if simu != None and shrf.sampleFlag==0:
-            hrfDuration = (len(simu.hrf.get_hrf(0,0))-1)*simu.hrf.dt
+        if simu != None and shrf.sampleFlag == 0:
+            hrfDuration = (len(simu.hrf.get_hrf(0, 0)) - 1) * simu.hrf.dt
             pyhrf.verbose(6,'Found simulation data and hrf is '\
                           'not sampled, setting hrfDuration to:' \
                           +str(hrfDuration))

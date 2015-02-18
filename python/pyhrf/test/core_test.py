@@ -4,7 +4,6 @@ import os.path as op
 import unittest
 import tempfile
 import shutil
-
 import numpy as np
 
 import pyhrf

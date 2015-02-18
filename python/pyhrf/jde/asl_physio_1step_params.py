@@ -6,13 +6,13 @@ from samplerbase import GibbsSampler, GibbsSamplerVariable
 
 from pyhrf import xmlio
 from pyhrf.ndarray import xndarray, stack_cuboids
-
 from pyhrf.jde.models import WN_BiG_Drift_BOLDSamplerInput, GSDefaultCallbackHandler
-
 from pyhrf.boldsynth.hrf import genGaussianSmoothHRF, getCanoHRF
 from pyhrf.boldsynth.scenarios import build_ctrl_tag_matrix
 from pyhrf.jde.intensivecalc import asl_compute_y_tilde
 from pyhrf.jde.intensivecalc import sample_potts
+from pyhrf.sandbox.physio2 import PHY_PARAMS_FRISTON00
+
 
 def b():
     raise Exception()
@@ -104,9 +104,9 @@ class ResponseSampler(GibbsSamplerVariable):
     Generic parent class to perfusion response & BOLD response samplers
     """
 
-    def __init__(self, name, response_level_name, variance_name, smooth_order=2,
-                 zero_constraint=False, duration=25., normalise=0., val_ini=None,
-                 do_sampling=True, use_true_value=False):
+    def __init__(self, name, response_level_name, variance_name, phy_params,
+                 smooth_order=2, zero_constraint=False, duration=25., 
+                 normalise=0., val_ini=None, do_sampling=True, use_true_value=False):
 
         self.response_level_name = response_level_name
         self.var_name = variance_name
@@ -122,6 +122,7 @@ class ResponseSampler(GibbsSamplerVariable):
         self.duration = duration
         self.varR = None
         self.derivOrder = smooth_order
+        self.phy_params = phy_params
 
     def linkToData(self, dataInput):
         self.dataInput = dataInput
@@ -247,7 +248,7 @@ class ResponseSampler(GibbsSamplerVariable):
         self.resp_norm = sqrt((np.dot(fv,fv)).sum())
         #self.resp_norm = sum(fv**2)**0.5
         fv /= self.resp_norm
-        #print 'norm response = ', self.resp_norm
+        print 'norm response = ', self.resp_norm
 
         if self.zc:
             # Append and prepend zeros
@@ -256,62 +257,65 @@ class ResponseSampler(GibbsSamplerVariable):
             
             if self.name == 'prf':
                 hrf_length = self.currentValue.shape[0] + 2.
-                from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
-                from pyhrf.sandbox.physio import linear_rf_operator
-                self.omega_operator =  linear_rf_operator(hrf_length, phy_params, self.dt,
-                                                  calculating_brf=False)
+                #from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
+                from pyhrf.sandbox.physio2 import linear_rf_operator
+                self.omega_operator =  linear_rf_operator(hrf_length, 
+                                                self.phy_params, self.dt,
+                                                calculating_brf=False)
                 
             if self.meanHistory is not None:
                 nbIt = len(self.obsHistoryIts)
 
                 self.meanHistory =  np.hstack((np.hstack((np.zeros((nbIt,1)),
-                                                    self.meanHistory)),
-                                            np.zeros((nbIt,1))))
+                                                self.meanHistory)),
+                                                np.zeros((nbIt,1))))
 
             if self.smplHistory is not None:
                 nbIt = len(self.smplHistoryIts)
                 self.smplHistory = np.hstack((np.hstack((np.zeros((nbIt,1)),
-                                                    self.smplHistory)),
-                                           np.zeros((nbIt,1))))
+                                                self.smplHistory)),
+                                                np.zeros((nbIt,1))))
         else:
             self.finalValue = fv
             if self.name == 'prf':
                 hrf_length = self.currentValue.shape[0] + 6.
-                from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
-                from pyhrf.sandbox.physio import linear_rf_operator
-                self.omega_operator =  linear_rf_operator(hrf_length, phy_params, self.dt,
-                                                  calculating_brf=False)
+                #from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
+                from pyhrf.sandbox.physio2 import linear_rf_operator
+                self.omega_operator =  linear_rf_operator(hrf_length, 
+                                                self.phy_params, self.dt,
+                                                calculating_brf=False)
 
         # print '~~~~~~~~~~~~~~~~~~~~~~~'
         # print 'self.finalValue.shape:', self.finalValue.shape
         # print 'self.trueValue.shape:', self.trueValue.shape
 
-        pyhrf.verbose(4, '%s finalValue :' % self.name)
+        pyhrf.verbose(4, '%s finalValue :' %self.name)
         pyhrf.verbose.printNdarray(4, self.finalValue)
+
 
     def getOutputs(self):
 
         outputs = GibbsSamplerVariable.getOutputs(self)
         if self.trueValue is not None:
-            err = ((self.finalValue - self.trueValue) ** 2).sum() ** .5
+            err = ((self.finalValue - self.trueValue)**2).sum()**.5
             err = xndarray([err], axes_names=['err'])
             outputs[self.name + '_norm_error'] = err
 
         return outputs
-
+        
 
 class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
-    def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
-                 normalise=0., val_ini=None, do_sampling=True,
-                 use_true_value=False):
+    def __init__(self, phy_params=PHY_PARAMS_FRISTON00, smooth_order=2, 
+                 zero_constraint=True, duration=25., normalise=0., 
+                 val_ini=None, do_sampling=True, use_true_value=False):
 
         """
         """
         xmlio.XmlInitable.__init__(self)
-        ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', smooth_order,
-                                 zero_constraint, duration, normalise, val_ini,
-                                 do_sampling, use_true_value)
+        ResponseSampler.__init__(self, 'brf', 'brl', 'brf_var', phy_params,
+                                 smooth_order, zero_constraint, duration, 
+                                 normalise, val_ini, do_sampling, use_true_value)
 
     def get_stackX(self):
         return self.dataInput.stackX
@@ -328,6 +332,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         #                             self.name + '_new_factor_mean',
         #                             axes_names=['time'])
 
+
     def computeYTilde(self):
         """ y - \sum cWXg - Pl - wa """
 
@@ -338,13 +343,12 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
         wa = bl_sampler.wa
         y = self.dataInput.varMBY
 
-        if ('deterministic' in self.get_variable('prf').prior_type) and \
-        not ('hack' in self.get_variable('prf').prior_type):
+        if ('deterministic' in self.get_variable('prf').prior_type) and not ('hack' in self.get_variable('prf').prior_type):
             ytilde = y - Pl - wa
         else:
             ytilde = y - sumcXg - Pl - wa
 
-        if 0 and self.dataInput.simulData is not None:  # hack
+        if 0 and self.dataInput.simulData is not None: #hack
             sd = self.dataInput.simulData[0]
             osf = int(sd['tr'] / sd['dt'])
             brl_sampler = self.get_variable('brl')
@@ -353,8 +357,7 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
             if not prl_sampler.sampleFlag and not prf_sampler.sampleFlag and\
                     prl_sampler.useTrueValue and prf_sampler.useTrueValue:
-                perf = np.dot(self.dataInput.W, \
-                              sd['perf_stim_induced'][0:-1:osf])
+                perf = np.dot(self.dataInput.W, sd['perf_stim_induced'][0:-1:osf])
                 assert_almost_equal(sumcXg, perf)
 
             if not drift_sampler.sampleFlag and drift_sampler.useTrueValue:
@@ -456,10 +459,10 @@ class PhysioBOLDResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
 class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
-    def __init__(self, smooth_order=2, zero_constraint=True, duration=25.,
-                 normalise=0., val_ini=None, do_sampling=True,
-                 use_true_value=False, diff_res=True,
-                 prior_type='physio_stochastic_regularized'):
+    def __init__(self, phy_params=PHY_PARAMS_FRISTON00, smooth_order=2, 
+                 zero_constraint=True, duration=25., normalise=0., 
+                 val_ini=None, do_sampling=True, use_true_value=False, 
+                 diff_res=True, prior_type='physio_stochastic_regularized'):
         """
         *diff_res*: if True then residuals (ytilde values) are differenced
         so that sampling is the same as for BRF.
@@ -484,9 +487,9 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
                             %(prior_type, available_priors))
         xmlio.XmlInitable.__init__(self)
         self.diff_res = diff_res
-        ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', smooth_order,
-                                 zero_constraint, duration, normalise, val_ini,
-                                 do_sampling, use_true_value)
+        ResponseSampler.__init__(self, 'prf', 'prl', 'prf_var', phy_params,
+                                 smooth_order, zero_constraint, duration, 
+                                 normalise, val_ini, do_sampling, use_true_value)
         self.prior_type = prior_type
 
     def get_stackX(self):
@@ -506,15 +509,17 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def samplingWarmUp(self, variables):
 
-        from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
-        from pyhrf.sandbox.physio import linear_rf_operator
+        #from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
+        from pyhrf.sandbox.physio2 import linear_rf_operator
 
         hrf_length = self.currentValue.shape[0]
 
-        self.omega_operator =  linear_rf_operator(hrf_length, phy_params, self.dt,
-                                                  calculating_brf=False)
-        self.omega_operator_l =  linear_rf_operator(hrf_length+6, phy_params, self.dt,
-                                                  calculating_brf=False)
+        self.omega_operator =  linear_rf_operator(hrf_length, 
+                                                self.phy_params, self.dt,
+                                                calculating_brf=False)
+        self.omega_operator_l =  linear_rf_operator(hrf_length+6, 
+                                                self.phy_params, self.dt,
+                                                calculating_brf=False)
         
         if 'physio' in self.prior_type:
             #print 'PHYSIO!!'
@@ -729,7 +734,7 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             assert isinstance(self.dataInput.simulData[0], dict)
             sd = dataInput.simulData[0]
             #sd = dataInput.simulData
-            #print sd
+            print sd
             if sd.has_key('noise'):
                 # self.trueValue = np.array([sd['v_gnoise']])
                 # pyhrf.verbose(3, 'True noise variance = %1.3f' \
@@ -1131,10 +1136,10 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         respnorm = self.response_sampler.resp_norm
         
         #print fv
-        #print fv.shape
-        #print fv[0,:].sum()
-        #print 'respnorm', respnorm
-        #print '------------------------------------------'
+        print fv.shape
+        print fv[0,:].sum()
+        print 'respnorm', respnorm
+        print '------------------------------------------'
         
         self.finalValue = fv * respnorm
         
@@ -1884,8 +1889,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 
-                            'hrf', 'hrf_var']
+        parametersToShow = ['nb_its', 'response_levels', 'hrf', 'hrf_var']
 
     def __init__(self, nb_iterations=default_nb_its,
                  obs_hist_pace=-1., glob_obs_hist_pace=-1,
@@ -1893,16 +1897,14 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  callback=GSDefaultCallbackHandler(),
                  bold_response_levels=BOLDResponseLevelSampler(),
                  perf_response_levels=PerfResponseLevelSampler(),
-                 labels=LabelSampler(), 
-                 noise_var=NoiseVarianceSampler(),
+                 labels=LabelSampler(), noise_var=NoiseVarianceSampler(),
                  brf=PhysioBOLDResponseSampler(),
                  brf_var=PhysioBOLDResponseVarianceSampler(),
                  prf=PhysioPerfResponseSampler(),
                  prf_var=PhysioPerfResponseVarianceSampler(),
                  bold_mixt_params=BOLDMixtureSampler(),
                  perf_mixt_params=PerfMixtureSampler(),
-                 drift=DriftCoeffSampler(), 
-                 drift_var=DriftVarianceSampler(),
+                 drift=DriftCoeffSampler(), drift_var=DriftVarianceSampler(),
                  perf_baseline=PerfBaselineSampler(),
                  perf_baseline_var=PerfBaselineVarianceSampler(),
                  check_final_value=None,
@@ -1944,48 +1946,9 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         GibbsSampler.__init__(self, variables, nbIt, smplHistPace,
                               obsHistPace, nbSweeps, callbackObj,
                               globalObsHistoryPace=globalObsHistPace,
-                              check_ftval=check_ftval,
-                              output_fit=output_fit)
+                              check_ftval=check_ftval)
 
     def finalizeSampling(self):
-
-        if 0:
-            # Reconstruction error
-            rerror = np.array([])
-            for it in xrange(0, self.final_iteration):
-                jde_fit = self.jde_fit_vec[it]
-                r = bold - jde_fit
-                rec_error_j = np.sum(r ** 2, 0)
-                bold2 = np.sum(bold ** 2, 0)
-                #rec_error = np.mean(rec_error_j/bold2)   # Univariate analysis
-                rec_error = np.mean(rec_error_j) / np.mean(bold2)
-                rerror = np.append(rerror, rec_error)
-    
-            # Loglikelihood
-            var_noise = self.get_variable('noise_var').finalValue
-            hrf = self.get_variable('brf').finalValue
-            Pl = self.get_variable('drift_coeff').P
-            wa = self.get_variable('perf_baseline').finalValue
-            loglh = 0
-            N = r.shape[0]
-            J = r.shape[1]
-            for j in np.arange(0., J):
-                loglh -= (np.log(np.abs(2 * np.pi * var_noise[j] * N)) + \
-                            np.dot(r[:, j].T, r[:, j]) / var_noise[j] / 2)
-            self.loglikelihood = loglh
-    
-            # BIC
-            if len(hrf.shape) > 1:
-                M = hrf.shape[1]
-            else:
-                M = 1
-            D = hrf.shape[0]
-            Q = Pl.shape[1]
-            p = 2 * M * J + 2 * (D - 1) + J * Q + J
-            n = N * J
-            self.bic = loglh + p / 2 * np.log(n)
-            print self.bic
-
         if self.cmp_ftval:
 
             msg = []
@@ -2051,14 +2014,12 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         drift_sampler = self.get_variable('drift_coeff')
         perf_baseline_sampler = self.get_variable('perf_baseline')
 
-
         brf = brf_sampler.finalValue
         if brf is None:
             brf = brf_sampler.currentValue
         elif brf_sampler.zc:
             brf = brf[1:-1]
         vXh = brf_sampler.calcXResp(brf) # base convolution
-
 
         prf = prf_sampler.finalValue
         if prf is None:
@@ -2093,14 +2054,6 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
     def getGlobalOutputs(self):
         outputs = GibbsSampler.getGlobalOutputs(self)
         
-        #tp = time.time()
-        d = {'parcel_size':np.array([self.dataInput.nbVoxels])}
-        outputs['conv_error'] = xndarray(np.array(self.converror)) 
-        outputs['loglikelihood'] = xndarray(np.array([self.loglikelihood]))
-        outputs['bic'] = xndarray(np.array([self.bic]),
-                                            axes_names = ['parcel_size'],
-                                            axes_domains = d)
-
         bf = outputs.pop('bold_fit', None)
         if bf is not None and self.output_fit:
             cdict = bf.split('stype')
@@ -2138,9 +2091,9 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
             p = drift_sampler.P
 
             perf_baseline = perf_baseline_sampler.finalValue
-            #wa = perf_baseline_sampler.compute_wa(perf_baseline)
+            wa = perf_baseline_sampler.compute_wa(perf_baseline)
 
-            #fit = np.dot(vXh, brl) + np.dot(vXg, prl) + np.dot(p, l) + wa
+            fit = np.dot(vXh, brl) + np.dot(vXg, prl) + np.dot(p, l) + wa
 
             an = fit.axes_names
             ad = fit.axes_domains
@@ -2164,8 +2117,8 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
             p_adjusted = p[:,:,np.newaxis] * .15 * signal.ptp('time').data + \
               signal.min('time').data
 
-            ad = {'time':fit.get_domain('time'),
-                  'condition':self.dataInput.cNames}
+            ad = {'time': fit.get_domain('time'),
+                  'condition': self.dataInput.cNames}
 
             c_paradigm = xndarray(p_adjusted,
                                 axes_names=['condition', 'time', 'voxel'],
@@ -2176,15 +2129,15 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                                              fitted_bold,
                                              c_paradigm.sum('condition'),
                                              fitted_perf_baseline], 'stype',
-                                             ['signal','fit','perf',
-                                              'bold','paradigm',
+                                             ['signal', 'fit', 'perf',
+                                              'bold', 'paradigm',
                                               'perf_baseline'])
         return outputs
 
 
 import pyhrf.jde.models
-pyhrf.jde.models.allModels['ASL_PHYSIO0'] = {'class' : ASLPhysioSampler,
-    'doc' : 'BOLD and perfusion component, physiological prior on responses,'
+pyhrf.jde.models.allModels['ASL_PHYSIO0'] = {'class': ASLPhysioSampler,
+    'doc': 'BOLD and perfusion component, physiological prior on responses,'
     'BiGaussian prior on stationary response levels, iid white noise, '\
     'explicit drift'
     }

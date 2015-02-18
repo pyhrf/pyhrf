@@ -313,7 +313,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
         pyhrf.verbose(1,'Building outputs from %d results ...' %len(results))
         pyhrf.verbose(6, 'results :')
         pyhrf.verbose.printDict(6, results, exclude=['xmlHandler'])
-
+        
         # Handle analyses that crashed
         results = self.filter_crashed_results(results)
 
