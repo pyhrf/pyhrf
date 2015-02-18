@@ -5,7 +5,7 @@ from time import time
 from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.vem_asl_constrained import Main_vbjde_c_constrained,\
                                             Main_vbjde_constrained
-from pyhrf.vbjde.Utils import roc_curve
+from pyhrf.vbjde.vem_tools_asl import roc_curve
 #from scipy.linalg import norm
 #from pyhrf.tools._io import read_volume
 import pyhrf
