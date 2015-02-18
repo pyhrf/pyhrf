@@ -157,7 +157,7 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            Malpha = alpha.mean()
+            Malpha = np.float64(alpha.mean())
             alpha /= Malpha
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
@@ -171,7 +171,7 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            Malpha = alpha.mean()
+            Malpha = np.float64(alpha.mean())
             alpha /= Malpha
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):

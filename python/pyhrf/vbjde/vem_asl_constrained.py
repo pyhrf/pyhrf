@@ -414,6 +414,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     # Initialization
     gamma_h = 1000000000  #7.5
     gamma_g = 1000000000  #7.5
+    gamma = 0.0000000001
+    beta = 100
     Thresh = 1e-5
     D, M = np.int(np.ceil(Thrf / dt)) + 1, len(Onsets)
     N, J = Y.shape[0], Y.shape[1]
@@ -571,7 +573,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             Gt, Sigma_G = EM.expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
                                            R, sigmaG)
-            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=True)
+            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=True,
+                                      perfusion=alpha)
             #G = Gt / np.linalg.norm(Gt)
             print 'PRF ERROR = ', EM.error(G, simulation['prf'][:, 0])
             g_norm = np.append(g_norm, np.linalg.norm(G))
@@ -610,8 +613,6 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                          (np.linalg.norm(q_Z1).flatten() + eps)) ** 2
             cZ += [Crit_Z]
             q_Z1 = q_Z
-
-        
 
         # crit. AH and CG
         for d in xrange(0, D):
@@ -675,8 +676,9 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             pyhrf.verbose(3, "estimating beta")
             for m in xrange(0, M):
                 Beta[m] = EM.maximization_beta(Beta[m], q_Z, Z_tilde,
-                                        J, K, m, graph, gamma_h,
+                                        J, K, m, graph, gamma,
                                         neighboursIndexes, maxNeighbours)
+            print Beta
             pyhrf.verbose(3, "End estimating beta")
             pyhrf.verbose.printNdarray(3, Beta)
 

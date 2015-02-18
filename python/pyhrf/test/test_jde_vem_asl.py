@@ -42,7 +42,7 @@ class VEMASLTest(unittest.TestCase):
         pyhrf.verbose.set_verbosity(0)
         jde_vem_analyser = JDEVEMAnalyser(beta=.8, dt=.5, hrfDuration=25.,
                                         nItMax=2, nItMin=2, fast=True,
-                                        computeContrast=False, PLOT=False,
+                                        PLOT=False,
                                         constrained=True)
         tjde_vem = FMRITreatment(fmri_data=self.data_simu,
                                 analyser=jde_vem_analyser,

@@ -255,9 +255,9 @@ def constraint_norm1(Ftilde, Sigma_F, positivity=False):
     return np.squeeze(np.array((F.value)))
 
 
-def constraint_norm1_b(Ftilde, Sigma_F, positivity=False):
+def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     """ Constrain with optimization strategy """
-    from scipy.optimize import minimize, fmin_l_bfgs_b, fmin_slsqp
+    from scipy.optimize import fmin_l_bfgs_b, fmin_slsqp
     Sigma_F_inv = np.linalg.inv(Sigma_F)
     zeros_F = np.zeros_like(Ftilde)
     #print 'm_H = ', Ftilde
@@ -269,17 +269,30 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False):
 
     def fung(F):
         'function to minimize'
-        return np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde))*0.5, \
-                      np.dot(Sigma_F_inv, (F - Ftilde))
+        mean = np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde)) * 0.5
+        Sigma = np.dot(Sigma_F_inv, (F - Ftilde))
+        return mean, Sigma
 
     def ec1(F):
         'Norm2(F)==1'
-        return 1 - np.linalg.norm(F, 2)
+        return - 1 + np.linalg.norm(F, 2)
 
-    print 'SLSQP method: '
-    y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], bounds=[(None, None)] * (len(zeros_F)))
-    print y
-    if 0:    
+    if perfusion is not None:
+        def ec2(F):
+            'F>=perfusion'
+            return F - [perfusion[0]] * (len(zeros_F))
+        #print 'SLSQP method: '
+        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
+                       bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
+        #               bounds=[(None, None)] * (len(zeros_F)))
+    else:
+        #print 'SLSQP method: '
+        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],
+                       bounds=[(None, None)] * (len(zeros_F)))
+
+    #print y
+    if 0:
         print y
         print len(y)
         print fun(y)
@@ -400,8 +413,9 @@ def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
             S = sum(q_Z[m, k, :])
             if S == 0.:
                 S = eps
-            Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2) +
-                                    Sigma_X[m, m, :])) / S
+            #Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2) +
+            #                        Sigma_X[m, m, :])) / S
+            Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2))) / S
             if Sigma[m, k] < eps:
                 Sigma[m, k] = eps
             if k != 0:          # mu_0 = 0 a priori
@@ -464,16 +478,30 @@ def maximization_sigma_noise(Y, X, m_A, Sigma_A, Ht, m_C, Sigma_C, Gt, W, \
 
 def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
     Gr = gamma
+    print 'Gr initial = ', Gr
     for i in xrange(0, J):
+        print '*** voxel ', i
+        print 'neighbours = ', graph[i]
+        print 'Ztilde = ', Z_tilde[m, :, graph[i]]
         tmp2 = beta * sum(Z_tilde[m, :, graph[i]], 0)
+        print 'beta * sum_j\inN(i) = ', tmp2
         Emax = max(tmp2)
-        Sum = sum(np.exp(tmp2 - Emax))
+        print 'Emax = ', Emax
+        #Sum = sum(np.exp(tmp2 - Emax))
+        Sum = sum(np.exp(tmp2))
+        print 'exp(beta * sum_k\inN(i) - Emax)', Sum
         for k in xrange(0, K):
+            print 'class ', k
             tmp = sum(Z_tilde[m, k, graph[i]], 0)
+            print 'sum_j\inN(i) class = ', tmp
             energy = beta * tmp
-            Pzmi = np.exp(energy - Emax)
-            Pzmi /= (Sum + eps)
-            Gr += tmp * (-q_Z[m, k, i] + Pzmi)
+            print 'beta * sum_j\inN(i) class = ', energy
+            #Pmf_ik = np.exp(energy - Emax)
+            Pmf_ik = np.exp(energy) / (Sum + eps)
+            print 'Pmf_i = ', Pmf_ik
+            #Gr += tmp * (-q_Z[m, k, i] + Pmf_ik)
+            Gr += (-q_Z[m, k, i] + Pmf_ik)
+    print 'Gr = ', Gr
     return Gr
 
 
@@ -485,6 +513,7 @@ def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour,
     while ((abs(Gr) > 0.0001) and (ni < 200)):
         Gr = gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma)
         beta -= step * Gr
+        print 'beta[%d] = %f' % (ni, beta)
         ni += 1
     return max(beta, eps)
 

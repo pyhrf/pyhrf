@@ -484,7 +484,7 @@ def expectation_Q(m_H,Sigma_H,sigma_M,beta,Q_tilde,HRFDict,HRFDictCovar,q_Q,grap
             tmp = sum(Q_tilde[:,graph[j]],1)
             for i in xrange(0,I):
                 alpha[i] = -0.5*np.dot(Sigma_H[:,:,j],HRFDictCovar[i]).trace()
-            Malpha = alpha.mean()
+            Malpha = np.float64(alpha.mean())
             alpha /= Malpha
             maxGauss = 1
             for i in xrange(0,I):
@@ -505,7 +505,7 @@ def expectation_Q(m_H,Sigma_H,sigma_M,beta,Q_tilde,HRFDict,HRFDictCovar,q_Q,grap
         tmp = sum(Q_tilde[:,graph[j]],1)
         for i in xrange(0,I):
             alpha[i] = -0.5*np.dot(Sigma_H[:,:,j],HRFDictCovar[i]).trace()
-        Malpha = alpha.mean()
+        Malpha = np.float64(alpha.mean())
         alpha /= Malpha
         maxGauss = 1
         for i in xrange(0,I):
@@ -571,7 +571,7 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            Malpha = alpha.mean()
+            Malpha = np.float64(alpha.mean())
             alpha /= Malpha
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
@@ -585,7 +585,7 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            Malpha = alpha.mean()
+            Malpha = np.float64(alpha.mean())
             alpha /= Malpha
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
@@ -2926,7 +2926,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = reshape( m_A - m_A1,(M*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        if np.linalg.norm( reshape(m_A1,(M*J)) ) > 0:        
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        else:
+            Crit_A = 0
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
         
@@ -2939,7 +2942,11 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = reshape( AH - AH1,(M*J*D) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        
+        if np.linalg.norm( reshape(AH1,(M*J*D)) ) > 0:
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        else:
+            Crit_AH = 0
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -2964,7 +2971,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        if np.linalg.norm( reshape(q_Z1,(M*K*J)) ) > 0:
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        else:
+            Crit_Z = 0
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -3064,7 +3074,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     DIFF = reshape( m_A - m_A1,(M*J) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    if np.linalg.norm( reshape(m_A1,(M*J)) ) > 0:
+        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
+    else:
+        Crit_A = 0
     cA += [Crit_A]
     m_A1[:,:] = m_A[:,:]    
         
@@ -3078,7 +3091,10 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
     DIFF = reshape( AH - AH1,(M*J*D) )
     DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
     DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-    Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    if np.linalg.norm( reshape(AH1,(M*J*D)) ) > 0:    
+        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+    else:
+        Crit_AH = 0
     cAH += [Crit_AH]
     AH1[:,:,:] = AH[:,:,:]
     
@@ -13385,7 +13401,10 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         pyhrf.verbose(3, "E A step ...")
         UtilsC.expectation_A_ParsiMod(p_Wtilde,q_Z,mu_M,sigma_M,sigma_epsilone,Gamma,Sigma_H,y_tilde,m_A,m_H,Sigma_A,XX.astype(int32),J,D,M,N,K)
         DIFF = reshape( m_A - m_A1,(M*J) )
-        Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        if np.linalg.norm( reshape(m_A1,(M*J)) ) > 0:
+            Crit_A = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(m_A1,(M*J)) ))**2
+        else:
+            Crit_A = 0
         cA += [Crit_A]
         m_A1[:,:] = m_A[:,:]
 
@@ -13424,7 +13443,10 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         for d in xrange(0,D):
             AH[:,:,d] = m_A[:,:]*m_H[d]
         DIFF = reshape( AH - AH1,(M*J*D) )
-        Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        if np.linalg.norm( reshape(AH1,(M*J*D)) ) > 0:
+            Crit_AH = (np.linalg.norm(DIFF) / np.linalg.norm( reshape(AH1,(M*J*D)) ))**2
+        else:
+            Crit_AH = 0
         cAH += [Crit_AH]
         AH1[:,:,:] = AH[:,:,:]
         
@@ -13448,7 +13470,10 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         DIFF = reshape( q_Z - q_Z1,(M*K*J) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        if np.linalg.norm( reshape(q_Z1,(M*K*J)) ) > 0:
+            Crit_Z = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(q_Z1,(M*K*J)) ))**2
+        else:
+            Crit_Z = 0
         cZ += [Crit_Z]
         q_Z1[:,:,:] = q_Z[:,:,:]
         
@@ -13476,7 +13501,10 @@ def Main_vbjde_Extension_ParsiMod_C_4_tau2(graph,Y,Onsets,Thrf,K,TR,beta,dt,scal
         DIFF = reshape( p_Wtilde - p_Wtilde1,(M*K) )
         DIFF[ np.where( (DIFF<1e-50) & (DIFF>0.0) ) ] = 0.0 #### To avoid numerical problems
         DIFF[ np.where( (DIFF>-1e-50) & (DIFF<0.0) ) ] = 0.0 #### To avoid numerical problems
-        Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        if np.linalg.norm( reshape(p_Wtilde1,(M*K)) ) > 0:
+            Crit_W = ( np.linalg.norm(DIFF) / np.linalg.norm( reshape(p_Wtilde1,(M*K)) ))**2
+        else:
+            Crit_W = 0
         cW += [Crit_W]
         p_Wtilde1[:,:] = p_Wtilde[:,:]
         

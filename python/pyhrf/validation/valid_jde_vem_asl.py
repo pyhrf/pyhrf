@@ -109,7 +109,7 @@ class ASLTest(unittest.TestCase):
         self._test_specific_parameters(['mixture_params'], fdata, simu,
                                        nItMax=100, estimateMP=True)
         print 'pyhrf_view %s/*drift*nii' % self.tmp_dir
-        
+
     def test_beta(self):
         """ Validate estimation of drift at high SNR"""
         pyhrf.verbose.set_verbosity(2)
@@ -168,11 +168,11 @@ class ASLTest(unittest.TestCase):
         mem.cache(self._test_specific_parameters)(v, fdata, simu,
                                                   nItMax=100,
                                                   estimateG=True,
-                                                  estimateC=True, 
+                                                  estimateC=True,
                                                   estimateSigmaG=True)
         print 'pyhrf_view %s/*nii' % self.tmp_dir
-        
-    def test_perfusion(self):
+
+    def test_E_step(self):
         """ Validate estimation of perfusion component at high SNR"""
         pyhrf.verbose.set_verbosity(2)
         from pyhrf.jde.asl import simulate_asl
@@ -183,12 +183,15 @@ class ASLTest(unittest.TestCase):
 
         mem.cache(self._test_specific_parameters)(v, fdata, simu,
                                                   nItMax=100,
+                                                  estimateH=True,
+                                                  estimateA=True,
+                                                  estimateSigmaH=True,
                                                   estimateG=True,
-                                                  estimateC=True, 
-                                                  estimateSigmaG=True)
+                                                  estimateC=True,
+                                                  estimateSigmaG=True,
+                                                  estimateZ=True)
         print 'pyhrf_view %s/*nii' % self.tmp_dir
-     
-        
+
     def test_all(self):
         """ Validate estimation of full ASL model at high SNR"""
         pyhrf.verbose.set_verbosity(2)
