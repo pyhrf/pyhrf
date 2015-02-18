@@ -221,8 +221,10 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            Malpha = np.float64(alpha.mean())
-            alpha /= Malpha
+            print 'ALPHA: '            
+            print alpha
+            print np.mean(alpha)
+            alpha /= np.mean(alpha)
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
                 extern_field = alpha[k] + max(np.log( normpdf(m_A[i,m], mu_M[m,k], np.sqrt(sigma_M[m,k])) + eps) ,-100 )
@@ -235,8 +237,7 @@ def expectation_Z(Sigma_A,m_A,sigma_M,Beta,Z_tilde,mu_M,q_Z,graph,M,J,K,zerosK):
     for i in xrange(0,J):
         for m in xrange(0,M):
             alpha = -0.5*Sigma_A[m,m,i] / (sigma_M[m,:] + eps)
-            Malpha = np.float64(alpha.mean())
-            alpha /= Malpha
+            alpha /= np.mean(alpha)
             tmp = sum(Z_tilde[m,:,graph[i]],0)
             for k in xrange(0,K):
                 extern_field = alpha[k]
