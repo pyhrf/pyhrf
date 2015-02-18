@@ -8,7 +8,7 @@ import pyhrf.tools as tools
 from pyhrf import FmriData
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.jde.models import simulate_bold
-from pyhrf.ui.vb_jde_analyser_compMod import JDEVEMAnalyser
+from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
 from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained,\
                                              Main_vbjde_Python_constrained
 from pyhrf.vbjde.vem_bold import Main_vbjde_Extension,\
