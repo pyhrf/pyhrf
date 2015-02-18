@@ -96,6 +96,70 @@ def buildFiniteDiffMatrix(order, size):
     diffMat = toeplitz(np.concatenate((b, np.zeros(size-len(b)))))
     return diffMat
 
+def roc_curve(dvals, labels, rocN=None, normalize=True):
+    """
+    Compute ROC curve coordinates and area
+
+    - `dvals`  - a list with the decision values of the classifier
+    - `labels` - list with class labels, \in {0, 1}
+
+    returns (FP coordinates, TP coordinates, AUC )
+    """
+    if rocN is not None and rocN < 1:
+        rocN = int(rocN * np.sum(np.not_equal(labels, 1)))
+
+    TP = 0.0  # current number of true positives
+    FP = 0.0  # current number of false positives
+
+    fpc = [0.0]  # fp coordinates
+    tpc = [0.0]  # tp coordinates
+    dv_prev = - np.inf  # previous decision value
+    TP_prev = 0.0
+    FP_prev = 0.0
+    area = 0.0
+
+    #num_pos = labels.count(1)  # num pos labels np.sum(labels)
+    #num_neg = labels.count(0)  # num neg labels np.prod(labels.shape)-num_pos
+
+    #if num_pos == 0 or num_pos == len(labels):
+    #    raise ValueError, "There must be at least one example from each class"
+
+    # sort decision values from highest to lowest
+    indices = np.argsort(dvals)[::-1]
+
+    for idx in indices:
+        # increment associated TP/FP count
+        if labels[idx] == 1:
+            TP += 1.
+        else:
+            FP += 1.
+            if rocN is not None and FP == rocN:
+                break
+        # Average points with common decision values
+        # by not adding a coordinate until all
+        # have been processed
+        if dvals[idx] != dv_prev:
+            if len(fpc) > 0 and FP == fpc[-1]:
+                tpc[-1] = TP
+            else:
+                fpc.append(FP)
+                tpc.append(TP)
+            dv_prev = dvals[idx]
+            area += _trap_area((FP_prev, TP_prev), (FP, TP))
+            FP_prev = FP
+            TP_prev = TP
+
+    #area += _trap_area( ( FP, TP ), ( FP_prev, TP_prev ) )
+    #fpc.append( FP  )
+    #tpc.append( TP )
+    if normalize:
+        fpc = [np.float64(x) / FP for x in fpc]
+        if TP > 0:
+            tpc = [np.float64(x) / TP for x in tpc]
+        if area > 0:
+            area /= (TP * FP)
+
+    return fpc, tpc, area
 
 # Expectation functions
 ##############################################################

@@ -654,7 +654,7 @@ def Main_vbjde_Extension(graph,Y,Onsets,Thrf,K,TR,beta,dt,scale=1,estimateSigmaH
                 #------------ variance -------------#
                 n +=1
                 pyhrf.verbose(3, 'Done contrasts computing.')
-        #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
+        #+++++++++++++++++++++++  calculate contrast maps and variance  ++++++++++++++++++roc_curve+++++#
     
     pyhrf.verbose(1, "Nb iterations to reach criterion: %d" %ni)
     pyhrf.verbose(1, "Computational time = " + str(int( CompTime//60 ) ) + " min " + str(int(CompTime%60)) + " s")
