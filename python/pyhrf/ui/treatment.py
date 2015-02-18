@@ -755,7 +755,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
 
     logger.info('Estimation done, took %s', format_duration(time.time() - t0))
 
-TODO : cleanup the imports (and put them at the beginning)
+# TODO : cleanup the imports (and put them at the beginning)
 from pyhrf.tools import add_prefix, add_suffix
 from pyhrf.ui.jde import JDEAnalyser as JDE
 from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser as VBJDE
