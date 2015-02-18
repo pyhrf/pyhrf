@@ -487,7 +487,7 @@ class HRF_Sampler(GibbsSamplerVariable):
 
         logger.info('hrfValIni: %s', str(hrfValIni.shape))
         logger.debug(hrfValIni)
-        logger.info('self.hrfLength:', str(self.hrfLength))
+        logger.info('self.hrfLength: %s', str(self.hrfLength))
 
         for s in xrange(self.nbSubj):
             normHRF = (hrfValIni[s] ** 2).sum() ** (0.5)

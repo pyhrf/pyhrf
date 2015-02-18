@@ -252,8 +252,8 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         if self.trueValue is not None:
             logger.info('cur drift norm: %f', self.norm)
-            logger.info('true drift norm:', (self.trueValue *
-                                             self.trueValue).sum())
+            logger.info('true drift norm: %f', (self.trueValue *
+                                                self.trueValue).sum())
 
     def get_final_value(self):
         if self.final_signal is None:
