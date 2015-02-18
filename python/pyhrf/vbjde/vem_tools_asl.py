@@ -23,7 +23,7 @@ except ImportError:
 # Tools
 ##############################################################
 
-eps = 1e-4
+eps = 1e-6
 
 
 def error(estimated, simulated):
@@ -399,7 +399,6 @@ def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
         for m in xrange(0, M):
             alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
                     - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
-            print 'alpha mean = ', alpha.mean()
             alpha /= alpha.mean()
             tmp = sum(Z_tilde[m, :, graph[i]], 0)
             for k in xrange(0, K):
