@@ -200,9 +200,8 @@ class xndarray:
         >>> from pyhrf.ndarray import xndarray
         >>> c = xndarray(np.random.randn(10,2), axes_names=['x','y'], \
                        axes_domains={'y' : ['plop','plip']})
-        >>> c.get_domain('y')  # doctest: +NORMALIZE_WHITESPACE
-        array(['plop', 'plip'],
-              dtype='|S4')
+        >>> (c.get_domain('y') == np.array(['plop', 'plip'], dtype='|S4')).all()
+        True
         >>> c.get_domain('x') #default domain made of slice indexes
         array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         """
