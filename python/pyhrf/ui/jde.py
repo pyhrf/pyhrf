@@ -103,7 +103,7 @@ class JDEMCMCAnalyser(JDEAnalyser):
         sampler.linkToData(sInput)
 
         logger.info('Treating region %d', atomData.get_roi_id())
-        sampler.runSampling()
+        sampler.runSampling(atomData)
         logger.info('Cleaning memory ...')
         sampler.dataInput.cleanMem()
         return sampler

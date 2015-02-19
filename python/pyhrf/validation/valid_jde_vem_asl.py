@@ -1,18 +1,25 @@
 # -*- coding: utf-8 -*-
 
-#import os
 import unittest
-import numpy as np
 import shutil
-from sklearn.externals.joblib import Memory
-#from copy import deepcopy
+import tempfile
+import logging
 
-mem = Memory("cache")
+import numpy as np
+
+from sklearn.externals.joblib import Memory
 
 import pyhrf
+
 from pyhrf.core import FmriData
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.ui.vb_jde_analyser_asl import JDEVEMAnalyser
+
+
+cache_dir = tempfile.mkdtemp(prefix='pyhrf_validate',
+                             dir=pyhrf.cfg['global']['tmp_path'])
+mem = Memory(cache_dir)
+logger = logging.getLogger(__name__)
 
 
 class ASLTest(unittest.TestCase):
@@ -25,14 +32,15 @@ class ASLTest(unittest.TestCase):
 
     def tearDown(self):
         if self.clean_tmp:
-            pyhrf.verbose(1, 'Remove tmp dir %s' % self.tmp_dir)
+            logger.info('Remove tmp dir %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
         else:
-            pyhrf.verbose(1, 'Keep tmp dir %s' % self.tmp_dir)
+            logger.info('Keep tmp dir %s', self.tmp_dir)
 
     def test_prf(self):
         """ Validate estimation of PRF """
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir)
         fdata = FmriData.from_simulation_dict(simu)
@@ -42,17 +50,19 @@ class ASLTest(unittest.TestCase):
 
     def test_brf(self):
         """ Validate estimation of BRF at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir)
         fdata = FmriData.from_simulation_dict(simu)
-        self._test_specific_parameters(['brf'], fdata, simu, nItMax=100, \
+        self._test_specific_parameters(['brf'], fdata, simu, nItMax=100,
                                        estimateH=True)
         print 'pyhrf_view_qt3 %s/*brf*nii' % self.tmp_dir
 
     def test_brls(self):
         """ Validate estimation of BRLs at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir)
         fdata = FmriData.from_simulation_dict(simu)
@@ -62,7 +72,8 @@ class ASLTest(unittest.TestCase):
 
     def test_prls(self):
         """ Validate estimation of PRLs at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir)
         fdata = FmriData.from_simulation_dict(simu)
@@ -72,7 +83,8 @@ class ASLTest(unittest.TestCase):
 
     def test_labels(self):
         """ Validate estimation of labels at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir)
         fdata = FmriData.from_simulation_dict(simu)
@@ -82,7 +94,8 @@ class ASLTest(unittest.TestCase):
 
     def test_noise_var(self):
         """ Validate estimation of noise variances at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir)
         fdata = FmriData.from_simulation_dict(simu)
@@ -92,7 +105,8 @@ class ASLTest(unittest.TestCase):
 
     def test_la(self):
         """ Validate estimation of drift at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -102,7 +116,8 @@ class ASLTest(unittest.TestCase):
 
     def test_mp(self):
         """ Validate estimation of drift at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -112,7 +127,8 @@ class ASLTest(unittest.TestCase):
 
     def test_beta(self):
         """ Validate estimation of drift at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -122,7 +138,8 @@ class ASLTest(unittest.TestCase):
 
     def test_sigmaH(self):
         """ Validate estimation of drift at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -132,7 +149,8 @@ class ASLTest(unittest.TestCase):
 
     def test_sigmaG(self):
         """ Validate estimation of drift at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -142,7 +160,8 @@ class ASLTest(unittest.TestCase):
 
     def test_bold(self):
         """ Validate estimation of bold component at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -158,7 +177,8 @@ class ASLTest(unittest.TestCase):
 
     def test_perfusion(self):
         """ Validate estimation of perfusion component at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -174,7 +194,8 @@ class ASLTest(unittest.TestCase):
 
     def test_E_step(self):
         """ Validate estimation of perfusion component at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -194,7 +215,8 @@ class ASLTest(unittest.TestCase):
 
     def test_all(self):
         """ Validate estimation of full ASL model at high SNR"""
-        pyhrf.verbose.set_verbosity(2)
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
@@ -206,7 +228,7 @@ class ASLTest(unittest.TestCase):
         self._test_specific_parameters(v, fdata, simu,
                                        estimateSigmaH=False, nItMax=100,
                                        nItMin=10, estimateBeta=True,
-                                       estimateSigmaG=True, PLOT=True,
+                                       estimateSigmaG=True, PLOT=False,
                                        constrained=True, fast=False,
                                        estimateH=True, estimateG=True,
                                        estimateA=True, estimateC=True,
@@ -226,9 +248,9 @@ class ASLTest(unittest.TestCase):
         """
         Test specific samplers.
         """
-        pyhrf.verbose(1, '_test_specific_parameters %s' % str(parameter_name))
+        logger.info('_test_specific_parameters %s', str(parameter_name))
         output_dir = self.tmp_dir
-        #JDE analysis
+        # JDE analysis
         jde_vem_analyser = JDEVEMAnalyser(beta=beta, dt=dt,
                                           hrfDuration=hrfDuration,
                                           estimateSigmaH=estimateSigmaH,

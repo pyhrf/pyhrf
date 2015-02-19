@@ -157,7 +157,7 @@ class GibbsSampler:
     def stop_criterion(self, it):
         return False
 
-    def runSampling(self):
+    def runSampling(self, atomData=None):
         # np.seterr(all='raise')
         """
         Launch a complete sampling process by calling the function
@@ -222,6 +222,9 @@ class GibbsSampler:
                 logger.info('Saving init value of %s', v.name)
                 v.saveCurrentValue(-1)
 
+        rerror = np.array([])
+        loglkhd = np.array([])
+
         for it in self.iterate_sampling():
             iv = 0
 
@@ -262,6 +265,45 @@ class GibbsSampler:
                 if self.globalObsHistoryPace != -1 and \
                         (it % self.globalObsHistoryPace) == 0:
                     self.saveGlobalObservables(it)
+
+            # if pyhrf.verbose.verbosity >= 6:
+            #     try:
+            #         f = self.computeFit()
+            #         err = np.sqrt((self.dataInput.varMBY - f)**2)
+            #         pyhrf.verbose(6, 'Errors:')
+            #         pyhrf.verbose.printNdarray(6, err)
+            #     except NotImplementedError:
+            #         pass
+
+            # Save jde_fit()
+            #self.jde_fit_vec = np.append(self.jde_fit_vec, self.computeFit())
+
+            # Compute error measures
+            try:
+                bold = atomData.bold
+
+                # relative reconstruction error
+                jde_fit = self.computeFit()
+                r = bold - jde_fit
+                rec_error_j = np.sum(r ** 2, 0)
+                bold2 = np.sum(bold ** 2, 0)
+                #rec_error = np.mean(rec_error_j/bold2)   # Univariate analysis
+                rec_error = np.mean(rec_error_j) / np.mean(bold2)
+                rerror = np.append(rerror, rec_error)
+    
+                # Loglikelihood
+                var_noise = self.get_variable('noise_var').currentValue
+                loglh = 0
+                N = r.shape[0]
+                J = r.shape[1]
+                for j in np.arange(0., J):
+                    loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
+                        np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
+                loglkhd = np.append(loglkhd, loglh)
+
+            except AttributeError:
+                pass
+                
 
             # Some verbose about online profiling :
             now = time.time()
@@ -451,16 +493,16 @@ class GibbsSampler:
                                 axes_domains=axes_domains,
                                 value_label='BOLD')
                 # if self.dataInput.simulData is not None:
-
-                # s = xndarray(self.dataInput.simulData.stimInduced,
-                # axes_names=axes_names,
-                # axes_domains=axes_domains,
-                # value_label='BOLD')
-
-                # outputs['fit'] = stack_cuboids([s,cfit], 'type',
-                #['simu', 'fit'])
+    
+                    # s = xndarray(self.dataInput.simulData.stimInduced,
+                               # axes_names=axes_names,
+                               # axes_domains=axes_domains,
+                               # value_label='BOLD')
+    
+                    # outputs['fit'] = stack_cuboids([s,cfit], 'type',
+                                                   # ['simu', 'fit'])
                 # else:
-                outputs['bold_fit'] = stack_cuboids([bold, cfit],
+                outputs['bold_fit'] = stack_cuboids([bold,cfit],
                                                     'stype', ['bold', 'fit'])
 
                 # e = np.sqrt((fit.astype(np.float32) - \
