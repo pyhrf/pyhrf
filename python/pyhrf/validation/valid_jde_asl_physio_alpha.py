@@ -8,8 +8,9 @@ import logging
 from copy import deepcopy
 
 import pyhrf
-import pyhrf.jde.asl_physio_alpha as jasl  # FIXME: no asl_physio_alpha
-#import pyhrf.jde.asl_physio as jasl
+#import pyhrf.jde.asl_physio_alpha as jasl  # FIXME: no asl_physio_alpha
+import pyhrf.jde.asl_physio as jasl  # TODO: check if this is the same that
+                                     # above
 
 from pyhrf.core import FmriData
 from pyhrf.ui.jde import JDEMCMCAnalyser
