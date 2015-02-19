@@ -200,7 +200,7 @@ class xndarray:
         >>> from pyhrf.ndarray import xndarray
         >>> c = xndarray(np.random.randn(10,2), axes_names=['x','y'], \
                        axes_domains={'y' : ['plop','plip']})
-        >>> c.get_domain('y')
+        >>> c.get_domain('y')  # doctest: +NORMALIZE_WHITESPACE
         array(['plop', 'plip'],
               dtype='|S4')
         >>> c.get_domain('x') #default domain made of slice indexes
@@ -750,7 +750,7 @@ class xndarray:
         >>> c_flat = xndarray(np.arange(2*6).reshape(2,6).astype(np.int64), \
                               ['condition', 'voxel'], \
                               {'condition' : ['audio','video']})
-        >>> print c_flat.descrip()
+        >>> print c_flat.descrip()  # doctest: +NORMALIZE_WHITESPACE
         * shape : (2, 6)
         * dtype : int64
         * orientation: ['condition', 'voxel']
@@ -762,7 +762,7 @@ class xndarray:
         >>> mask = np.zeros((4,4,4), dtype=int)
         >>> mask[:3,:2,0] = 1
         >>> c_expanded = c_flat.expand(mask, 'voxel', ['x','y','z'])
-        >>> print c_expanded.descrip()
+        >>> print c_expanded.descrip()  # doctest: +NORMALIZE_WHITESPACE
         * shape : (2, 4, 4, 4)
         * dtype : int64
         * orientation: ['condition', 'x', 'y', 'z']
@@ -1754,7 +1754,7 @@ def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
            [12, 14, 16],
            [18, 20, 22]])
     >>> c_stacked = stack_cuboids([c1,c2], 'stack_axis', ['c1','c2'])
-    >>> print c_stacked.descrip()
+    >>> print c_stacked.descrip()  # doctest: +NORMALIZE_WHITESPACE
     * shape : (2, 4, 3)
     * dtype : int64
     * orientation: ['stack_axis', 'x', 'y']
