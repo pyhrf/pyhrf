@@ -5,26 +5,35 @@ array (ndarray) objects and extend them with some semantics (axes labels and
 axes domains). See xndarray class.
 (TODO: make xndarray inherit numpy.ndarray?)
 """
+
 import os.path as op
 import numpy as np
-import pprint
+import logging
+
+from pprint import pformat
+
 from pkg_resources import parse_version
 
 import pyhrf
-
-
-from pyhrf.tools import treeBranches, rescale_values, has_ext, tree_items, \
-     html_cell, html_list_to_row, html_row, html_table, html_img, html_div
-
+from pyhrf.tools import (treeBranches, rescale_values, has_ext, tree_items,
+                         html_cell, html_list_to_row, html_row, html_table,
+                         html_img, html_div)
 from pyhrf.tools.backports import OrderedDict
+
+
+logger = logging.getLogger(__name__)
+
+
 debug = False
 
-MRI3Daxes = ['sagittal','coronal','axial']
+MRI3Daxes = ['sagittal', 'coronal', 'axial']
 MRI4Daxes = MRI3Daxes + ['time']
 TIME_AXIS = 3
 
+
 class ArrayMappingError(Exception):
     pass
+
 
 class xndarray:
     """ Handles a multidimensional numpy array with axes that are labeled
@@ -54,13 +63,13 @@ class xndarray:
                 if None: then axes_names = [\"dim0\", \"dim1\", ...]
             - axes_domains (dictof <str>:<numpy array>):
                 domains associated to axes.
-                If a domain is not specified then it defaults to 
+                If a domain is not specified then it defaults to
                 range(size(axis))
 
 
         Return: a xndarray instance
         """
-        pyhrf.verbose(5, 'xndarray.__init__ ...')
+        logger.debug('xndarray.__init__ ...')
 
         narray = np.asarray(narray)
         self.data = narray
@@ -71,56 +80,50 @@ class xndarray:
         nbDims = self.data.ndim
 
         if axes_names is None:
-            self.axes_names = ['dim'+str(i) for i in xrange(nbDims)]
+            self.axes_names = ['dim' + str(i) for i in xrange(nbDims)]
         else:
             assert type(axes_names) == list
             if len(axes_names) != nbDims:
-                raise Exception("length of axes_names (%d) is different " \
-                                    "from nb of dimensions (%d).\n" \
-                                    "Got axes names: %s" \
-                                    %(len(axes_names), nbDims, str(axes_names)))
+                raise Exception("length of axes_names (%d) is different "
+                                "from nb of dimensions (%d).\n"
+                                "Got axes names: %s"
+                                % (len(axes_names), nbDims, str(axes_names)))
 
             self.axes_names = axes_names[:]
 
-
-        self.axes_ids = dict( [(self.axes_names[i],i) for i in xrange(nbDims)] )
+        self.axes_ids = dict([(self.axes_names[i], i) for i in xrange(nbDims)])
 
         # By default: domain of axis = array of slice indexes
         sh = self.data.shape
-        self.axes_domains = dict([(axis,np.arange(sh[i])) \
-                                  for i,axis in enumerate(self.axes_names)])
+        self.axes_domains = dict([(axis, np.arange(sh[i]))
+                                  for i, axis in enumerate(self.axes_names)])
 
         if axes_domains is not None:
             assert isinstance(axes_domains, dict)
 
-            for an,dom in axes_domains.iteritems():
+            for an, dom in axes_domains.iteritems():
                 if an not in self.axes_names:
-                    raise Exception('Axis "%s" defined in domains not '\
-                                        'found in axes (%s)' \
-                                        %(an, ','.join(self.axes_names)))
+                    raise Exception('Axis "%s" defined in domains not '
+                                    'found in axes (%s)'
+                                    % (an, ','.join(self.axes_names)))
 
                 ia = self.axes_names.index(an)
                 l = self.data.shape[ia]
                 if len(dom) != l:
-                    raise Exception('Length of domain for axis "%s" (%d) ' \
-                                    'does not match length of data '\
-                                    'axis %d (%d) ' %(an, len(dom), ia, l))
-
+                    raise Exception('Length of domain for axis "%s" (%d) '
+                                    'does not match length of data '
+                                    'axis %d (%d) ' % (an, len(dom), ia, l))
 
                 if len(set(dom)) != len(dom):
-                    raise Exception('Domain of axis "%s" does not contain '\
-                                    'unique values' %an)
+                    raise Exception('Domain of axis "%s" does not contain '
+                                    'unique values' % an)
 
                 axes_domains[an] = np.asarray(dom)
 
             self.axes_domains.update(axes_domains)
-        # for ia,dv in axes_domains.items():
-        #     self.set_axis_domain(ia,dv)
 
-        if pyhrf.verbose.verbosity > 5:
-            pyhrf.verbose(6, 'Axes names: %s' %str(self.axes_names))
-            pyhrf.verbose(6, 'Axes domains: %s' %str(self.axes_domains))
-    #__init__
+        logger.debug('Axes names: %s', str(self.axes_names))
+        logger.debug('Axes domains: %s', str(self.axes_domains))
 
     @staticmethod
     def xndarray_like(c, data=None):
@@ -151,18 +154,19 @@ class xndarray:
     def get_axis_id(self, axis_name):
         """ Return the id of an axis from the given name.
         """
-        pyhrf.verbose(6,'core.cuboid ... getting id of %s' %axis_name)
-        pyhrf.verbose(6,'from : %s' %str(self.axes_ids))
-        if isinstance(axis_name, str) : # axis_name is a string axis name
+        logger.debug('core.cuboid ... getting id of %s', axis_name)
+        logger.debug('from : %s', str(self.axes_ids))
+        if isinstance(axis_name, str):  # axis_name is a string axis name
             if axis_name in self.axes_ids.keys():
                 return self.axes_ids[axis_name]
-            else: return None
-        else: # axis_name is an integer axis index
-            if axis_name>=0 and axis_name<self.get_ndims():
+            else:
+                return None
+        else:  # axis_name is an integer axis index
+            if axis_name >= 0 and axis_name < self.get_ndims():
                 return axis_name
-            else: return None
-    #get_axis_id
-
+            else:
+                return None
+    # get_axis_id
 
     def set_axis_domain(self, axis_id, domain):
         """
@@ -177,16 +181,16 @@ class xndarray:
 
         assert axis_id in self.axes_domains
 
-        if axis_id is not None :
-            pyhrf.verbose(6, 'setting domain of axis %s with %s' \
-                              %(str(axis_id),str(domain)))
+        if axis_id is not None:
+            logger.debug('setting domain of axis %s with %s', str(axis_id),
+                         str(domain))
             if len(domain) != self.data.shape[axis_id]:
-                raise Exception('length of domain values (%d) does not ' \
-                                ' match length of data (%d) for axis %s' \
-                                %(len(domain),self.data.shape[axis_id],
-                                  self.get_axis_name(axis_id)))
+                raise Exception('length of domain values (%d) does not '
+                                ' match length of data (%d) for axis %s'
+                                % (len(domain), self.data.shape[axis_id],
+                                   self.get_axis_name(axis_id)))
             self.axes_domains[axis_id] = np.array(domain)
-    #set_axis_domain
+    # set_axis_domain
 
     def get_domain(self, axis_id):
         """
@@ -197,7 +201,7 @@ class xndarray:
         >>> c = xndarray(np.random.randn(10,2), axes_names=['x','y'], \
                        axes_domains={'y' : ['plop','plip']})
         >>> c.get_domain('y')
-        array(['plop', 'plip'], 
+        array(['plop', 'plip'],
               dtype='|S4')
         >>> c.get_domain('x') #default domain made of slice indexes
         array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
@@ -205,8 +209,8 @@ class xndarray:
         if axis_id in self.axes_domains:
             return self.axes_domains[axis_id]
         else:
-            raise Exception('Unknow axis %s' %axis_id)
-    #get_domain
+            raise Exception('Unknow axis %s' % axis_id)
+    # get_domain
 
     def swapaxes(self, a1, a2):
         """
@@ -223,7 +227,7 @@ class xndarray:
         ia1, ia2 = self.get_axis_id(a1), self.get_axis_id(a2)
         an[ia2], an[ia1] = an[ia1], an[ia2]
         return xndarray(np.swapaxes(self.data, ia1, ia2), an, self.axes_domains,
-                      self.value_label, self.meta_data)
+                        self.value_label, self.meta_data)
 
     def roll(self, axis, pos=-1):
         """
@@ -232,15 +236,15 @@ class xndarray:
         TODO: handle all pos.
         """
         i = self.get_axis_id(axis)
-        if (i == 0 and pos == 0) or (i == self.get_ndims()-1 and pos == -1):
+        if (i == 0 and pos == 0) or (i == self.get_ndims() - 1 and pos == -1):
             return self
         if pos == 0:
             raise NotImplementedError(' pos=0 not coded yet. TODO')
 
         self.data = np.rollaxis(self.data, i, len(self.axes_names))
-        self.axes_names = self.axes_names[:i] + self.axes_names[i+1:] + \
+        self.axes_names = self.axes_names[:i] + self.axes_names[i + 1:] + \
             [axis]
-        self.axes_ids = dict([(a,i) for i,a in enumerate(self.axes_names)])
+        self.axes_ids = dict([(a, i) for i, a in enumerate(self.axes_names)])
         return self
 
     def repeat(self, n, new_axis, domain=None):
@@ -253,10 +257,9 @@ class xndarray:
 
         return stack_cuboids([self.copy() for i in xrange(n)], new_axis, domain)
 
-
     def squeeze_all_but(self, axes):
-        to_squeeze = [a for i,a in enumerate(self.axes_names) \
-                          if self.data.shape[i] == 1 and a not in axes]
+        to_squeeze = [a for i, a in enumerate(self.axes_names)
+                      if self.data.shape[i] == 1 and a not in axes]
         if len(to_squeeze) == 0:
             return self
         else:
@@ -267,17 +270,17 @@ class xndarray:
         Remove all dims which have length=1.
         'axis' selects a subset of the single-dimensional axes.
         """
-        #print 'input axis:', axis
+        # print 'input axis:', axis
         sh = self.data.shape
         if axis is None:
-            axis = [a for i,a in enumerate(self.axes_names) if sh[i]==1]
+            axis = [a for i, a in enumerate(self.axes_names) if sh[i] == 1]
         else:
             assert self.has_axes(axis)
             ssh = np.array([sh[self.get_axis_id(a)] for a in axis])
             if (ssh != 1).all():
-                raise Exception('Subset axes to squeeze (%s) '\
-                                    'are not all one-length: %s' \
-                                    %(str(axis),str(ssh)))
+                raise Exception('Subset axes to squeeze (%s) '
+                                'are not all one-length: %s'
+                                % (str(axis), str(ssh)))
 
         axis_ids = tuple(self.get_axis_id(a) for a in axis)
         # print 'axes to squeeze', axis
@@ -286,7 +289,7 @@ class xndarray:
         # select axes to keep:
         axes_names = [a for a in self.axes_names if a not in axis]
 
-        axes_domains = dict( (a,self.axes_domains[a]) for a in axes_names )
+        axes_domains = dict((a, self.axes_domains[a]) for a in axes_names)
 
         if parse_version(np.__version__) >= parse_version('1.7'):
             data = self.data.squeeze(axis=axis_ids)
@@ -294,20 +297,20 @@ class xndarray:
             sm = [':'] * len(sh)
             for i in axis_ids:
                 sm[i] = '0'
-            #print 'sm:', sm
-            data = eval('self.data[%s]' %','.join(sm))
+            # print 'sm:', sm
+            data = eval('self.data[%s]' % ','.join(sm))
 
         return xndarray(data, axes_names, axes_domains,
-                      self.value_label, self.meta_data)
+                        self.value_label, self.meta_data)
 
     def descrip(self):
         """ Return a printable string describing the cuboid.
         """
         s = ''
-        s += '* shape : %s\n' %str(self.data.shape)
-        s += '* dtype : %s\n' %str(self.data.dtype)
-        s += '* orientation: %s\n' %str(self.axes_names)
-        s += '* value label: %s\n' %self.value_label
+        s += '* shape : %s\n' % str(self.data.shape)
+        s += '* dtype : %s\n' % str(self.data.dtype)
+        s += '* orientation: %s\n' % str(self.axes_names)
+        s += '* value label: %s\n' % self.value_label
         s += '* axes domains:\n'
         for dname in self.axes_names:
             dvalues = self.axes_domains[dname]
@@ -319,18 +322,13 @@ class xndarray:
                     len(dvalues) > 1:
                 delta = np.diff(dvalues)
                 if (delta == delta[0]).all():
-                    s += "  '%s': "%dname + 'arange(%s,%s,%s)\n' \
-                        %(str(dvalues[0]),str(dvalues[-1]),str(delta[0]))
+                    s += "  '%s': " % dname + 'arange(%s,%s,%s)\n' \
+                        % (str(dvalues[0]), str(dvalues[-1]), str(delta[0]))
                 else:
-                    s += "  '%s': "%dname + pprint.pformat(dvalues) + '\n'
+                    s += "  '%s': " % dname + pformat(dvalues) + '\n'
             else:
-                s += "  '%s': "%dname + pprint.pformat(dvalues) + '\n'
-
-        #sdomain = pprint.pformat(self.axes_domains)
-        #s += '\n'.join([ '  '+s for s in sdomain.split('\n')])
-                
+                s += "  '%s': " % dname + pformat(dvalues) + '\n'
         return s.rstrip('\n')
-
 
     def _html_table_headers(self, row_axes, col_axes):
         """
@@ -343,14 +341,14 @@ class xndarray:
                    list of html code for the col header (with <tr> tags))
         """
         dsh = self.get_dshape()
-        nb_blank_cols = len(row_axes) * 2 #nb of blank cols preprended to
-                                          #each line of the column header
+        nb_blank_cols = len(row_axes) * 2  # nb of blank cols preprended to
+        # each line of the column header
         nb_rows = int(np.prod([dsh[a] for a in row_axes]))
         nb_cols = int(np.prod([dsh[a] for a in col_axes]))
         # col header
         if nb_blank_cols > 0:
             blank_cells = ['']
-            blank_cells_attrs = [{'colspan':str(nb_blank_cols)}]
+            blank_cells_attrs = [{'colspan': str(nb_blank_cols)}]
         else:
             blank_cells = []
             blank_cells_attrs = []
@@ -358,17 +356,18 @@ class xndarray:
         nb_repets = 1
         span = nb_cols
         for a in col_axes:
-            dom = [str(v) for v in self.get_domain(a)] #TODO: better dv format
+            dom = [str(v)
+                   for v in self.get_domain(a)]  # TODO: better dv format
             span /= len(dom)
             # row showing the axis label
             col_header.append(html_list_to_row(blank_cells + [a], 'h',
-                                               blank_cells_attrs + \
-                                                [{'colspan':nb_cols}]))
+                                               blank_cells_attrs +
+                                               [{'colspan': nb_cols}]))
             # row showing domain values
             col_header.append(html_list_to_row(blank_cells + dom * nb_repets, 'h',
                                                blank_cells_attrs +
-                                               [{'colspan':str(span)}] * \
-                                                 len(dom) * nb_repets))
+                                               [{'colspan': str(span)}] *
+                                               len(dom) * nb_repets))
             nb_repets *= len(dom)
 
         # row header
@@ -378,14 +377,16 @@ class xndarray:
         span = nb_rows
         for a in row_axes:
             # 1st row contains all axis labels:
-            row_header[0].append(html_cell(html_div(a,{'class':'rotate'}), 'h',
-                                           {'rowspan':nb_rows}))
+            row_header[0].append(html_cell(html_div(a, {'class': 'rotate'}), 'h',
+                                           {'rowspan': nb_rows}))
 
             # dispatch domain values across corresponding rows:
-            dom = [str(v) for v in self.get_domain(a)] #TODO: better dv format
+            dom = [str(v)
+                   for v in self.get_domain(a)]  # TODO: better dv format
             span /= len(dom)
             for idv, dv in enumerate(dom * nb_repets):
-                row_header[idv*span].append(html_cell(dv, 'h', {'rowspan':span}))
+                row_header[
+                    idv * span].append(html_cell(dv, 'h', {'rowspan': span}))
 
             nb_repets *= len(dom)
 
@@ -419,27 +420,27 @@ class xndarray:
         norm = plt.normalize(self.min(), self.max())
 
         def protect_html_fn(fn):
-            base,ext = op.splitext(fn)
+            base, ext = op.splitext(fn)
             return base.replace('.', '-') + ext
 
         def format_cell(slice_info, cell_val):
             attrs = {}
             if tooltip:
-                stooltip = '|| '.join(['%s=%s' %(a, str(s)) \
-                                     for a,s in zip(outer_axes, slice_info)])
+                stooltip = '|| '.join(['%s=%s' % (a, str(s))
+                                       for a, s in zip(outer_axes, slice_info)])
                 attrs['title'] = stooltip
-
 
             if cell_format == 'txt':
                 return html_cell(str(cell_val), attrs=attrs)
             elif cell_format == 'plot':
                 # Forge figure filename
-                suffix = '_'.join(['%s_%s' %(a, str(s)) \
-                                   for a,s in zip(outer_axes, slice_info)])
-                fig_fn = op.join(plot_dir, plot_fig_prefix + suffix + '.png' )
+                suffix = '_'.join(['%s_%s' % (a, str(s))
+                                   for a, s in zip(outer_axes, slice_info)])
+                fig_fn = op.join(plot_dir, plot_fig_prefix + suffix + '.png')
                 fig_fn = protect_html_fn(fig_fn)
                 # Render figure
-                plt.figure(figsize=(4,3), dpi=40) #TODO: expose these parameters
+                # TODO: expose these parameters
+                plt.figure(figsize=(4, 3), dpi=40)
                 if plot_style == 'image':
                     pplot.plot_cub_as_image(cell_val, norm=norm, **plot_args)
                 else:
@@ -451,24 +452,22 @@ class xndarray:
                     html_fig_fn = op.join(rel_plot_dir, op.basename(fig_fn))
                 return html_cell(html_img(html_fig_fn), attrs=attrs)
             else:
-                raise Exception('Wrong plot_style "%s"' %plot_style)
+                raise Exception('Wrong plot_style "%s"' % plot_style)
 
-        pyhrf.verbose(2, 'Generate html table headers ...')
+        logger.info('Generate html table headers ...')
         row_header, col_header = self._html_table_headers(row_axes, col_axes)
-        pyhrf.verbose(2, 'Convert xarray to tree ...')
+        logger.info('Convert xarray to tree ...')
         cell_vals = tree_items(self.to_tree(row_axes + col_axes, inner_axes))
 
         dsh = self.get_dshape()
         nb_cols = int(np.prod([dsh[a] for a in col_axes]))
         content = []
-        pyhrf.verbose(2, 'Generate cells ...')
+        logger.info('Generate cells ...')
         for i, r in enumerate(row_header):
             # at each row, concatenate row header + table content
-            content += html_row(r + ''.join([format_cell(*cell_vals.next()) \
+            content += html_row(r + ''.join([format_cell(*cell_vals.next())
                                              for c in range(nb_cols)]))
         return html_table(''.join(col_header + content), border=border)
-
-
 
     def _combine_domains(self, axes):
         """
@@ -479,7 +478,7 @@ class xndarray:
                 print 'stack_dvalues ...'
                 print 'prev:', prev
                 print 'x:', x
-            res = prev + [list(np.tile(x,len(prev)==0 or len(prev[-1])))]
+            res = prev + [list(np.tile(x, len(prev) == 0 or len(prev[-1])))]
             if 0:
                 print 'result:', res
                 print ''
@@ -491,10 +490,10 @@ class xndarray:
                  val_fmt='%1.2f', col_align=None):
 
         def multicol(n, s, align='c'):
-            return '\\multicolumn{%d}{%s}{%s}' %(n,align,s)
-        def multirow(n, s, position='*'):
-            return '\\multirow{%d}{%s}{%s}' %(n,position,s)
+            return '\\multicolumn{%d}{%s}{%s}' % (n, align, s)
 
+        def multirow(n, s, position='*'):
+            return '\\multirow{%d}{%s}{%s}' % (n, position, s)
 
         if hval_fmt is None:
             hval_fmt = {}
@@ -521,21 +520,21 @@ class xndarray:
         if header_styles is None:
             header_styles = {}
 
-        hstyles = dict( (a,['split']) for a in self.axes_names )
+        hstyles = dict((a, ['split']) for a in self.axes_names)
         hstyles.update(header_styles)
-        pyhrf.verbose(6, 'hstyles: %s' %str(hstyles))
+        logger.debug('hstyles: %s', str(hstyles))
 
         if col_align is None:
             col_align = {}
 
-        calign = dict( (a,'c') for a in self.axes_names )
+        calign = dict((a, 'c') for a in self.axes_names)
         calign.update(col_align)
 
         def fmt_val(val):
             if isinstance(val, str):
                 return val
             else:
-                return val_fmt %val
+                return val_fmt % val
 
         def fmt_hval(val, axis):
             if isinstance(val, str):
@@ -552,7 +551,7 @@ class xndarray:
                 r = a + "=" + fmt_hval(val, axis)
 
             if 'vertical' in style:
-                return r'\rotatebox{90}{{%s}}' %r
+                return r'\rotatebox{90}{{%s}}' % r
             else:
                 return r
 
@@ -561,7 +560,8 @@ class xndarray:
         c_to_print = self.reorient(row_axes + col_axes + inner_axes)
         dsh = c_to_print.get_dshape()
         data = c_to_print.data.reshape(int(np.prod([dsh[a] for a in row_axes])),
-                                       int(np.prod([dsh[a] for a in col_axes])),
+                                       int(np.prod([dsh[a]
+                                                    for a in col_axes])),
                                        int(np.prod([dsh[a] for a in inner_axes])))
 
         #data = np.atleast_2d(self.unstack(row_axes + col_axes, inner_axes).data)
@@ -580,7 +580,7 @@ class xndarray:
             assert len(doms_for_row_header[-1]) == nb_rows
             row_header = [[] for i in range(nb_rows)]
 
-            for a,d in zip(row_axes, doms_for_row_header):
+            for a, d in zip(row_axes, doms_for_row_header):
                 # print 'a:', a
                 # print 'd:', d
                 if 'split' in hstyles[a]:
@@ -596,9 +596,9 @@ class xndarray:
                 j = 0
                 for i in range(nb_rows):
                     # print 'i=', i
-                    if i%(nb_rows / len_d) == 0:
+                    if i % (nb_rows / len_d) == 0:
                         if nb_rows / len_d > 1:
-                            row_header[i].append(multirow(nb_rows/len_d,
+                            row_header[i].append(multirow(nb_rows / len_d,
                                                           fmt_hcell(a, d[j])))
                         else:
                             row_header[i].append(fmt_hcell(a, d[j]))
@@ -616,51 +616,53 @@ class xndarray:
             row_header = [''] * nb_rows
 
         assert len(doms_for_col_header[-1]) == nb_cols
-        hprefix = ''.join([ ['&','&&']['split' in hstyles[a]] \
-                            for a in row_axes ])
+        hprefix = ''.join([['&', '&&']['split' in hstyles[a]]
+                           for a in row_axes])
         header = ''
-        for a,d in zip(col_axes[:-1], doms_for_col_header[:-1]):
+        for a, d in zip(col_axes[:-1], doms_for_col_header[:-1]):
             # print 'format header for axis', a
             if 'split' in hstyles[a]:
                 header += hprefix + multicol(nb_cols, a) + table_line_end
-            header += hprefix + ' & '.join([multicol(nb_cols/len(d),
-                                                     fmt_hcell(a,e)) \
+            header += hprefix + ' & '.join([multicol(nb_cols / len(d),
+                                                     fmt_hcell(a, e))
                                             for e in d]) + table_line_end
 
         a, d = col_axes[-1], doms_for_col_header[-1]
         if 'split' in hstyles[col_axes[-1]]:
-            header += hprefix + multicol(nb_cols, col_axes[-1]) + table_line_end
-        header += hprefix + ' & '.join([fmt_hcell(a,e) for e in d]) + \
-          table_line_end
+            header += hprefix + \
+                multicol(nb_cols, col_axes[-1]) + table_line_end
+        header += hprefix + ' & '.join([fmt_hcell(a, e) for e in d]) + \
+            table_line_end
 
         # nb_cols = len(self.axes_domains.get(col_axes[-1], '1'))
         all_col_align = [calign[col_axes[-1]]] * nb_cols
-        for a,d in zip(col_axes[:-1], doms_for_col_header[:-1]):
+        for a, d in zip(col_axes[:-1], doms_for_col_header[:-1]):
             len_d = len(d)
             # print 'a:', a
             # print 'd:', d
             # print 'range(nb_cols/len_d, nb_cols, len_d):', \
             #   range(nb_cols/len_d-1, nb_cols, nb_cols/len_d-1)
-            for i in range(nb_cols/len_d-1, nb_cols, nb_cols/len_d):
+            for i in range(nb_cols / len_d - 1, nb_cols, nb_cols / len_d):
                 all_col_align[i] = calign[a]
 
-        table_align = ' '.join([ ['c','c c']['split' in hstyles[a]] \
-                                 for a in row_axes]  + \
-                             ['|'] * (len(row_axes)>0) + \
-                             all_col_align)
+        table_align = ' '.join([['c', 'c c']['split' in hstyles[a]]
+                                for a in row_axes] +
+                               ['|'] * (len(row_axes) > 0) +
+                               all_col_align)
 
-        s = '\\begin{tabular}{%s}\n' %table_align
+        s = '\\begin{tabular}{%s}\n' % table_align
         s += header
+
         def fmt_cell(c):
             if isinstance(c, xndarray):
                 return inner_separator.join(map(fmt_val, c.data))
             elif isinstance(c, np.ndarray):
                 return inner_separator.join(map(fmt_val, c))
-            else: #scalar
+            else:  # scalar
                 return fmt_val(c)
-        s += table_line_end.join([lh + " & ".join(map(fmt_cell,l)) \
-                                  for lh, l in zip(row_header,data)]) + \
-             table_line_end
+        s += table_line_end.join([lh + " & ".join(map(fmt_cell, l))
+                                  for lh, l in zip(row_header, data)]) + \
+            table_line_end
         s += '\\end{tabular}'
         return s
 
@@ -686,35 +688,33 @@ class xndarray:
 
             self.set_orientation(orientation)
 
-
     def set_orientation(self, axes):
         """ Set the cuboid orientation (inplace) according to input axes labels
         """
         if debug:
-            pyhrf.verbose(5, 'set_orientation ...')
-            pyhrf.verbose(5, '%s -> %s' %(str(self.axes_names), str(axes)))
+            logger.debug('set_orientation ...')
+            logger.debug('%s -> %s', str(self.axes_names), str(axes))
 
         if set(axes) != set(self.axes_names):
-            raise Exception('Required orientation %s does not contain '\
-                                'all axes %s' %(str(axes), str(self.axes_names)))
+            raise Exception('Required orientation %s does not contain '
+                            'all axes %s' % (str(axes), str(self.axes_names)))
 
-        if axes == self.axes_names: #already in the asked orientation
+        if axes == self.axes_names:  # already in the asked orientation
             return
 
-        for i,axis in enumerate(axes):
-            pyhrf.verbose(5, 'Rolling axis %s, cur pos=%d -> dest pos=%d' \
-                              %(axis,self.axes_names.index(axis),i))
-            pyhrf.verbose(5, 'Shape: %s' %str(self.data.shape))
+        for i, axis in enumerate(axes):
+            logger.debug('Rolling axis %s, cur pos=%d -> dest pos=%d',
+                         axis, self.axes_names.index(axis), i)
+            logger.debug('Shape: %s', str(self.data.shape))
             cur_i = self.axes_names.index(axis)
-            self.data = np.rollaxis(self.data, cur_i , i)
+            self.data = np.rollaxis(self.data, cur_i, i)
             self.axes_names.pop(cur_i)
             self.axes_names.insert(i, axis)
-            pyhrf.verbose(5,'After rolling. Shape: %s, new axes: %s' \
-                              %(str(self.data.shape), str(self.axes_names)))
-            pyhrf.verbose(5,'')
+            logger.debug('After rolling. Shape: %s, new axes: %s',
+                         str(self.data.shape), str(self.axes_names))
+            logger.debug('')
 
-
-        self.axes_ids = dict([(a,i) for i,a in enumerate(self.axes_names)])
+        self.axes_ids = dict([(a, i) for i, a in enumerate(self.axes_names)])
 
     def reorient(self, orientation):
         """ Return a cuboid with new orientation.
@@ -736,7 +736,6 @@ class xndarray:
         return self.expand(cmask.data, axis, cmask.axes_names,
                            cmask.axes_domains, dest=dest)
 
-
     def expand(self, mask, axis, target_axes=None,
                target_domains=None, dest=None, do_checks=True, m=None):
         """ Create a new xndarray instance (or store into an existing 'dest'
@@ -757,7 +756,7 @@ class xndarray:
         * orientation: ['condition', 'voxel']
         * value label: value
         * axes domains:
-          'condition': array(['audio', 'video'], 
+          'condition': array(['audio', 'video'],
               dtype='|S5')
           'voxel': arange(0,5,1)
         >>> mask = np.zeros((4,4,4), dtype=int)
@@ -769,62 +768,59 @@ class xndarray:
         * orientation: ['condition', 'x', 'y', 'z']
         * value label: value
         * axes domains:
-          'condition': array(['audio', 'video'], 
+          'condition': array(['audio', 'video'],
               dtype='|S5')
           'x': arange(0,3,1)
           'y': arange(0,3,1)
           'z': arange(0,3,1)
         """
-        if pyhrf.verbose.verbosity > 5:
-            pyhrf.verbose(6, 'expand ... '\
-                          'mask: %s -> region size=%d, ' \
-                          'axis: %s, target_axes: %s, target_domains: %s' \
-                          %(str(mask.shape), mask.sum(dtype=int), axis,
-                            str(target_axes), str(target_domains)))
+        logger.debug('expand ... mask: %s -> region size=%d, '
+                     'axis: %s, target_axes: %s, target_domains: %s',
+                     str(mask.shape), mask.sum(dtype=int), axis,
+                     str(target_axes), str(target_domains))
 
         if do_checks:
-            if  not ((mask.min() == 0 and mask.max() == 1) or \
-                     (mask.min() == 1 and mask.max() == 1) or
-                     (mask.min() == 0 and mask.max() == 0)):
-                raise Exception("Input mask is not binary (%s)" \
-                                %str(np.unique(mask)))
+            if not ((mask.min() == 0 and mask.max() == 1) or
+                    (mask.min() == 1 and mask.max() == 1) or
+                    (mask.min() == 0 and mask.max() == 0)):
+                raise Exception("Input mask is not binary (%s)"
+                                % str(np.unique(mask)))
 
             if axis not in self.axes_names:
-                raise Exception('Axes %s not found in cuboid\'s axes.' %axis)
+                raise Exception('Axes %s not found in cuboid\'s axes.' % axis)
 
         if target_axes is None:
             target_axes = []
             for i in xrange(mask.ndim):
                 d = 0
-                while 'dim%d' %d in self.axes_names+target_axes:
+                while 'dim%d' % d in self.axes_names + target_axes:
                     d += 1
-                target_axes.append('dim%d' %d)
+                target_axes.append('dim%d' % d)
         else:
             target_axes = target_axes
 
-        pyhrf.verbose(6, 'target_axes: %s' %str(target_axes))
+        logger.debug('target_axes: %s', str(target_axes))
 
         if do_checks and len(target_axes) != 1 and \
                 len(set(target_axes).intersection(self.axes_names)) != 0:
             # if len(target_axes) == 1 & target_axes[0] already in current axes
             #    -> OK, axis is mapped to itself.
-            raise Exception('Error while expanding xndarray, intersection btwn'\
-                                ' targer axes (%s) and current axes (%s) is ' \
-                                'not empty.' \
-                                %(str(target_axes),str(self.axes_names)))
+            raise Exception('Error while expanding xndarray, intersection btwn'
+                            ' targer axes (%s) and current axes (%s) is '
+                            'not empty.'
+                            % (str(target_axes), str(self.axes_names)))
 
         assert len(target_axes) == mask.ndim
 
         if target_domains is None:
-            target_domains = dict([(a,range(mask.shape[i])) \
-                                       for i,a in enumerate(target_axes)])
+            target_domains = dict([(a, range(mask.shape[i]))
+                                   for i, a in enumerate(target_axes)])
 
         assert set(target_domains.keys()).issubset(target_axes)
         # target_domains = [target_domains.get(a,range(mask.shape[i])) \
         #                       for i,a in enumerate(target_axes)]
 
-        if pyhrf.verbose.verbosity > 5:
-            pyhrf.verbose(6, 'target_domains: %s' %str(target_domains))
+        logger.debug('target_domains: %s', str(target_domains))
         assert len(target_domains) == len(target_axes)
 
         flat_axis_idx = self.get_axis_id(axis)
@@ -836,7 +832,7 @@ class xndarray:
                                         flat_axis=flat_axis_idx, dest=dest_data,
                                         m=m)
         new_axes = self.axes_names[:flat_axis_idx] + target_axes + \
-            self.axes_names[flat_axis_idx+1:]
+            self.axes_names[flat_axis_idx + 1:]
 
         new_domains = self.axes_domains.copy()
         new_domains.pop(axis)
@@ -848,15 +844,14 @@ class xndarray:
         return xndarray(new_data, new_axes, new_domains, self.value_label,
                         meta_data=self.meta_data)
 
-
     def map_onto(self, xmapping):
         """
-        Reshape the array by mapping the axis corresponding to 
+        Reshape the array by mapping the axis corresponding to
         xmapping.value_label onto the shape of xmapping.
         Args:
             - xmapping (xndarray): array whose attribute value_label
                                    matches an axis of the current array
-        
+
         Return:
             - a new array (xndarray) where values from the current array
               have been mapped according to xmapping
@@ -876,7 +871,7 @@ class xndarray:
         >>> # 2D spatial mask of regions:
         >>> region_map = xndarray(np.array([[2,2,2,6], [6,6,6,0], [6,6,0,0]]), \
                                   ['x','y'], value_label='region')
-        >>> # expand region-specific data into region mask 
+        >>> # expand region-specific data into region mask
         >>> # (duplicate values)
         >>> data.map_onto(region_map)
         axes: ['x', 'y', 'time'], array([[[ 0. ,  0.1,  0.2,  0.3],
@@ -896,23 +891,23 @@ class xndarray:
         """
         mapped_axis = xmapping.value_label
         if not self.has_axis(mapped_axis):
-            raise ArrayMappingError('Value label "%s" of xmapping not found '\
-                                        'in array axes (%s)' \
-                                        %(mapped_axis,
-                                          ', '.join(self.axes_names)))
+            raise ArrayMappingError('Value label "%s" of xmapping not found '
+                                    'in array axes (%s)'
+                                    % (mapped_axis,
+                                       ', '.join(self.axes_names)))
 
         if not set(xmapping.data.flat).issuperset(self.get_domain(mapped_axis)):
             raise ArrayMappingError('Domain of axis "%s" to be mapped is not a '
-                                    'subset of values in the mapping array.'\
-                                     %mapped_axis)
+                                    'subset of values in the mapping array.'
+                                    % mapped_axis)
         dest = None
         for mval in self.get_domain(mapped_axis):
-            sub_a = self.sub_cuboid(**{mapped_axis:mval})
-            sub_mapping = self.xndarray_like(xmapping, data=xmapping.data==mval)
+            sub_a = self.sub_cuboid(**{mapped_axis: mval})
+            sub_mapping = self.xndarray_like(
+                xmapping, data=xmapping.data == mval)
             rsub_a = sub_a.repeat(sub_mapping.sum(), '__mapped_axis__')
             dest = rsub_a.cexpand(sub_mapping, '__mapped_axis__', dest=dest)
         return dest
-
 
     def flatten(self, mask, axes, new_axis):
         """ flatten cudoid.
@@ -920,29 +915,28 @@ class xndarray:
         TODO: +unit test
         """
         if not set(axes).issubset(self.axes_names):
-            raise Exception('Axes to flat (%s) are not a subset of '\
-                            'current axes (%s)' \
-                            %(str(axes), str(self.axes_names)))
-
+            raise Exception('Axes to flat (%s) are not a subset of '
+                            'current axes (%s)'
+                            % (str(axes), str(self.axes_names)))
 
         m = np.where(mask)
         # print 'mask:', mask.sum()
         # print 'flat_data:', flat_data.shape
-        sm = [':']*self.data.ndim
-        for i,a in enumerate(axes):
+        sm = [':'] * self.data.ndim
+        for i, a in enumerate(axes):
             j = self.get_axis_id(a)
-            sm[j] = 'm[%d]'%i
+            sm[j] = 'm[%d]' % i
 
-        new_axes = [ a for a in self.axes_names if a not in axes]
+        new_axes = [a for a in self.axes_names if a not in axes]
         new_axes.insert(self.get_axis_id(axes[0]), new_axis)
 
-        flat_data = eval('self.data[%s]' %','.join(sm))
+        flat_data = eval('self.data[%s]' % ','.join(sm))
 
-        new_domains = dict( (a,self.axes_domains[a]) \
-                                for a in new_axes if a != new_axis )
+        new_domains = dict((a, self.axes_domains[a])
+                           for a in new_axes if a != new_axis)
 
         return xndarray(flat_data, new_axes, new_domains, self.value_label,
-                      self.meta_data)
+                        self.meta_data)
 
     def explode_a(self, mask, axes, new_axis):
         """
@@ -960,8 +954,8 @@ class xndarray:
             dict of xndarray that maps a mask value to a xndarray.
 
         """
-        return dict( (i, self.flatten(mask==i, axes, new_axis)) \
-                     for i in np.unique(mask) )
+        return dict((i, self.flatten(mask == i, axes, new_axis))
+                    for i in np.unique(mask))
 
     def explode(self, cmask, new_axis='position'):
         """
@@ -976,8 +970,8 @@ class xndarray:
         Return:
             dict of xndarray that maps a mask value to a xndarray.
         """
-        return dict((i, self.flatten(cmask.data==i,cmask.axes_names,new_axis)) \
-                     for i in np.unique(cmask.data))
+        return dict((i, self.flatten(cmask.data == i, cmask.axes_names, new_axis))
+                    for i in np.unique(cmask.data))
 
     def cflatten(self, cmask, new_axis):
         return self.flatten(cmask.data, cmask.axes_names, new_axis)
@@ -987,11 +981,11 @@ class xndarray:
         Return an OrderedDict of cuboids.
         """
         if axis not in self.axes_names:
-            raise Exception('Axis %s not found. Available axes: %s' \
-                                %(axis, self.axes_names))
+            raise Exception('Axis %s not found. Available axes: %s'
+                            % (axis, self.axes_names))
 
-        return OrderedDict( (dv, self.sub_cuboid(**{axis:dv})) \
-                            for dv in self.axes_domains[axis] )
+        return OrderedDict((dv, self.sub_cuboid(**{axis: dv}))
+                           for dv in self.axes_domains[axis])
 
     def unstack(self, outer_axes, inner_axes):
         """
@@ -1012,21 +1006,20 @@ class xndarray:
         >>> c = xndarray(np.arange(4).reshape(2,2), axes_names=['a1','ia'], \
                          axes_domains={'a1':['out_dv1', 'out_dv2'], \
                                        'ia':['in_dv1', 'in_dv2']})
-        >>> c.unstack(['a1'], ['ia']) 
+        >>> c.unstack(['a1'], ['ia'])
         axes: ['a1'], array([axes: ['ia'], array([0, 1]), axes: ['ia'], array([2, 3])], dtype=object)
         """
 
         def _unstack(xa, ans):
             if len(ans) > 0:
-                return [_unstack(suba, ans[1:]) \
+                return [_unstack(suba, ans[1:])
                         for suba in xa.split(ans[0]).itervalues()]
             else:
                 return xa
         xarray = self.reorient(outer_axes + inner_axes)
         return xndarray(_unstack(xarray, outer_axes), axes_names=outer_axes,
-                        axes_domains=dict((a, self.axes_domains[a]) \
-                                           for a in outer_axes))
-
+                        axes_domains=dict((a, self.axes_domains[a])
+                                          for a in outer_axes))
 
     def to_tree(self, level_axes, leaf_axes):
         """
@@ -1048,19 +1041,18 @@ class xndarray:
         """
         def _to_tree(xa, ans):
             if len(ans) != len(leaf_axes):
-                return OrderedDict( (dv, _to_tree(suba, ans[1:])) \
-                                    for dv,suba in xa.split(ans[0]).iteritems())
+                return OrderedDict((dv, _to_tree(suba, ans[1:]))
+                                   for dv, suba in xa.split(ans[0]).iteritems())
             else:
                 return xa
 
         xarray = self.reorient(level_axes + leaf_axes)
         return _to_tree(xarray, xarray.axes_names)
 
-
     def _format_dvalues(self, axis):
         if (np.diff(self.axes_domains[axis]) == 1).all():
             ndigits = len(str(self.axes_domains[axis].max()))
-            return [ str(d).zfill(ndigits) for d in self.axes_domains[axis] ]
+            return [str(d).zfill(ndigits) for d in self.axes_domains[axis]]
         else:
             return self.axes_domains[axis]
 
@@ -1075,36 +1067,31 @@ class xndarray:
     def get_axis_name(self, axis_id):
         """ Return the name of an axis from the given index 'axis_id'.
         """
-        # pyhrf.verbose(6, 'xndarray.get_axis_name(%s) ...' %str(axis_id))
-        # pyhrf.verbose(6, 'type(axis_id): %s' %str(type(axis_id)))
         if isinstance(axis_id, str):
             if axis_id in self.axes_names:
                 return axis_id
             else:
                 return None
         assert np.isreal(axis_id) and np.round(axis_id) == axis_id
-        # pyhrf.verbose(6, 'core.cuboid ... getting name of %d' %axis_id)
-        # pyhrf.verbose(6, 'from : %s' %str(self.axes_names))
-        if axis_id>=0 and axis_id<self.get_ndims():
+        if axis_id >= 0 and axis_id < self.get_ndims():
             return self.axes_names[axis_id]
         else:
             return None
-    #get_axis_name
 
     def sub_cuboid(self, orientation=None, **kwargs):
         """ Return a sub cuboid. 'kwargs' allows argument in the form:
         axis=slice_value.
         """
         if not set(kwargs.keys()).issubset(self.axes_names):
-            raise Exception('Axes to slice (%s) mismatch current axes (%s)' \
-                                %(','.join(kwargs.keys()),
-                                  ','.join(self.axes_names)))
+            raise Exception('Axes to slice (%s) mismatch current axes (%s)'
+                            % (','.join(kwargs.keys()),
+                               ','.join(self.axes_names)))
         if orientation is not None:
             assert set(orientation) == set(self.axes_names).difference(kwargs)
 
         new_kwargs = {}
-        for axis,i in kwargs.iteritems():
-            new_kwargs[axis] = self.get_domain_idx(axis,i)
+        for axis, i in kwargs.iteritems():
+            new_kwargs[axis] = self.get_domain_idx(axis, i)
 
         return self.sub_cuboid_from_slices(orientation, **new_kwargs)
 
@@ -1113,10 +1100,10 @@ class xndarray:
         axis=slice_index.
         """
         mask = [':'] * self.data.ndim
-        for axis,i in kwargs.iteritems():
+        for axis, i in kwargs.iteritems():
             mask[self.axes_names.index(axis)] = str(i)
         # print 'mask:', mask
-        sub_data = eval('self.data[%s]' %','.join(mask))
+        sub_data = eval('self.data[%s]' % ','.join(mask))
 
         sub_domains = self.axes_domains.copy()
         for a in kwargs:
@@ -1130,7 +1117,7 @@ class xndarray:
         assert set(orientation) == set(self.axes_names).difference(kwargs)
 
         if self.meta_data is not None:
-            meta_data = (self.meta_data[0].copy(),self.meta_data[1].copy())
+            meta_data = (self.meta_data[0].copy(), self.meta_data[1].copy())
         else:
             meta_data = None
 
@@ -1138,13 +1125,12 @@ class xndarray:
             return sub_data
 
         sub_c = xndarray(sub_data, sub_axes, sub_domains, self.value_label,
-                       meta_data)
+                         meta_data)
 
         # set orientation
         sub_c.set_orientation(orientation)
 
         return sub_c
-
 
     def fill(self, c):
         """
@@ -1155,9 +1141,8 @@ class xndarray:
                 sm.append(':')
             else:
                 sm.append('np.newaxis')
-        self.data[:] = eval('c.data[%s]' %','.join(sm))
+        self.data[:] = eval('c.data[%s]' % ','.join(sm))
         return self
-
 
     def copy(self, copy_meta_data=False):
         """ Return copy of the current cuboid. Domains are copied with a shallow
@@ -1172,23 +1157,23 @@ class xndarray:
         else:
             new_meta_data = None
         return xndarray(self.data.copy(), self.axes_names[:],
-                      self.axes_domains.copy(),
-                      self.value_label, new_meta_data)
+                        self.axes_domains.copy(),
+                        self.value_label, new_meta_data)
 
     def get_new_axis_name(self):
         """ Return an axis label not already in use. Format is: dim%d
         """
         i = 0
-        while 'dim%d' %i in self.axes_names:
+        while 'dim%d' % i in self.axes_names:
             i += 1
 
-        return 'dim%d' %i
+        return 'dim%d' % i
 
     def get_domain_idx(self, axis, value):
         """ Get slice index from domain value for axis 'axis'.
         """
         if debug:
-            print 'get_domain_idx ... axis=%s, value=%s' %(axis, str(value))
+            print 'get_domain_idx ... axis=%s, value=%s' % (axis, str(value))
             print 'axes_domains:', self.axes_domains
             print 'self.axes_domains[axis]:', self.axes_domains[axis]
             print 'self.axes_domains[axis] == value:', \
@@ -1196,11 +1181,10 @@ class xndarray:
             print type(np.where(self.axes_domains[axis] == value)[0][0])
         where_res = np.where(self.axes_domains[axis] == value)[0]
         if len(where_res) == 0:
-            raise Exception('Value "%s" not found in domain of axis "%s"' \
-                                %(str(value), self.get_axis_name(axis)))
+            raise Exception('Value "%s" not found in domain of axis "%s"'
+                            % (str(value), self.get_axis_name(axis)))
 
         return where_res[0]
-
 
     def has_axis(self, axis):
         return axis in self.axes_names
@@ -1213,17 +1197,18 @@ class xndarray:
         TODO: should it be irrespective of the orientation ?
         """
 
-        for k,v in self.axes_domains.iteritems():
+        for k, v in self.axes_domains.iteritems():
             if k not in other.axes_domains:
-                #print '%s not in domains %s' %(str(k),str(other.axes_domains))
+                # print '%s not in domains %s'
+                # %(str(k),str(other.axes_domains))
                 return False
             if isinstance(v, np.ndarray):
-                if not np.allclose(v,other.axes_domains[k]).all():
-                    #print 'numpy array differ for %s' %str(k)
+                if not np.allclose(v, other.axes_domains[k]).all():
+                    # print 'numpy array differ for %s' %str(k)
                     return False
             else:
                 if v != other.axes_domains[k]:
-                    #print 'domain value differ for %s' %str(k)
+                    # print 'domain value differ for %s' %str(k)
                     return False
 
         return (self.data == other.data).all() and \
@@ -1237,7 +1222,8 @@ class xndarray:
 
     def descrip_shape(self):
         sh = self.data.shape
-        axes_info = ['%s:%d'%(a,sh[i]) for i,a in enumerate(self.axes_names)]
+        axes_info = ['%s:%d' % (a, sh[i])
+                     for i, a in enumerate(self.axes_names)]
         return '(' + ','.join(axes_info) + ')'
 
     def get_voxel_size(self, axis):
@@ -1247,9 +1233,9 @@ class xndarray:
         assert axis in MRI3Daxes
         if self.meta_data is not None:
             affine, header = self.meta_data
-            return  header['pixdim'][1:4][MRI3Daxes.index(axis)]
+            return header['pixdim'][1:4][MRI3Daxes.index(axis)]
         else:
-            raise Exception('xndarray does not have any meta data to get' \
+            raise Exception('xndarray does not have any meta data to get'
                             'voxel size')
 
     def get_dshape(self):
@@ -1271,10 +1257,10 @@ class xndarray:
         """
         if isinstance(c, np.ndarray):
             if self.data.shape != c.shape:
-                raise Exception('Cannot %s cuboid and ndarray. Shape of self' \
-                                    ' %s different from ndarray shape %s.' \
-                                    %(op_name, str(self.data.shape),
-                                      str(c.shape)))
+                raise Exception('Cannot %s cuboid and ndarray. Shape of self'
+                                ' %s different from ndarray shape %s.'
+                                % (op_name, str(self.data.shape),
+                                   str(c.shape)))
 
             c = xndarray.xndarray_like(self, data=c)
         elif np.isscalar(c):
@@ -1284,28 +1270,28 @@ class xndarray:
             return Dummy(c)
 
         if set(self.axes_names) != set(c.axes_names):
-            raise Exception('Cannot %s cuboids with different axes' %op_name)
+            raise Exception('Cannot %s cuboids with different axes' % op_name)
 
-        #TODO: check axes domains ...
+        # TODO: check axes domains ...
         if self.axes_names != c.axes_names:
-          c = c.reorient(self.axes_names)
+            c = c.reorient(self.axes_names)
 
-        for i,a in enumerate(self.axes_names):
+        for i, a in enumerate(self.axes_names):
             if self.data.shape[i] != c.data.shape[i]:
 
-                raise Exception('Cannot %s cuboids, shape mismatch.' \
-                                    ' self has shape: %s and operand has '\
-                                    ' shape: %s'
-                                %(op_name, self.descrip_shape(),
-                                  c.descrip_shape()))
+                raise Exception('Cannot %s cuboids, shape mismatch.'
+                                ' self has shape: %s and operand has '
+                                ' shape: %s'
+                                % (op_name, self.descrip_shape(),
+                                   c.descrip_shape()))
 
         return c
 
     def add(self, c, dest=None):
         c = self._prepare_for_operation('add', c)
         if dest is None:
-            return xndarray(self.data+c.data, self.axes_names, self.axes_domains,
-                          self.value_label, self.meta_data)
+            return xndarray(self.data + c.data, self.axes_names, self.axes_domains,
+                            self.value_label, self.meta_data)
         else:
             dest.data += c.data
             return dest
@@ -1313,8 +1299,8 @@ class xndarray:
     def multiply(self, c, dest=None):
         c = self._prepare_for_operation('multiply', c)
         if dest is None:
-            return xndarray(self.data*c.data, self.axes_names, self.axes_domains,
-                          self.value_label, self.meta_data)
+            return xndarray(self.data * c.data, self.axes_names, self.axes_domains,
+                            self.value_label, self.meta_data)
         else:
             dest.data *= c.data
             return dest
@@ -1322,8 +1308,8 @@ class xndarray:
     def divide(self, c, dest=None):
         c = self._prepare_for_operation('divide', c)
         if dest is None:
-            return xndarray(self.data/c.data, self.axes_names, self.axes_domains,
-                          self.value_label, self.meta_data)
+            return xndarray(self.data / c.data, self.axes_names, self.axes_domains,
+                            self.value_label, self.meta_data)
         else:
             dest.data /= c.data
             return dest
@@ -1331,8 +1317,8 @@ class xndarray:
     def substract(self, c, dest=None):
         c = self._prepare_for_operation('substract', c)
         if dest is None:
-            return xndarray(self.data-c.data, self.axes_names, self.axes_domains,
-                          self.value_label, self.meta_data)
+            return xndarray(self.data - c.data, self.axes_names, self.axes_domains,
+                            self.value_label, self.meta_data)
         else:
             dest.data -= c.data
             return dest
@@ -1363,7 +1349,7 @@ class xndarray:
 
     def __rdiv__(self, c):
         if np.isscalar(c):
-            return xndarray_like(self, data=c/self.data)
+            return xndarray_like(self, data=c / self.data)
         else:
             c = self._prepare_for_operation(c)
             return c.divide(self)
@@ -1375,15 +1361,14 @@ class xndarray:
         return self.substract(c)
 
     def __rsub__(self, c):
-        return (self*-1).add(c)
-
+        return (self * -1).add(c)
 
     def __pow__(self, c):
         if np.isscalar(c):
-            return xndarray_like(self, data=self.data**c)
+            return xndarray_like(self, data=self.data ** c)
         else:
-            raise NotImplementedError('Broadcast for pow operation not available')
-
+            raise NotImplementedError(
+                'Broadcast for pow operation not available')
 
     def min(self, axis=None):
         if axis is None:
@@ -1392,11 +1377,11 @@ class xndarray:
             ia = self.get_axis_id(axis)
             na = self.get_axis_name(axis)
             if ia is None or na is None:
-                raise Exception('Wrong axis %s (%d available axes: %s)' \
-                                    %(str(axis), self.ndim, \
-                                          ','.join(self.axes_names)))
+                raise Exception('Wrong axis %s (%d available axes: %s)'
+                                % (str(axis), self.ndim,
+                                   ','.join(self.axes_names)))
 
-            an = self.axes_names[:ia] + self.axes_names[ia+1:]
+            an = self.axes_names[:ia] + self.axes_names[ia + 1:]
             ad = self.axes_domains.copy()
             ad.pop(na)
             m = self.data.min(axis=ia)
@@ -1405,7 +1390,6 @@ class xndarray:
             else:
                 return xndarray(m, an, ad, self.value_label, self.meta_data)
 
-
     def max(self, axis=None):
         if axis is None:
             return self.data.max()
@@ -1413,11 +1397,11 @@ class xndarray:
             ia = self.get_axis_id(axis)
             na = self.get_axis_name(axis)
             if ia is None or na is None:
-                raise Exception('Wrong axis %s (%d available axes: %s)' \
-                                    %(str(axis), self.ndim, \
-                                          ','.join(self.axes_names)))
+                raise Exception('Wrong axis %s (%d available axes: %s)'
+                                % (str(axis), self.ndim,
+                                   ','.join(self.axes_names)))
 
-            an = self.axes_names[:ia] + self.axes_names[ia+1:]
+            an = self.axes_names[:ia] + self.axes_names[ia + 1:]
             ad = self.axes_domains.copy()
             ad.pop(na)
             m = self.data.max(axis=ia)
@@ -1426,7 +1410,6 @@ class xndarray:
             else:
                 return xndarray(m, an, ad, self.value_label, self.meta_data)
 
-
     def ptp(self, axis=None):
         if axis is None:
             return self.data.ptp()
@@ -1434,11 +1417,11 @@ class xndarray:
             ia = self.get_axis_id(axis)
             na = self.get_axis_name(axis)
             if ia is None or na is None:
-                raise Exception('Wrong axis %s (%d available axes: %s)' \
-                                    %(str(axis), self.ndim, \
-                                          ','.join(self.axes_names)))
+                raise Exception('Wrong axis %s (%d available axes: %s)'
+                                % (str(axis), self.ndim,
+                                   ','.join(self.axes_names)))
 
-            an = self.axes_names[:ia] + self.axes_names[ia+1:]
+            an = self.axes_names[:ia] + self.axes_names[ia + 1:]
             ad = self.axes_domains.copy()
             ad.pop(na)
             r = self.data.ptp(axis=ia)
@@ -1447,9 +1430,6 @@ class xndarray:
             else:
                 return xndarray(r, an, ad, self.value_label, self.meta_data)
 
-
-
-
     def mean(self, axis=None):
         if axis is None:
             return self.data.mean()
@@ -1457,17 +1437,15 @@ class xndarray:
             ia = self.get_axis_id(axis)
             na = self.get_axis_name(axis)
             if ia is None or na is None:
-                raise Exception('Wrong axis %s (%d available axes: %s)' \
-                                    %(str(axis), self.ndim, \
-                                          ','.join(self.axes_names)))
+                raise Exception('Wrong axis %s (%d available axes: %s)'
+                                % (str(axis), self.ndim,
+                                   ','.join(self.axes_names)))
 
-            an = self.axes_names[:ia] + self.axes_names[ia+1:]
+            an = self.axes_names[:ia] + self.axes_names[ia + 1:]
             ad = self.axes_domains.copy()
             ad.pop(na)
             return xndarray(self.data.mean(axis=ia), an, ad,
-                          self.value_label, self.meta_data)
-
-
+                            self.value_label, self.meta_data)
 
     def std(self, axis=None):
         if axis is None:
@@ -1476,15 +1454,15 @@ class xndarray:
             ia = self.get_axis_id(axis)
             na = self.get_axis_name(axis)
             if ia is None or na is None:
-                raise Exception('Wrong axis %s (%d available axes: %s)' \
-                                    %(str(axis), self.ndim, \
-                                          ','.join(self.axes_names)))
+                raise Exception('Wrong axis %s (%d available axes: %s)'
+                                % (str(axis), self.ndim,
+                                   ','.join(self.axes_names)))
 
-            an = self.axes_names[:ia] + self.axes_names[ia+1:]
+            an = self.axes_names[:ia] + self.axes_names[ia + 1:]
             ad = self.axes_domains.copy()
             ad.pop(na)
             return xndarray(self.data.std(axis=ia), an, ad,
-                          self.value_label+'_std', self.meta_data)
+                            self.value_label + '_std', self.meta_data)
 
     def var(self, axis=None):
         if axis is None:
@@ -1493,17 +1471,15 @@ class xndarray:
             ia = self.get_axis_id(axis)
             na = self.get_axis_name(axis)
             if ia is None or na is None:
-                raise Exception('Wrong axis %s (%d available axes: %s)' \
-                                    %(str(axis), self.ndim, \
-                                          ','.join(self.axes_names)))
+                raise Exception('Wrong axis %s (%d available axes: %s)'
+                                % (str(axis), self.ndim,
+                                   ','.join(self.axes_names)))
 
-            an = self.axes_names[:ia] + self.axes_names[ia+1:]
+            an = self.axes_names[:ia] + self.axes_names[ia + 1:]
             ad = self.axes_domains.copy()
             ad.pop(na)
             return xndarray(self.data.var(axis=ia), an, ad,
-                          self.value_label+'_var', self.meta_data)
-
-
+                            self.value_label + '_var', self.meta_data)
 
     def sum(self, axis=None):
         if axis is None:
@@ -1512,15 +1488,15 @@ class xndarray:
             ia = self.get_axis_id(axis)
             na = self.get_axis_name(axis)
             if ia is None or na is None:
-                raise Exception('Wrong axis %s (%d available axes: %s)' \
-                                    %(str(axis), self.ndim, \
-                                          ','.join(self.axes_names)))
+                raise Exception('Wrong axis %s (%d available axes: %s)'
+                                % (str(axis), self.ndim,
+                                   ','.join(self.axes_names)))
 
-            an = self.axes_names[:ia] + self.axes_names[ia+1:]
+            an = self.axes_names[:ia] + self.axes_names[ia + 1:]
             ad = self.axes_domains.copy()
             ad.pop(na)
             return xndarray(self.data.sum(axis=ia), an, ad,
-                          self.value_label, self.meta_data)
+                            self.value_label, self.meta_data)
 
     def rescale_values(self, v_min=0., v_max=1., axis=None):
         if axis is not None:
@@ -1528,7 +1504,7 @@ class xndarray:
         new_data = rescale_values(self.data, v_min, v_max, axis)
 
         return xndarray(new_data, self.axes_names, self.axes_domains,
-                      self.value_label, self.meta_data)
+                        self.value_label, self.meta_data)
 
     def get_extra_info(self, fmt='dict'):
         from pyhrf.xmlio import to_xml
@@ -1537,12 +1513,11 @@ class xndarray:
             'axes_names': self.axes_names,
             'axes_domains': self.axes_domains,
             'value_label': self.value_label,
-            }
-        if fmt=='dict':
+        }
+        if fmt == 'dict':
             return info
-        elif fmt=='xml':
+        elif fmt == 'xml':
             return to_xml(info)
-
 
     def save(self, file_name, meta_data=None, set_MRI_orientation=False):
         """ Save cuboid to a file. Supported format: Nifti1.
@@ -1555,9 +1530,8 @@ class xndarray:
 
         from pyhrf.xmlio import from_xml, to_xml, DeprecatedXMLFormatException
 
-        pyhrf.verbose(5, 'xndarray.save(%s)' %file_name)
+        logger.debug('xndarray.save(%s)', file_name)
         ext = op.splitext(file_name)[1]
-        #print 'save:', file_name
         c_to_save = self
 
         if has_ext(file_name, 'nii'):
@@ -1566,16 +1540,16 @@ class xndarray:
 
             extra_info = c_to_save.get_extra_info()
 
-            pyhrf.verbose(4, 'Extra info:')
-            pyhrf.verbose.printDict(4, extra_info)
+            logger.info('Extra info:')
+            logger.info(extra_info)
 
             from nibabel.nifti1 import Nifti1Extension, Nifti1Header, \
                 Nifti1Image, extension_codes
 
             if self.data.ndim > 7:
-                raise Exception("Nifti format can not handle more than "\
-                                    "7 dims. xndarray has %d dims" \
-                                    %self.data.ndim)
+                raise Exception("Nifti format can not handle more than "
+                                "7 dims. xndarray has %d dims"
+                                % self.data.ndim)
 
             if meta_data is None:
                 if c_to_save.meta_data is not None:
@@ -1584,7 +1558,7 @@ class xndarray:
                     affine = np.eye(4)
                     header = Nifti1Header()
             else:
-                affine,header = meta_data
+                affine, header = meta_data
                 header = Nifti1Header()
 
             header = header.copy()
@@ -1593,8 +1567,6 @@ class xndarray:
             if extension_codes['comment'] in ecodes:
                 ic = ecodes.index(extension_codes['comment'])
                 econtent = header.extensions[ic].get_content()
-                #print 'comment extension found!'
-                #print econtent
                 # Check if existing extension can be safely overwritten
                 try:
                     prev_extra_info = from_xml(econtent)
@@ -1602,77 +1574,62 @@ class xndarray:
                     from pyhrf.xmliobak import from_xml as from_xml_bak
                     prev_extra_info = from_xml_bak(econtent)
                 except Exception:
-                    raise IOError("Cannot safely overwrite Extension in " \
-                                      "Header. It already has a 'comment' " \
-                                      "extension " \
-                                      "with the following content:\n" +
+                    raise IOError("Cannot safely overwrite Extension in "
+                                  "Header. It already has a 'comment' "
+                                  "extension "
+                                  "with the following content:\n" +
                                   str(econtent))
 
                 if not isinstance(prev_extra_info, dict) and \
-                  prev_extra_info.has_key('axes_names'):
-                    raise IOError("Cannot safely overwrite Extension in "\
-                                  "Header. It already has a readable "\
-                                  "XML 'comment' extension, but it's "\
-                                  "not related to xndarray meta info." )
-
+                        prev_extra_info.has_key('axes_names'):
+                    raise IOError("Cannot safely overwrite Extension in "
+                                  "Header. It already has a readable "
+                                  "XML 'comment' extension, but it's "
+                                  "not related to xndarray meta info.")
 
                 # Checks are OK, remove the previous extension:
                 prev_ext = header.extensions.pop(ic).get_content()
-                pyhrf.verbose(5, 'Extensions after popping previous ext:')
-                #pyhrf.verbose.printDict(4,list(header.extensions))
-                pyhrf.verbose(5, str(header.extensions))
+                logger.debug('Extensions after popping previous ext:')
+                logger.debug(str(header.extensions))
             else:
                 prev_ext = ""
 
             ext_str = to_xml(extra_info)
             if len(ext_str) < len(prev_ext):
-                extra_info['dummy'] = '#'*(len(prev_ext)-len(ext_str))
+                extra_info['dummy'] = '#' * (len(prev_ext) - len(ext_str))
                 ext_str = to_xml(extra_info)
 
-            pyhrf.verbose(5, 'Length of extension string: %s' %len(ext_str))
-            pyhrf.verbose(5, 'Extension: \n %s' %ext_str)
+            logger.debug('Length of extension string: %s', len(ext_str))
+            logger.debug('Extension: \n %s', ext_str)
             e = Nifti1Extension('comment', ext_str)
 
             header.extensions.append(e)
 
-            pyhrf.verbose(4, 'Extensions after appending new ext:')
-            #print header.extensions
-            #pyhrf.verbose.printDict(4,list(header.extensions))
+            logger.info('Extensions after appending new ext:')
 
             header.set_data_dtype(c_to_save.data.dtype)
             i = Nifti1Image(c_to_save.data, affine, header=header)
             i.update_header()
 
-            pyhrf.verbose(5, 'Save Nifti image to %s ...' %file_name)
+            logger.debug('Save Nifti image to %s ...', file_name)
             i.to_filename(file_name)
-            pyhrf.verbose(5, 'Save Nifti image, done!')
-        elif ext == '.csv' :
-            #print 'dumping an array of shape %s to csv' %(str(self.data.shape))
-            #print '-> file:', filename
+            logger.debug('Save Nifti image, done!')
+        elif ext == '.csv':
             np.savetxt(file_name, c_to_save.data, fmt="%12.9G")
-        # elif ext == '.h5':
-        #     import tables
-        #     h5file = tables.openFile(file_name, mode='w', title='array')
-        #     root = h5file.root
-        #     #print 'dumping an array of shape %s to h5'%(str(self.data.shape))
-        #     #print '-> file:', filename
-        #     h5file.createArray(root, "array", self.data)
-        #     h5file.close()
         elif has_ext(file_name, 'gii'):
             from pyhrf.tools._io import write_texture
-            pyhrf.verbose(4, 'Save Gifti image (dim=%d) ...' \
-                              %(c_to_save.get_ndims()))
-            pyhrf.verbose(4, 'axes names: %s' %str(c_to_save.axes_names))
+            logger.info('Save Gifti image (dim=%d) ...', c_to_save.get_ndims())
+            logger.info('axes names: %s', str(c_to_save.axes_names))
 
             if c_to_save.get_ndims() == 1:
                 write_texture(c_to_save.data, file_name,
                               meta_data=c_to_save.get_extra_info(fmt='xml'))
             elif c_to_save.get_ndims() == 2 and \
-                    c_to_save.has_axes(['voxel','time']) :
+                    c_to_save.has_axes(['voxel', 'time']):
                 saxes = ['voxel'] + \
                     list(set(c_to_save.axes_names).difference(['voxel']))
-                #make sure spatial axis is the 1st one
-                pyhrf.verbose(3, 'reorient as %s' %str(saxes))
+                # make sure spatial axis is the 1st one
+                logger.info('reorient as %s', str(saxes))
                 c_to_save = c_to_save.reorient(saxes)
                 write_texture(c_to_save.data, file_name,
                               meta_data=c_to_save.get_extra_info(fmt='xml'))
@@ -1683,13 +1640,12 @@ class xndarray:
                     split_c = c_to_save.split(saxes[0])
                     for dval, subc in split_c.iteritems():
                         subc.save(add_suffix(file_name,
-                                             '_%s_%s' %(saxes[0],str(dval))))
+                                             '_%s_%s' % (saxes[0], str(dval))))
                 else:
                     write_texture(c_to_save.data, file_name,
                                   meta_data=c_to_save.get_extra_info(fmt='xml'))
         else:
-            raise Exception('Unsupported file format (ext: "%s")' %ext)
-
+            raise Exception('Unsupported file format (ext: "%s")' % ext)
 
     @staticmethod
     def load(file_name):
@@ -1703,7 +1659,7 @@ class xndarray:
         from pyhrf.xmlio import from_xml, DeprecatedXMLFormatException
         has_deprecated_xml_header = False
 
-        pyhrf.verbose(3, 'xndarray.load(%s)' %file_name)
+        logger.info('xndarray.load(%s)', file_name)
         ext = op.splitext(file_name)[1]
         if ext == '.nii' or \
                 (ext == '.gz' and op.splitext(file_name[:-3])[1] == '.nii') or \
@@ -1712,17 +1668,17 @@ class xndarray:
             import nibabel
             i = nibabel.load(file_name)
             h = i.get_header()
-            data = np.array(i.get_data()) #avoid memmapping
+            data = np.array(i.get_data())  # avoid memmapping
             cuboid_info = {}
-            cuboid_info['axes_names'] = MRI4Daxes[:min(4,data.ndim)]
-            #TODO: fill spatial domains with position in mm, and time axis
+            cuboid_info['axes_names'] = MRI4Daxes[:min(4, data.ndim)]
+            # TODO: fill spatial domains with position in mm, and time axis
             #      according TR value.
             cuboid_info['value_label'] = 'intensity'
 
-            #print 'extensions:', h.extensions
+            # print 'extensions:', h.extensions
             if hasattr(h, 'extensions') and len(h.extensions) > 0:
                 ecodes = h.extensions.get_codes()
-                #print 'ecodes:', ecodes
+                # print 'ecodes:', ecodes
                 ccode = nibabel.nifti1.extension_codes['comment']
                 if ccode in ecodes:
                     ic = ecodes.index(ccode)
@@ -1736,21 +1692,21 @@ class xndarray:
                             cuboid_info = from_xml_bak(ext_content)
                         except:
                             # Can't load xml -> ignore it
-                            #TODO: warn?
+                            # TODO: warn?
                             cuboid_info = {}
                     except Exception, e:
                         raise IOError('Extension for xndarray meta info can not '
                                       'be read from "comment" extension. '
-                                      'Content is:\n%s\n Exception was:\n%s' \
-                                          %(ext_content, str(e)))
+                                      'Content is:\n%s\n Exception was:\n%s'
+                                      % (ext_content, str(e)))
 
-                    cuboid_info.pop('dummy',None)
+                    cuboid_info.pop('dummy', None)
 
-            pyhrf.verbose(3, 'Extra info loaded from extension:')
-            pyhrf.verbose.printDict(3, cuboid_info)
+            logger.info('Extra info loaded from extension:')
+            logger.info(cuboid_info)
 
             meta_data = (i.get_affine(), h)
-            cuboid_info = dict((str(k),v) for k,v in cuboid_info.iteritems())
+            cuboid_info = dict((str(k), v) for k, v in cuboid_info.iteritems())
             data[np.where(np.isnan(data))] = 0
             a = xndarray(data, meta_data=meta_data, **cuboid_info)
             a.has_deprecated_xml_header = has_deprecated_xml_header
@@ -1768,7 +1724,7 @@ class xndarray:
                 cuboid_info = {}
             return xndarray(data, **cuboid_info)
         else:
-            raise Exception('Unrecognised file format (ext: %s)' %ext)
+            raise Exception('Unrecognised file format (ext: %s)' % ext)
 
 
 def xndarray_like(c, data=None):
@@ -1804,7 +1760,7 @@ def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
     * orientation: ['stack_axis', 'x', 'y']
     * value label: value
     * axes domains:
-      'stack_axis': array(['c1', 'c2'], 
+      'stack_axis': array(['c1', 'c2'],
           dtype='|S2')
       'x': arange(0,3,1)
       'y': arange(0,2,1)
@@ -1816,35 +1772,35 @@ def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
     size = len(c_list)
     cub0 = c_list[0]
     axes = cub0.axes_names
-    #print 'axes:', axes
+    # print 'axes:', axes
     sh = (size,) + cub0.data.shape
     stackedData = np.zeros(sh, cub0.data.dtype)
     newDomains = cub0.axes_domains.copy()
     if domain is not None:
         newDomains[axis] = domain
     targetCub = xndarray(stackedData,
-                       axes_names=[axis] + cub0.axes_names,
-                       axes_domains=newDomains, value_label=cub0.value_label)
-    #print 'c_list', c_list, c_list[0], c_list[1]
+                         axes_names=[axis] + cub0.axes_names,
+                         axes_domains=newDomains, value_label=cub0.value_label)
+    # print 'c_list', c_list, c_list[0], c_list[1]
     for i, cuboid in enumerate(c_list):
-        if debug: print 'targetCub.data[i] :', targetCub.data[i].shape
-        if debug: print 'cuboid', cuboid.descrip()
-        #print 'number:', i
-        #print 'cuboid.axes:', cuboid.axes_names
+        if debug:
+            print 'targetCub.data[i] :', targetCub.data[i].shape
+        if debug:
+            print 'cuboid', cuboid.descrip()
+        # print 'number:', i
+        # print 'cuboid.axes:', cuboid.axes_names
         if axes != cuboid.axes_names:
-            raise Exception('%dth cuboid in list does not match other cuboids'\
-                                'found axes: %s, should be: %s' \
-                                %(i, str(cuboid.axes_names), str(axes)))
+            raise Exception('%dth cuboid in list does not match other cuboids'
+                            'found axes: %s, should be: %s'
+                            % (i, str(cuboid.axes_names), str(axes)))
 
-        #TODO: better use numpy stacking functions (faster)
+        # TODO: better use numpy stacking functions (faster)
         targetCub.data[i] = cuboid.data
 
     if axis_pos == 'last':
         targetCub.roll(axis)
 
     return targetCub
-
-
 
 
 def expand_array_in_mask(flat_data, mask, flat_axis=0, dest=None, m=None):
@@ -1874,10 +1830,10 @@ def expand_array_in_mask(flat_data, mask, flat_axis=0, dest=None, m=None):
     """
     flat_sh = flat_data.shape
     mask_sh = mask.shape
-    target_shape = flat_sh[:flat_axis] + mask_sh + flat_sh[flat_axis+1:]
+    target_shape = flat_sh[:flat_axis] + mask_sh + flat_sh[flat_axis + 1:]
 
-    pyhrf.verbose(6, 'expand_array_in_mask ... %s -> %s' \
-                      %(str(flat_sh), str(target_shape)))
+    logger.debug('expand_array_in_mask ... %s -> %s', str(flat_sh),
+                 str(target_shape))
     if dest is None:
         dest = np.zeros(target_shape, dtype=flat_data.dtype)
 
@@ -1889,15 +1845,12 @@ def expand_array_in_mask(flat_data, mask, flat_axis=0, dest=None, m=None):
 
     n = len(m[0])
     if n != flat_data.shape[flat_axis]:
-        raise Exception('Nb positions in mask (%d) different from length of '\
-                            'flat_data (%d)' %(n,flat_data.shape[flat_axis]))
-    # print 'mask:', mask.sum()
-    # print 'flat_data:', flat_data.shape
-    sm = [':']*len(flat_sh[:flat_axis]) + \
-        ['m[%d]'%i for i in range(len(mask_sh))] + \
-        [':']*len(flat_sh[flat_axis+1:])
-    # print 'sm:', sm
-    exec('dest[%s] = flat_data' %','.join(sm))
+        raise Exception('Nb positions in mask (%d) different from length of '
+                        'flat_data (%d)' % (n, flat_data.shape[flat_axis]))
+    sm = ([':'] * len(flat_sh[:flat_axis]) +
+          ['m[%d]' % i for i in range(len(mask_sh))] +
+          [':'] * len(flat_sh[flat_axis + 1:]))
+    exec('dest[%s] = flat_data' % ','.join(sm))
 
     return dest
 
@@ -1919,11 +1872,12 @@ def merge(arrays, mask, axis, fill_value=0):
         raise Exception('Empty list of arrays')
 
     dest_c = None
-    for i,a in arrays.iteritems():
-        dest_c = a.expand(mask.data==i, axis, mask.axes_names,
+    for i, a in arrays.iteritems():
+        dest_c = a.expand(mask.data == i, axis, mask.axes_names,
                           dest=dest_c, do_checks=False)
 
     return dest_c
+
 
 def tree_to_xndarray(tree, level_labels=None):
     """
@@ -1948,7 +1902,7 @@ def tree_to_xndarray(tree, level_labels=None):
               2 : { .1 : xndarray([1,2], axes_names=['inner_axis']), \
                     .2 : xndarray([3,4], axes_names=['inner_axis']), \
                   }                                                  \
-            }                                                        
+            }
     >>> tree_to_xndarray(d, ['level_1', 'level_2'])
     axes: ['level_1', 'level_2', 'inner_axis'], array([[[1, 2],
             [3, 4]],
@@ -1957,20 +1911,21 @@ def tree_to_xndarray(tree, level_labels=None):
             [3, 4]]])
     """
     tree_depth = len(treeBranches(tree).next())
-    level_labels = level_labels or ['axis_%d'%i for i in xrange(tree_depth)]
+    level_labels = level_labels or ['axis_%d' % i for i in xrange(tree_depth)]
     assert len(level_labels) == tree_depth
 
     def _reduce(node, level):
-        if isinstance(node, xndarray): #leaf node
+        if isinstance(node, xndarray):  # leaf node
             return node
         else:
             domain = sorted(node.keys())
-            return stack_cuboids([_reduce(node[c], level+1) for c in domain],
+            return stack_cuboids([_reduce(node[c], level + 1) for c in domain],
                                  level_labels[level], domain)
     return _reduce(tree, level=0)
 
 
 from pyhrf.tools import add_suffix
+
 
 def split_and_save(cub, axes, fn, meta_data=None, set_MRI_orientation=False,
                    output_dir=None, format_dvalues=False):
@@ -1988,24 +1943,22 @@ def split_and_save(cub, axes, fn, meta_data=None, set_MRI_orientation=False,
 
     axis = axes[0]
 
-
     split_res = cub.split(axis)
     split_dvals = np.array(split_res.keys())
 
-    if format_dvalues and np.issubdtype(split_dvals.dtype,np.number) and \
-            (np.diff(split_dvals)==1).all():
+    if format_dvalues and np.issubdtype(split_dvals.dtype, np.number) and \
+            (np.diff(split_dvals) == 1).all():
         ndigits = len(str(max(split_dvals)))
         if min(split_dvals) == 0:
             o = 1
         else:
             o = 0
 
-        split_dvals = [ str(d+o).zfill(ndigits) for d in split_dvals ]
+        split_dvals = [str(d + o).zfill(ndigits) for d in split_dvals]
 
-
-    for dvalue,sub_c in zip(split_dvals, split_res.values()):
+    for dvalue, sub_c in zip(split_dvals, split_res.values()):
         if axis != 'error':
-            newfn = add_suffix(fn, '_%s_%s' %(axis,str(dvalue)))
+            newfn = add_suffix(fn, '_%s_%s' % (axis, str(dvalue)))
         else:
             if dvalue == 'error':
                 newfn = add_suffix(fn, '_error')
@@ -2033,8 +1986,3 @@ ndarray_html_style = """<!-- td {
              filter:  progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083);  /* IE6,IE7 */
          -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083)"; /* IE8 */
 } -->"""
-
-
-
-
-

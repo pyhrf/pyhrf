@@ -5,18 +5,24 @@ Base structures :
 - undirected, unweighted graph: a list of neighbours index (list of numpy array).
 """
 
+import logging
+
 import numpy as np
 
 import pyhrf
+
 from pyhrf.tools import cartesian
 from pyhrf.boldsynth.spatialconfig import lattice_indexes
 from pyhrf.boldsynth.spatialconfig import mask_to_coords
-
 from pyhrf.ndarray import expand_array_in_mask
+
+
+logger = logging.getLogger(__name__)
+
 
 try:
     from pygraph.algorithms.searching import breadth_first_search as bfs_pygraph
-    #raise ImportError() # for test
+    # raise ImportError() # for test
 except ImportError, e:
     if 0 and pyhrf.__usemode__ == pyhrf.DEVEL:
         print '---------------------------------------------------'
@@ -37,24 +43,25 @@ def graph_is_sane(g, toroidal=False):
     -> no isolated node
     """
     nn = len(g[0])
-    for i,nl in enumerate(g):
-        #if len(nl) == 0:
+    for i, nl in enumerate(g):
+        # if len(nl) == 0:
         #    print 'orphan node'
         #    return False
-        if toroidal and len(nl)!=nn:
-            pyhrf.verbose(2, 'not consistent with toroidal geometry')
+        if toroidal and len(nl) != nn:
+            logger.info('not consistent with toroidal geometry')
             return False
         if np.unique(nl).size != nl.size:
-            pyhrf.verbose(2, 'duplicate neighbours, nl: %s' %str(nl))
+            logger.info('duplicate neighbours, nl: %s', str(nl))
             return False
         for k in nl:
-            #print 'k:', k
-            #print 'nl:', nl
+            # print 'k:', k
+            # print 'nl:', nl
             if i not in g[k]:
-                pyhrf.verbose(2, '%d is neighbour of %d but converse is not '\
-                                  'true' %(i,k))
+                logger.info(
+                    '%d is neighbour of %d but converse is not true', i, k)
                 return False
     return True
+
 
 def graph_from_mesh(polygonList):
     """Return the list of neighbours indexes for each position, from a list of
@@ -67,12 +74,10 @@ def graph_from_mesh(polygonList):
         indexSet.update(l)
     nbPositions = len(indexSet)
 
-    pyhrf.verbose(6, 'indexSet:')
-    pyhrf.verbose.printDict(6, indexSet)
+    logger.debug('indexSet:')
+    logger.debug(indexSet)
 
     neighbourSets = {}
-    #pyhrf.verbose(6, 'polygonList:')
-    #pyhrf.verbose.printDict(6, polygonList)
     for triangle in polygonList:
         for idx in triangle:
             if not neighbourSets.has_key(idx):
@@ -83,59 +88,63 @@ def graph_from_mesh(polygonList):
     neighbourLists = np.empty(nbPositions, dtype=object)
     for idx in indexSet:
         neighbourSets[idx].remove(idx)
-        neighbourLists[idx] = np.array(list(neighbourSets[idx]),dtype=int)
+        neighbourLists[idx] = np.array(list(neighbourSets[idx]), dtype=int)
 
     return neighbourLists
 
+
 def graph_nb_cliques(graph):
-    return sum( [len(x) for x in graph])/2.
+    return sum([len(x) for x in graph]) / 2.
+
 
 def center_mask_at_v01(mask, pos, shape):
     new = range(len(mask))
     toKeep = set(range(len(mask[0])))
-    for i,(d,p,s) in enumerate(zip(mask,pos,shape)):
+    for i, (d, p, s) in enumerate(zip(mask, pos, shape)):
         comp = d + p
         new[i] = comp
-        toKeep.difference_update(np.where(comp<0)[0])
-        toKeep.difference_update(np.where(comp>=s)[0])
+        toKeep.difference_update(np.where(comp < 0)[0])
+        toKeep.difference_update(np.where(comp >= s)[0])
     toKeep = list(toKeep)
-    #print 'toKeep:', toKeep
-    #print 'new:', new
-    return tuple( [n[toKeep] for n in new] )
+    # print 'toKeep:', toKeep
+    # print 'new:', new
+    return tuple([n[toKeep] for n in new])
+
 
 def center_mask_at(mask, pos, indexes, toroidal=False):
     ndim = len(mask)
-    #print 'ndim:', ndim
+    # print 'ndim:', ndim
     new = range(ndim)
-    #print 'new:', new
+    # print 'new:', new
     toKeep = np.ones(len(mask[0]), dtype=bool)
-    #print 'toKeep:', toKeep
+    # print 'toKeep:', toKeep
     for ic in xrange(ndim):
-        #print 'ic:', ic
-        #print 'pos[ic]:', pos[ic]
+        # print 'ic:', ic
+        # print 'pos[ic]:', pos[ic]
         comp = mask[ic] + pos[ic]
-        #print 'comp:', comp
+        # print 'comp:', comp
         if not toroidal:
-            insiders = np.bitwise_and(comp>=0, comp<indexes.shape[ic])
+            insiders = np.bitwise_and(comp >= 0, comp < indexes.shape[ic])
             np.bitwise_and(toKeep, insiders, toKeep)
         else:
-            comp[np.where(comp<0)] = indexes.shape[ic]-1
-            comp[np.where(comp>=indexes.shape[ic])] = 0
-            #print 'indexes.shape[ic]:', indexes.shape[ic]
-            #print 'comp after modif:', comp
+            comp[np.where(comp < 0)] = indexes.shape[ic] - 1
+            comp[np.where(comp >= indexes.shape[ic])] = 0
+            # print 'indexes.shape[ic]:', indexes.shape[ic]
+            # print 'comp after modif:', comp
         new[ic] = comp
-        #print 'new[ic]:', new[ic]
+        # print 'new[ic]:', new[ic]
     #m = tuple( [n[toKeep] for n in new] )
     #np.bitwise_and(toKeep, indexes[m]!=-1, toKeep)
-    #print 'toKeep:', toKeep
-    #print 'new:', new
-    return tuple( [n[toKeep] for n in new] )
+    # print 'toKeep:', toKeep
+    # print 'new:', new
+    return tuple([n[toKeep] for n in new])
+
 
 def center_mask_at_v02(mask, pos, shape):
-    new = [ [] for n in xrange(len(mask)) ]
-    #print ' mask:', mask
-    #print ' pos:', pos
-    #print 'new:', new
+    new = [[] for n in xrange(len(mask))]
+    # print ' mask:', mask
+    # print ' pos:', pos
+    # print 'new:', new
     ndim = len(mask)
     for i in xrange(len(mask[0])):
         ncoords = range(ndim)
@@ -153,38 +162,40 @@ def center_mask_at_v02(mask, pos, shape):
     return tuple(new)
 
 
-
-#kerMask3D_6n = np.array( [ [1,0,0]  ,  [0,1,0] , [0,0,1],
+# kerMask3D_6n = np.array( [ [1,0,0]  ,  [0,1,0] , [0,0,1],
 #                           [-1,0,0] , [0,-1,0] , [0,0,-1] ], dtype=int )
-kerMask3D_6n = ( np.array([1,0,0,-1,0,0], dtype=int),
-                 np.array([0,1,0,0,-1,0], dtype=int),
-                 np.array([0,0,1,0,0,-1], dtype=int))
+kerMask3D_6n = (np.array([1, 0, 0, -1, 0, 0], dtype=int),
+                np.array([0, 1, 0, 0, -1, 0], dtype=int),
+                np.array([0, 0, 1, 0, 0, -1], dtype=int))
 
 #kerMask2D_4n = np.array( [ [-1,0], [1,0], [0,1], [0,-1] ], dtype=int )
-kerMask2D_4n = ( np.array([-1,1,0,0], dtype=int),
-                 np.array([0,0,1,-1], dtype=int))
+kerMask2D_4n = (np.array([-1, 1, 0, 0], dtype=int),
+                np.array([0, 0, 1, -1], dtype=int))
 
-kerMask2D_8n = ( np.array([-1,1,0,0,-1,1,-1,1], dtype=int),
-                 np.array([0,0,1,-1,-1,1,1,-1], dtype=int))
+kerMask2D_8n = (np.array([-1, 1, 0, 0, -1, 1, -1, 1], dtype=int),
+                np.array([0, 0, 1, -1, -1, 1, 1, -1], dtype=int))
 
 
 def graph_pool_indexes(g):
-    nodeMap = dict( [(v,iv) for iv,v in enumerate(nodes)] )
+    nodeMap = dict([(v, iv) for iv, v in enumerate(nodes)])
     for nl in subg:
         for i, n in enumerate(nl):
             nl[i] = nodeMap[n]
+
 
 def flatten_and_graph(data, mask=None, kerMask=None, depth=1,
                       toroidal=False):
 
     if mask is None:
-        mask = data>0
+        mask = data > 0
 
     fdata = data[np.where(mask)]
     g = graph_from_lattice(mask, kerMask, depth, toroidal)
-    return fdata,g
+    return fdata, g
 
 #---------------------------   Lotfi   -----------------------------#
+
+
 def graph_from_lattice3D(mask, kerMask=None, depth=1, toroidal=False):
     """
     Creates a graph from a n-dimensional lattice
@@ -193,34 +204,34 @@ def graph_from_lattice3D(mask, kerMask=None, depth=1, toroidal=False):
     neighbourhood system, ie the relative positions of neighbours for a given
     position in the lattice.
     """
-    #print 'size:', latticeIndexes.size
+    # print 'size:', latticeIndexes.size
     if kerMask is not None:
-        assert  mask.ndim == len(kerMask)
+        assert mask.ndim == len(kerMask)
     else:
         # Full neighbourhood, ie 8 in 2D, 26 in 3D ...
         ndim = mask.ndim
-        neighbourCoords = list(cartesian(*[[0,-1,1]]*ndim))[1:]
+        neighbourCoords = list(cartesian(*[[0, -1, 1]] * ndim))[1:]
         kerMask = tuple(np.array(neighbourCoords, dtype=int).transpose())
 
     # loop over valid positions:
 
-    positions = np.array(np.where( mask >= 0 )).transpose()
-    #print "----------------------------"
-    #print np.prod(mask.shape)
-    #print positions.shape
-    #print "----------------------------"
-    #raw_input('')
+    positions = np.array(np.where(mask >= 0)).transpose()
+    # print "----------------------------"
+    # print np.prod(mask.shape)
+    # print positions.shape
+    # print "----------------------------"
+    # raw_input('')
     #positions = mask_to_coords(mask)
     latticeIndexes = lattice_indexes(mask)
-    #print positions
-    #print positions.shape
+    # print positions
+    # print positions.shape
     # Build lists of closest neighbours:
     closestNeighbours = np.empty(len(positions), dtype=object)
     for idx, pos in enumerate(positions):
-        #print 'idx :', idx, '- pos:', pos
+        # print 'idx :', idx, '- pos:', pos
         # O(n) :
         m = center_mask_at(kerMask, pos, latticeIndexes, toroidal)
-        closestNeighbours[idx] = latticeIndexes[m][latticeIndexes[m]>=0]
+        closestNeighbours[idx] = latticeIndexes[m][latticeIndexes[m] >= 0]
 
     if depth == 1:
         return closestNeighbours
@@ -232,7 +243,7 @@ def graph_from_lattice3D(mask, kerMask=None, depth=1, toroidal=False):
         neighboursToTreat = closestNeighbours[idx]
         visited = set([idx])
         # O(max( sum(lattice shape), kerMask size))*O(kerMask size)*O(d)
-        for d in xrange(depth-1):
+        for d in xrange(depth - 1):
             newNeighboursToTreat = set()
             # In the worst case, neighbours to treat are on the perimeter
             # of the lattice, say O(sum(lattice shape))
@@ -257,15 +268,16 @@ def graph_from_lattice3D(mask, kerMask=None, depth=1, toroidal=False):
 
 #--------------------------------   Lotfi   -------------------------#
 
+
 def graph_to_sparse_matrix(graph):
     """
-    Creates a connectivity sparse matrix from the adjacency graph 
+    Creates a connectivity sparse matrix from the adjacency graph
     (list of neighbors list)
     """
     from scipy.sparse.coo import coo_matrix
     n_vox = len(graph)
 
-    ij = [[],[]]
+    ij = [[], []]
     for i in xrange(n_vox):
         ij[0] += [i] * len(graph[i])
         ij[1] += list(graph[i])
@@ -281,29 +293,29 @@ def graph_from_lattice(mask, kerMask=None, depth=1, toroidal=False):
     neighbourhood system, ie the relative positions of neighbours for a given
     position in the lattice.
     """
-    #print 'size:', latticeIndexes.size
+    # print 'size:', latticeIndexes.size
     if kerMask is not None:
-        assert  mask.ndim == len(kerMask)
+        assert mask.ndim == len(kerMask)
     else:
         # Full neighbourhood, ie 8 in 2D, 26 in 3D ...
         ndim = mask.ndim
-        neighbourCoords = list(cartesian(*[[0,-1,1]]*ndim))[1:]
+        neighbourCoords = list(cartesian(*[[0, -1, 1]] * ndim))[1:]
         kerMask = tuple(np.array(neighbourCoords, dtype=int).transpose())
 
     # loop over valid positions:
-    #print mask.shape
+    # print mask.shape
     positions = mask_to_coords(mask)
     latticeIndexes = lattice_indexes(mask)
-    #print positions
-    #print positions.shape
+    # print positions
+    # print positions.shape
     # Build lists of closest neighbours:
     closestNeighbours = np.empty(len(positions), dtype=object)
     for idx, pos in enumerate(positions):
-        #print 'idx :', idx, '- pos:', pos
+        # print 'idx :', idx, '- pos:', pos
         # O(n) :
         m = center_mask_at(kerMask, pos, latticeIndexes, toroidal)
-        #print 'm:', m
-        closestNeighbours[idx] = latticeIndexes[m][latticeIndexes[m]>=0]
+        # print 'm:', m
+        closestNeighbours[idx] = latticeIndexes[m][latticeIndexes[m] >= 0]
 
     if depth == 1:
         return closestNeighbours
@@ -315,7 +327,7 @@ def graph_from_lattice(mask, kerMask=None, depth=1, toroidal=False):
         neighboursToTreat = closestNeighbours[idx]
         visited = set([idx])
         # O(max( sum(lattice shape), kerMask size))*O(kerMask size)*O(d)
-        for d in xrange(depth-1):
+        for d in xrange(depth - 1):
             newNeighboursToTreat = set()
             # In the worst case, neighbours to treat are on the perimeter
             # of the lattice, say O(sum(lattice shape))
@@ -346,7 +358,8 @@ def breadth_first_search(graph, root=0, visitable=None):
     iterable with all searchable nodes;
     """
 
-    if visitable is None: visitable = range(len(graph)) #all nodes are visitable
+    if visitable is None:
+        visitable = range(len(graph))  # all nodes are visitable
 
     # makes a shallow copy, makes it a collection, removes duplicates
     unvisited = list(set(visitable))
@@ -366,8 +379,9 @@ def breadth_first_search(graph, root=0, visitable=None):
                 unvisited.remove(child)
                 queue.append(child)
 
-    return None,order #return None to be compliant with pygraph which also
-                      # return the spanning tree
+    return None, order  # return None to be compliant with pygraph which also
+    # return the spanning tree
+
 
 def graph_pygraph(g):
     from pygraph.classes.graph import graph
@@ -379,6 +393,7 @@ def graph_pygraph(g):
                 gr.add_edge((inode, ineighbour))
     return gr
 
+
 def connected_components_iter(g):
     if pygraph_available:
         g = graph_pygraph(g)
@@ -387,15 +402,14 @@ def connected_components_iter(g):
         print 'Warning: pygraph not available ... fall back to slow BFS function'
         bfs = breadth_first_search
 
-    visited = np.zeros(len(g),dtype=bool)
+    visited = np.zeros(len(g), dtype=bool)
     root = 0
     while not visited.all():
-        root = np.where(visited==False)[0][0]
-        #print 'root:', root
+        root = np.where(visited == False)[0][0]
+        # print 'root:', root
         st, order = bfs(g, root=root)
         visited[order] = True
         yield sorted(order)
-
 
 
 def connected_components(g):
@@ -407,13 +421,12 @@ def connected_components(g):
         print 'Warning: pygraph not available ... fall back to slow BFS function'
         bfs = breadth_first_search
 
-
     if 1:
-        visited = np.zeros(len(g),dtype=bool)
+        visited = np.zeros(len(g), dtype=bool)
         components = []
         root = 0
         while not visited.all():
-            root = np.where(visited==False)[0][0]
+            root = np.where(visited == False)[0][0]
             st, order = bfs(g, root=root)
             visited[order] = True
             components.append(sorted(order))
@@ -429,24 +442,28 @@ if pygraph_available:
 
         counts = np.bincount(labels)
         to_visit = set(range(len(gr)))
+
         class label_filter(object):
             def __init__(self, l, labels):
                 self.l = l
                 self.labels = labels
-            def configure(self,gr,s):
+
+            def configure(self, gr, s):
                 pass
+
             def __call__(self, node, parent):
                 return self.labels[node] == self.l
 
-        components = dict( [(i,[]) for i in np.unique(labels)] )
+        components = dict([(i, []) for i in np.unique(labels)])
         while len(to_visit) > 0:
             root = to_visit.pop()
             label = labels[root]
-            st, o = bfs_pygraph(gr, root, label_filter(label,labels))
+            st, o = bfs_pygraph(gr, root, label_filter(label, labels))
             components[label].append(o)
             to_visit.difference_update(o)
 
         return components
+
 
 def split_mask_into_cc_iter(mask, min_size=0, kerMask=None):
     """ Return an iterator over all connected components (CC) within input mask.
@@ -476,15 +493,15 @@ def split_mask_into_cc_iter(mask, min_size=0, kerMask=None):
     """
     assert isinstance(min_size, int)
     flat_mask = mask[np.where(mask)]
-    #print 'flat_mask:', flat_mask.shape
+    # print 'flat_mask:', flat_mask.shape
     g = graph_from_lattice(mask, kerMask)
     for cc in connected_components_iter(g):
-        #print 'cc:'
-        #print cc
+        # print 'cc:'
+        # print cc
         if len(cc) >= min_size:
             flat_mask[:] = 0
             flat_mask[cc] = 1
-            #print expand_array_in_mask(flat_mask, mask)
+            # print expand_array_in_mask(flat_mask, mask)
             yield expand_array_in_mask(flat_mask, mask)
 
 
@@ -495,6 +512,7 @@ def bfs_set_label(g, root, data, value, radius):
     filt_radius = Radius(radius)
     _, o = breadth_first_search(gr, root, filt_radius)
     data[o] = value
+
 
 def bfs_sub_graph(g, root, radius):
     from pygraph.algorithms.filters.radius import radius as Radius
@@ -516,13 +534,14 @@ def sub_graph(graph, nodes):
     sNodeIds = set(nodes)
     # Filter the graph to only keep given nodes:
     subg = np.array([np.array(list(sNodeIds.intersection(nl)))
-                      for nl in graph[nodes]], dtype=object)
+                     for nl in graph[nodes]], dtype=object)
     # Fix indexes to be in the new referential:
-    nodeMap = dict( [(v,iv) for iv,v in enumerate(nodes)] )
+    nodeMap = dict([(v, iv) for iv, v in enumerate(nodes)])
     for nl in subg:
         for i, n in enumerate(nl):
             nl[i] = nodeMap[n]
     return subg, nodeMap
+
 
 def parcels_to_graphs(parcellation, kerMask, toKeep=None,
                       toDiscard=None):
@@ -535,24 +554,22 @@ def parcels_to_graphs(parcellation, kerMask, toKeep=None,
      - a dictionnary mapping a roi ID to its graph
     """
     # determine the set of parcels to work on:
-    parcelIds = np.unique(parcellation) #everything
+    parcelIds = np.unique(parcellation)  # everything
     if toKeep is not None:
         assert set(toKeep).issubset(set(parcelIds))
         parcelIds = toKeep
     if toDiscard is not None:
         #assert set(toDiscard).issubset(set(parcelIds))
         parcelIds = set(parcelIds).difference(toDiscard)
-    #print 'parcelIds:', parcelIdsx
+    # print 'parcelIds:', parcelIdsx
 
     parcelGraphs = {}
     parcelNodeMap = {}
     # loop over parcels
     for pid in parcelIds:
-        parcelGraphs[pid] = graph_from_lattice(parcellation==pid,
+        parcelGraphs[pid] = graph_from_lattice(parcellation == pid,
                                                kerMask=kerMask)
-        #print 'pg:', parcelGraphs[pid]
+        # print 'pg:', parcelGraphs[pid]
         assert graph_is_sane(parcelGraphs[pid])
 
     return parcelGraphs
-
-

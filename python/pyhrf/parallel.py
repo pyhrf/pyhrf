@@ -1,33 +1,42 @@
 # -*- coding: utf-8 -*-
 
-
 import os
 import os.path as op
-from os.path import basename, splitext
 import cPickle
 import shutil
 import subprocess
+import logging
+
+from os.path import basename, splitext
 from tempfile import mkdtemp
 
-import pyhrf
-from pyhrf.tools._io import remote_copy
-from pyhrf import xmlio
 try:
     from soma_workflow.client import Job, FileTransfer
     from soma_workflow.client import Group
     from soma_workflow.client import Helper
     from soma_workflow.client import Workflow, WorkflowController
-except:
+except ImportError:
     pass
+
+import pyhrf
+
+from pyhrf.tools._io import remote_copy
+from pyhrf import xmliobak
+
+
+logger = logging.getLogger(__name__)
+
 
 class RemoteException(Exception):
     pass
 
-def save_treatment(t,f):
-    sXml = xmlio.to_xml(t, handler=xmlio.xmlnumpy.NumpyXMLHandler())
-    fOut = open(f,'w')
+
+def save_treatment(t, f):
+    sXml = xmliobak.to_xml(t, handler=xmliobak.xmlnumpy.NumpyXMLHandler())
+    fOut = open(f, 'w')
     fOut.write(sXml)
     fOut.close()
+
 
 def prepare_treatment_jobs(treatment, tmp_local_dir, local_result_path,
                            local_user, local_host, remote_host, remote_user,
@@ -64,105 +73,99 @@ def prepare_treatment_jobs(treatment, tmp_local_dir, local_result_path,
     # roiFiles contains the list of files that will be produced by job_split
     roiFiles, roiIds = treatment.dump_roi_datasets(dry=True)
 
-    pyhrf.verbose(1, 'Get list of splitted data files ... %d files' \
-                      %len(roiFiles))
+    logger.info('Get list of splitted data files ... %d files', len(roiFiles))
     datafiles = treatment.get_data_files()
 
     # Make all path be relative in the treatment config file
     # so that data file can be found on the cluster file system
     treatment.replace_data_dir('./')
-    remote_cfg_file = op.join(tmp_local_dir,'./detectestim_remote.xml')
+    remote_cfg_file = op.join(tmp_local_dir, './detectestim_remote.xml')
     treatment.set_init_param('make_outputs', False)
-    pyhrf.verbose(1, 'Save remote treatment to %s' %remote_cfg_file)
+    logger.info('Save remote treatment to %s', remote_cfg_file)
     save_treatment(treatment, remote_cfg_file)
 
-    pyhrf.verbose(1, 'Upload input data')
+    logger.info('Upload input data')
     # All data which are the inputs of the workflow:
-    data_to_upload = datafiles+[remote_cfg_file]
+    data_to_upload = datafiles + [remote_cfg_file]
     remote_input_files = remote_copy(data_to_upload, remote_host,
                                      remote_user, remote_path)
-    #print 'remote_input_files:'
-    #print remote_input_files
-    pyhrf.verbose(1, 'Remove tmp remote cfg file')
+    logger.info('Remove tmp remote cfg file')
     os.remove(remote_cfg_file)
 
-    pyhrf.verbose(1, 'Prepare jobs ...')
-    pyhrf.verbose(1, 'Job split ...')
-    verbosity = pyhrf.verbose.verbosity
-    cmd = ["pyhrf_split_roidata","-c", basename(remote_cfg_file),
-           "-v %d" %verbosity, "-d", "./"]
-    pyhrf.verbose(2, '-> %s' %cmd)
+    logger.info('Prepare jobs ...')
+    logger.info('Job split ...')
+    verbose_level = logger.getEffectiveLevel()
+    cmd = ["pyhrf_split_roidata", "-c", basename(remote_cfg_file),
+           "-v %d" % verbose_level, "-d", "./"]
+    logger.info('-> %s', cmd)
     job_split = Job(cmd, working_directory=remote_path, name="roi_split")
 
-    pyhrf.verbose(1, 'Jobs JDE ...')
-    jobs_jde = [Job(["pyhrf_jde_estim","-c", basename(remote_cfg_file),
-                     "-r", basename(roiFile), "-v %d" %verbosity],
+    logger.info('Jobs JDE ...')
+    jobs_jde = [Job(["pyhrf_jde_estim", "-c", basename(remote_cfg_file),
+                     "-r", basename(roiFile), "-v %d" % verbose_level],
                     working_directory=remote_path,
-                    name="jde_r%04d" %roiId)
+                    name="jde_r%04d" % roiId)
                 for roiFile, roiId in zip(roiFiles, roiIds)]
-    pyhrf.verbose(2, 'First jde job -> %s' %jobs_jde[0].command)
+    logger.info('First jde job -> %s', jobs_jde[0].command)
     # Files produced by all JDE jobs, which will be then used as input of the
     # merge job:
-    resultFiles = ["result_%04d.pck" %iroi for iroi in roiIds]
+    resultFiles = ["result_%04d.pck" % iroi for iroi in roiIds]
 
-    pyhrf.verbose(1, 'Job pack result ...')
+    logger.info('Job pack result ...')
     # Output of the merge job, which has to transfered back to local:
     remote_resultFile = './result.pck'
-    pyhrf.verbose(1, 'Remote result file: %s' %remote_resultFile)
+    logger.info('Remote result file: %s', remote_resultFile)
 
-    cmd = ["pyhrf_pack_results",'-v1','-o',remote_resultFile]+resultFiles
-    pyhrf.verbose(3, 'cmd pack result: %s' %cmd)
+    cmd = ["pyhrf_pack_results", '-v1', '-o', remote_resultFile] + resultFiles
+    logger.info('cmd pack result: %s', cmd)
     job_merge = Job(cmd, working_directory=remote_path,
                     name="merge_results")
 
-
     # Retrieve result file:
-    #local_host = "132.166.200.5" #HACK
-    #cmd = ["pyhrf_shell_cmd", "scp","-C",remote_resultFile, "%s@%s:\"%s\"" \
-               #%(local_user,local_host,local_result_path)]
-    cmd = ["scp","-C",remote_resultFile, "%s@%s:\"%s\"" \
-               %(local_user,local_host,local_result_path)]           
-    
-    pyhrf.verbose(2, 'cmd scp result: %s' %cmd)
+    # local_host = "132.166.200.5" #HACK
+    # cmd = ["pyhrf_shell_cmd", "scp","-C",remote_resultFile, "%s@%s:\"%s\"" \
+    #%(local_user,local_host,local_result_path)]
+    cmd = ["scp", "-C", remote_resultFile, "%s@%s:\"%s\""
+           % (local_user, local_host, local_result_path)]
+
+    logger.info('cmd scp result: %s', cmd)
     job_scp_result = Job(cmd, working_directory=remote_path, name="scp_result")
 
     # Clean everything:
     # -> all input files, splitted roi data, result for each data, merged result:
-    #cmd = ["pyhrf_shell_cmd", "rm","-f", remote_resultFile] + \
-      #map(basename, roiFiles) + resultFiles + remote_input_files
-    #pyhrf.verbose(3, 'cmd clean: %s' %cmd)
-    cmd = ["rm","-f", remote_resultFile] + \
-      map(basename, roiFiles) + resultFiles + remote_input_files
-    pyhrf.verbose(3, 'cmd clean: %s' %cmd)
+    cmd = ["rm", "-f", remote_resultFile] + \
+        map(basename, roiFiles) + resultFiles + remote_input_files
+    logger.info('cmd clean: %s', cmd)
     job_clean = Job(cmd, working_directory=remote_path, name="clean_files")
 
-    pyhrf.verbose(1,'Setup of work flow ...')
+    logger.info('Setup of work flow ...')
 
     # Build the Job lists, dependencies and group
     clean = True
     if clean:
-        nodes = [job_merge,job_scp_result,job_clean] + jobs_jde
+        nodes = [job_merge, job_scp_result, job_clean] + jobs_jde
     else:
-        nodes = [job_merge,job_scp_result] + jobs_jde
+        nodes = [job_merge, job_scp_result] + jobs_jde
     dependencies = []
     for jj in jobs_jde:
-        dependencies.append((job_split,jj))
-        dependencies.append((jj,job_merge))
-    dependencies.append((job_merge,job_scp_result))
+        dependencies.append((job_split, jj))
+        dependencies.append((jj, job_merge))
+    dependencies.append((job_merge, job_scp_result))
     if clean:
-        dependencies.append((job_scp_result,job_clean))
+        dependencies.append((job_scp_result, job_clean))
 
-    jjGroup = Group(elements=jobs_jde, name=label_for_cluster+'-roi_jobs')
+    jjGroup = Group(elements=jobs_jde, name=label_for_cluster + '-roi_jobs')
     if clean:
-        elements = [job_split,jjGroup,job_merge,
-                    job_scp_result,job_clean]
+        elements = [job_split, jjGroup, job_merge,
+                    job_scp_result, job_clean]
     else:
-        elements = [job_split,jjGroup,job_merge,
+        elements = [job_split, jjGroup, job_merge,
                     job_scp_result]
     mainGroup = Group(name=label_for_cluster,
                       elements=elements)
 
     return job_split, nodes, dependencies, mainGroup
+
 
 def run_soma_workflow(treatments, exec_cmd, tmp_local_dirs, server_id,
                       remote_host, remote_user, remote_pathes,
@@ -207,18 +210,17 @@ def run_soma_workflow(treatments, exec_cmd, tmp_local_dirs, server_id,
                                              local_user, local_host,
                                              remote_host,
                                              remote_user, remote_path,
-                                             label_for_cluster+'-'+str(t_id))
+                                             label_for_cluster + '-' + str(t_id))
         all_nodes.extend(n)
         all_deps.extend(d)
         all_groups.append(g)
         split_jobs.append(sj)
 
-
     # Jobs for data splitting should be done sequentially.
     # If they're done in parallel, they may flood the remote file system
     for isj in xrange(len(split_jobs)):
-        if isj+1 < len(split_jobs):
-            all_deps.append((split_jobs[isj],split_jobs[isj+1]))
+        if isj + 1 < len(split_jobs):
+            all_deps.append((split_jobs[isj], split_jobs[isj + 1]))
 
     # # Be sure that all splitting jobs are done first:
     # # Is there a better way ?
@@ -227,25 +229,26 @@ def run_soma_workflow(treatments, exec_cmd, tmp_local_dirs, server_id,
     #         all_deps.append((sjob,n))
     # Does not seem to work well -> maybe to many deps ?
 
-    workflow = Workflow(all_nodes+split_jobs, all_deps, root_group=all_groups)
+    workflow = Workflow(
+        all_nodes + split_jobs, all_deps, root_group=all_groups)
 
     # f = open('/tmp/workflow.pck','w')
     # cPickle.dump(workflow, f)
     # f.close()
 
-    pyhrf.verbose(1,'Open connection ...')
+    logger.info('Open connection ...')
     connection = WorkflowController(server_id, remote_user)
 
-    pyhrf.verbose(1,'Submit workflow ...')
-    wf_id = connection.submit_workflow( workflow=workflow,
-                                        #expiration_date="",
-                                        #queue="run32",
-                                        name=label_for_cluster+'-' + \
-                                            local_user)
+    logger.info('Submit workflow ...')
+    wf_id = connection.submit_workflow(workflow=workflow,
+                                       # expiration_date="",
+                                       # queue="run32",
+                                       name=label_for_cluster + '-' +
+                                       local_user)
     #wf = connection.workflow(wf_id)
 
-    if wait_ending: #wait for result
-        pyhrf.verbose(1,'Wait for workflow to end and make outputs ...')
+    if wait_ending:  # wait for result
+        logger.info('Wait for workflow to end and make outputs ...')
         Helper.wait_workflow(wf_id, connection)
 
         for t_id, local_result_path in local_result_pathes.iteritems():
@@ -257,12 +260,12 @@ def run_soma_workflow(treatments, exec_cmd, tmp_local_dirs, server_id,
                                         op.basename(rfilename))
 
             if not op.exists(local_result_file):
-                raise Exception('Local result does not exist "%s"' \
-                                    %local_result_file)
+                raise Exception('Local result does not exist "%s"'
+                                % local_result_file)
 
         if treatment.analyser.outFile is not None:
-            #return result only for last treatment ...
-            print 'Load result from %s ...' %local_result_file
+            # return result only for last treatment ...
+            print 'Load result from %s ...' % local_result_file
             if splitext(local_result_file)[1] == '.gz':
                 import gzip
                 fresult = gzip.open(local_result_file)
@@ -270,26 +273,23 @@ def run_soma_workflow(treatments, exec_cmd, tmp_local_dirs, server_id,
                 fresult = open(local_result_file)
             results = cPickle.load(fresult)
             fresult.close()
-            #print 'Make outputs ...'
+            # print 'Make outputs ...'
             #treatment.output(results, dump=False)
-            pyhrf.verbose(1, 'Cleaning tmp dirs ...')
+            logger.info('Cleaning tmp dirs ...')
             for tmp_dir in tmp_local_dirs.itervalues():
                 shutil.rmtree(tmp_dir)
 
             return results
     else:
-        pyhrf.verbose(1, 'Cleaning tmp dirs ...')
+        logger.info('Cleaning tmp dirs ...')
         for tmp_dir in tmp_local_dirs.itervalues():
             shutil.rmtree(tmp_dir)
 
-        pyhrf.verbose(1,'Workflow sent, returning ...')
+        logger.info('Workflow sent, returning ...')
         return []
 
 
-
-
-
-#argv: -c, input params file, func file, output file
+# argv: -c, input params file, func file, output file
 cfunc_marshal = "import sys;import cPickle;p=cPickle.load(open(sys.argv[1]));"\
     "import marshal,types;ff=open(sys.argv[2]);"\
     "code=marshal.loads(ff.read());ff.close();"\
@@ -297,21 +297,25 @@ cfunc_marshal = "import sys;import cPickle;p=cPickle.load(open(sys.argv[1]));"\
     "o=f(*p[0],**p[1]);fout=open(sys.argv[3],'w');cPickle.dump(o,fout);"\
     "fout.close();"
 
+
 def dump_func(func, fn):
     import marshal
-    f = open(fn,'w')
+    f = open(fn, 'w')
     marshal.dump(func.func_code, f)
     f.close()
 
 import inspect
+
+
 def merge_default_kwargs(func, kwargs):
-    args,_,_,defaults = inspect.getargspec(func)
+    args, _, _, defaults = inspect.getargspec(func)
     if defaults is not None:
-        default_kwargs = dict(zip(args[len(args)-len(defaults):],defaults))
+        default_kwargs = dict(zip(args[len(args) - len(defaults):], defaults))
         default_kwargs.update(kwargs)
         return default_kwargs
     else:
         return kwargs
+
 
 def remote_map_marshal(func, largs=None, lkwargs=None, mode='local'):
 
@@ -324,38 +328,38 @@ def remote_map_marshal(func, largs=None, lkwargs=None, mode='local'):
     if lkwargs is None:
         lkwargs = [{}] * len(largs)
 
-    lkwargs = [merge_default_kwargs(func,kw) for kw in lkwargs]
+    lkwargs = [merge_default_kwargs(func, kw) for kw in lkwargs]
 
     assert len(lkwargs) == len(largs)
 
     all_args = zip(largs, lkwargs)
 
-    if mode=='local':
-        return [func(*args,**kwargs) for args,kwargs in all_args]
-    elif mode=='local_with_dumps':
+    if mode == 'local':
+        return [func(*args, **kwargs) for args, kwargs in all_args]
+    elif mode == 'local_with_dumps':
 
         func_fn = './func.marshal'
         dump_func(func, func_fn)
         results = []
-        for i,params in enumerate(all_args):
+        for i, params in enumerate(all_args):
             print 'params:', params
-            params_fn = 'params_%d.pck' %i
-            fparams = open(params_fn,'wb')
+            params_fn = 'params_%d.pck' % i
+            fparams = open(params_fn, 'wb')
             cPickle.dump(params, fparams)
             fparams.close()
-            output_fn = 'output_%d.pck' %i
+            output_fn = 'output_%d.pck' % i
             print 'call subprocess ...'
-            subprocess.call(['python','-c', cfunc_marshal, params_fn,
+            subprocess.call(['python', '-c', cfunc_marshal, params_fn,
                              func_fn, output_fn])
             print 'Read outputs ...'
             fout = open(output_fn)
             results.append(cPickle.load(fout))
         return results
-    elif mode=='remote_cluster':
+    elif mode == 'remote_cluster':
         # FileTransfer creation for input files
         #data_dir = './rmap_data'
         data_dir = mkdtemp(prefix="sw_rmap")
-        func_fn = op.join(data_dir ,'func.marshal')
+        func_fn = op.join(data_dir, 'func.marshal')
         dump_func(func, func_fn)
         func_file = FileTransfer(is_input=True,
                                  client_path=func_fn,
@@ -363,22 +367,22 @@ def remote_map_marshal(func, largs=None, lkwargs=None, mode='local'):
 
         all_jobs = []
         param_files = []
-        for i,params in enumerate(all_args):
-            params_fn = op.join(data_dir,'params_%d.pck' %i)
-            fparams = open(params_fn,'wb')
+        for i, params in enumerate(all_args):
+            params_fn = op.join(data_dir, 'params_%d.pck' % i)
+            fparams = open(params_fn, 'wb')
             cPickle.dump(params, fparams)
             fparams.close()
             param_file = FileTransfer(is_input=True,
                                       client_path=params_fn,
-                                      name='params_file_%d'%i)
+                                      name='params_file_%d' % i)
             param_files.append(param_file)
-            output_fn = op.join(data_dir,'output_%d.pck' %i)
+            output_fn = op.join(data_dir, 'output_%d.pck' % i)
             output_file = FileTransfer(is_input=False,
                                        client_path=output_fn,
-                                       name='output_file_%d'%i)
-            job = Job(command=['python','-c', cfunc, param_file, func_file,
+                                       name='output_file_%d' % i)
+            job = Job(command=['python', '-c', cfunc, param_file, func_file,
                                output_file],
-                      name="rmap, item %d" %i,
+                      name="rmap, item %d" % i,
                       referenced_input_files=[func_file, param_file],
                       referenced_output_files=[output_file])
             all_jobs.append(job)
@@ -388,8 +392,9 @@ def remote_map_marshal(func, largs=None, lkwargs=None, mode='local'):
         cfg = pyhrf.cfg['parallel-cluster']
         controller = WorkflowController(cfg['server_id'], cfg['user'])
 
-        #controller.transfer_files(fids_to_transfer)
-        wf_id = controller.submit_workflow(workflow=workflow, name="remote_map")
+        # controller.transfer_files(fids_to_transfer)
+        wf_id = controller.submit_workflow(
+            workflow=workflow, name="remote_map")
 
         Helper.transfer_input_files(wf_id, controller)
 
@@ -399,7 +404,7 @@ def remote_map_marshal(func, largs=None, lkwargs=None, mode='local'):
 
         results = []
         for i in xrange(len(all_args)):
-            fout = open(op.join(data_dir,'output_%d.pck'%i))
+            fout = open(op.join(data_dir, 'output_%d.pck' % i))
             results.append(cPickle.load(fout))
             fout.close()
         return results
@@ -461,74 +466,74 @@ def remote_map(func, largs=None, lkwargs=None, mode='serial'):
     if lkwargs is None:
         lkwargs = [{}] * len(largs)
 
-    lkwargs = [merge_default_kwargs(func,kw) for kw in lkwargs]
+    lkwargs = [merge_default_kwargs(func, kw) for kw in lkwargs]
 
     assert len(lkwargs) == len(largs)
 
     all_args = zip(largs, lkwargs)
-    #print 'all_args:', all_args
+    # print 'all_args:', all_args
 
     fmodule = func.__module__
     fname = '.'.join([fmodule, func.__name__])
 
-    if mode=='serial':
-        return [func(*args,**kwargs) for args,kwargs in all_args]
-    elif mode=='local':
+    if mode == 'serial':
+        return [func(*args, **kwargs) for args, kwargs in all_args]
+    elif mode == 'local':
         try:
             from joblib import Parallel, delayed
         except ImportError:
-            raise ImportError('Can not import joblib. It is '\
-                              'required to enable parallel '\
+            raise ImportError('Can not import joblib. It is '
+                              'required to enable parallel '
                               'processing on a local machine.')
 
-        if pyhrf.verbose.verbosity == 6:
+        if logger.getEffectiveLevel() == logging.DEBUG:
             parallel_verb = 10
         else:
             parallel_verb = 0
         n_jobs = pyhrf.cfg['parallel-local']['nb_procs']
         p = Parallel(n_jobs=n_jobs, verbose=parallel_verb)
-        return p(delayed(func)(*args,**kwargs) \
-                     for args, kwargs in all_args)
+        return p(delayed(func)(*args, **kwargs)
+                 for args, kwargs in all_args)
 
-    elif mode=='local_with_dumps':
+    elif mode == 'local_with_dumps':
         results = []
-        for i,params in enumerate(all_args):
-            #print 'params:', params
-            params_fn = 'params_%d.pck' %i
-            fparams = open(params_fn,'wb')
+        for i, params in enumerate(all_args):
+            # print 'params:', params
+            params_fn = 'params_%d.pck' % i
+            fparams = open(params_fn, 'wb')
             cPickle.dump(params, fparams)
             fparams.close()
-            output_fn = 'output_%d.pck' %i
-            #print 'call subprocess ...'
-            subprocess.call(['python','-c', cfunc%(fmodule,fname),
+            output_fn = 'output_%d.pck' % i
+            # print 'call subprocess ...'
+            subprocess.call(['python', '-c', cfunc % (fmodule, fname),
                              params_fn, output_fn])
-            #print 'Read outputs ...'
+            # print 'Read outputs ...'
             fout = open(output_fn)
             results.append(cPickle.load(fout))
         return results
-    elif mode=='remote_cluster':
+    elif mode == 'remote_cluster':
         # FileTransfer creation for input files
         #data_dir = './rmap_data'
         data_dir = mkdtemp(prefix="sw_rmap")
 
         all_jobs = []
         param_files = []
-        for i,params in enumerate(all_args):
-            params_fn = op.join(data_dir,'params_%d.pck' %i)
-            fparams = open(params_fn,'wb')
+        for i, params in enumerate(all_args):
+            params_fn = op.join(data_dir, 'params_%d.pck' % i)
+            fparams = open(params_fn, 'wb')
             cPickle.dump(params, fparams)
             fparams.close()
             param_file = FileTransfer(is_input=True,
                                       client_path=params_fn,
-                                      name='params_file_%d'%i)
+                                      name='params_file_%d' % i)
             param_files.append(param_file)
-            output_fn = op.join(data_dir,'output_%d.pck' %i)
+            output_fn = op.join(data_dir, 'output_%d.pck' % i)
             output_file = FileTransfer(is_input=False,
                                        client_path=output_fn,
-                                       name='output_file_%d'%i)
-            job = Job(command=['pyhrf_exec_pyfunc', fmodule,fname,
+                                       name='output_file_%d' % i)
+            job = Job(command=['pyhrf_exec_pyfunc', fmodule, fname,
                                param_file, output_file],
-                      name="rmap, item %d" %i,
+                      name="rmap, item %d" % i,
                       referenced_input_files=[param_file],
                       referenced_output_files=[output_file])
             all_jobs.append(job)
@@ -537,8 +542,9 @@ def remote_map(func, largs=None, lkwargs=None, mode='serial'):
         # submit the workflow
         cfg = pyhrf.cfg['parallel-cluster']
         controller = WorkflowController(cfg['server_id'], cfg['user'])
-        #controller.transfer_files(fids_to_transfer)
-        wf_id = controller.submit_workflow(workflow=workflow, name="remote_map")
+        # controller.transfer_files(fids_to_transfer)
+        wf_id = controller.submit_workflow(
+            workflow=workflow, name="remote_map")
 
         Helper.transfer_input_files(wf_id, controller)
 
@@ -548,15 +554,15 @@ def remote_map(func, largs=None, lkwargs=None, mode='serial'):
 
         results = []
         for i in xrange(len(all_args)):
-            fnout = op.join(data_dir, 'output_%d.pck'%i)
+            fnout = op.join(data_dir, 'output_%d.pck' % i)
             fout = open(fnout)
             o = cPickle.load(fout)
             print 'file cPickle loaded:', o
             fout.close()
             os.remove(fnout)
             if isinstance(o, Exception):
-                raise RemoteException('Task %d failed'%i, o)
-                if o.errno != 17:   
-                    raise RemoteException('Task %d failed'%i, o)
+                raise RemoteException('Task %d failed' % i, o)
+                if o.errno != 17:
+                    raise RemoteException('Task %d failed' % i, o)
             results.append(o)
         return results

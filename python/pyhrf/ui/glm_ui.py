@@ -1,32 +1,36 @@
 # -*- coding: utf-8 -*-
+
+import logging
+
 import numpy as np
 
-
-import pyhrf
 from pyhrf import xmlio
 try:
     from collections import OrderedDict
 except ImportError:
-    from pyhrf.backport import OrderedDict
+    from pyhrf.tools.backports import OrderedDict
 from pyhrf.ndarray import xndarray, tree_to_xndarray, stack_cuboids
-
 from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.glm import glm_nipy
+
+
+logger = logging.getLogger(__name__)
+
 
 class GLMAnalyser(FMRIAnalyser):
 
     parametersToShow = []
 
     parametersComments = {
-        'fit_method' : 'Either "ols" or "kalman"',
-        'residuals_model' : 'Either "spherical" or "ar1". If "ar1" then '\
-            'the kalman fit method is used'
-        }
+        'fit_method': 'Either "ols" or "kalman"',
+        'residuals_model': 'Either "spherical" or "ar1". If "ar1" then '
+        'the kalman fit method is used'
+    }
 
-    def __init__(self, contrasts={'dummy_contrast_example':'3*audio-video/3'},
+    def __init__(self, contrasts={'dummy_contrast_example': '3*audio-video/3'},
                  contrast_test_baseline=0.0,
                  hrf_model='Canonical', drift_model='Cosine', hfcut=128.,
-                 residuals_model='spherical',fit_method='ols',
+                 residuals_model='spherical', fit_method='ols',
                  outputPrefix='glm_', rescale_results=False,
                  rescale_factor_file=None, fir_delays=[0],
                  output_fit=False):
@@ -42,7 +46,7 @@ class GLMAnalyser(FMRIAnalyser):
         self.residuals_model = residuals_model
         self.fit_method = fit_method
         self.contrasts = contrasts
-        self.contrasts.pop('dummy_contrast_example',None)
+        self.contrasts.pop('dummy_contrast_example', None)
         self.con_bl = contrast_test_baseline
         self.rescale_results = rescale_results
 
@@ -55,11 +59,11 @@ class GLMAnalyser(FMRIAnalyser):
         return 'pyhrf_GLM_analysis'
 
     def analyse_roi(self, fdata):
-        pyhrf.verbose(1, 'Run GLM analysis (ROI %d) ...' %fdata.get_roi_id())
+        logger.info('Run GLM analysis (ROI %d) ...', fdata.get_roi_id())
 
         if self.rescale_factor is not None:
             m = np.where(fdata.roiMask)
-            rescale_factor = self.rescale_factor[:,m[0],m[1],m[2]]
+            rescale_factor = self.rescale_factor[:, m[0], m[1], m[2]]
         else:
             rescale_factor = None
 
@@ -78,79 +82,78 @@ class GLMAnalyser(FMRIAnalyser):
         ns, nr = dm.matrix.shape
         tr = fdata.tr
         if rescale_factor is not None:
-            #same sf for all voxels
-            dm.matrix[:,:rescale_factor.shape[0]] /= rescale_factor[:,0]
+            # same sf for all voxels
+            dm.matrix[:, :rescale_factor.shape[0]] /= rescale_factor[:, 0]
 
         cdesign_matrix = xndarray(dm.matrix,
-                                axes_names=['time','regressor'],
-                                axes_domains={'time':np.arange(ns)*tr,
-                                              'regressor':dm.names})
+                                  axes_names=['time', 'regressor'],
+                                  axes_domains={'time': np.arange(ns) * tr,
+                                                'regressor': dm.names})
         outputs['design_matrix'] = cdesign_matrix
 
         if self.output_fit:
             axes_names = ['time', 'voxel']
-            axes_domains = {'time' : np.arange(ns)*tr}
+            axes_domains = {'time': np.arange(ns) * tr}
             bold = xndarray(fdata.bold.astype(np.float32),
-                          axes_names=axes_names,
-                          axes_domains=axes_domains,
-                          value_label='BOLD')
+                            axes_names=axes_names,
+                            axes_domains=axes_domains,
+                            value_label='BOLD')
 
             fit = np.dot(dm.matrix, glm.beta)
-            cfit = xndarray(fit, axes_names=['time','voxel'],
-                          axes_domains={'time':np.arange(ns)*tr})
+            cfit = xndarray(fit, axes_names=['time', 'voxel'],
+                            axes_domains={'time': np.arange(ns) * tr})
 
-            outputs['bold_fit'] = stack_cuboids([bold,cfit], 'stype',
+            outputs['bold_fit'] = stack_cuboids([bold, cfit], 'stype',
                                                 ['bold', 'fit'])
 
-
             nb_cond = fdata.nbConditions
-            fit_cond = np.dot(dm.matrix[:,:nb_cond], glm.beta[:nb_cond,:])
+            fit_cond = np.dot(dm.matrix[:, :nb_cond], glm.beta[:nb_cond, :])
             fit_cond -= fit_cond.mean(0)
             fit_cond += fdata.bold.mean(0)
 
-            outputs['fit_cond'] = xndarray(fit_cond, axes_names=['time','voxel'],
-                                           axes_domains={'time':np.arange(ns)*tr})
-
+            outputs['fit_cond'] = xndarray(fit_cond, axes_names=['time', 'voxel'],
+                                           axes_domains={'time': np.arange(ns) * tr})
 
         s2 = np.atleast_1d(glm.s2)
         outputs['s2'] = xndarray(s2, axes_names=['voxel'])
 
-
         if 0:
-            cbeta = xndarray(glm.beta, axes_names=['reg_name','voxel'],
-                           axes_domains={'reg_name':dm.names})
+            cbeta = xndarray(glm.beta, axes_names=['reg_name', 'voxel'],
+                             axes_domains={'reg_name': dm.names})
 
             outputs['beta'] = cbeta
         else:
             if self.hrf_model == 'FIR':
-                fir = dict((d * fdata.tr, OrderedDict()) for d in self.fir_delays)
+                fir = dict((d * fdata.tr, OrderedDict())
+                           for d in self.fir_delays)
             for ib, bname in enumerate(dm.names):
                 outputs['beta_' + bname] = xndarray(glm.beta[ib],
-                                                  axes_names=['voxel'])
+                                                    axes_names=['voxel'])
                 if self.hrf_model == 'FIR' and 'delay' in bname:
-                    #reconstruct filter:
+                    # reconstruct filter:
                     cond, delay = bname.split('_delay_')
                     delay = int(delay) * fdata.tr
-                    fir[delay][cond] = xndarray(glm.beta[ib], axes_names=['voxel'])
+                    fir[delay][cond] = xndarray(
+                        glm.beta[ib], axes_names=['voxel'])
 
             if self.hrf_model == 'FIR':
                 chrf = tree_to_xndarray(fir, ['time', 'condition'])
                 outputs['hrf'] = chrf
-                outputs['hrf_norm'] = (chrf**2).sum('time')**.5
+                outputs['hrf_norm'] = (chrf ** 2).sum('time') ** .5
 
             for cname, con in cons.iteritems():
-                #print 'con:'
-                #print dir(con)
-                outputs['con_effect_'+cname] = xndarray(con.effect,
-                                                      axes_names=['voxel'])
+                # print 'con:'
+                # print dir(con)
+                outputs['con_effect_' + cname] = xndarray(con.effect,
+                                                          axes_names=['voxel'])
 
-                #print '%%%%%%% con.variance:', con.variance.shape
+                # print '%%%%%%% con.variance:', con.variance.shape
                 ncon = con.effect / con.variance.std()
-                outputs['ncon_effect_'+cname] = xndarray(ncon, axes_names=['voxel'])
+                outputs[
+                    'ncon_effect_' + cname] = xndarray(ncon, axes_names=['voxel'])
 
-                outputs['con_pvalue_'+cname] = xndarray(con.pvalue(self.con_bl),
-                                                      axes_names=['voxel'])
-
+                outputs['con_pvalue_' + cname] = xndarray(con.pvalue(self.con_bl),
+                                                          axes_names=['voxel'])
 
         roi_lab_vol = np.zeros(fdata.get_nb_vox_in_mask(), dtype=np.int32) + \
             fdata.get_roi_id()
@@ -163,6 +166,5 @@ class GLMAnalyser(FMRIAnalyser):
         #     beta_file = op.join(output_dir, 'beta_%s.nii' %bname)
         #     save(beta_image, beta_file)
         #     beta_files.append(beta_file)
-
 
         return outputs

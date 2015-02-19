@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
+
 import os
 import os.path as op
 import sys
-import numpy as np
-import scipy.linalg
-import scipy.signal
 import string
 import cPickle
 import hashlib
 import gzip
-from itertools import izip
 import datetime
 import inspect
-from time import time
 import re
+import logging
 
+from itertools import izip
+from time import time
 from collections import defaultdict
+
+import numpy as np
+import scipy.linalg
+import scipy.signal
+
 import pyhrf
 
 try:
@@ -27,9 +31,13 @@ except ImportError:
         pools = map(tuple, args) * kwds.get('repeat', 1)
         result = [[]]
         for pool in pools:
-            result = [x+[y] for x in result for y in pool]
+            result = [x + [y] for x in result for y in pool]
             for prod in result:
                 yield tuple(prod)
+
+
+logger = logging.getLogger(__name__)
+
 
 class PickleableStaticMethod(object):
     def __init__(self, fn, cls=None):
@@ -42,10 +50,13 @@ class PickleableStaticMethod(object):
             return self.fn(*args, **kwargs)
         else:
             return self.fn(self.cls, *args, **kwargs)
+
     def __get__(self, obj, cls):
         return PickleableStaticMethod(self.fn, cls)
+
     def __getstate__(self):
         return (self.cls, self.fn.__name__)
+
     def __setstate__(self, state):
         self.cls, name = state
         self.fn = getattr(self.cls, name).fn
@@ -66,20 +77,20 @@ def is_importable(module_name, func_name=None):
 
 def report_arrays_in_obj(o):
     for a in dir(o):
-        attr = eval('o.%s' %a)
+        attr = eval('o.%s' % a)
         if isinstance(attr, np.ndarray):
-            print a,'->', attr.shape, attr.dtype, '[id=%s]' %str(id(attr))
-        elif (isinstance(attr, list) or isinstance(attr, tuple)) and len(attr)>0 and \
+            print a, '->', attr.shape, attr.dtype, '[id=%s]' % str(id(attr))
+        elif (isinstance(attr, list) or isinstance(attr, tuple)) and len(attr) > 0 and \
                 isinstance(attr[0], np.ndarray):
             print a, '-> list of %d arrays (first array: %s, %s), [id=%s]' \
-                %(len(attr), str(attr[0].shape), str(attr[0].dtype),str(id(attr)))
+                % (len(attr), str(attr[0].shape), str(attr[0].dtype), str(id(attr)))
         elif isinstance(attr, dict) \
-                and len(attr)>0 and isinstance(attr[attr.keys()[0]], np.ndarray):
+                and len(attr) > 0 and isinstance(attr[attr.keys()[0]], np.ndarray):
             print a, 'is a dict of arrays comprising:'
-            for k,v in attr.iteritems():
+            for k, v in attr.iteritems():
                 print k, '->'
                 report_arrays_in_obj(v)
-            print 'end of listing dict "%s"' %a
+            print 'end of listing dict "%s"' % a
 
 
 def has_ext(fn, ext):
@@ -88,11 +99,12 @@ def has_ext(fn, ext):
     else:
         return fn.split('.')[-1] == ext
 
+
 def replace_ext(fn, ext):
     if fn.endswith('gz'):
-        return '.'.join(fn.split('.')[:-2]+[ext,'gz'])
+        return '.'.join(fn.split('.')[:-2] + [ext, 'gz'])
     else:
-        return '.'.join(fn.split('.')[:-1]+[ext])
+        return '.'.join(fn.split('.')[:-1] + [ext])
 
 
 def add_suffix(fn, suffix):
@@ -108,6 +120,7 @@ def add_suffix(fn, suffix):
         sfn = op.splitext(fn[:-3])
         sfn = (sfn[0], sfn[1] + '.gz')
     return sfn[0] + suffix + sfn[1]
+
 
 def add_prefix(fn, prefix):
     """ Add a prefix at the beginning of a file name.
@@ -125,49 +138,43 @@ def add_prefix(fn, prefix):
 
     return op.join(sfn[0], prefix + sfn[1])
 
+
 def assert_path_not_in_src(p):
     p = op.realpath(p)
-    src_path = op.realpath(op.join(op.dirname(pyhrf.__file__),'../../'))
+    src_path = op.realpath(op.join(op.dirname(pyhrf.__file__), '../../'))
     if op.commonprefix([p, src_path]) == src_path:
-        raise Exception('Directory %s is in source path' %p)
+        raise Exception('Directory %s is in source path' % p)
+
 
 def assert_file_exists(fn):
     if not op.exists(fn):
-        raise Exception('File %s does not exists' %fn)
+        raise Exception('File %s does not exists' % fn)
 
 
 def non_existent_canditate(f, start_idx=1):
     yield f
     i = start_idx
     while True:
-        yield add_suffix(f,'_%d' %i)
+        yield add_suffix(f, '_%d' % i)
         i += 1
+
 
 def non_existent_file(f):
     for f in non_existent_canditate(f):
         if not op.exists(f):
             return f
-    # s = suffix_int()
-    # in_f = f
-    # for f in
-    # while op.exists(f):
-    #     print f, 'exists'
-    #     f = add_suffix(in_f,s.next())
-    # return f
 
 
 def do_if_nonexistent_file(*dargs, **kwargs):
     force = kwargs.get('force', False)
-    vlevel = kwargs.get('verbose', 1)
-    def wrapper(func):
-        def wrapper(*args,**kwargs):
-            if force:
-                return func(*args,**kwargs)
+    vlevel = kwargs.get('verbose', 20)
 
-            ins_a,_,_, d = inspect.getargspec(func)
-            # print 'args:', args
-            # print 'ins_a:', ins_a
-            # print 'func.func_code.co_varnames;', func.func_code.co_varnames
+    def wrapper(func):
+        def wrapper(*args, **kwargs):
+            if force:
+                return func(*args, **kwargs)
+
+            ins_a, _, _, d = inspect.getargspec(func)
             do_func = False
             checked_fns = []
             for a in dargs:
@@ -177,38 +184,37 @@ def do_if_nonexistent_file(*dargs, **kwargs):
                     try:
                         iarg = func.func_code.co_varnames.index(a)
                         fn = args[iarg]
-                        # print 'iarg:', iarg
                     except (IndexError, ValueError):
                         try:
                             la, ld = len(ins_a), len(d)
-                            i = ins_a[la-ld:].index(a)
+                            i = ins_a[la - ld:].index(a)
                         except (IndexError, ValueError):
                             msg = 'Error when defining decorator '\
-                              'do_if_nonexistent_file: '\
-                              '"%s" is not a valid '\
-                              'argument of func %s' \
-                              %(a,func.func_name)
+                                'do_if_nonexistent_file: '\
+                                '"%s" is not a valid '\
+                                'argument of func %s' \
+                                % (a, func.func_name)
                             raise Exception(msg)
                         fn = d[i]
                 if not isinstance(fn, str):
-                    raise Exception('Arg %s should be a string, %s found'\
-                                    %(fn, type(fn)))
+                    raise Exception('Arg %s should be a string, %s found'
+                                    % (fn, type(fn)))
                 if not op.exists(fn):
-                    pyhrf.verbose(vlevel, 'func %s executed because file "%s" does'\
-                                  ' not exist' %(func.func_name, fn))
+                    logger.log(vlevel, 'func %s executed because file "%s" does'
+                               ' not exist', func.func_name, fn)
 
                     do_func = True
                     break
                 checked_fns.append(fn)
             if do_func:
-                return func(*args,**kwargs)
-            pyhrf.verbose(vlevel, 'func %s not executed because file(s) '\
-                          'exist(s)' %func.func_name)
-            pyhrf.verbose(vlevel+1, '\n'.join(['-> '+ f for f in checked_fns]))
+                return func(*args, **kwargs)
+            logger.log(vlevel, 'func %s not executed because file(s) '
+                       'exist(s)', func.func_name)
+            logger.log(
+                vlevel + 10, '\n'.join(['-> ' + f for f in checked_fns]))
             return None
         return wrapper
     return wrapper
-
 
 
 def cartesian(*sequences):
@@ -221,7 +227,8 @@ def cartesian(*sequences):
     """
     length = len(sequences)
     if length < 5:
-        # Cases 1, 2 and 3, 4 are for speed only, these are not really required.
+        # Cases 1, 2 and 3, 4 are for speed only, these are not really
+        # required.
         if length == 4:
             for first in sequences[0]:
                 for second in sequences[1]:
@@ -247,9 +254,6 @@ def cartesian(*sequences):
         for result in cartesian(*head):
             for last in tail:
                 yield result + [last]
-
-
-
 
 
 def cartesian_combine_args(varying_args, fixed_args=None):
@@ -288,8 +292,9 @@ def cartesian_combine_args(varying_args, fixed_args=None):
     if fixed_args is None:
         fixed_args = {}
 
-    return [dict(zip(varying_args.keys(),vp) + fixed_args.items()) \
-                for vp in iproduct(*varying_args.values())]
+    return [dict(zip(varying_args.keys(), vp) + fixed_args.items())
+            for vp in iproduct(*varying_args.values())]
+
 
 def icartesian_combine_args(varying_args, fixed_args=None):
     """
@@ -300,8 +305,8 @@ def icartesian_combine_args(varying_args, fixed_args=None):
     if fixed_args is None:
         fixed_args = {}
 
-    return (dict(zip(varying_args.keys(),vp) + fixed_args.items()) \
-                for vp in iproduct(*varying_args.values()))
+    return (dict(zip(varying_args.keys(), vp) + fixed_args.items())
+            for vp in iproduct(*varying_args.values()))
 
 
 def cartesian_apply(varying_args, func, fixed_args=None, nb_parallel_procs=1,
@@ -343,30 +348,30 @@ def cartesian_apply(varying_args, func, fixed_args=None, nb_parallel_procs=1,
 
     if nb_parallel_procs == 1:
         args_iter = icartesian_combine_args(varying_args, fixed_args)
-        return tree([ ([kwargs[a] for a in varying_args.keys()], func(**kwargs)) \
-                      for kwargs in args_iter])
+        return tree([([kwargs[a] for a in varying_args.keys()], func(**kwargs))
+                     for kwargs in args_iter])
     else:
         from joblib import Parallel, delayed
         p = Parallel(n_jobs=nb_parallel_procs, verbose=joblib_verbose)
         args = cartesian_combine_args(varying_args, fixed_args)
         results = p(delayed(func)(**kwargs) for kwargs in args)
-        return tree([ ([kwargs[a] for a in varying_args.keys()], r) \
-                      for kwargs, r in zip(args, results)])
-
+        return tree([([kwargs[a] for a in varying_args.keys()], r)
+                     for kwargs, r in zip(args, results)])
 
 
 def format_duration(dt):
     s = ''
-    if dt/3600 >= 1:
-        s += '%dH' %int(dt/3600)
-        dt = dt%3600
-    if dt/60 >= 1:
-        s += '%dmin' %int(dt/60)
-        dt = int(dt%60)
-    s += '%1.3fsec' %dt
+    if dt / 3600 >= 1:
+        s += '%dH' % int(dt / 3600)
+        dt = dt % 3600
+    if dt / 60 >= 1:
+        s += '%dmin' % int(dt / 60)
+        dt = int(dt % 60)
+    s += '%1.3fsec' % dt
     return s
 
 import pyhrf.ndarray
+
 
 def swapaxes(array, a1, a2):
 
@@ -375,21 +380,23 @@ def swapaxes(array, a1, a2):
     elif isinstance(array, pyhrf.ndarray.xndarray):
         return array.swapaxes(a1, a2)
     else:
-        raise Exception('Unknown array type: %s' %str(type(array)))
+        raise Exception('Unknown array type: %s' % str(type(array)))
+
 
 def rescale_values(a, v_min=0., v_max=1., axis=None):
-    a = a.astype(np.float64) #make sure that precision is sufficient
+    a = a.astype(np.float64)  # make sure that precision is sufficient
     a_min = a.min(axis=axis)
     a_max = a.max(axis=axis)
 
     if axis is not None and axis != 0:
-        a = np.swapaxes(a, 0, axis) #make target axis be the 1st to enable bcast
+        # make target axis be the 1st to enable bcast
+        a = np.swapaxes(a, 0, axis)
 
-    res =  (v_min - v_max)*1. / (a_min - a_max) * (a - a_max) + v_max
+    res = (v_min - v_max) * 1. / (a_min - a_max) * (a - a_max) + v_max
     if axis is not None and axis != 0:
-        res = np.swapaxes(res, 0, axis) #reposition target axis at original pos
+        # reposition target axis at original pos
+        res = np.swapaxes(res, 0, axis)
     return res
-
 
 
 def cartesian_params(**kwargs):
@@ -397,19 +404,15 @@ def cartesian_params(**kwargs):
     for p in cartesian(*kwargs.itervalues()):
         yield dict(zip(keys, p))
 
+
 def cartesian_eval(func, varargs, fixedargs=None):
     resultTree = {}
     if fixedargs is None:
         fixedargs = {}
-    #print 'varargs.keys():', varargs.keys()
     for p in cartesian_params(**varargs):
         fargs = dict(p.items() + fixedargs.items())
-        #print 'fargs:', fargs
-        #print 'p.keys:', p.keys()
-        #print 'p.values:', [p[k] for k in varargs.iterkeys()]
         set_leaf(resultTree, [p[k] for k in varargs.iterkeys()], func(**fargs))
     return varargs.keys(), resultTree
-
 
 
 def cuboidPrinter(c):
@@ -420,9 +423,10 @@ def my_func(**kwargs):
     from pyhrf.ndarray import xndarray
     return xndarray(np.zeros(kwargs['shape']) + kwargs['val'])
 
+
 def cartesian_test():
-    branchLabels, resTree = cartesian_eval(my_func, {'shape':[(2,5),(6,8)],
-                                                     'val':[4,1.3]})
+    branchLabels, resTree = cartesian_eval(my_func, {'shape': [(2, 5), (6, 8)],
+                                                     'val': [4, 1.3]})
     pprint(resTree)
     apply_to_leaves(resTree, cuboidPrinter)
 
@@ -433,31 +437,28 @@ def crop_array(a, m=None, extension=0):
     Increase bounding box of mask by *extension*
     """
     if m is None:
-        m = np.where(a!=0.)
+        m = np.where(a != 0.)
     else:
-        m = np.where(m!=0)
+        m = np.where(m != 0)
     mm = np.vstack(m).transpose()
-    #print 'mm', mm
-    #print mm.ptp(0)
-    d = np.zeros(tuple(mm.ptp(0)+1+2*extension), dtype=a.dtype)
-    #print 'tuple((mm-mm.min(0)).transpose()):'
-    #print tuple((mm-mm.min(0)).transpose())
-    d[tuple((mm-mm.min(0)+extension).transpose())] = a[m]
+    d = np.zeros(tuple(mm.ptp(0) + 1 + 2 * extension), dtype=a.dtype)
+    d[tuple((mm - mm.min(0) + extension).transpose())] = a[m]
     return d
 
-def buildPolyMat(paramLFD, n ,dt):
 
-    regressors = dt*np.arange(0, n)
-    timePower = np.arange(0,paramLFD+1, dtype=int)
-    regMat = np.zeros((len(regressors),paramLFD+1),dtype=float)
-    pyhrf.verbose(2, 'regMat: %s' %str(regMat.shape))
-    for v in xrange(paramLFD+1):
-        regMat[:,v] = regressors[:]
+def buildPolyMat(paramLFD, n, dt):
+
+    regressors = dt * np.arange(0, n)
+    timePower = np.arange(0, paramLFD + 1, dtype=int)
+    regMat = np.zeros((len(regressors), paramLFD + 1), dtype=float)
+    logger.info('regMat: %s', str(regMat.shape))
+    for v in xrange(paramLFD + 1):
+        regMat[:, v] = regressors[:]
 
     tPowerMat = np.tile(timePower, (n, 1))
-    lfdMat = np.power(regMat,tPowerMat)
+    lfdMat = np.power(regMat, tPowerMat)
     lfdMat = np.array(scipy.linalg.orth(lfdMat))
-    #print 'lfdMat :', lfdMat
+    # print 'lfdMat :', lfdMat
     return lfdMat
 
 
@@ -473,10 +474,10 @@ def polyFit(signal, tr=1., order=5):
     n = len(signal)
     print 'n:', n, 'tr:', tr
     p = buildPolyMat(order, n, tr)
-    ptp = np.dot(p.transpose(),p)
+    ptp = np.dot(p.transpose(), p)
     invptp = np.linalg.inv(ptp)
     invptppt = np.dot(invptp, p.transpose())
-    l = np.dot(invptppt,signal)
+    l = np.dot(invptppt, signal)
     return (p, l)
 
 
@@ -487,64 +488,65 @@ def undrift(signal, tr, order=5):
     """
     print 'signal:', signal.shape
     m = np.where(np.ones(signal.shape[:3]))
-    sm = string.join(['m[%d]'%d for d in xrange(signal.ndim-1)],',')
-    signal_flat = eval('signal[%s,:]' %sm)
+    sm = string.join(['m[%d]' % d for d in xrange(signal.ndim - 1)], ',')
+    signal_flat = eval('signal[%s,:]' % sm)
     print 'signal_flat:', signal_flat.shape
     # Least square estimate of drift
-    p,l = polyFit(signal_flat.transpose(), tr, order)
-    usignal_flat = signal_flat.transpose() - np.dot(p,l)
+    p, l = polyFit(signal_flat.transpose(), tr, order)
+    usignal_flat = signal_flat.transpose() - np.dot(p, l)
     usignal = np.zeros_like(signal)
     print 'usignal:', usignal.shape
-    exec('usignal[%s,:] = usignal_flat.transpose()' %sm)
+    exec('usignal[%s,:] = usignal_flat.transpose()' % sm)
     return usignal
 
 
 def root3(listCoeffs):
     length = len(listCoeffs)
     if length != 4:
-        raise polyError(listCoeffs,"wrong poly order")
-    if listCoeffs[0]==0:
-        raise polyError(listCoeffs[0],"wrong poly order:null coefficient")
-    a=P[1]/P[0]
-    b=P[2]/P[0]
-    c=P[2]/P[0]
+        raise polyError(listCoeffs, "wrong poly order")
+    if listCoeffs[0] == 0:
+        raise polyError(listCoeffs[0], "wrong poly order:null coefficient")
+    a = P[1] / P[0]
+    b = P[2] / P[0]
+    c = P[2] / P[0]
 
-    #change of variables: z = x -a/3
-    #Polynome Q(Z)=Z^3 - pZ -q
-    #np.sqrt(np.complex(-1))
-    p = a**2/3. -b
-    q= (a*b)/3. -2./27.*a**3-c
-    if np.abs(p)<1e-16:
-        polycoeffs = np.zeros((1,3),dtype=complex)
+    # change of variables: z = x -a/3
+    # Polynome Q(Z)=Z^3 - pZ -q
+    p = a ** 2 / 3. - b
+    q = (a * b) / 3. - 2. / 27. * a ** 3 - c
+    if np.abs(p) < 1e-16:
+        polycoeffs = np.zeros((1, 3), dtype=complex)
         polycoeffs[0] = 1
-        polycoeffs[1] = (1j)**(4/3.)
-        polycoeffs[2] = (-1j)**(4/3.)
-        rp = np.multiply(polycoeffs,(np.sign(q)*q)**(1/3.)) - a/3.
-    elif p<0:
-        t2 = 2*p/3./q*np.sqrt(-p/3.)
-        tho = ( (np.sqrt(1.+t2**2) -1)/t2)**(1/3.)
-        tho2 = 2.*tho/(1-tho**2)
-        tho3 = 2.*tho/(1+tho**2)
-        rp = - a/3.*np.ones((1,3),dtype=complex)
-        fracTho2 = np.sqrt(-p/3.)/tho2
-        fracTho3 = np.sqrt(-p)/tho3
-        rp[0] += -2.*fracTho2
-        rp[1] += fracTho2 + 1j*fracTho3
-        rp[2] += fracTho2 - 1j*fracTho3
+        polycoeffs[1] = (1j) ** (4 / 3.)
+        polycoeffs[2] = (-1j) ** (4 / 3.)
+        rp = np.multiply(polycoeffs, (np.sign(q) * q) ** (1 / 3.)) - a / 3.
+    elif p < 0:
+        t2 = 2 * p / 3. / q * np.sqrt(-p / 3.)
+        tho = ((np.sqrt(1. + t2 ** 2) - 1) / t2) ** (1 / 3.)
+        tho2 = 2. * tho / (1 - tho ** 2)
+        tho3 = 2. * tho / (1 + tho ** 2)
+        rp = - a / 3. * np.ones((1, 3), dtype=complex)
+        fracTho2 = np.sqrt(-p / 3.) / tho2
+        fracTho3 = np.sqrt(-p) / tho3
+        rp[0] += -2. * fracTho2
+        rp[1] += fracTho2 + 1j * fracTho3
+        rp[2] += fracTho2 - 1j * fracTho3
     else:
-        if np.abs((p/3.)**3 - q**2/2.)<1e-16:
-            rp = - a/3.*np.ones((1,3),dtype=float)
-            rp[0] +=-3 *q/2./p
-            rp[1] +=-3 *q/2./p
-            rp[2] += 3.* q/p
-
+        if np.abs((p / 3.) ** 3 - q ** 2 / 2.) < 1e-16:
+            rp = - a / 3. * np.ones((1, 3), dtype=float)
+            rp[0] += -3 * q / 2. / p
+            rp[1] += -3 * q / 2. / p
+            rp[2] += 3. * q / p
 
 
 def gaussian_kernel(shape):
     """ Returns a normalized ND gauss kernel array for convolutions """
-    grid = eval('np.mgrid[%s]'%(string.join(['-%d:%d+1' %(s,s) for s in shape],',')))
-    k = 1./np.prod([np.exp((grid[d]**2/float(shape[d]))) for d in xrange(len(shape))],axis=0)
+    grid = eval(
+        'np.mgrid[%s]' % (string.join(['-%d:%d+1' % (s, s) for s in shape], ',')))
+    k = 1. / np.prod([np.exp((grid[d] ** 2 / float(shape[d])))
+                      for d in xrange(len(shape))], axis=0)
     return k / k.sum()
+
 
 def gaussian_blur(a, shape):
     assert a.ndim == len(shape)
@@ -557,7 +559,7 @@ def foo(*args, **kwargs):
 
 
 class polyError(Exception):
-    def __init__(self, expression,message):
+    def __init__(self, expression, message):
         self.expression = expression
         self.message = message
 
@@ -579,47 +581,47 @@ def convex_hull_mask(mask):
 
     result = np.zeros_like(mask)
     m = np.where(np.ones_like(mask))
-    result[m] = hull.find_simplex(np.array(m).T)>=0
+    result[m] = hull.find_simplex(np.array(m).T) >= 0
 
     return result
 
-def peelVolume3D(volume, backgroundLabel=0):
 
+def peelVolume3D(volume, backgroundLabel=0):
 
     # Make sure that boundaries are filled with zeros
     # -> expand volume with zeros:
     vs = volume.shape
-    expVol = np.zeros((vs[0]+2, vs[1]+2, vs[2]+2), dtype=int)
-    expVol[1:-1, 1:-1, 1:-1] = volume!=backgroundLabel
+    expVol = np.zeros((vs[0] + 2, vs[1] + 2, vs[2] + 2), dtype=int)
+    expVol[1:-1, 1:-1, 1:-1] = volume != backgroundLabel
 
     # 27-neighbourhood mask:
-    neighbMask = np.array([c for c in cartesian([0,-1,1],
-                                                   [0,-1,1],
-                                                   [0,-1,1])][1:])
-    mask = np.where(expVol!=0)
+    neighbMask = np.array([c for c in cartesian([0, -1, 1],
+                                                [0, -1, 1],
+                                                [0, -1, 1])][1:])
+    mask = np.where(expVol != 0)
     coords = np.array(mask).transpose()
     # For each position, compute the number of valid neighbours:
     marks = np.zeros_like(expVol)
     for iv in xrange(len(mask[0])):
         cn = (neighbMask + coords[iv]).transpose()
         curNeighbMask = (cn[0], cn[1], cn[2])
-        marks[mask[0][iv],mask[1][iv],mask[2][iv]] = expVol[curNeighbMask].sum()
+        marks[mask[0][iv], mask[1][iv], mask[2][iv]] = expVol[
+            curNeighbMask].sum()
 
     # Let's go back to the original volume shape:
-    trimmedMarks = marks[1:-1,1:-1,1:-1]
+    trimmedMarks = marks[1:-1, 1:-1, 1:-1]
 
     # Keep only positions which have 26 neighbours (completely burried):
     peeledVolume = np.zeros_like(volume)
-    validPos = np.where(trimmedMarks==26)
+    validPos = np.where(trimmedMarks == 26)
     peeledVolume[validPos] = volume[validPos]
 
     return peeledVolume
 
 
-
 def distance(c1, c2, coord_system=None):
-    #TODO: use coordinate system (xform)
-    return ((c1-c2)**2).sum()**.5
+    # TODO: use coordinate system (xform)
+    return ((c1 - c2) ** 2).sum() ** .5
 
 
 def inspect_default_args(args, defaults):
@@ -629,29 +631,30 @@ def inspect_default_args(args, defaults):
     kw_defaults = {}
     firstdefault = len(args) - len(defaults)
     for i in range(firstdefault, len(args)):
-        kw_defaults[args[i]]= defaults[i - firstdefault]
+        kw_defaults[args[i]] = defaults[i - firstdefault]
 
     return kw_defaults
+
 
 class Pipeline:
 
     THE_ROOT = 0
 
-    def __init__(self, quantities): #, cached=False, cache_dir='./'):
+    def __init__(self, quantities):  # , cached=False, cache_dir='./'):
         """
         Handles a graph of quantities. A quantity can be a variable or
         a callable.
         """
-        self.roots = set([]) # will store roots, ie quantities
-                             # which have no dependency
-        self.quantities = {} # mapping value_label => compute function
+        self.roots = set([])  # will store roots, ie quantities
+        # which have no dependency
+        self.quantities = {}  # mapping value_label => compute function
         # will hold all labels:
         self.labels = set()
-        self.siblings = {} # sibling labels associated to the same quantity
-                           # -> eg when a func returns multiple values
+        self.siblings = {}  # sibling labels associated to the same quantity
+        # -> eg when a func returns multiple values
 
         for l, q in quantities.iteritems():
-            if isinstance(l, (tuple,list)):
+            if isinstance(l, (tuple, list)):
                 for e in l:
                     self.quantities[e] = q
                     self.siblings[e] = l
@@ -661,21 +664,13 @@ class Pipeline:
                 self.siblings[l] = (l,)
                 self.labels.add(l)
 
-        pyhrf.verbose(4, 'labels at init: %s (%d)' \
-                      %(str(self.labels),len(self.labels)))
-        #self.load_from_cache = dict([ (label,False) for label in self.labels ])
-        #self.force_eval = dict([ (label,False) for label in self.labels ])
-        self.dependencies = dict( (l,set()) for l in self.labels )
-        self.dependers = dict( (l,set()) for l in self.labels )
-        #print 'dependers at init:', self.dependers
-        self.dependers[self.THE_ROOT] = set() # virtual common root of the forest
-        self.values = {} # will hold all values
-
-        # self.cached = cached
-        # self.cache_dir = cache_dir
-
-        #assert len(self.labels) == len(quantities)
-
+        logger.info(
+            'labels at init: %s (%d)', str(self.labels), len(self.labels))
+        self.dependencies = dict((l, set()) for l in self.labels)
+        self.dependers = dict((l, set()) for l in self.labels)
+        # virtual common root of the forest
+        self.dependers[self.THE_ROOT] = set()
+        self.values = {}  # will hold all values
         self.init_dependencies(quantities)
 
     def add_root(self, label):
@@ -685,51 +680,37 @@ class Pipeline:
 
     def init_dependencies(self, quantities):
 
-        pyhrf.verbose(3,'Pipeline.init_dependencies ...')
+        logger.info('Pipeline.init_dependencies ...')
         for labels, val in quantities.iteritems():
             if not isinstance(labels, (list, tuple)):
                 labels = (labels,)
-            pyhrf.verbose(4,'treating quantities: %s' %str(labels))
-            pyhrf.verbose(4,'val: %s' %str(val))
+            logger.info('treating quantities: %s', str(labels))
+            logger.info('val: %s', str(val))
             func = self.get_func(val)
             if func is not None:
-                pyhrf.verbose(4,  '... is a function')
+                logger.info('... is a function')
                 arg_spec = inspect.getargspec(func)
                 args = arg_spec[0]
-                #print 'args:', args
                 for label in labels:
-                    #print 'treating label:', label
                     assert label not in args
 
                     for arg in args:
-                        #print 'arg:', arg
                         if self.dependers.has_key(arg):
-                            #print '-> in dependers!'
                             self.dependencies[label].add(arg)
                             self.dependers[arg].add(label)
                         else:
-                            # print arg
-                            # print len(args)-len(arg_spec[3])
-                            # print 'args:', args
-                            # print 'arg_spec[3]:', arg_spec[3]
-                            # print 'args[len(args)-len(arg_spec[3]):]'
-                            # print args[len(args)-len(arg_spec[3]):]
-
                             if arg_spec[3] is None or \
-                                    arg not in args[len(args)-len(arg_spec[3]):]:
-                                raise Exception('arg "%s" of function "%s" ' \
-                                                'undefined (no quantity found' \
-                                                ' or no default value)' \
-                                                %(arg, val.__name__))
+                                    arg not in args[len(args) - len(arg_spec[3]):]:
+                                raise Exception('arg "%s" of function "%s" '
+                                                'undefined (no quantity found'
+                                                ' or no default value)'
+                                                % (arg, val.__name__))
 
-                    #print '-> current dependers', self.dependers
-                    #print '-> current dependencies', self.dependencies
                     if len(self.dependencies[label]) == 0:
                         self.add_root(label)
 
             else:
-                pyhrf.verbose(4, '... is of type %s' %val.__class__)
-                #self.load_from_cache.pop(label) #It won't be cached
+                logger.info('... is of type %s', val.__class__)
                 for label in labels:
                     self.add_root(label)
 
@@ -750,7 +731,6 @@ class Pipeline:
         g = pgv.AGraph(directed=True)
         for label in self.labels:
             for deper in self.dependers[label]:
-                #print 'label:', label, 'deper:', deper
                 g.add_edge(label, deper)
 
         for label in self.roots:
@@ -763,12 +743,10 @@ class Pipeline:
 
         if images is not None:
             blank_image = pyhrf.get_data_file_name('empty.png')
-            #image = images.values()[0]
             for label in self.labels:
                 n = g.get_node(label)
                 if images.has_key(label):
                     n.attr['image'] = images[label]
-                    #n.attr['imagescale'] = '4'
                     n.attr['labelloc'] = 'b'
                 else:
                     n.attr['image'] = blank_image
@@ -776,47 +754,36 @@ class Pipeline:
         g.layout('dot')
         g.draw(image_filename)
 
-
     def update_subgraph(self, root):
-        #TODO : limit init of force_eval only to quantities involved
+        # TODO : limit init of force_eval only to quantities involved
         #       in current subgraph
-        self.force_eval = dict([ (label,False) for label in self.labels ])
+        self.force_eval = dict([(label, False) for label in self.labels])
 
         depths = {}
         for lab in self.labels:
-            depths[lab] = -1 # mark as not visited
+            depths[lab] = -1  # mark as not visited
         self.setDepths(root, depths, 0)
-        #print 'depths:', depths
         maxDepth = max(depths.values())
-        levels = range(maxDepth+1)
+        levels = range(maxDepth + 1)
 
-        levels = [[] for d in xrange(maxDepth+1)]
-        for lab,depth in depths.iteritems():
-            if depth != -1 :
+        levels = [[] for d in xrange(maxDepth + 1)]
+        for lab, depth in depths.iteritems():
+            if depth != -1:
                 levels[depth].append(lab)
 
-        updated = dict((l,False) for l in self.labels)
+        updated = dict((l, False) for l in self.labels)
         for level in levels:
             for lab in level:
                 self.update_quantity(lab, updated)
 
-    # def updated_from_cache(self):
-    #     print 'load_from_cache:', self.load_from_cache
-    #     return all(self.load_from_cache.values())
-
-
     def setDepths(self, label, depths, curDepth):
-        # print 'setDepths ...'
-        # print 'label:', label
-        # print 'curDepth:', curDepth
         for deper in self.dependers[label]:
             # if depth not yet set for this node
             # or
             # if a deeper path has been found to  reach this node :
             if depths[deper] == -1 or depths[deper] < curDepth:
                 depths[deper] = curDepth
-                self.setDepths(deper, depths, curDepth+1)
-
+                self.setDepths(deper, depths, curDepth + 1)
 
     def resolve(self):
         self.update_subgraph(self.THE_ROOT)
@@ -839,15 +806,11 @@ class Pipeline:
 
         return self.values
 
-
-    def reportChange(rootLabel):
+    def reportChange(self, rootLabel):
         """
         Trigger update of the sub graph starting at the given root
         """
         assert rootLabel in self.roots
-        #pyhrf.verbose(5,
-        #              '%s reported as changed ... spreading the news ...'
-        #              %rootLabel)
         self.update_subgraph(rootLabel)
 
     def reprAllDeps(self):
@@ -877,12 +840,12 @@ class Pipeline:
         else:
             maxLDepee = 1
         depeeMark = ' <-\n'
-        s = string.join([string.ljust(' '+dep,maxLDepee) for dep in deps]+[''],
-                         depeeMark)
+        s = string.join([string.ljust(' ' + dep, maxLDepee) for dep in deps] + [''],
+                        depeeMark)
         deps = self.dependers[label]
-        deperMark = string.rjust('-> ', maxLDepee+len(depeeMark)+1)
-        s += string.join([deperMark+dep for dep in deps],'\n')
-        res = '*'+string.rjust(label, maxLDepee)+'*\n'+s
+        deperMark = string.rjust('-> ', maxLDepee + len(depeeMark) + 1)
+        s += string.join([deperMark + dep for dep in deps], '\n')
+        res = '*' + string.rjust(label, maxLDepee) + '*\n' + s
         return res
 
     def checkGraph(self):
@@ -893,9 +856,7 @@ class Pipeline:
 
         # check acyclicity :
         self.visited = {}
-        #print 'detect cycl ...'
         for r in self.roots:
-            #print 'starting from ', r
             self.detectCyclity([r])
 
         # Check there is no short-circuit:
@@ -910,7 +871,7 @@ class Pipeline:
         """
         Recursive method which detects and corrects short-circuits
         """
-        ## Breadth graph walk :
+        # Breadth graph walk :
         for deper in self.dependers[curRoot]:
             dDeper = depths[deper]
             # if depender was visited and its depth is smaller
@@ -921,7 +882,7 @@ class Pipeline:
             depths[dDeper] = curDepth
         # Continue walking ...
         for deper in self.dependers[curRoot]:
-            self.detectShortCircuit(deper, curDepth+1, depths)
+            self.detectShortCircuit(deper, curDepth + 1, depths)
 
     def removeShortCircuits(self, label, depths):
         d = depths[label]
@@ -930,51 +891,34 @@ class Pipeline:
             dDepee = depths[depee]
             # if dependence was not visited and dependence if further than
             # depth-1 :
-            if dDepee != -1 and dDepee != d-1:
+            if dDepee != -1 and dDepee != d - 1:
                 # Remove discovered shunt :
                 print 'removing shunt : %s <-> %s' \
-                    %(depee, label)
+                    % (depee, label)
                 self.dependers[depee].remove(label)
                 self.dependencies[label].remove(depee)
 
-
     def detectCyclity(self, viewedNodes):
-        #print 'viewedNodes :', viewedNodes
-        ## Depth graph walk, root->leaf direction :
-        ##if viewedNodes
+        # Depth graph walk, root->leaf direction :
+        # if viewedNodes
         root = viewedNodes[-1]
-        #print 'root :', root
         for deper in self.dependers[root]:
-            #print 'deper :', deper
             if deper in viewedNodes:
-                msg = 'Cyclicity detected in dependency graph :\n'+ \
-                  ' origin is %s and dep is %s' %(root,deper)
+                msg = 'Cyclicity detected in dependency graph :\n' + \
+                    ' origin is %s and dep is %s' % (root, deper)
                 raise Exception(msg)
             else:
                 viewedNodes.append(deper)
                 self.detectCyclity(viewedNodes)
         viewedNodes.pop()
 
-
-##    def hasChanged(self, fifo, visited, infifo):
-##        print 'hasChanged :', fifo[0]
-##        ## level by level graph walk, root->leaf direction :
-##        print 'dependers :', self.dependers[fifo[0]]
-##        for deper in self.dependers[fifo.p
-##        opleft()]:
-##            if deper not in self.roots:
-##                self.update(deper)
-##            fifo.appendleft(deper)
-##        self.hasChanged(fifo)
-
-
-    
     def get_func(self, f):
         try:
             from joblib.memory import MemorizedFunc
         except ImportError:
-            class MemorizedFunc: pass #Dummy class
-    
+            class MemorizedFunc:
+                pass  # Dummy class
+
         if isinstance(f, MemorizedFunc):
             return f.func
         elif inspect.isfunction(f):
@@ -984,82 +928,36 @@ class Pipeline:
 
     def update_quantity(self, label, updated):
 
-        if updated[label]: #already updated
+        if updated[label]:  # already updated
             return
 
-        pyhrf.verbose(4, " ------------- Update quantity '%s' -----------" \
-                      %label)
+        logger.info(" ------------- Update quantity '%s' -----------", label)
         quantity = self.quantities[label]
         siblings = self.siblings[label]
         func = self.get_func(quantity)
         if func is not None:
 
-            if pyhrf.verbose.verbosity > 4:
-                pyhrf.verbose(4, " -> %s" %str(func))
+            logger.info(" -> %s", str(func))
 
             t0 = time()
             fargs = {}
-            args,_,_,d = inspect.getargspec(func)
-            defaults = inspect_default_args(args,d)
-            #print "defaults:", defaults
-            #print "args:", args
+            args, _, _, d = inspect.getargspec(func)
+            defaults = inspect_default_args(args, d)
             for depee in args:
-                #print "depee:", depee
-                #print '-> val:', self.values.get(depee,defaults.get(depee,None))
-                fargs[depee] = self.values.get(depee,defaults.get(depee,None))
+                fargs[depee] = self.values.get(
+                    depee, defaults.get(depee, None))
 
-	    #print self.cached
-	    #raw_input('')
-            # if self.cached:
-            #     pyhrf.verbose(4, 'Cache enabled')
-            #     if self.force_eval[label]:
-            #         new_eval = True
-            #         self.load_from_cache[label] = False
-            #     else:
-            #         cache_existent = cache_exists(quantity, fargs,
-            #                                       path=self.cache_dir,
-            #                                       digest_code=True) \
-            #                                       and self.cached
-            #         self.load_from_cache[label] = cache_existent
-            #         new_eval = not self.load_from_cache[label]
-
-            #     if self.load_from_cache[label]:
-            #         pyhrf.verbose(4, 'Load from cache')
-
-            #     if new_eval:
-            #         pyhrf.verbose(4, 'New evaluation %s ...' \
-            #                           %(['','(forced)'][self.force_eval[label]]))
-
-            #         # Dependers must be updated too
-            #         depers = self.dependers[label]
-            #         pyhrf.verbose(4, 'Force update of dependent quantities '\
-            #                           '-> %s' %(','.join(depers)))
-            #         for deper in depers:
-            #             self.force_eval[deper] = True
-            # else:
-                # new_eval = True
-
-            #seval = ['E','Cached e'][self.cached]
-            pyhrf.verbose(4, 'Eval of %s ...' %(label))
-            # self.values[label] = cached_eval(quantity, fargs,
-            #                                  new=new_eval,
-            #                                  save=self.cached,
-            #                                  path=self.cache_dir,
-            #                                  digest_code=True)
-
+            logger.info('Eval of %s ...', label)
             results = quantity(**fargs)
 
-
-            pyhrf.verbose(4, 'Quantity %s updated in %s' \
-                              %(label, format_duration(time()-t0)))
+            logger.info('Quantity %s updated in %s', label,
+                        format_duration(time() - t0))
         else:
-            if pyhrf.verbose.verbosity > 4:
-                if isinstance(quantity, np.ndarray):
-                    pyhrf.verbose(4,' -> ndarray of shape %s and type %s'
-                                  %(str(quantity.shape), str(quantity.dtype)))
-                    #pyhrf.verbose.printNdarray(3, quantity)
-                else:
-                    pyhrf.verbose(4, " -> %s" %str(quantity))
+            if isinstance(quantity, np.ndarray):
+                logger.info(' -> ndarray of shape %s and type %s',
+                            str(quantity.shape), str(quantity.dtype))
+            else:
+                logger.info(" -> %s", str(quantity))
             results = quantity
 
         if len(siblings) > 1:
@@ -1068,83 +966,54 @@ class Pipeline:
         else:
             results = (results,)
 
-        for l,r in zip(siblings, results):
+        for l, r in zip(siblings, results):
             self.values[l] = r
             updated[l] = True
 
+
 def rebin(a, newshape):
-        '''Rebin an array to a new shape.
-        Can be used to rebin a func image onto a anat image
-        '''
-        assert len(a.shape) == len(newshape)
+    '''Rebin an array to a new shape.
+    Can be used to rebin a func image onto a anat image
+    '''
+    assert len(a.shape) == len(newshape)
 
-        slices = [ slice(0,old, float(old)/new) \
-                       for old,new in zip(a.shape,newshape) ]
-        coordinates = np.mgrid[slices]
+    slices = [slice(0, old, float(old) / new)
+              for old, new in zip(a.shape, newshape)]
+    coordinates = np.mgrid[slices]
 
-        #choose the biggest smaller integer index:
-        indices = coordinates.astype('i')
+    # choose the biggest smaller integer index:
+    indices = coordinates.astype('i')
 
-        return a[tuple(indices)]
+    return a[tuple(indices)]
 
 
 def resampleToGrid(x, y, xgrid):
 
-    # assert that target grid is included in original x
-    #assert x[0] <= xgrid[0]
-    #assert x[-1] >= xgrid[-1]
-##     print 'x :', x
-##     print 'y :', y
-##     print 'xgrid :', xgrid
     i = 1
-    yg = np.empty(xgrid.shape,dtype=y.dtype)
+    yg = np.empty(xgrid.shape, dtype=y.dtype)
     for ig, xg in enumerate(xgrid):
-        while i<len(x) and xg > x[i]:
+        while i < len(x) and xg > x[i]:
             i += 1
-        if i>=len(x) : i-=1
-        #if ig == 0:
-        #    print 'ig=0, xg=%f' %xg
-        #    print 'i = %d, y[i]=%f, x[i]=%f, x[i-1]=%f' \
-        #          %(i, y[i], x[i], x[i-1])
-        #if xg < x[i] :
-        dx = 0. if x[i]!=x[i-1] else 0.0000001
-        yg[ig] = (y[i]-y[i-1])*(xg-x[i])/((x[i]+dx)-(x[i-1]-dx)) + y[i]
-        #yg[ig] = (y[i]-y[i-1])*xg/((x[i]+dx)-(x[i-1]-dx))+ y[i-1]
-        #print 'i:', i
-        #print 'ig:', ig
-        #print 'xg:', xg
-        #print 'y[i] et y[i-1]:', y[i], y[i-1]
-        #print 'dx:', dx
-        #print 'x[i] et x[i-1]:', x[i], x[i-1]
-        #print 'yg[ig]:', yg[ig]
-        #if ig == 0:
-        #    print ' -> yg[ig]=%f' %yg[ig]
-        #else:
-        #    yg[ig] = y[i]
-
+        if i >= len(x):
+            i -= 1
+        dx = 0. if x[i] != x[i - 1] else 0.0000001
+        yg[ig] = (y[i] - y[i - 1]) * (xg - x[i]) / \
+            ((x[i] + dx) - (x[i - 1] - dx)) + y[i]
     return yg
 
 
 def resampleSignal(s, osf):
 
     ls = len(s)
-##    print 'ls =', ls
-##    print s.shape
-    timeMarks = np.arange(osf*(ls-1),dtype=float)/osf
-##    print 'timeMarks :'
-##    print timeMarks
+    timeMarks = np.arange(osf * (ls - 1), dtype=float) / osf
     prevTMarksSrc = np.array(np.floor(timeMarks), dtype=int)
-##    print 'prevTMarksSrc:'
-##    print prevTMarksSrc
     nextTMarksSrc = np.array(np.ceil(timeMarks), dtype=int)
-##    print 'nextTMarksSrc :'
-##    print nextTMarksSrc
-    deltaBold = s[nextTMarksSrc,:]-s[prevTMarksSrc,:]
-    deltaTime = timeMarks-prevTMarksSrc
-    sr = s[prevTMarksSrc,:] + \
-                 (deltaBold.transpose()*deltaTime).transpose()
-##    print sr
+    deltaBold = s[nextTMarksSrc, :] - s[prevTMarksSrc, :]
+    deltaTime = timeMarks - prevTMarksSrc
+    sr = s[prevTMarksSrc, :] + \
+        (deltaBold.transpose() * deltaTime).transpose()
     return sr
+
 
 def diagBlock(mats, rep=0):
     """
@@ -1154,62 +1023,65 @@ def diagBlock(mats, rep=0):
     """
     if type(mats) == np.ndarray:
         finalMat = mats
-    elif type(mats)==list and len(mats) == 1:
+    elif type(mats) == list and len(mats) == 1:
         finalMat = mats[0]
-    elif type(mats)==list :
-        m = 0 # nbLines
-        n = 0 # nbCols
+    elif type(mats) == list:
+        m = 0  # nbLines
+        n = 0  # nbCols
         for mat in mats:
             m += mat.shape[0]
             n += 1 if len(mat.shape) < 2 else mat.shape[1]
-        finalMat = np.zeros((m,n), dtype=float)
+        finalMat = np.zeros((m, n), dtype=float)
         lOffset = 0
         cOffset = 0
         for mat in mats:
             m = mat.shape[0]
             n = 1 if len(mat.shape) < 2 else mat.shape[1]
-            sh = finalMat[lOffset:lOffset+m, cOffset:cOffset+n].shape
-            finalMat[lOffset:lOffset+m, cOffset:cOffset+n] = mat.reshape(sh)[:]
+            sh = finalMat[lOffset:lOffset + m, cOffset:cOffset + n].shape
+            finalMat[
+                lOffset:lOffset + m, cOffset:cOffset + n] = mat.reshape(sh)[:]
             lOffset += m
             cOffset += n
     else:
         raise Exception('diagBlock: unrecognised type for "mats"')
 
     if rep > 0:
-        return diagBlock([finalMat]*rep)
+        return diagBlock([finalMat] * rep)
     else:
         return finalMat
 
 
-
 def extractRoiMask(nmask, roiId):
 
-    mask = nmask==roiId
+    mask = nmask == roiId
     m = np.where(mask)
     mm = np.vstack(m).transpose()
-    cropMask = np.zeros(mm.ptp(0)+1, dtype=int)
-    cropMask[tuple((mm-mm.min(0)).transpose())] = mask[m]
+    cropMask = np.zeros(mm.ptp(0) + 1, dtype=int)
+    cropMask[tuple((mm - mm.min(0)).transpose())] = mask[m]
 
     return cropMask
 
+
 def describeRois(roiMask):
 
-    s = 'Number of voxels : %d\n' %(roiMask!=0).sum()
-    s += 'Number of regions : %d\n' %(len(np.unique(roiMask))-int(0 in roiMask))
+    s = 'Number of voxels : %d\n' % (roiMask != 0).sum()
+    s += 'Number of regions : %d\n' % (
+        len(np.unique(roiMask)) - int(0 in roiMask))
     s += 'Region sizes :\n'
-    counts = np.bincount(roiMask[roiMask>0])
+    counts = np.bincount(roiMask[roiMask > 0])
     s += np.array2string(counts) + '\n'
     nbr = (counts >= 60).sum()
-    s += 'Nb of region with size > 60: %d\n' %nbr
+    s += 'Nb of region with size > 60: %d\n' % nbr
 
     return s
 
+
 def array_summary(a, precision=4):
-    return '%s -- %1.*f(%1.*f)[%1.*f...%1.*f]' %(str(a.shape),
-                                                 precision, a.mean(),
-                                                 precision, a.std(),
-                                                 precision, a.min(),
-                                                 precision, a.max())
+    return '%s -- %1.*f(%1.*f)[%1.*f...%1.*f]' % (str(a.shape),
+                                                  precision, a.mean(),
+                                                  precision, a.std(),
+                                                  precision, a.min(),
+                                                  precision, a.max())
 
 
 def get_2Dtable_string(val, rownames, colnames, precision=4, col_sep='|',
@@ -1222,35 +1094,36 @@ def get_2Dtable_string(val, rownames, colnames, precision=4, col_sep='|',
         val = val.reshape(val.shape[0], 1)
     nrows, ncols = val.shape[:2]
 
-    if np.isscalar(val[0,0]):
-        valWidth = len(str('%1.*f' %(precision,-3.141658938325)))
+    if np.isscalar(val[0, 0]):
+        valWidth = len(str('%1.*f' % (precision, -3.141658938325)))
     else:
-        if (val>=0).all():
-            valWidth = len(array_summary(val[0,0], precision=precision))
+        if (val >= 0).all():
+            valWidth = len(array_summary(val[0, 0], precision=precision))
         else:
-            valWidth = len(array_summary(np.abs(val[0,0]) * -1,
+            valWidth = len(array_summary(np.abs(val[0, 0]) * -1,
                                          precision=precision))
 
     rowWidth = max([len(str(rn)) for rn in rownames])
-    colWidth = [max([valWidth, len(cn)]) for cn in colnames ]
+    colWidth = [max([valWidth, len(cn)]) for cn in colnames]
 
     sheader = line_start + ' ' * rowWidth + '  ' + col_sep
-    sheader += col_sep.join([' %*s ' %(colWidth[j], cn) for j,cn in enumerate(colnames)])
+    sheader += col_sep.join([' %*s ' % (colWidth[j], cn)
+                             for j, cn in enumerate(colnames)])
     sheader += line_end + '\n'
 
     scontent = ''
-    #print 'nrows:',nrows
-    #print 'rownames:', rownames
     for i in xrange(nrows):
-        line = line_start + ' %*s ' %(rowWidth, str(rownames[i])) + col_sep
+        line = line_start + ' %*s ' % (rowWidth, str(rownames[i])) + col_sep
         for j in xrange(ncols):
-            if np.isscalar(val[i,j]):
-                line += ' %*.*f ' %(colWidth[j], precision, val[i,j]) + col_sep
+            if np.isscalar(val[i, j]):
+                line += ' %*.*f ' % (colWidth[j],
+                                     precision, val[i, j]) + col_sep
             else:
-                line += ' %*s ' %(valWidth, array_summary(val[i,j], precision)) + col_sep
+                line += ' %*s ' % (valWidth,
+                                   array_summary(val[i, j], precision)) + col_sep
 
         if outline_char is not None:
-            outline = outline_char * (len(line)-1 + len(line_end)) + '\n'
+            outline = outline_char * (len(line) - 1 + len(line_end)) + '\n'
         else:
             outline = ''
         scontent += outline + line[:-len(col_sep)] + line_end + '\n'
@@ -1263,7 +1136,7 @@ def get_leaf(element, branch):
     Return the nested leaf element corresponding to all dictionnary keys in
     branch from element
     """
-    if isinstance(element, dict) and len(branch)>0:
+    if isinstance(element, dict) and len(branch) > 0:
         return get_leaf(element[branch[0]], branch[1:])
     else:
         return element
@@ -1290,28 +1163,30 @@ def set_leaf(tree, branch, leaf, branch_classes=None):
     else:
         set_leaf(tree[branch[0]], branch[1:], leaf)
 
+
 def swap_layers(t, labels, l1, l2):
     """ Create a new tree from t where layers labeled by l1 and l2 are swapped.
     labels contains the branch labels of t.
     """
     i1 = labels.index(l1)
     i2 = labels.index(l2)
-    nt = t.__class__() # new tree init from the input tree
-                       # can be dict or OrderedDict
-    for b,l in izip(treeBranches(t), tree_leaves(t)):
+    nt = t.__class__()  # new tree init from the input tree
+    # can be dict or OrderedDict
+    for b, l in izip(treeBranches(t), tree_leaves(t)):
         nb = list(b)
         nb[i1], nb[i2] = nb[i2], nb[i1]
         set_leaf(nt, nb, l)
 
     return nt
 
+
 def tree_rearrange(t, oldlabels, newlabels):
     """ Create a new tree from t where layers are rearranged following newlabels.
     oldlabels contains the branch labels of t.
     """
     order = [oldlabels.index(nl) for nl in newlabels]
-    nt = t.__class__() # new tree
-    for b,l in izip(treeBranches(t), tree_leaves(t)):
+    nt = t.__class__()  # new tree
+    for b, l in izip(treeBranches(t), tree_leaves(t)):
         nb = [b[i] for i in order]
         set_leaf(nt, nb, l)
 
@@ -1319,15 +1194,11 @@ def tree_rearrange(t, oldlabels, newlabels):
 
 
 def treeBranches(tree, branch=None):
-    #print "tree", tree
-    #print "branch", branch
     if branch is None:
         branch = []
     if isinstance(tree, dict):
         for k in tree.iterkeys():
-            #print "k", k
-            #print 'tree[k],', tree[k]
-            for b in treeBranches(tree[k], branch+[k]):
+            for b in treeBranches(tree[k], branch + [k]):
                 yield b
     else:
         yield branch
@@ -1339,16 +1210,13 @@ def tree(branched_leaves):
         set_leaf(d, branch, leaf)
     return d
 
+
 def treeBranchesClasses(tree, branch=None):
-    #print "tree", tree
-    #print "branch", branch
     if branch is None:
         branch = []
     if isinstance(tree, dict):
-        for k,v in tree.iteritems():
-            #print "k", k
-            #print 'tree[k],', tree[k]
-            for b in treeBranchesClasses(tree[k], branch+[v.__class__]):
+        for k, v in tree.iteritems():
+            for b in treeBranchesClasses(tree[k], branch + [v.__class__]):
                 yield b
     else:
         yield branch
@@ -1363,8 +1231,7 @@ def tree_items(tree):
     """
     """
     for branch in treeBranches(tree):
-        yield (branch,get_leaf(tree, branch))
-
+        yield (branch, get_leaf(tree, branch))
 
 
 def stack_trees(trees, join_func=None):
@@ -1384,21 +1251,23 @@ def stack_trees(trees, join_func=None):
         set_leaf(stackedTree, branch, leaveList, branch_classes)
     return stackedTree
 
+
 def unstack_trees(tree):
     """ Return a list of tree from a tree where leaves are all lists with
     the same number of items
     """
 
     first_list = tree_leaves(tree).next()
-    tree_list = [ tree.__class__() for i in xrange(len(first_list)) ]
-    for b,l in tree_items(tree):
-        for t,item in zip(tree_list,l):
+    tree_list = [tree.__class__() for i in xrange(len(first_list))]
+    for b, l in tree_items(tree):
+        for t, item in zip(tree_list, l):
             set_leaf(t, b, item)
 
     return tree_list
 
 
 from pprint import pprint
+
 
 def apply_to_leaves(tree, func, funcArgs=None, funcKwargs=None):
     """
@@ -1409,13 +1278,14 @@ def apply_to_leaves(tree, func, funcArgs=None, funcKwargs=None):
     if funcArgs is None:
         funcArgs = []
 
-    newTree = tree.__class__() # could be dict or OrderedDict
-    for branch,leaf in tree_items(tree):
-        set_leaf(newTree, branch, func(leaf,*funcArgs,**funcKwargs))
+    newTree = tree.__class__()  # could be dict or OrderedDict
+    for branch, leaf in tree_items(tree):
+        set_leaf(newTree, branch, func(leaf, *funcArgs, **funcKwargs))
     return newTree
 
+
 def map_dict(func, d):
-    return d.__class__( (k,func(v)) for k,v in d.iteritems() )
+    return d.__class__((k, func(v)) for k, v in d.iteritems())
 
 
 def get_cache_filename(args, path='./', prefix=None, gz=True):
@@ -1429,9 +1299,10 @@ def get_cache_filename(args, path='./', prefix=None, gz=True):
     else:
         return fn
 
+
 def hash_func_input(func, args, digest_code):
 
-    if isinstance(args, dict): # sort keys
+    if isinstance(args, dict):  # sort keys
         to_digest = ''
         for k in sorted(args.keys()):
             v = args[k]
@@ -1462,16 +1333,15 @@ def cache_exists(func, args=None, prefix=None, path='./',
                  digest_code=False):
 
     return op.exists(cache_filename(func, args=args, prefix=prefix,
-                                    path=path,digest_code=digest_code))
+                                    path=path, digest_code=digest_code))
 
 
 def cached_eval(func, args=None, new=False, save=True, prefix=None,
                 path='./', return_file=False, digest_code=False,
                 gzip_mode='cmd'):
 
-
     fn = cache_filename(func, args=args, prefix=prefix,
-                        path=path,digest_code=digest_code)
+                        path=path, digest_code=digest_code)
 
     if not os.path.exists(fn) or new:
         if args is None:
@@ -1481,20 +1351,18 @@ def cached_eval(func, args=None, new=False, save=True, prefix=None,
         elif isinstance(args, dict):
             r = func(**args)
         else:
-            raise Exception("type of arg (%s) is not valid. Should be tuple, "\
-                                "list or dict" %str(arg.__class__))
+            raise Exception("type of arg (%s) is not valid. Should be tuple, "
+                            "list or dict" % str(args.__class__))
         if save:
-            if gzip_mode=='pygzip' and os.system('gzip -V') != 0:
-                #print 'use python gzip'
-                f = gzip.open(fn,'w')
-                cPickle.dump(r,f)
+            if gzip_mode == 'pygzip' and os.system('gzip -V') != 0:
+                f = gzip.open(fn, 'w')
+                cPickle.dump(r, f)
                 f.close()
             else:
-                #print 'use gzip command'
-                f = open(fn[:-3],'w')
-                cPickle.dump(r,f)
+                f = open(fn[:-3], 'w')
+                cPickle.dump(r, f)
                 f.close()
-                os.system("gzip -f %s" %fn[:-3])
+                os.system("gzip -f %s" % fn[:-3])
         if not return_file:
             return r
         else:
@@ -1504,6 +1372,7 @@ def cached_eval(func, args=None, new=False, save=True, prefix=None,
             return cPickle.load(gzip.open(fn))
         else:
             return fn
+
 
 def montecarlo(datagen, festim, nbit=None):
     """Perform a Monte Carlo loop with data generator 'datagen' and estimation
@@ -1518,65 +1387,58 @@ def montecarlo(datagen, festim, nbit=None):
     s = itgen.next()
     e = festim(s)
     cumul = e
-    cumul2 = e**2
+    cumul2 = e ** 2
 
     if nbit is None:
         nbit = 0
         for s in itgen:
             e = festim(s)
             cumul += e
-            cumul2 += e**2
+            cumul2 += e ** 2
             nbit += 1
     else:
         for i in xrange(1, nbit):
             s = itgen.next()
             e = festim(s)
             cumul += e
-            cumul2 += e**2
+            cumul2 += e ** 2
 
     m = cumul / float(nbit)
-    v = cumul2 / float(nbit) - m**2
+    v = cumul2 / float(nbit) - m ** 2
     return m, v
-
 
 
 def closestsorted(a, val):
     i = np.searchsorted(a, val)
-    if i == len(a)-1:
+    if i == len(a) - 1:
         return i
-    elif np.abs(a[i]-val) < np.abs(a[i+1]-val):
+    elif np.abs(a[i] - val) < np.abs(a[i + 1] - val):
         return i
     else:
-        return i+1
+        return i + 1
 
 
 ##################
 def calc_nc2D(a, b):
-    return a + b + 2*(a-1)*(b-1) - 2
+    return a + b + 2 * (a - 1) * (b - 1) - 2
+
 
 def nc2DGrid(maxSize):
     nc2D = np.zeros((maxSize, maxSize), dtype=int)
     for a in xrange(maxSize):
         for b in xrange(maxSize):
-            nc2D[a,b] = calc_nc2D(a,b)
+            nc2D[a, b] = calc_nc2D(a, b)
     return nc2D
-
-# nc2D = cached_eval(nc2DGrid, (1000,))
-# nbCliques = 4752
-# sol = where(nc2D==nbCliques)
-# print 'Configuration where nb cliques =', nbCliques, ':'
-# for i in xrange(len(sol[0])):
-#     a,b = sol[0][i], sol[1][i]
-#     print a,"x",b,"=",a*b
 
 
 def now():
     return datetime.datetime.fromtimestamp(time())
 
+
 def time_diff_str(diff):
-    return '%dH%dmin%dsec' %(diff.seconds/3600,
-                             (diff.seconds%3600)/60,
-                             (diff.seconds%3600)%60)
+    return '%dH%dmin%dsec' % (diff.seconds / 3600,
+                              (diff.seconds % 3600) / 60,
+                              (diff.seconds % 3600) % 60)
 
 
 class AnsiColorizer:
@@ -1584,14 +1446,15 @@ class AnsiColorizer:
 
     BEGINC = '\033['
     COLORS = {
-        'purple' : '95',
-        'blue' : '94',
-        'green' : '92',
-        'yellow' : '93',
-        'red' : '91',
-        }
+        'purple': '95',
+        'blue': '94',
+        'green': '92',
+        'yellow': '93',
+        'red': '91',
+    }
 
     ENDC = '\033[0m'
+
     def __init__(self):
         self.disabled = False
         self.do_tty_check = True
@@ -1610,18 +1473,19 @@ class AnsiColorizer:
 
     def __call__(self, s, color, bright=False, bold=False):
         if color not in self.COLORS:
-            raise Exception('Invalid color "%s". Available colors: %s' \
-                            %(color, str(self.COLORS)))
+            raise Exception('Invalid color "%s". Available colors: %s'
+                            % (color, str(self.COLORS)))
 
         col = self.COLORS[color]
         if self.disabled or (self.do_tty_check and not sys.stdout.isatty()):
             return s
         else:
-            ansi_codes = ";".join([['','1'][bright],col])
-            return '%s%sm%s%s' %(self.BEGINC, ansi_codes, s, self.ENDC)
+            ansi_codes = ";".join([['', '1'][bright], col])
+            return '%s%sm%s%s' % (self.BEGINC, ansi_codes, s, self.ENDC)
 
 
 colorizer = AnsiColorizer()
+
 
 def extract_file_series(files):
     """
@@ -1630,45 +1494,43 @@ def extract_file_series(files):
     Return a dictionnary with two levels (<tag>,<extension>), mapped to all
     corresponding series index found.
     """
-    #print 'extract_file_series ...'
-    series = {} # will map (tag,extension) to number series
+    series = {}  # will map (tag,extension) to number series
     rexpSeries = re.compile("(.*?)([0-9]+)[.]([a-zA-Z.~]*?)\Z")
     series = defaultdict(lambda: defaultdict(list))
     for f in files:
-        #print 'f:', f
         r = rexpSeries.match(f)
         if r is not None:
-            (tag,idx,ext) = r.groups()
+            (tag, idx, ext) = r.groups()
             ext = '.' + ext
-            #print '-> %s | %s | %s' %(tag, idx, ext)
         else:
-            tag,ext = op.splitext(f)
-            #print '-> %s | %s' %(tag, ext)
+            tag, ext = op.splitext(f)
             idx = ''
         series[tag][ext].append(idx)
     return series
 
+
 def format_serie(istart, iend):
-    return colorizer(['[%d...%d]'%(istart,iend),
-                      '[%d]'%(istart)][istart==iend],
-                    'red')
+    return colorizer(['[%d...%d]' % (istart, iend),
+                      '[%d]' % (istart)][istart == iend],
+                     'red')
+
 
 def condense_series(numbers):
     if len(numbers) == 1:
         return numbers[0]
     else:
-        inumbers = np.sort(np.array(map(int,numbers)))
+        inumbers = np.sort(np.array(map(int, numbers)))
         if (np.diff(inumbers) == 1).all():
-            return format_serie(inumbers.min(),inumbers.max())
+            return format_serie(inumbers.min(), inumbers.max())
         else:
             segment_start = 0
             s = ''
-            for segment_end in np.where(np.diff(inumbers)!=1)[0]:
-                s += format_serie(inumbers[segment_start],inumbers[segment_end])
-                segment_start = segment_end+1
-            s += format_serie(inumbers[segment_start],inumbers[-1])
+            for segment_end in np.where(np.diff(inumbers) != 1)[0]:
+                s += format_serie(inumbers[segment_start],
+                                  inumbers[segment_end])
+                segment_start = segment_end + 1
+            s += format_serie(inumbers[segment_start], inumbers[-1])
             return s
-
 
 
 def group_file_series(series, group_rules=None):
@@ -1677,7 +1539,7 @@ def group_file_series(series, group_rules=None):
 
     groups = defaultdict(dict)
     dummy_tag = 0
-    for tag,ext_data in series.iteritems():
+    for tag, ext_data in series.iteritems():
         tag_has_been_grouped = False
         for gr in group_rules:
             r = gr.match(tag)
@@ -1688,7 +1550,7 @@ def group_file_series(series, group_rules=None):
                 break
 
         if not tag_has_been_grouped:
-            for ext,numbers in ext_data.iteritems():
+            for ext, numbers in ext_data.iteritems():
 
                 if '' in numbers:
                     groups[dummy_tag][ext] = tag
@@ -1699,13 +1561,14 @@ def group_file_series(series, group_rules=None):
             dummy_tag += 1
 
     final_groups = []
-    for tag,series in groups.iteritems():
+    for tag, series in groups.iteritems():
         sv = series.values()
         if len(sv) > 1 and len(set(sv)) == 1:
             exts = [ext[1:] for ext in series.keys()]
-            final_groups.append(sv[0]+colorizer('.{%s}'%','.join(exts),'green'))
+            final_groups.append(
+                sv[0] + colorizer('.{%s}' % ','.join(exts), 'green'))
         else:
-            for ext,s in series.iteritems():
+            for ext, s in series.iteritems():
                 if ext == '...':
                     ext = colorizer('...', 'purple')
                 final_groups.append(s + ext)
@@ -1713,45 +1576,14 @@ def group_file_series(series, group_rules=None):
     return sorted(final_groups)
 
 
-# def group_file_series(files):
-#     """
-#     group all file names sharing a common prefix followed by a number, ie:
-#     <prefix><number><extension>.
-#     Return a dictionnary with two levels (<tag>,<extension>), mapped to all
-#     corresponding series index found.
-#     """
-#     series = {} # maps (tag,extension) to indexes
-#     rexpSeries = re.compile("(.*?)([0-9]+)[.]([a-zA-Z]*)\Z")
-#     for f in files:
-#         r = rexpSeries.match(f)
-#         if r is not None:
-#             (tag,idx,ext) = r.groups()
-#             if not series.has_key(tag):
-#                 series[tag] = {}
-#             if not series[tag].has_key(ext):
-#                 series[tag][ext] = []
-#             series[tag][ext].append(idx)
-
-#     return series
-
-# def find_file_series(path):
-#     """ Find all files in directory 'path' which are formated as
-#     <tag><number><extension>. Sub-directories are ignored.
-#     Return a dictionnary with two levels (<tag>,<extension>), mapped to all
-#     corresponding series index found.
-#     """
-#     return group_file_series([f for f in os.listdir(path) \
-#                                   if op.isfile(op.join(path,f))])
-
-
 def check_files_series(fseries, verbose=False):
 
     ok_status = True
-    for tag,dext in fseries.iteritems():
-        for ext,indexes in dext.iteritems():
+    for tag, dext in fseries.iteritems():
+        for ext, indexes in dext.iteritems():
             if 0:
-                print 'tag',tag,'ext',ext
-                print 'indexes:',indexes
+                print 'tag', tag, 'ext', ext
+                print 'indexes:', indexes
             sorted_indexes = sorted(indexes)
             last = int(sorted_indexes[-1])
             first = int(sorted_indexes[0])
@@ -1760,14 +1592,14 @@ def check_files_series(fseries, verbose=False):
                 ok_status = False
                 if verbose:
                     print '%d items missing for series %s[...].%s' \
-                        %(diff,tag,ext)
+                        % (diff, tag, ext)
                     print '-> Series should have %d items (%s to %s)' \
                           ' - found %d items' \
-                          %(last-first+1,first,last,len(indexes))
+                          % (last - first + 1, first, last, len(indexes))
     return ok_status
 
 
-#Factorisation of the code: functions creations
+# Factorisation of the code: functions creations
 def Extract_TTP_whM_hrf(hrf, dt):
     """
     Extract TTP and whM from an hrf
@@ -1776,56 +1608,53 @@ def Extract_TTP_whM_hrf(hrf, dt):
     from pyhrf.boldsynth.hrf import getCanoHRF
     hcano = getCanoHRF()
 
-    Abscisses = np.arange(hrf.size)*dt
+    Abscisses = np.arange(hrf.size) * dt
 
     # TTP calculus
-    TTP = hrf.argmax()*dt
+    TTP = hrf.argmax() * dt
     print 'found TTP:', TTP
 
-    #whM calculus
-    #1/ Round the HRF
+    # whM calculus
+    # 1/ Round the HRF
     HRF_rounded = np.round(hrf, 5)
 
-    #2/ Interpolation to obtain more values
-    Abscisses_round  = np.arange(HRF_rounded.size)*dt
+    # 2/ Interpolation to obtain more values
+    Abscisses_round = np.arange(HRF_rounded.size) * dt
     f = interp1d(Abscisses, hrf)
     r = 0.00001
-    HRF_interp = f(np.arange(0,Abscisses_round[len(Abscisses_round)-1], r))
+    HRF_interp = f(np.arange(0, Abscisses_round[len(Abscisses_round) - 1], r))
     HRF_interp_rounded = np.round(HRF_interp, 5)
 
-    #To reconvert from interpolation to correct values in seconds
+    # To reconvert from interpolation to correct values in seconds
     len_use = len(HRF_interp)
-    dt_interp = (hcano[0][len(hcano[0])-1])/len(HRF_interp)
+    dt_interp = (hcano[0][len(hcano[0]) - 1]) / len(HRF_interp)
 
-    #3/ Where the half max is found
-    Pts_1_2_h = np.where(abs(HRF_interp_rounded-HRF_rounded.max()/2.)<0.001)
-    #Pts_1_2_h = np.where(HRF_interp==HRF_interp[TTP/r]/2)
+    # 3/ Where the half max is found
+    Pts_1_2_h = np.where(
+        abs(HRF_interp_rounded - HRF_rounded.max() / 2.) < 0.001)
     Values_pts_1_2_h = HRF_interp[Pts_1_2_h]
-    #print 'Max/2, Abscisses, Y :', HRF_rounded.max()/2., Pts_1_2_h, Values_pts_1_2_h
-    if Pts_1_2_h[0].shape[0]==0:
+    if Pts_1_2_h[0].shape[0] == 0:
         print '#### No point found ####'
 
-    #Selection of Pts of abscisse<max
-    Diff1 = abs(Pts_1_2_h - HRF_interp_rounded.argmax())*(Pts_1_2_h<HRF_interp_rounded.argmax())
-    #Diff1 = (Pts_1_2_h - HRF_interp[TTP/r])*(Pts_1_2_h<HRF_interp[TTP/r])
-    Diff1_non_zeros=Diff1[0][np.where(Diff1[0]>0)] #retrieve positions#0
-    Diff1_non_zeros.sort() #to sort all differences
+    # Selection of Pts of abscisse<max
+    Diff1 = abs(Pts_1_2_h - HRF_interp_rounded.argmax()) * \
+        (Pts_1_2_h < HRF_interp_rounded.argmax())
+    Diff1_non_zeros = Diff1[0][np.where(Diff1[0] > 0)]  # retrieve positions#0
+    Diff1_non_zeros.sort()  # to sort all differences
     First_diff1 = Diff1_non_zeros.mean()
 
-    #Selection of Pts of abscisse>max
-    Diff2 = abs(HRF_interp_rounded.argmax() - Pts_1_2_h)*(Pts_1_2_h>HRF_interp_rounded.argmax())
-    #Diff2 = (HRF_interp[TTP/r] - Pts_1_2_h)*(Pts_1_2_h>HRF_interp[TTP/r])
-    Diff2_non_zeros=Diff2[0][np.where(Diff2[0]>0)] #retrieve positions#0
-    Diff2_non_zeros.sort() #to sort all differences
+    # Selection of Pts of abscisse>max
+    Diff2 = abs(HRF_interp_rounded.argmax() - Pts_1_2_h) * \
+        (Pts_1_2_h > HRF_interp_rounded.argmax())
+    Diff2_non_zeros = Diff2[0][np.where(Diff2[0] > 0)]  # retrieve positions#0
+    Diff2_non_zeros.sort()  # to sort all differences
     First_diff2 = Diff2_non_zeros.mean()
 
-    #addition of the two differences and *dt_interp to obtain whM in seconds
-    whM = (First_diff1 + First_diff2)*dt_interp
+    # addition of the two differences and *dt_interp to obtain whM in seconds
+    whM = (First_diff1 + First_diff2) * dt_interp
     print 'found whM:', whM
 
-
     return TTP, whM
-
 
 
 def Extract_TTP_whM_from_group(hrfs_pck_file, dt, model, Path_data, acq):
@@ -1847,66 +1676,70 @@ def Extract_TTP_whM_from_group(hrfs_pck_file, dt, model, Path_data, acq):
 
         HRF_at_max = hrfs[isubj, :]
 
-        Abscisses = np.arange(HRF_at_max.size)*dt
-
+        Abscisses = np.arange(HRF_at_max.size) * dt
 
         # TTP calculus
-        TTP = HRF_at_max.argmax()*dt
+        TTP = HRF_at_max.argmax() * dt
         print 'found TTP:', TTP
         TTP_tot[isubj] = TTP
 
-        #whM calculus
-        #1/ Round the HRF
+        # whM calculus
+        # 1/ Round the HRF
         HRF_rounded = np.round(HRF_at_max, 5)
 
-        #2/ Interpolation to obtain more values
-        Abscisses_round  = np.arange(HRF_rounded.size)*dt
+        # 2/ Interpolation to obtain more values
+        Abscisses_round = np.arange(HRF_rounded.size) * dt
         f = interp1d(Abscisses, HRF_at_max)
         r = 0.00001
-        HRF_interp = f(np.arange(0,Abscisses_round[len(Abscisses_round)-1], r))
+        HRF_interp = f(
+            np.arange(0, Abscisses_round[len(Abscisses_round) - 1], r))
         HRF_interp_rounded = np.round(HRF_interp, 5)
 
-        #To reconvert from interpolation to correct values in seconds
+        # To reconvert from interpolation to correct values in seconds
         len_use = len(HRF_interp)
-        dt_interp = (hcano[0][len(hcano[0])-1])/len(HRF_interp)
+        dt_interp = (hcano[0][len(hcano[0]) - 1]) / len(HRF_interp)
 
-        #3/ Where the half max is found
-        Pts_1_2_h = np.where(abs(HRF_interp_rounded-HRF_rounded.max()/2.)<0.001)
-        #Pts_1_2_h = np.where(HRF_interp==HRF_interp[TTP/r]/2)
+        # 3/ Where the half max is found
+        Pts_1_2_h = np.where(
+            abs(HRF_interp_rounded - HRF_rounded.max() / 2.) < 0.001)
         Values_pts_1_2_h = HRF_interp[Pts_1_2_h]
-        #print 'Max/2, Abscisses, Y :', HRF_rounded.max()/2., Pts_1_2_h, Values_pts_1_2_h
-        if Pts_1_2_h[0].shape[0]==0:
+        if Pts_1_2_h[0].shape[0] == 0:
             print '#### No point found ####'
 
-        #Selection of Pts of abscisse<max
-        Diff1 = abs(Pts_1_2_h - HRF_interp_rounded.argmax())*(Pts_1_2_h<HRF_interp_rounded.argmax())
-        #Diff1 = (Pts_1_2_h - HRF_interp[TTP/r])*(Pts_1_2_h<HRF_interp[TTP/r])
-        Diff1_non_zeros=Diff1[0][np.where(Diff1[0]>0)] #retrieve positions#0
-        Diff1_non_zeros.sort() #to sort all differences
+        # Selection of Pts of abscisse<max
+        Diff1 = abs(Pts_1_2_h - HRF_interp_rounded.argmax()) * \
+            (Pts_1_2_h < HRF_interp_rounded.argmax())
+        # retrieve positions#0
+        Diff1_non_zeros = Diff1[0][np.where(Diff1[0] > 0)]
+        Diff1_non_zeros.sort()  # to sort all differences
         First_diff1 = Diff1_non_zeros.mean()
 
-        #Selection of Pts of abscisse>max
-        Diff2 = abs(HRF_interp_rounded.argmax() - Pts_1_2_h)*(Pts_1_2_h>HRF_interp_rounded.argmax())
-        #Diff2 = (HRF_interp[TTP/r] - Pts_1_2_h)*(Pts_1_2_h>HRF_interp[TTP/r])
-        Diff2_non_zeros=Diff2[0][np.where(Diff2[0]>0)] #retrieve positions#0
-        Diff2_non_zeros.sort() #to sort all differences
+        # Selection of Pts of abscisse>max
+        Diff2 = abs(HRF_interp_rounded.argmax() - Pts_1_2_h) * \
+            (Pts_1_2_h > HRF_interp_rounded.argmax())
+        # retrieve positions#0
+        Diff2_non_zeros = Diff2[0][np.where(Diff2[0] > 0)]
+        Diff2_non_zeros.sort()  # to sort all differences
         First_diff2 = Diff2_non_zeros.mean()
 
-        #addition of the two differences and *dt_interp to obtain whM in seconds
-        whM = (First_diff1 + First_diff2)*dt_interp
+        # addition of the two differences and *dt_interp to obtain whM in
+        # seconds
+        whM = (First_diff1 + First_diff2) * dt_interp
         print 'found whM:', whM
 
-        whM_tot[isubj] = np.round(whM,1)
+        whM_tot[isubj] = np.round(whM, 1)
 
-        cPickle.dump(TTP_tot, open(Path_data + '/_TTPs_at_peak_by_hand_' + '_' + model + '_' + acq + '.pck', 'w'))
-        cPickle.dump(whM_tot, open(Path_data + '/_whMs_at_peak_by_hand_' + '_' + model + '_' + acq + '.pck', 'w'))
+        cPickle.dump(TTP_tot, open(
+            Path_data + '/_TTPs_at_peak_by_hand_' + '_' + model + '_' + acq + '.pck', 'w'))
+        cPickle.dump(whM_tot, open(
+            Path_data + '/_whMs_at_peak_by_hand_' + '_' + model + '_' + acq + '.pck', 'w'))
 
     return TTP_tot, whM_tot
 
 
-def PPMcalculus_jde(threshold_value, apost_mean_activ_fn, apost_var_activ_fn,  \
-    apost_mean_inactiv_fn, apost_var_inactiv_fn, labels_activ_fn, \
-    labels_inactiv_fn, nrls_fn, mask_file, null_hyp=True):
+def PPMcalculus_jde(threshold_value, apost_mean_activ_fn, apost_var_activ_fn,
+                    apost_mean_inactiv_fn, apost_var_inactiv_fn, labels_activ_fn,
+                    labels_inactiv_fn, nrls_fn, mask_file, null_hyp=True):
     '''
     Function to calculate the probability that the nrl in voxel j,
     condition m, is superior to a given hreshold_value
@@ -1916,72 +1749,70 @@ def PPMcalculus_jde(threshold_value, apost_mean_activ_fn, apost_var_activ_fn,  \
     from scipy.integrate import quad
     from pyhrf.ndarray import xndarray
     from scipy.stats import norm
-    #m1 = apost_mean_activ
-    #sig1 = apost_var_activ
-    #m2 = apost_mean_inactiv
-    #sig2 = apost_var_inactiv
-    #perc1 = labels_activ #proportion of samples drawn from the activ class
-    #perc2 = labels_inactiv #proportion of samples drawn from the inactiv class
 
     mask = xndarray.load(mask_file).data
     apost_mean_activ = xndarray.load(apost_mean_activ_fn)
     apost_mean_inactiv = xndarray.load(apost_mean_inactiv_fn)
     apost_var_activ = xndarray.load(apost_var_activ_fn)
-    apost_var_inactiv = xndarray.load( apost_var_inactiv_fn)
+    apost_var_inactiv = xndarray.load(apost_var_inactiv_fn)
     labels_activ = xndarray.load(labels_activ_fn)
-    labels_inactiv = xndarray.load( labels_inactiv_fn)
+    labels_inactiv = xndarray.load(labels_inactiv_fn)
     nrls = xndarray.load(nrls_fn)
 
-    #flattend data
-    m1 = apost_mean_activ.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
-    m2 = apost_mean_inactiv.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
-    var1 = apost_var_activ.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
-    var2 = apost_var_inactiv.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
-    perc1 = labels_activ.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
-    perc2 = labels_inactiv.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
-    nrls_values = nrls.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
+    # flattend data
+    m1 = apost_mean_activ.flatten(
+        mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
+    m2 = apost_mean_inactiv.flatten(
+        mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
+    var1 = apost_var_activ.flatten(
+        mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
+    var2 = apost_var_inactiv.flatten(
+        mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
+    perc1 = labels_activ.flatten(
+        mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
+    perc2 = labels_inactiv.flatten(
+        mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
+    nrls_values = nrls.flatten(
+        mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
 
-    Probas=np.zeros(perc1.shape[0])
+    Probas = np.zeros(perc1.shape[0])
     if null_hyp:
-        Pvalues=np.zeros(perc1.shape[0])
-        #to detect positions activ and inactiv
-        Comp=perc1-perc2
-        Pos_activ = np.where(Comp[:,0])
-        Pos_inactiv = np.where(Comp[:,0]<0)
+        Pvalues = np.zeros(perc1.shape[0])
+        # to detect positions activ and inactiv
+        Comp = perc1 - perc2
+        Pos_activ = np.where(Comp[:, 0])
+        Pos_inactiv = np.where(Comp[:, 0] < 0)
 
         Means = np.zeros(perc1.shape[0])
         Vars = np.zeros(perc1.shape[0])
 
     for i in xrange(perc1.shape[0]):
-        #posterior probability distribution
-        fmix = lambda x: perc1[i]*norm.pdf(x,m1[i], var1[i]**.5) + perc2[i]*norm.pdf(x,m2[i], var2[i]**.5)
+        # posterior probability distribution
+        fmix = lambda x: perc1[
+            i] * norm.pdf(x, m1[i], var1[i] ** .5) + perc2[i] * norm.pdf(x, m2[i], var2[i] ** .5)
 
-        #fmix = lambda t: perc1[i] * 1/np.sqrt(2*np.pi*sig1[i]**2)*np.exp(- (t - m1[i])**2 / (2*sig1[i]**2) )  +  \
-            #perc2[i] * 1/np.sqrt(2*np.pi*sig2[i]**2)*np.exp(- (t - m2[i])**2 / (2*sig2[i]**2) )
         Probas[i] = quad(fmix, threshold_value, float('inf'))[0]
-        #if Probas[i]>1: Probas[i]=1
 
     if null_hyp:
-        Means[Pos_activ]   = m1[Pos_activ]
+        Means[Pos_activ] = m1[Pos_activ]
         Means[Pos_inactiv] = m2[Pos_inactiv]
-        Vars[Pos_activ]    = var1[Pos_activ]
-        Vars[Pos_inactiv]  = var2[Pos_inactiv]
+        Vars[Pos_activ] = var1[Pos_activ]
+        Vars[Pos_inactiv] = var2[Pos_inactiv]
         for i in xrange(perc1.shape[0]):
             nrl_val = nrls_values[i]
-            fmix = lambda x:norm.pdf(x,0, Vars[i]**.5)
+            fmix = lambda x: norm.pdf(x, 0, Vars[i] ** .5)
             Pvalues[i] = quad(fmix, nrl_val, float('inf'))[0]
 
-
-    #deflatten to retrieve original shape
+    # deflatten to retrieve original shape
     PPM_ = xndarray(Probas, axes_names=['position'])
-    PPM = PPM_.expand(mask, 'position', ['sagittal','coronal','axial'])
+    PPM = PPM_.expand(mask, 'position', ['sagittal', 'coronal', 'axial'])
 
-    PPMinvv = 1-Probas #to obtain more readable maps
+    PPMinvv = 1 - Probas  # to obtain more readable maps
     PPMinv_ = xndarray(PPMinvv, axes_names=['position'])
-    PPMinv = PPMinv_.expand(mask, 'position', ['sagittal','coronal','axial'])
+    PPMinv = PPMinv_.expand(mask, 'position', ['sagittal', 'coronal', 'axial'])
 
     Pval_ = xndarray(Pvalues, axes_names=['position'])
-    Pval = Pval_.expand(mask, 'position', ['sagittal','coronal','axial'])
+    Pval = Pval_.expand(mask, 'position', ['sagittal', 'coronal', 'axial'])
 
     return PPM.data, PPMinv.data, Pval.data
 
@@ -1989,54 +1820,62 @@ def PPMcalculus_jde(threshold_value, apost_mean_activ_fn, apost_var_activ_fn,  \
 ## HTML formating ##
 
 def html_row(s):
-    return '<tr>%s</tr>' %s
+    return '<tr>%s</tr>' % s
+
 
 def html_table(s, border=None):
     if border is None:
-        return '<table>%s</table>' %s
+        return '<table>%s</table>' % s
     else:
-        return '<table border="%d">%s</table>' %(border, s)
+        return '<table border="%d">%s</table>' % (border, s)
 
 
 def attrs_to_string(attrs):
     attrs = attrs or {}
     sattrs = ''
     if len(attrs) > 0:
-        sattrs = ' '+' '.join(['%s="%s"' %(k,v) for k,v in attrs.items()])
+        sattrs = ' ' + ' '.join(['%s="%s"' % (k, v) for k, v in attrs.items()])
     return sattrs
 
+
 def html_img(fn, attrs=None):
-    return '<img src="%s"%s>' %(fn,attrs_to_string(attrs))
+    return '<img src="%s"%s>' % (fn, attrs_to_string(attrs))
+
 
 def html_cell(s, cell_type='d', attrs=None):
-    return '<t%s%s>%s</t%s>' %(cell_type, attrs_to_string(attrs), s, cell_type)
+    return '<t%s%s>%s</t%s>' % (cell_type, attrs_to_string(attrs), s, cell_type)
+
 
 def html_div(s, attrs=None):
-    return '<div%s>%s</div>' %(attrs_to_string(attrs), s)
+    return '<div%s>%s</div>' % (attrs_to_string(attrs), s)
+
 
 def html_list_to_row(l, cell_types, attrs):
     if not isinstance(attrs, (list, tuple)):
-        attrs  = [attrs] * len(l)
+        attrs = [attrs] * len(l)
     else:
         assert len(attrs) == len(l)
 
     if not isinstance(cell_types, (list, tuple)):
-        cell_types  = [cell_types] * len(l)
+        cell_types = [cell_types] * len(l)
     else:
         assert len(cell_types) == len(l)
 
-    return html_row(''.join([html_cell(e, t, a) \
-                             for e,t,a in zip(l,cell_types,attrs)]))
+    return html_row(''.join([html_cell(e, t, a)
+                             for e, t, a in zip(l, cell_types, attrs)]))
+
 
 def html_doc(s):
     return '<!DOCTYPE html><html>' + s + '</html>'
 
+
 def html_head(s):
     return '<head>' + s + '</head>'
+
 
 def html_style(s):
     return '<style>' + s + '</style>'
 
+
 def html_body(s):
     return '<body>' + s + '</body>'
-

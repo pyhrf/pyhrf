@@ -1,24 +1,29 @@
 # -*- coding: utf-8 -*-
 
-#from numpy import *
+import time
+import logging
+
 import numpy as np
 import numpy.matlib
 
-from pyhrf.ndarray import xndarray, stack_cuboids
-
-
 import pyhrf
+
+from pyhrf.ndarray import xndarray, stack_cuboids
 from pyhrf import xmlio
 from pyhrf.tools import array_summary, get_2Dtable_string
 
-import time
+
+logger = logging.getLogger(__name__)
+
 
 class DuplicateVariableException(Exception):
     def __init__(self, vName, v):
         self.variableName = vName
         self.variableObject = v
+
     def __str__(self):
         return 'vname:' + str(self.variableName)
+
 
 class VariableTypeException(Exception):
     def __init__(self, vClass, vName, v):
@@ -26,7 +31,9 @@ class VariableTypeException(Exception):
         self.variableObject = v
         self.variableClass = vClass
 
+
 class GibbsSampler:
+
     """
     Generic class of a Gibbs sampler with gathers common operations for any
     gibbs sampling: variable initialisation, observables updates (posterior mean),
@@ -34,8 +41,8 @@ class GibbsSampler:
     """
 
     def __init__(self, variables, nbIt, smplHistoryPace=-1,
-                 obsHistoryPace=-1, nbSweeps=None, callbackObj=None, 
-                 randomSeed=None, globalObsHistoryPace=-1,
+                 obsHistoryPace=-1, nbSweeps=None,
+                 callbackObj=None, randomSeed=None, globalObsHistoryPace=-1,
                  check_ftval=None, output_fit=False):
         """
         Initialize a new GibbsSampler object.
@@ -48,27 +55,29 @@ class GibbsSampler:
         See C{GSDefaultCallbackHandler}.
         """
 
-        #TODO change to Exceptions ...
+        # TODO change to Exceptions ...
         # Check for type consistency :
         if type(variables) != type(list()):
-            print 'Error : given variables of type : \'',    \
-                  type(self.variables), '\' -> need a list'
+            logger.error('Error : given variables of type : \'%s\' '
+                         '-> need a list', type(variables))
             return
         self.variablesMapping = {}
         for var in variables:
-            if not isinstance(var, GibbsSamplerVariable):       #if var is not an instance of GibbsSamplerVariable
-                #TODO : exception ...
-                print '!Err : variable(%s) of wrong type -> \
-                need a derivation of GibbsSamplerVariable' %(var.__class__)
+            # if var is not an instance of GibbsSamplerVariable
+            if not isinstance(var, GibbsSamplerVariable):
+                # TODO : exception ...
+                logger.error('!Err : variable(%s) of wrong type -> '
+                             'need a derivation of GibbsSamplerVariable',
+                             var.__class__)
                 raise VariableTypeException(var.__class__, var.name, var)
             else:
                 if not self.variablesMapping.has_key(var.name):
                     self.variablesMapping[var.name] = var
                 else:
                     raise DuplicateVariableException(var.name, var)
-        self.variables = variables # variables involved in sampling
+        self.variables = variables  # variables involved in sampling
 
-        if callbackObj is None :
+        if callbackObj is None:
             self.callbacker = GSDefaultCallbackHandler()
         else:
             self.callbacker = callbackObj
@@ -86,7 +95,7 @@ class GibbsSampler:
         self.analysis_duration = 0
         self.tVars = np.zeros(len(variables), dtype=float)
 
-        for v in variables :
+        for v in variables:
             v.registerNbIterations(nbIt)
             v.setSamplerEngine(self)
 
@@ -99,28 +108,28 @@ class GibbsSampler:
         prev_its = self.nbIterations
         self.nbIterations = n
 
-        pyhrf.verbose(6, 'set_nb_iterations to %d' %n)
-        pyhrf.verbose(6, 'prev nb sweep %d' %self.nbSweeps)
+        logger.debug('set_nb_iterations to %d', n)
+        logger.debug('prev nb sweep %d', self.nbSweeps)
 
         if self.nbSweeps > 0:
-            self.nbSweeps = int(np.ceil(self.nbSweeps * (n*1. / prev_its)))
+            self.nbSweeps = int(np.ceil(self.nbSweeps * (n * 1. / prev_its)))
 
-        pyhrf.verbose(6, 'new nb sweep %d' %self.nbSweeps)
+        logger.debug('new nb sweep %d', self.nbSweeps)
 
         if self.smplHistoryPace > 0:
-            self.smplHistoryPace = int(np.ceil(self.smplHistoryPace * \
-                                                   (n*1. / prev_its)))
+            self.smplHistoryPace = int(np.ceil(self.smplHistoryPace *
+                                               (n * 1. / prev_its)))
 
         if self.obsHistoryPace > 0:
-            self.obsHistoryPace = int(np.ceil(self.obsHistoryPace * \
-                                                  (n*1. / prev_its)))
+            self.obsHistoryPace = int(np.ceil(self.obsHistoryPace *
+                                              (n * 1. / prev_its)))
 
     def linkToData(self, dataInput):
         #-> set input data
         self.dataInput = dataInput
-        self.fit = None #TODO init fit according to input signal shape
+        self.fit = None  # TODO init fit according to input signal shape
         for v in self.variables:
-            pyhrf.verbose(3, '%s -> linking to data'%v.name)
+            logger.info('%s -> linking to data', v.name)
             v.linkToData(dataInput)
             if (v.axes_names is not None) and ('condition' in v.axes_names):
                 v.axes_domains['condition'] = self.dataInput.cNames
@@ -132,13 +141,12 @@ class GibbsSampler:
 
         rules = []
         for v in self.variables:
-            rules.append({'label' : v.name, 'ref' : v})
+            rules.append({'label': v.name, 'ref': v})
 
         self.sharedData.addDependencies(rules)
 
     def get_variable(self, label):
         return self.variablesMapping[label]
-
 
     def iterate_sampling(self):
         it = 0
@@ -150,7 +158,7 @@ class GibbsSampler:
         return False
 
     def runSampling(self, atomData=None):
-        #np.seterr(all='raise')
+        # np.seterr(all='raise')
         """
         Launch a complete sampling process by calling the function
         L{GibbsSamplerVariable.sampleNext()} of each variable. Call the callback
@@ -158,35 +166,35 @@ class GibbsSampler:
         L{tSamplinOnly} and L{analysis_duration}
         """
         if self.randomSeed is not None:
-            pyhrf.verbose(4, 'setting random seed: '+str(self.randomSeed))
+            logger.info('setting random seed: %s', str(self.randomSeed))
             np.random.seed(self.randomSeed)
         else:
-            pyhrf.verbose(4, 'No random seed specified ')
+            logger.info('No random seed specified ')
 
         #self.itAxis = []
         if self.nbSweeps is None:
-            self.nbSweeps = self.nbIterations/3
+            self.nbSweeps = self.nbIterations / 3
 
-        pyhrf.verbose(4, 'Nb sweeps: %d' %self.nbSweeps)
-        pyhrf.verbose(4, 'obs hist pace: %d' %self.obsHistoryPace)
-        pyhrf.verbose(4, 'smpl hist pace: %d' %self.obsHistoryPace)
+        logger.info('Nb sweeps: %d', self.nbSweeps)
+        logger.info('obs hist pace: %d', self.obsHistoryPace)
+        logger.info('smpl hist pace: %d', self.obsHistoryPace)
 
-        for v in self.variables :
-            pyhrf.verbose(3, 'Init of '+v.name)
-            pyhrf.verbose(3, v.get_summary())
+        for v in self.variables:
+            logger.info('Init of ' + v.name)
+            logger.info(v.get_summary())
             v.checkAndSetInitValue(self.variables)
             if type(v.currentValue) == numpy.ndarray:
-                pyhrf.verbose.printNdarray(6, v.currentValue)
+                logger.debug(v.currentValue)
             else:
-                pyhrf.verbose.printNdarray(6, v.currentValue)
+                logger.debug(v.currentValue)
 
-        #Warming up variables to sample (precalculations):
-        for v in self.variables :
+        # Warming up variables to sample (precalculations):
+        for v in self.variables:
             if v.useTrueValue:
                 if v.trueValue is None:
-                    raise Exception("No true value defined for %s" %v.name)
+                    raise Exception("No true value defined for %s" % v.name)
 
-            pyhrf.verbose(3,'Warming of '+v.name)
+            logger.info('Warming of ' + v.name)
             v.samplingWarmUp(self.variables)
             v.initObservables()
         self.initGlobalObservables()
@@ -196,73 +204,66 @@ class GibbsSampler:
         tIni = time.time()
 
         # main loop over variables to sample :
-        nbIt2EstimTime = max(1,min(10,int(self.nbIterations*0.1)))
+        nbIt2EstimTime = max(1, min(10, int(self.nbIterations * 0.1)))
         tLoopShown = False
-        pyhrf.verbose(1, 'Starting sampling (%d it)...' %self.nbIterations)
+        logger.info('Starting sampling (%d it)...', self.nbIterations)
         try:
             lhrf = self.get_variable('hrf').hrfLength
         except KeyError:
             lhrf = self.get_variable('brf').hrfLength
 
-        pyhrf.verbose(1, 'Data dims : nbvox=%d, ny=%d, nbCond=%d, nb coeffs hrf=%d'
-                      %(self.dataInput.nbVoxels, self.dataInput.ny,
-                        self.dataInput.nbConditions, lhrf ))
+        logger.info('Data dims : nbvox=%d, ny=%d, nbCond=%d, nb coeffs hrf=%d',
+                    self.dataInput.nbVoxels, self.dataInput.ny,
+                    self.dataInput.nbConditions, lhrf)
 
         tLoopIni = time.time()
-        for v in self.variables :
-            if self.smplHistoryPace != -1 :
-                pyhrf.verbose(3, 'Saving init value of %s' %(v.name))
+        for v in self.variables:
+            if self.smplHistoryPace != -1:
+                logger.info('Saving init value of %s', v.name)
                 v.saveCurrentValue(-1)
-        
+
         rerror = np.array([])
         loglkhd = np.array([])
 
         for it in self.iterate_sampling():
             iv = 0
 
-            for v in self.variables :
-                #for v in np.random.permutation(self.variables): # permutation of Gibbs steps
+            for v in self.variables:
                 tIniv = time.time()
 
                 if not v.sampleFlag:
-                    pyhrf.verbose(3, '(it %d) %s not sampled' %(it,v.name))
+                    logger.info('(it %d) %s not sampled', it, v.name)
                 else:
-                    pyhrf.verbose(3, '(it %d) Sampling of %s ...' %(it,v.name))
+                    logger.info('(it %d) Sampling of %s ...', it, v.name)
                 v.sampleNext(self.variables)
 
-##                if v.sampleFlag :
-##                    self.sharedData.hasChanged(v.name)
-
-                pyhrf.verbose(5, 'current value of %s:' %v.name)
-                pyhrf.verbose.printNdarray(5, v.currentValue)
+                logger.debug('current value of %s:', v.name)
+                logger.debug(v.currentValue)
                 if v.sampleFlag:
-                    pyhrf.verbose(3, '(it %d) Sampling of %s done !' \
-                                      %(it,v.name))
+                    logger.info('(it %d) Sampling of %s done !', it, v.name)
                 self.tVars[iv] += time.time() - tIniv
                 iv += 1
 
-
-            for v in self.variables :
+            for v in self.variables:
 
                 v.record_trajectories(it)
 
-                if self.smplHistoryPace != -1 and (it%self.smplHistoryPace) == 0:
-                    pyhrf.verbose(3, '(it %d) saving sample of %s)' %(it,v.name))
+                if self.smplHistoryPace != -1 and (it % self.smplHistoryPace) == 0:
+                    logger.info('(it %d) saving sample of %s)', it, v.name)
                     v.saveCurrentValue(it)
 
                 # Update observables after burn-in period :
-                if it>=self.nbSweeps :
+                if it >= self.nbSweeps:
                     v.updateObsersables()
-                    if self.obsHistoryPace!=-1 and (it%self.obsHistoryPace) == 0:
-                        pyhrf.verbose(3, '(it %d) saving observables of %s' \
-                                          %(it,v.name))
-                        #self.itAxis.append(it)
+                    if self.obsHistoryPace != -1 and (it % self.obsHistoryPace) == 0:
+                        logger.info(
+                            '(it %d) saving observables of %s', it, v.name)
                         v.saveObservables(it)
 
-            if it>=self.nbSweeps :
+            if it >= self.nbSweeps:
                 self.updateGlobalObservables()
-                if self.globalObsHistoryPace!=-1 and \
-                        (it%self.globalObsHistoryPace) == 0:
+                if self.globalObsHistoryPace != -1 and \
+                        (it % self.globalObsHistoryPace) == 0:
                     self.saveGlobalObservables(it)
 
             # if pyhrf.verbose.verbosity >= 6:
@@ -307,17 +308,16 @@ class GibbsSampler:
             # Some verbose about online profiling :
             now = time.time()
             self.loop_timing = (now - tLoopIni)
-                        
-            if not tLoopShown and it>=nbIt2EstimTime-1:
+
+            if not tLoopShown and it >= nbIt2EstimTime - 1:
                 tLoop = self.loop_timing / nbIt2EstimTime
                 tSampling = tLoop * (self.nbIterations - nbIt2EstimTime)
-                pyhrf.verbose(1, 'Time of loop : %1.2fs => total time ~%1.2fs'
-                              % (tLoop, tSampling))
-                pyhrf.verbose(1, 'Now is: ' + \
-                                  time.strftime('%c', time.localtime()))
-                pyhrf.verbose(1, 'Sampling should end at : ' +
-                              time.strftime('%c',
-                                            time.localtime(now + tSampling)))
+                logger.info('Time of loop : %1.2fs => total time ~%1.2fs',
+                            tLoop, tSampling)
+                logger.info(
+                    'Now is: %s', time.strftime('%c', time.localtime()))
+                logger.info('Sampling should end at : %s',
+                            time.strftime('%c', time.localtime(now + tSampling)))
                 tLoopShown = True
 
             # measure the time spent in sampling only :
@@ -325,13 +325,12 @@ class GibbsSampler:
             self.tSamplingOnly += tFin - tIni
 
             # launch callback function after each sample step :
-            pyhrf.verbose(3, 'calling callback ...')
+            logger.info('calling callback ...')
             self.callbacker(it, self.variables, self)
             tIni = time.time()
-
         self.final_iteration = it
-        pyhrf.verbose(1, '##- Sampling done, final iteration=%d -##' \
-                          % self.final_iteration)
+        logger.info('##- Sampling done, final iteration=%d -##',
+                    self.final_iteration)
 
         try:
             bold = atomData.bold
@@ -355,22 +354,21 @@ class GibbsSampler:
         except AttributeError:
             pass
 
-        # Finalizing everything:
+        # Finalizing everything :
         for v in self.variables:
             if v.finalValue is None:
                 v.setFinalValue()
 
         for v in self.variables:
-            pyhrf.verbose(2, v.name + '-> finalizing sampling ...')
+            logger.info(v.name + '-> finalizing sampling ...')
             v.finalizeSampling()
-            if pyhrf.verbose.verbosity >= 2:
-                pyhrf.verbose(2, v.get_final_summary())
+            logger.info(v.get_final_summary())
 
         for v in self.variables:
-            pyhrf.verbose(3, v.name + '-> cleaning observables ...')
+            logger.info(v.name + '-> cleaning observables ...')
             v.cleanObservables()
 
-        pyhrf.verbose(3, 'Finalizing overall sampling ...')
+        logger.info('Finalizing overall sampling ...')
 
         self.finalizeSampling()
         #outputs = self.getGlobalOutputs()
@@ -385,12 +383,12 @@ class GibbsSampler:
 
     def getOutputs(self):
         outputs = {}
-        pyhrf.verbose(4, 'get output of sampled variables ...')
+        logger.info('get output of sampled variables ...')
         for v in self.variables:
-            pyhrf.verbose(5, 'get outputs of %s' % v.name)
+            logger.debug('get outputs of %s', v.name)
             outputs.update(v.getOutputs())
 
-        pyhrf.verbose(4, 'get output of global observables ...')
+        logger.info('get output of global observables ...')
         outputs.update(self.getGlobalOutputs())
 
         #tp = time.time()
@@ -418,14 +416,14 @@ class GibbsSampler:
         prof += '---------------------\n'
         prof += '|| Short profile   ||\n'
         prof += '---------------------\n'
-        prof += '|| Sampling done !\n'#TODO: add option for printing report on/off
+        prof += '|| Sampling done !\n'  # TODO: add option for printing report on/off
         prof += '|| time spent in sampling : '+ str(self.tSamplingOnly) + ' sec\n'
         prof += '|| time spent in sampling and callbacks : '+ \
                 str(self.analysis_duration) + ' sec\n'
         prof += '|| time spent in sampling for each variable : \n'
         for iv in xrange(len(self.variables)):
             v = self.variables[iv]
-            prof += '|| '+ v.name + ' -> ' + str(self.tVars[iv]) + ' sec\n'
+            prof += '|| ' + v.name + ' -> ' + str(self.tVars[iv]) + ' sec\n'
         return prof
 
     def getTinyProfile(self):
@@ -442,10 +440,6 @@ class GibbsSampler:
 
     def updateGlobalObservables(self):
         pass
-##        try:
-##            self.fit = self.computeFit()
-##        except NotImplementedError :
-##            pass
 
     def saveGlobalObservables(self, it):
         if self.globalObsHistoryIts is None:
@@ -456,90 +450,83 @@ class GibbsSampler:
         self.globalObsHistoryIts.append(it)
         self.globalObsHistoryTiming.append(self.loop_timing)
 
-##        if self.fit is not None:
-##            self.fitHistory.append(self.fit)
-
-
     def getGlobalOutputs(self):
-        
         outputs = {}
-        axes_domains = {'time' : np.arange(self.dataInput.ny)*self.dataInput.tr}
+        axes_domains = {
+            'time': np.arange(self.dataInput.ny) * self.dataInput.tr}
         if pyhrf.__usemode__ == pyhrf.DEVEL:
             # output of design matrix:
-            dMat = np.zeros_like(self.dataInput.varX[0,:,:])
-            for ic,vx in enumerate(self.dataInput.varX):
-                dMat += vx * (ic+1)
+            dMat = np.zeros_like(self.dataInput.varX[0, :, :])
+            for ic, vx in enumerate(self.dataInput.varX):
+                dMat += vx * (ic + 1)
 
-            outputs['matX'] = xndarray(dMat, axes_names=['time','P'],
-                                     axes_domains=axes_domains,
-                                     value_label='value')
+            outputs['matX'] = xndarray(dMat, axes_names=['time', 'P'],
+                                       axes_domains=axes_domains,
+                                       value_label='value')
 
             ad = axes_domains.copy()
             ad['condition'] = self.dataInput.cNames
             outputs['varX'] = xndarray(self.dataInput.varX.astype(np.int8),
-                                     axes_names=['condition','time','P'],
-                                     axes_domains=ad,
-                                     value_label='value')
+                                       axes_names=['condition', 'time', 'P'],
+                                       axes_domains=ad,
+                                       value_label='value')
         if self.output_fit:
             try:
                 fit = self.computeFit()
                 if self.dataInput.varMBY.ndim == 2:
                     axes_names = ['time', 'voxel']
-                else: #multisession
+                else:  # multisession
                     axes_names = ['session', 'time', 'voxel']
                 bold = xndarray(self.dataInput.varMBY.astype(np.float32),
                                 axes_names=axes_names,
                                 axes_domains=axes_domains,
                                 value_label='BOLD')
-    
-                #TODO: outputs of paradigm
+
+                # TODO: outputs of paradigm
                 # outputs of onsets, per condition:
                 # get binary sequence sampled at TR
                 # build a xndarray from it
                 # build time axis values
 
                 cfit = xndarray(fit.astype(np.float32),
-                              axes_names=axes_names,
-                              axes_domains=axes_domains,
-                              value_label='BOLD')
-                #if self.dataInput.simulData is not None:
+                                axes_names=axes_names,
+                                axes_domains=axes_domains,
+                                value_label='BOLD')
+                # if self.dataInput.simulData is not None:
     
-                    #s = xndarray(self.dataInput.simulData.stimInduced,
-                               #axes_names=axes_names,
-                               #axes_domains=axes_domains,
-                               #value_label='BOLD')
+                    # s = xndarray(self.dataInput.simulData.stimInduced,
+                               # axes_names=axes_names,
+                               # axes_domains=axes_domains,
+                               # value_label='BOLD')
     
-                    #outputs['fit'] = stack_cuboids([s,cfit], 'type',
-                                                  #['simu', 'fit'])
-                #else:
+                    # outputs['fit'] = stack_cuboids([s,cfit], 'type',
+                                                   # ['simu', 'fit'])
+                # else:
                 outputs['bold_fit'] = stack_cuboids([bold,cfit],
                                                     'stype', ['bold', 'fit'])
-    
-                #e = np.sqrt((fit.astype(np.float32) - \
+
+                # e = np.sqrt((fit.astype(np.float32) - \
                 #             self.dataInput.varMBY.astype(np.float32))**2)
-                #outputs['error'] = xndarray(e, axes_names=axes_names,
+                # outputs['error'] = xndarray(e, axes_names=axes_names,
                 #                            axes_domains=axes_domains,
                 #                            value_label='Error')
-                #outputs['rmse'] = xndarray(e.mean(0), axes_names=['voxel'],
+                # outputs['rmse'] = xndarray(e.mean(0), axes_names=['voxel'],
                 #                            value_label='Rmse')
-    
-    
-    
-            except NotImplementedError :
+
+            except NotImplementedError:
                 print 'Compute fit not implemented !'
                 pass
-    
+
         return outputs
-        
 
-    #def initGlobalObservablesOutputs(self, outputs, nbROI):
-        #if self.fit is not None:
-            #fitAxes = 'iteration' + self.getFitAxes()
-            #outputs['fit_history'] = None
+    # def initGlobalObservablesOutputs(self, outputs, nbROI):
+        # if self.fit is not None:
+        #fitAxes = 'iteration' + self.getFitAxes()
+        #outputs['fit_history'] = None
 
-    #def fillGlobalObservablesOutputs(self, outputs, iROI):
-        #pass
-        ##if len(self.fitHistory) > 0:
+    # def fillGlobalObservablesOutputs(self, outputs, iROI):
+        # pass
+        # if len(self.fitHistory) > 0:
 
 
 class Trajectory:
@@ -576,7 +563,7 @@ class Trajectory:
             nsamples_max = 0
 
         if first_saved_iteration == -1:
-            nsamples_max += 1 #+1 because of init
+            nsamples_max += 1  # +1 because of init
 
         self.history = np.zeros((nsamples_max,) + variable.shape,
                                 dtype=variable.dtype)
@@ -594,14 +581,14 @@ class Trajectory:
         Increment the history saving.
         """
         if self.hist_pace > 0 and iteration >= self.hist_start and \
-          (iteration%self.hist_pace)==0 :
+                (iteration % self.hist_pace) == 0:
             self.history[self.sample_count] = self.variable[:]
             self.saved_iterations.append(iteration)
             self.sample_count += 1
 
     def get_last(self):
         """ Return the last saved element """
-        return self.history[self.sample_count-1]
+        return self.history[self.sample_count - 1]
 
     def to_cuboid(self):
         """ Pack the current trajectory in a xndarray
@@ -611,7 +598,7 @@ class Trajectory:
             an = ['iteration'] + self.axes_names
         else:
             an = ['iteration'] + \
-              ['axis_%02d'%i for i in xrange(self.variable.ndim)]
+                ['axis_%02d' % i for i in xrange(self.variable.ndim)]
 
         if self.axes_domains is not None:
             ad = self.axes_domains.copy()
@@ -622,17 +609,14 @@ class Trajectory:
         return c
 
 
-
-
 class GibbsSamplerVariable:
 
-    #TODO: make GibbsSamplerVariable be XMLParamDrivenClass
+    # TODO: make GibbsSamplerVariable be XMLParamDrivenClass
     # to factorize common parametrisation
 
     def __init__(self, name, valIni=None, trueVal=None, sampleFlag=1,
                  useTrueValue=False, axes_names=None, axes_domains=None,
                  value_label='value'):
-
         """
         #TODO : comment
 
@@ -640,29 +624,28 @@ class GibbsSamplerVariable:
         """
         self.axes_domains = {} if axes_domains is None else axes_domains
         self.axes_names = axes_names
-        pyhrf.verbose(3, 'Init of GibbsSamplerVariable %s with axes: %s' \
-                          %(name, str(axes_names)))
+        logger.info('Init of GibbsSamplerVariable %s with axes: %s', name,
+                    str(axes_names))
         self.value_label = value_label
         self.useTrueValue = useTrueValue
         self.name = name
 
         if valIni is not None and not isinstance(valIni, np.ndarray):
-            raise Exception('Init value of variable %s should be a numpy array '\
-                            '(if scalar variable then it should encapsulated in'\
-                            'an array)' %self.name)
+            raise Exception('Init value of variable %s should be a numpy array '
+                            '(if scalar variable then it should encapsulated in'
+                            'an array)' % self.name)
         if trueVal is not None and not isinstance(trueVal, np.ndarray):
-            raise Exception('true value of variable %s should be a numpy array '\
-                            '(if scalar variable then it should encapsulated in'\
-                            'an array)' %self.name)
+            raise Exception('true value of variable %s should be a numpy array '
+                            '(if scalar variable then it should encapsulated in'
+                            'an array)' % self.name)
 
         if self.useTrueValue:
             self.currentValue = trueVal
         else:
-            self.currentValue = valIni # if None -> must be
-                                       # generated later
+            self.currentValue = valIni  # if None -> must be
+            # generated later
 
-
-        self.trueValue = trueVal #should only be defined with linkToData (?)
+        self.trueValue = trueVal  # should only be defined with linkToData (?)
         self.sampleFlag = sampleFlag
         self.sampleNext = self.chooseSampleNext(sampleFlag)
         self.finalValue = None
@@ -677,7 +660,7 @@ class GibbsSamplerVariable:
         self.tracked_quantities = {}
 
     def chooseSampleNext(self, flag):
-        if flag :
+        if flag:
             return self.sampleNextInternal
         else:
             return self.sampleNextAlt
@@ -688,13 +671,11 @@ class GibbsSamplerVariable:
         """
         return self.samplerEngine.get_variable(label)
 
-
     def __setstate__(self, d):
         d['sampleNext'] = self.chooseSampleNext(d['sampleFlag'])
         self.__dict__ = d
 
-
-    def __getstate__(self): # use for compatibilty with pickles which doesn't
+    def __getstate__(self):  # use for compatibilty with pickles which doesn't
                             # support instance variable methods
         # copy the __dict__ so that further changes
         # do not affect the current instance
@@ -707,13 +688,13 @@ class GibbsSamplerVariable:
 
     def get_summary(self):
         s = self.name + ' summary:'
-        s += '  sample flag:' + ['Off','On'][self.sampleFlag]
+        s += '  sample flag:' + ['Off', 'On'][self.sampleFlag]
         s += '  use true value:' + str(self.useTrueValue)
         return s
 
     def get_string_value(self, v):
         if v.size == 1:
-            return '%1.4f' %v[0]
+            return '%1.4f' % v[0]
         if self.axes_names is not None and 'condition' == self.axes_names[0]:
             cNames = self.dataInput.cNames
             if v.ndim == 1:
@@ -721,12 +702,11 @@ class GibbsSamplerVariable:
             else:
                 # print 'cNames:', cNames
                 # print 'v.shape:', v.shape
-                v = v[:len(cNames),:]
-                return get_2Dtable_string(v.reshape(v.shape[0],1,-1),
+                v = v[:len(cNames), :]
+                return get_2Dtable_string(v.reshape(v.shape[0], 1, -1),
                                           cNames, ['Value'])
         else:
             return array_summary(v)
-
 
     def get_final_summary(self):
         s = self.name + ' sampling report: \n'
@@ -736,7 +716,7 @@ class GibbsSamplerVariable:
         else:
             s += ' - final value: ' + sv + '\n'
         if self.trueValue is not None:
-            #TODO: handle condition matching
+            # TODO: handle condition matching
             self.trueValue = np.array(self.trueValue)
             sv = self.get_string_value(self.trueValue)
             if '\n' in sv:
@@ -760,7 +740,7 @@ class GibbsSamplerVariable:
                                     history_pace, hist_start, max_its)
             self.tracked_quantities[name] = trajectory
         else:
-            raise Exception('Quantity %s already tracked' %name)
+            raise Exception('Quantity %s already tracked' % name)
 
     def track_sampled_quantity(self, q, name, axes_names=None, axes_domains=None,
                                history_pace=None):
@@ -779,7 +759,6 @@ class GibbsSamplerVariable:
         burnin = self.samplerEngine.nbSweeps
         self._track_quantity(q, name, axes_domains, axes_domains,
                              history_pace, hist_start=burnin)
-
 
     def record_trajectories(self, it):
         for q in self.tracked_quantities.values():
@@ -800,30 +779,26 @@ class GibbsSamplerVariable:
 
     def updateObsersables(self):
         self.nbItObservables += 1
-        pyhrf.verbose(6, 'Generic update Observables for var %s, it=%d ...' \
-                          %(self.name,self.nbItObservables))
-        pyhrf.verbose(6, 'CurrentValue:')
-        pyhrf.verbose.printNdarray(6, self.currentValue)
-
+        logger.debug('Generic update Observables for var %s, it=%d ...',
+                     self.name, self.nbItObservables)
+        logger.debug('CurrentValue:')
+        logger.debug(self.currentValue)
 
         self.cumul += self.currentValue
         #self.cumul2 += self.currentValue**2
 
-        pyhrf.verbose(6, 'Cumul:')
-        pyhrf.verbose.printNdarray(6, self.cumul)
+        logger.debug('Cumul:')
+        logger.debug(self.cumul)
 
         self.mean = self.cumul / self.nbItObservables
-        #print 'self.mean:', self.mean
-        #self.error = self.cumul2 / self.nbItObservables - \
-            #self.mean**2
 
         # Another Computing of error to avoid negative value when cumul is < 1
-        self.cumul3 += (self.currentValue - self.mean)**2
-        pyhrf.verbose(6, 'Cumul3:')
-        pyhrf.verbose.printNdarray(6, self.cumul3)
-        
-        pyhrf.verbose(6, 'Mean')
-        pyhrf.verbose.printNdarray(6, self.mean)
+        self.cumul3 += (self.currentValue - self.mean) ** 2
+        logger.debug('Cumul3:')
+        logger.debug(self.cumul3)
+
+        logger.debug('Mean')
+        logger.debug(self.mean)
 
         if self.nbItObservables < 2:
             self.error = np.zeros_like(self.cumul3) + 1e-6
@@ -831,56 +806,51 @@ class GibbsSamplerVariable:
             self.error = self.cumul3 / self.nbItObservables
 
         tol = 1e-10
-        neg_close_to_zero = np.where(np.bitwise_and(self.error<0,
-                                                    np.abs(self.error)<tol))
+        neg_close_to_zero = np.where(np.bitwise_and(self.error < 0,
+                                                    np.abs(self.error) < tol))
         self.error[neg_close_to_zero] = tol
 
-        pyhrf.verbose(6, 'Error:')
-        pyhrf.verbose.printNdarray(6, self.error)
+        logger.debug('Error:')
+        logger.debug(self.error)
 
-        if (self.error <0.).any():
-                raise Exception('neg error on variable %s' %self.name)
-
-
+        if (self.error < 0.).any():
+            raise Exception('neg error on variable %s' % self.name)
 
     def saveObservables(self, it):
 
         self.obsHistoryIts.append(it)
-        if self.meanHistory is not None :
+        if self.meanHistory is not None:
             self.meanHistory = np.concatenate((self.meanHistory,
-                                            [self.mean]))
-        else :
+                                               [self.mean]))
+        else:
             self.meanHistory = np.array([self.mean.copy()])
 
-        if self.errorHistory is not None :
+        if self.errorHistory is not None:
             self.errorHistory = np.concatenate((self.errorHistory,
-                                            [self.error]))
-        else :
+                                                [self.error]))
+        else:
             self.errorHistory = np.array([self.error.copy()])
-
 
     def saveCurrentValue(self, it):
         self.smplHistoryIts.append(it)
-        if self.smplHistory is not None :
+        if self.smplHistory is not None:
             self.smplHistory = np.concatenate((self.smplHistory,
                                                [self.currentValue]))
-        else :
+        else:
             self.smplHistory = np.array([self.currentValue.copy()])
 
     def roiMapped(self):
-        pyhrf.verbose(5, 'roiMapped ?')
-        pyhrf.verbose(5, ' -> self.axes_names :' \
-                      + str(self.axes_names))
-        return False if (self.axes_names==None) else ('voxel' in self.axes_names)
+        logger.debug('roiMapped ?')
+        logger.debug(' -> self.axes_names : %s', str(self.axes_names))
+        return False if (self.axes_names == None) else ('voxel' in self.axes_names)
 
     def manageMappingInit(self, shape, axes_names):
         tans = self.dataInput.voxelMapping.getTargetAxesNames()
         i = axes_names.index('voxel')
-        axes_names = axes_names[:i] + tans + axes_names[i+1:]
-        shape = shape[:i] + self.dataInput.finalShape + shape[i+1:]
-        pyhrf.verbose(5,'manageMappingInit returns :')
-        pyhrf.verbose(5,' -> sh: %s, axes_names: %s' \
-                      %(str(shape), str(axes_names)))
+        axes_names = axes_names[:i] + tans + axes_names[i + 1:]
+        shape = shape[:i] + self.dataInput.finalShape + shape[i + 1:]
+        logger.debug('manageMappingInit returns :')
+        logger.debug(' -> sh: %s, axes_names: %s', str(shape), str(axes_names))
         return shape, axes_names
 
     def getOutputs(self):
@@ -893,19 +863,19 @@ class GibbsSamplerVariable:
         if hasattr(self, 'valueLabel'):
             self.value_label = self.valueLabel
 
-
         outputs = {}
         if self.axes_names is None:
-            #print ' "%s" -> no axes_names defined' %self.name
-            sh = (1,) if np.isscalar(self.finalValue) else self.finalValue.shape
+            # print ' "%s" -> no axes_names defined' %self.name
+            sh = (1,) if np.isscalar(
+                self.finalValue) else self.finalValue.shape
             #an = ['axis%d'%i for i in xrange(self.finalValue.ndim)]
-            an = ['axis%d'%i for i in xrange(len(sh))]
+            an = ['axis%d' % i for i in xrange(len(sh))]
         else:
             an = self.axes_names
 
         if self.meanHistory is not None:
-            outName = self.name+'_pm_history'
-            if hasattr(self,'obsHistoryIts'):
+            outName = self.name + '_pm_history'
+            if hasattr(self, 'obsHistoryIts'):
                 axes_domains = {'iteration': self.obsHistoryIts}
             else:
                 axes_domains = {}
@@ -913,100 +883,85 @@ class GibbsSamplerVariable:
 
             axes_names = ['iteration'] + an
             outputs[outName] = xndarray(self.meanHistory,
-                                      axes_names=axes_names,
-                                      axes_domains=axes_domains,
-                                      value_label=self.value_label)
+                                        axes_names=axes_names,
+                                        axes_domains=axes_domains,
+                                        value_label=self.value_label)
 
         if hasattr(self, 'smplHistory') and self.smplHistory is not None:
             axes_names = ['iteration'] + an
-            outName = self.name+'_smpl_history'
-            if hasattr(self,'smplHistoryIts'):
+            outName = self.name + '_smpl_history'
+            if hasattr(self, 'smplHistoryIts'):
                 axes_domains = {'iteration': self.smplHistoryIts}
             else:
                 axes_domains = {}
             axes_domains.update(self.axes_domains)
             outputs[outName] = xndarray(self.smplHistory,
-                                      axes_names=axes_names,
-                                      axes_domains=axes_domains,
-                                      value_label=self.value_label)
+                                        axes_names=axes_names,
+                                        axes_domains=axes_domains,
+                                        value_label=self.value_label)
 
             if hasattr(self, 'autocorrelation'):
                 outName = self.name + '_smpl_autocorr'
                 axes_names = ['lag'] + an
                 outputs[outName] = xndarray(self.autocorrelation,
-                                          axes_names=axes_names,
-                                          axes_domains=self.axes_domains,
-                                          value_label='acorr')
+                                            axes_names=axes_names,
+                                            axes_domains=self.axes_domains,
+                                            value_label='acorr')
 
                 outName = self.name + '_smpl_autocorr_test'
                 outputs[outName] = xndarray(self.autocorrelation_test,
-                                          axes_names=axes_names,
-                                          axes_domains=self.axes_domains,
-                                          value_label='acorr')
+                                            axes_names=axes_names,
+                                            axes_domains=self.axes_domains,
+                                            value_label='acorr')
 
                 outName = self.name + '_smpl_autocorr_pval'
                 outputs[outName] = xndarray(self.autocorrelation_pvalue,
-                                          axes_names=axes_names,
-                                          axes_domains=self.axes_domains,
-                                          value_label='pvalue')
-
+                                            axes_names=axes_names,
+                                            axes_domains=self.axes_domains,
+                                            value_label='pvalue')
 
                 outName = self.name + '_smpl_autocorr_thresh'
                 outputs[outName] = xndarray(np.array([self.autocorrelation_thresh]),
-                                          value_label='acorr')
+                                            value_label='acorr')
 
             if hasattr(self, 'median'):
                 outName = self.name + '_post_median'
                 outputs[outName] = xndarray(self.median,
-                                          axes_names=self.axes_names,
-                                          axes_domains=self.axes_domains,
-                                          value_label='median')
+                                            axes_names=self.axes_names,
+                                            axes_domains=self.axes_domains,
+                                            value_label='median')
 
-
-        #print "Var name", self.name
-        #print "Final value", self.finalValue
-
-        pyhrf.verbose(4, '%s final value:' %self.name)
-        pyhrf.verbose.printNdarray(4, self.finalValue)
+        logger.info('%s final value:', self.name)
+        logger.info(self.finalValue)
         if 1 and hasattr(self, 'error'):
-            err = self.error**.5
+            err = self.error ** .5
         else:
             err = None
 
         c = xndarray(self.get_final_value().astype(np.float32),
-                   axes_names=self.axes_names,
-                   axes_domains=self.axes_domains,
-                   value_label=self.value_label)
-
-        # if 'hrf' in self.name:
-        #     fv = self.get_final_value()
-        #     print 'hrf norms:'
-        #     if fv.ndim > 1:
-        #         for s in xrange(fv.shape[0]):
-        #             print (fv[s]**2).sum()**.5
-        #     else:
-        #         print (fv**2).sum()**.5
+                     axes_names=self.axes_names,
+                     axes_domains=self.axes_domains,
+                     value_label=self.value_label)
 
         if self.trueValue is not None:
             c_true = xndarray(np.array(self.get_true_value()),
-                           axes_names=self.axes_names,
-                           axes_domains=self.axes_domains,
-                           value_label=self.value_label)
+                              axes_names=self.axes_names,
+                              axes_domains=self.axes_domains,
+                              value_label=self.value_label)
 
-            c = stack_cuboids([c,c_true], axis='type', domain=['estim','true'],
+            c = stack_cuboids([c, c_true], axis='type', domain=['estim', 'true'],
                               axis_pos='last')
 
-        outputs[self.name+'_pm'] = c
+        outputs[self.name + '_pm'] = c
 
-        if ((err is not None) or ((err.size==1) and (err!=0))):
-            c_err = xndarray(self.error.astype(np.float32), 
+        if ((err is not None) or ((err.size == 1) and (err != 0))):
+            c_err = xndarray(self.error.astype(np.float32),
                              axes_names=self.axes_names,
                              axes_domains=self.axes_domains,
                              value_label=self.value_label)
             # c = stack_cuboids([c,c_err], axis='error', domain=['value','std'],
             #                   axis_pos='last')
-            outputs[self.name+'_mcmc_var'] = c_err
-
+            outputs[self.name + '_mcmc_var'] = c_err
 
         if hasattr(self, 'tracked_quantities'):
             for qname, q in self.tracked_quantities.iteritems():
@@ -1014,28 +969,26 @@ class GibbsSamplerVariable:
 
         if len(self.report_check_ft_val) > 0:
             r = self.report_check_ft_val
-            outputs[self.name+'_abs_err'] = xndarray(r['abs_error'],
-                                                   axes_names=self.axes_names,
-                                                   axes_domains=self.axes_domains)
+            outputs[self.name + '_abs_err'] = xndarray(r['abs_error'],
+                                                       axes_names=self.axes_names,
+                                                       axes_domains=self.axes_domains)
 
-            outputs[self.name+'_rel_err'] = xndarray(r['rel_error'],
-                                                   axes_names=self.axes_names,
-                                                   axes_domains=self.axes_domains)
-            on = self.name+'_inaccuracies'
+            outputs[self.name + '_rel_err'] = xndarray(r['rel_error'],
+                                                       axes_names=self.axes_names,
+                                                       axes_domains=self.axes_domains)
+            on = self.name + '_inaccuracies'
             an = r['accuracy'][0]
             ad = {}
             if an is not None:
-                ad = dict((a,self.axes_domains[a]) \
+                ad = dict((a, self.axes_domains[a])
                           for a in an if self.axes_domains.has_key(a))
             inacc = np.bitwise_not(r['accuracy'][1]).astype(np.int8)
             outputs[on] = xndarray(inacc, axes_names=an, axes_domains=ad)
 
         return outputs
 
-
     def manageMapping(self, cuboid):
         pass
-
 
     def cleanObservables(self):
         del self.cumul3
@@ -1046,14 +999,14 @@ class GibbsSamplerVariable:
         pass
 
     def setSamplerEngine(self, sampler):
-        #TODO : comment
+        # TODO : comment
         self.samplerEngine = sampler
 
     def linkToData(self,):
         raise NotImplementedError()
 
     def checkAndSetInitValue(self, variables):
-        if self.currentValue is None :
+        if self.currentValue is None:
             print 'Error - ', self.name, ' - initial value not set !'
 
     def samplingWarmUp(self, variables):
@@ -1067,50 +1020,34 @@ class GibbsSamplerVariable:
         #from scikits.talkbox.tools.correlations import  acorr
         from pyhrf.stats import acorr
         if 0 and self.smplHistory is not None:
-            pyhrf.verbose(3, 'Compute autocorrelation of %s samples '\
-                              ', shape=%s' \
-                              %(self.name, str(self.smplHistory.shape)))
+            logger.info('Compute autocorrelation of %s samples, shape=%s',
+                        self.name, str(self.smplHistory.shape))
             trajectory = self.smplHistory[self.samplerEngine.nbSweeps::2]
-            #print 'trajectory:', trajectory.shape
             self.autocorrelation = acorr(trajectory)
-            #print 'self.autocorrelation:', self.autocorrelation
-            sn = trajectory.shape[0]**.5
+            sn = trajectory.shape[0] ** .5
             t95 = 1.959963984540054 / sn
             self.autocorrelation_test = np.zeros(self.autocorrelation.shape,
                                                  dtype=np.int32)
-            #print 't95:', t95
-            self.autocorrelation_test[np.where(self.autocorrelation>t95)] = 1
-            self.autocorrelation_test[np.where(self.autocorrelation<-t95)] = -1
+            self.autocorrelation_test[np.where(self.autocorrelation > t95)] = 1
+            self.autocorrelation_test[
+                np.where(self.autocorrelation < -t95)] = -1
 
             self.autocorrelation_thresh = t95
 
             from scipy.stats import norm
             self.autocorrelation_pvalue = np.zeros(self.autocorrelation.shape,
                                                    dtype=np.float32)
-            #print 'self.autocorrelation ... :', self.autocorrelation
-            m_pos = np.where(self.autocorrelation>0)
+            m_pos = np.where(self.autocorrelation > 0)
             if len(m_pos[0]) > 0:
                 ac_pos = self.autocorrelation[m_pos]
                 self.autocorrelation_pvalue[m_pos] = norm.sf(ac_pos * sn)
-                # print 'ac_pos:', ac_pos.shape
-                # print ac_pos
-                # print '--- * sn'
-                # print ac_pos*sn
-                # print 'norm.sf:'
-                # print norm.sf(ac_pos * sn)
 
-            m_neg = np.where(self.autocorrelation<0)
+            m_neg = np.where(self.autocorrelation < 0)
             if len(m_neg[0]) > 0:
                 ac_neg = self.autocorrelation[m_neg]
-                # print 'ac_neg:', ac_neg.shape, (ac_neg*sn).mean()
                 self.autocorrelation_pvalue[m_neg] = norm.cdf(ac_neg * sn)
 
-            # print 'self.smplHistory:'
-            # print self.smplHistory
-            # print 'self.autocorrelation:', self.autocorrelation.shape
-            # print self.autocorrelation
-
-            pyhrf.verbose(3, 'Compute posterior median for %s ' %(self.name))
+            logger.info('Compute posterior median for %s ', self.name)
             self.median = np.median(self.smplHistory, axis=0)
 
         self.check_final_value()
@@ -1119,42 +1056,41 @@ class GibbsSamplerVariable:
         report = {}
         if self.samplerEngine.check_ftval is not None:
             if self.trueValue is None:
-                pyhrf.verbose(4, 'Warning: no true val to check against for %s' \
-                              %self.name)
+                logger.info('Warning: no true val to check against for %s',
+                            self.name)
             elif self.sampleFlag:
                 fv = self.get_final_value()
                 tv = self.get_true_value()
                 rtol = 0.1      # Relative tolerance value: 10%
-                atol = 0.1      # Absolute tolerance value. TODO: dependency to parameter
+                # Absolute tolerance value. TODO: dependency to parameter
+                atol = 0.1
 
                 # report['true_value'] = tv
                 # report['final_value'] = fv
                 abs_error = np.abs(tv - fv)
                 report['abs_error'] = abs_error
-                rel_error = abs_error/np.maximum(np.abs(tv), np.abs(fv))
+                rel_error = abs_error / np.maximum(np.abs(tv), np.abs(fv))
                 report['rel_error'] = rel_error
 
                 report['accuracy'] = self.get_accuracy(abs_error, rel_error,
                                                        fv, tv, atol, rtol)
                 is_accurate = report['accuracy'][1].all()
-                pyhrf.verbose(2, 'Fit error for %s: aerr=%f, rerr=%f, '\
-                              'is_accurate=%s' %(self.name, abs_error.mean(),
-                                                 rel_error.mean(),
-                                                 is_accurate))
+                logger.info('Fit error for %s: aerr=%f, rerr=%f, is_accurate=%s',
+                            self.name, abs_error.mean(), rel_error.mean(),
+                            is_accurate)
                 if not is_accurate:
                     m = "Final value of %s is not close to " \
-                    "true value.\n -> aerror: %s\n -> rerror: %s\n" \
-                    " Final value:\n %s\n True value:\n %s\n" \
-                    %(self.name, array_summary(report['abs_error']),
-                      array_summary(report['rel_error']),
-                      str(fv), str(tv))
+                        "true value.\n -> aerror: %s\n -> rerror: %s\n" \
+                        " Final value:\n %s\n True value:\n %s\n" \
+                        % (self.name, array_summary(report['abs_error']),
+                           array_summary(report['rel_error']),
+                           str(fv), str(tv))
                     if self.samplerEngine.check_ftval == 'raise':
                         raise Exception(m)
                     elif self.samplerEngine.check_ftval == 'print':
-                        print '\n'.join(['!! '+ s for s in m.split('\n')])
+                        print '\n'.join(['!! ' + s for s in m.split('\n')])
 
         self.report_check_ft_val = report
-
 
     def get_accuracy(self, abs_error, rel_error, fv, tv, atol, rtol):
         """ Return the accuray of the estimate *fv*, compared to the true
@@ -1174,18 +1110,17 @@ class GibbsSamplerVariable:
     def get_true_value(self):
         return self.trueValue
 
-
     def setFinalValue(self):
         self.finalValue = self.getMean()
-        #if self.name=='nrl_by_session':
-            #print 'self.cumul:', self.cumul[2,2,15]
+        # if self.name=='nrl_by_session':
+        # print 'self.cumul:', self.cumul[2,2,15]
 
     def sampleNextAlt(self, variables):
         """
         Define the behaviour of the variable at each sampling step when its
         sampling is not activated.
         """
-        #print self.name, ' skip sampling ...'
+        # print self.name, ' skip sampling ...'
         pass
 
     def sampleNextInternal(self, variables):
@@ -1195,46 +1130,45 @@ class GibbsSamplerVariable:
         """
         raise NotImplementedError()
 
-    def getMean(self):#, itStart=None, itEnd=None, pace=1):
+    def getMean(self):  # , itStart=None, itEnd=None, pace=1):
         """
         Wip ...
         Compute mean over MCMC iterations within the window defined by itStart,
         itEnd and pace. By default itStart is set to 'nbSweeps' and itEnd to
         the last iteration.
         """
-        #print 'seeelf:', self, self.mean
+        # print 'seeelf:', self, self.mean
         return self.mean
-##        if itStart == None :
+# if itStart == None :
 ##            itStart = self.samplerEngine.nbSweeps
-##        if itEnd == None :
+# if itEnd == None :
 ##            itEnd = len(self.valHistory)-1
-##        print 'getMean '
-##        print 'itStart = ', itStart
-##        print 'itEnd = ', itEnd
-##        print 'range = ', arange(itStart, itEnd+1, pace)
-##        return self.valHistory[arange(itStart, itEnd+1, pace)].mean(0)
+# print 'getMean '
+# print 'itStart = ', itStart
+# print 'itEnd = ', itEnd
+# print 'range = ', arange(itStart, itEnd+1, pace)
+# return self.valHistory[arange(itStart, itEnd+1, pace)].mean(0)
 
-    def getMeanHistory(self):#, itStart=None, histPace=1):
+    def getMeanHistory(self):  # , itStart=None, histPace=1):
         if self.meanHistory is None:
             return (None, None)
         else:
             return (self.obsHistoryIts, self.meanHistory)
 
-##        if itStart == None :
+# if itStart == None :
 ##            itStart = self.samplerEngine.nbSweeps
 
 ##        itMax = len(self.valHistory)
 ##        meanHistory = [self.getMean(itStart, itStart+1)]
-##        for ite in xrange(itStart+1, itMax, histPace):
+# for ite in xrange(itStart+1, itMax, histPace):
 ##            m = self.getMean(itStart, ite)
-##            if m != None:
+# if m != None:
 ##                meanHistory = concatenate( (meanHistory,[m]) )
 
 ##        itAxis = range(itStart, itMax, histPace)
-##        return (itAxis,meanHistory)
+# return (itAxis,meanHistory)
 
-    #TODO idem as mean with variance ...
-
+    # TODO idem as mean with variance ...
 
 
 class GSDefaultCallbackHandler(xmlio.XmlInitable):
@@ -1259,64 +1193,56 @@ class GSDefaultCallbackHandler(xmlio.XmlInitable):
         self.callback(it, v, e)
 
 
-#class BayesFactorCallback(xmlio.XMLParamDrivenClass):
+# class BayesFactorCallback(xmlio.XMLParamDrivenClass):
 
-    #defaultParameters = {
+    # defaultParameters = {
         #'monParametre' : 458.,
         #}
 
-    #def __init__(self, parameters=None, xmlHandler=xmlio.TypedXMLHandler(),
-                 #xmlLabel=None, xmlComment=None):
-        #xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
-                                           #xmlLabel, xmlComment)
+    # def __init__(self, parameters=None, xmlHandler=xmlio.TypedXMLHandler(),
+        # xmlLabel=None, xmlComment=None):
+        # xmlio.XMLParamDrivenClass.__init__(self, parameters, xmlHandler,
+        # xmlLabel, xmlComment)
 
-        ## Recuperation des parametres:
+        # Recuperation des parametres:
         #self.monParam = self.parameters['monParametre']
-        ##print 'BayesFactorCallback.__init__ :',
-        ##print 'self.monParam :', self.monParam
+        # print 'BayesFactorCallback.__init__ :',
+        # print 'self.monParam :', self.monParam
 
-
-
-
-    #def callback(self, it, vars, samplerEngine):
-
+    # def callback(self, it, vars, samplerEngine):
 
         #samplerEngine.invLike = 1.
         #LVformer = 1.
-        #N = samplerEngine.dataInput.varMBY.shape[0]       # N is the number of rows of P or H or yj
+        # N = samplerEngine.dataInput.varMBY.shape[0]       # N is the number of rows of P or H or yj
         #M = samplerEngine.dataInput.nbConditions
-        #Q = samplerEngine.dataInput.colP       # Q is the number of columns of P
+        # Q = samplerEngine.dataInput.colP       # Q is the number of columns of P
         #delta = samplerEngine.dataInput.delta
         #shrf = samplerEngine.get_variable('hrf')
         #snrl = samplerEngine.get_variable('nrl')
         #snoise = samplerEngine.get_variable('noise')
-        #h = shrf.currentValue # shape = (nbCoeffHrf)
-        #a = snrl.currentValue # shape = (nbConditions, nbVoxels)
-        #y = samplerEngine.dataInput.varMBY # shape = (nbScans, nbVoxels)
+        # h = shrf.currentValue # shape = (nbCoeffHrf)
+        # a = snrl.currentValue # shape = (nbConditions, nbVoxels)
+        # y = samplerEngine.dataInput.varMBY # shape = (nbScans, nbVoxels)
         #H = shrf.varXh
-        #noiseVars = snoise.currentValues # sh = (nbVoxels)
+        # noiseVars = snoise.currentValues # sh = (nbVoxels)
         #In = eye(N, dtype=float)
 
-        #print 'Iteration :', it
-        #if  it >= samplerEngine.nbSweeps:
-          #shrf = samplerEngine.get_variable('hrf')
+        # print 'Iteration :', it
+        # if  it >= samplerEngine.nbSweeps:
+        #shrf = samplerEngine.get_variable('hrf')
 
-          #LVcurrent_value = LVformer*(0.5*(N-Q-M)-2)!*(0.5
-          #samplerEngine.invLike = samplerEngine.invLike*(it-1)/it + LVcurrent_value/it
-          #samplerEngine.Like = 1/samplerEngine.Like
-          #LVformer = LVcurrent_value
+        # LVcurrent_value = LVformer*(0.5*(N-Q-M)-2)!*(0.5
+        #samplerEngine.invLike = samplerEngine.invLike*(it-1)/it + LVcurrent_value/it
+        #samplerEngine.Like = 1/samplerEngine.Like
+        #LVformer = LVcurrent_value
 
+        # print ' -> hrf value:', shrf.currentValue
+        # print ' -> nrl value:', snrl.currentValue
 
+        # print 'Harmonic mean estimate of the integrated likelihood...'
 
-        #print ' -> hrf value:', shrf.currentValue
-        #print ' -> nrl value:', snrl.currentValue
-
-
-
-        #print 'Harmonic mean estimate of the integrated likelihood...'
-
-    #def finalize(self):
-        #pass
+    # def finalize(self):
+        # pass
 
 
 class GSPrintCallbackHandler(GSDefaultCallbackHandler):
@@ -1324,11 +1250,12 @@ class GSPrintCallbackHandler(GSDefaultCallbackHandler):
     Class defining behaviour after each Gibbs Sampling step : printing reports to stdout.
 
     """
+
     def __init__(self, pace):
         self.pace = pace
 
     def callback(self, it, variables, samplerEngine):
-        if not it%self.pace :
+        if not it % self.pace:
             print 'Iteration : ', it
             for v in variables:
                 print v.name

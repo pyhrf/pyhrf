@@ -1,46 +1,43 @@
 #! /bin/env python
 # -*- coding: utf-8 -*-
-import os, sys, string, cPickle
+
+import sys
 import os.path as op
-import numpy as np
+
+from pprint import pformat
 from optparse import OptionParser
-#from nifti import NiftiImage
+
 import nibabel
+import numpy as np
 
 import pyhrf
-from pyhrf._verbose import dictToString
 from pyhrf.tools._io.tio import Texture
 from pyhrf.tools._io.spmio import load_paradigm_from_mat, load_contrasts
 
 from pyhrf.parcellation import parcellation_report
 
-def describeMatFile(fn):        
-    # try:
-    paradigm,tr = load_paradigm_from_mat(fn)
+
+def describe_mat_file(filename):
+    paradigm, tr = load_paradigm_from_mat(filename)
     print '*** Paradigm data ***'
     for sess in sorted(paradigm.keys()):
         datasession = paradigm[sess]
         print 'session:', sess
         for cond in sorted(datasession['onsets'].keys()):
-            print '  ',cond,':'
-            print '    ','ons:',datasession['onsets'][cond]
-            print '    ','dur:',datasession['stimulusLength'][cond]
+            print '  ', cond, ':'
+            print '    ', 'ons:', datasession['onsets'][cond]
+            print '    ', 'dur:', datasession['stimulusLength'][cond]
     print '*** Functional data ***'
     print 'TR =', tr
     print '*** Constrasts ***'
-    # except Exception: #maybe not a 1st level model ...        
-    #     pass
 
-    conts = load_contrasts(fn)
-    for i,c in enumerate(conts):
-	print '%d (%s): %s ' %(i+1,str(c[2][0]),str(c[0][0]))
-    for i,c in enumerate(conts):
+    conts = load_contrasts(filename)
+    for i, c in enumerate(conts):
+        print '%d (%s): %s ' % (i + 1, str(c[2][0]), str(c[0][0]))
+    for i, c in enumerate(conts):
         print str(c[0][0])
-	#if c[1].ndim == 1:
-	#    print np.array2string(c[1],precision=2)
-	#else:
-	#print ''
-	print np.array2string(c[1],precision=2)
+        print np.array2string(c[1], precision=2)
+
 
 def describeArray(a):
 
@@ -48,55 +45,51 @@ def describeArray(a):
         a = a.astype(int)
         print '-> integer values'
         print 'values, mean(std)[min...max]:\n %1.4f(%1.4f)[%d...%d]' \
-            %(a.mean(), a.std(), a.min(), a.max())
+            % (a.mean(), a.std(), a.min(), a.max())
         u = np.unique(a)
         print 'unique values:'
         print u
         print 'counts:'
         bc = np.bincount(a)
-        bc = bc[bc!=0]
+        bc = bc[bc != 0]
         print 'values, mean(std)[min...max]:\n %1.4f(%1.4f)[%d...%d]' \
-            %(bc.mean(), bc.std(), bc.min(), bc.max())
-        print np.vstack((u,bc)).transpose()
+            % (bc.mean(), bc.std(), bc.min(), bc.max())
+        print np.vstack((u, bc)).transpose()
 
 
-def describeNiiFile(fn):
+def describe_nii_file(filename):
     s = ''
-    i = nibabel.load(fn)
+    i = nibabel.load(filename)
     h = i.get_header()
     s += '*Nifti file*' + '\n'
     s += 'Description: ' + str(h['descrip']) + '\n'
-    s += 'Voxel dimensions: ' + ','.join(map(str,h['pixdim'])) + '\n'
-    #s += 'Repetition Time: ' + str(i.getRepetitionTime()) + '\n'
+    s += 'Voxel dimensions: ' + ','.join(map(str, h['pixdim'])) + '\n'
     s += 'Data shape: ' + str(i.get_shape()) + '\n'
     s += 'Qform:' + '\n'
     s += str(h.get_qform()) + '\n'
-    #s += 'Qform orientation: ' + str(i.getQOrientation(True)) + '\n'
     if not (h.get_sform() == 0).all():
         s += 'Sform:' + '\n'
         s += str(h.get_sform()) + '\n'
-        # s += 'Sform orientation:' + '\n'
-        # s += str(i.getSOrientation(True)) + '\n'
     else:
         s += 'SForm is null' + '\n'
     d = i.get_data()
     nb_nans = np.isnan(d).sum()
     if nb_nans > 0:
-        s += '* Found %d NaNs' %nb_nans
+        s += '* Found %d NaNs' % nb_nans
 
     if ('parcellation' in h['descrip'] or np.allclose(d.astype(int), d)) and \
             len(np.unique(d)) < 5000 and d.ndim < 4:
         s += parcellation_report(d)
 
-
     else:
         s += '* Values, mean(std)[min...max]: %1.4f(%1.4f)[%1.2f...%1.2f]\n' \
-            %(d.mean(), d.std(), d.min(), d.max()) + '\n'
+            % (d.mean(), d.std(), d.min(), d.max()) + '\n'
     return s
-        
-def describeTexFile(fn):
+
+
+def describeTexFile(filename):
     print 'Texture file:'
-    d = Texture.read(fn)
+    d = Texture.read(filename)
     d.show()
     describeArray(d.data)
 
@@ -106,28 +99,29 @@ description = 'Print info from a data FILE'
 
 parser = OptionParser(usage=usage, description=description)
 
-parser.add_option('-v','--verbose',dest='verbose',metavar='VERBOSELEVEL',
-                  type='int',default=0,
-                  help=dictToString(pyhrf.verboseLevels))
+parser.add_option('-v', '--verbose', dest='verbose', metavar='VERBOSELEVEL',
+                  type='int', default=0,
+                  help=pformat(pyhrf.verbose_levels))
 
-(options,args) = parser.parse_args()
-pyhrf.verbose.set_verbosity(options.verbose)
+(options, args) = parser.parse_args()
+# pyhrf.verbose.set_verbosity(options.verbose)
+pyhrf.logger.setLevel(options.verbose)
 
 # Treat result of option parsing:
-if len(args) !=1 :
+if len(args) != 1:
     parser.print_help()
     sys.exit(1)
 
 
-fn = args[0]
-bnf,ext = op.splitext(fn)
+filename = args[0]
+bnf, ext = op.splitext(filename)
 
 if ext == '.tex':
-    describeTexFile(fn)
-elif ext == '.nii' or (ext == '.gz' and fn.split('.')[-2] == 'nii') \
+    describeTexFile(filename)
+elif ext == '.nii' or (ext == '.gz' and filename.split('.')[-2] == 'nii') \
         or ext == '.img':
-    print describeNiiFile(fn)
+    print describe_nii_file(filename)
 elif ext == '.mat':
-    describeMatFile(fn)
+    describe_mat_file(filename)
 else:
     print 'unrecognised extension:', ext

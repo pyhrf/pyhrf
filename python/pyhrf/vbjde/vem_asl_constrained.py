@@ -7,21 +7,21 @@ and l2-norm=1 constraints.
 It imports functions from vem_tools.py in pyhrf/vbjde
 """
 
-#import os.path as op
-import numpy as np
 import time
-import UtilsC
-import pyhrf
-#from pyhrf.tools._io import read_volume
-from pyhrf.boldsynth.hrf import getCanoHRF
-#from pyhrf.ndarray import xndarray
-import vem_tools as vt
-import vem_tools_asl as EM
 import copy
-#try:
-#    from collections import OrderedDict
-#except ImportError:
-#    from pyhrf.tools.backports import OrderedDict
+import logging
+
+import numpy as np
+
+import pyhrf
+import pyhrf.vbjde.UtilsC as UtilsC
+import pyhrf.vbjde.vem_tools as vt
+import pyhrf.vbjde.vem_tools_asl as EM
+
+from pyhrf.boldsynth.hrf import getCanoHRF
+
+
+logger = logging.getLogger(__name__)
 
 eps = 1e-4
 
@@ -36,8 +36,8 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                              estimateNoise=True, estimateMP=True,
                              estimateLA=True):
     """ Version modified by Lofti from Christine's version """
-    pyhrf.verbose(1, "Fast EM with C extension started ... Here is the \
-                      stable version !")
+    logger.info("Fast EM with C extension started ... "
+                "Here is the stable version !")
     np.random.seed(6537546)
 
     #Initialize parameters
@@ -75,8 +75,8 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     h_norm, g_norm = [], []
 
     #Labels
-    pyhrf.verbose(3, "Labels are initialized by setting active probabilities \
-                        to ones ...")
+    logger.info("Labels are initialized by setting active probabilities "
+                "to ones ...")
     q_Z = np.zeros((M, K, J), dtype=np.float64)
     q_Z[:, 1, :] = 1
     q_Z1 = np.zeros((M, K, J), dtype=np.float64)
@@ -185,8 +185,8 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
     while ((ni < NitMin + 1) or ((Crit_AH > Thresh) and (ni < NitMax))):
 
-        pyhrf.verbose(1, "------------------------------ Iteration n° " + \
-                         str(ni + 1) + " ------------------------------")
+        logger.info("------------------------------ Iteration n° " + \
+                    str(ni + 1) + " ------------------------------")
 
         #####################
         # EXPECTATION
@@ -194,7 +194,7 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # A
         if estimateA:
-            pyhrf.verbose(3, "E A step ...")
+            logger.info("E A step ...")
             UtilsC.expectation_A(q_Z, mu_Mc, sigma_Mc, PL, sigma_eps,
                                  Gamma, Sigma_H, Y, y_tilde, m_A, H, Sigma_A,
                                  XX.astype(np.int32), J, D, M, N, K)
@@ -208,7 +208,7 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # C
         if estimateC:
-            pyhrf.verbose(3, "E C step ...")
+            logger.info("E C step ...")
             UtilsC.expectation_C(q_Z, mu_Mc, sigma_Mc, PL, sigma_eps,
                                  Gamma, Sigma_H, Y, y_tilde, m_A, H, Sigma_A,
                                  XX.astype(np.int32), J, D, M, N, K)
@@ -222,7 +222,7 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # HRF h
         if estimateH:
-            pyhrf.verbose(3, "E H step ...")
+            logger.info("E H step ...")
             UtilsC.expectation_H(XGamma, Q_barnCond, sigma_eps, Gamma, R,
                                  Sigma_H, Y, y_tilde, m_A, H, Sigma_A,
                                  XX.astype(np.int32), J, D, M, N, scale,
@@ -240,7 +240,7 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # PRF g
         if estimateG:
-            pyhrf.verbose(3, "E G step ...")
+            logger.info("E G step ...")
             UtilsC.expectation_G(XGamma, Q_barnCond, sigma_eps, Gamma, R,
                                  Sigma_H, Y, y_tilde, m_A, H, Sigma_A,
                                  XX.astype(np.int32), J, D, M, N, scale,
@@ -275,7 +275,7 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # Z labels
         if estimateZ:
-            pyhrf.verbose(3, "E Z step ...")
+            logger.info("E Z step ...")
             UtilsC.expectation_Z(Sigma_A, m_A, sigma_M, Beta, Z_tilde, mu_M,
                                  q_Z, neighboursIndexes.astype(np.int32), M,
                                  J, K, maxNeighbours)
@@ -293,31 +293,31 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # HRF: Sigma_h
         if estimateSigmaH:
-            pyhrf.verbose(3, "M sigma_H step ...")
+            logger.info("M sigma_H step ...")
             if gamma_h > 0:
                 sigmaH = EM.maximization_sigma_prior(D, Sigma_H, R, H,
                                                       gamma_h)
             else:
                 sigmaH = EM.maximization_sigma(D, Sigma_H, R, H)
-            pyhrf.verbose(3, 'sigmaH = ' + str(sigmaH))
+            logger.info('sigmaH = %s', str(sigmaH))
 
         # PRF: Sigma_g
         if estimateSigmaG:
-            pyhrf.verbose(3, "M sigma_G step ...")
+            logger.info("M sigma_G step ...")
             if gamma_g > 0:
                 sigmaG = vt.maximization_sigma_prior(D, Sigma_G, R, G,
                                                       gamma_g)
             else:
                 sigmaG = vt.maximization_sigma(D, Sigma_G, R, G)
-            pyhrf.verbose(3, 'sigmaG = ' + str(sigmaG))
+            logger.info('sigmaG = %s',  str(sigmaG))
 
         # (mu_a,sigma_a)
         if estimateMP:
-            pyhrf.verbose(3, "M (mu_a,sigma_a) step ...")
+            logger.info("M (mu_a,sigma_a) step ...")
             mu_Ma, sigma_Ma = vt.maximization_mu_sigma(mu_Ma, sigma_Ma, q_Z,
                                                        m_A, K, M, Sigma_A)
             # (mu_c,sigma_c)
-            pyhrf.verbose(3, "M (mu_c,sigma_c) step ...")
+            logger.info("M (mu_c,sigma_c) step ...")
             mu_Mc, sigma_Mc = vt.maximization_mu_sigma(mu_Mc, sigma_Mc, q_Z,
                                                      m_A, K, M, Sigma_A)
 
@@ -330,19 +330,19 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # Beta
         if estimateBeta:
-            pyhrf.verbose(3, "estimating beta")
+            logger.info("estimating beta")
             for m in xrange(0, M):
                 Beta[m] = UtilsC.maximization_beta(beta, \
                             q_Z[m, :, :].astype(np.float64),
                             Z_tilde[m, :, :].astype(np.float64), J, K,
                             neighboursIndexes.astype(np.int32), gamma,
                             maxNeighbours, MaxItGrad, gradientStep)
-            pyhrf.verbose(3, "End estimating beta")
-            pyhrf.verbose.printNdarray(3, Beta)
+            logger.info("End estimating beta")
+            logger.info(Beta)
 
         # Sigma noise
         if estimateNoise:
-            pyhrf.verbose(3, "M sigma noise step ...")
+            logger.info("M sigma noise step ...")
             UtilsC.maximization_sigma_noise(Gamma, PL, sigma_eps, Sigma_H,
                                             Y, m_A, H, Sigma_A,
                                             XX.astype(np.int32), J, D, M, N)
@@ -378,21 +378,19 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         sigma_Mc *= Norm ** 2
         sigma_Mc = np.sqrt(np.sqrt(sigma_Mc))
 
-    pyhrf.verbose(1, "Nb iterations to reach criterion: %d" % ni)
-    pyhrf.verbose(1, "Computational time = " + str(np.int(CompTime // 60)) + \
-                        " min " + str(np.int(CompTime % 60)) + " s")
+    logger.info("Nb iterations to reach criterion: %d",  ni)
+    logger.info("Computational time = %s min %s s", str(np.int(CompTime // 60)), str(np.int(CompTime % 60)))
 
     StimulusInducedSignal = vt.computeFit(H, m_A, X, J, N)
     SNR = 20 * np.log(np.linalg.norm(Y) / \
                np.linalg.norm(Y - StimulusInducedSignal - PL))
     SNR /= np.log(10.)
 
-    if pyhrf.verbose.verbosity > 1:
-        print 'mu_Ma:', mu_Ma
-        print 'sigma_Ma:', sigma_Ma
-        print "sigma_H = " + str(sigmaH)
-        print "Beta = " + str(Beta)
-        print 'SNR comp =', SNR
+    logger.info('mu_Ma: %f', mu_Ma)
+    logger.info('sigma_Ma: %f', sigma_Ma)
+    logger.info("sigma_H = %s" + str(sigmaH))
+    logger.info("Beta = %s" + str(Beta))
+    logger.info('SNR comp = %f', SNR)
 
     return ni, m_A, H, q_Z, sigma_eps, mu_Ma, sigma_Ma, Beta, L, PL, \
            cA[2:], cH[2:], cZ[2:], cAH[2:], cTime[2:], \
@@ -408,7 +406,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                            estimateC=True, estimateZ=True, estimateNoise=True,
                            estimateMP=True, estimateLA=True):
     """ Version modified by Lofti from Christine's version """
-    pyhrf.verbose(1, "EM for ASL!")
+    logger.info("EM for ASL!")
     np.random.seed(6537546)
 
     # Initialization
@@ -445,8 +443,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     # Noise initialization
     sigma_eps = np.ones(J)
     #Labels
-    pyhrf.verbose(3, "Labels are initialized by setting active probabilities \
-                        to ones ...")
+    logger.info("Labels are initialized by setting active probabilities "
+                "to ones ...")
     q_Z = np.zeros((M, K, J), dtype=np.float64)
     q_Z[:, 1, :] = 1
     q_Z1 = copy.deepcopy(q_Z)
@@ -545,17 +543,17 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     while ((ni < NitMin + 1) or ((Crit_AH > Thresh) and (Crit_CG > Thresh) \
             and (ni < NitMax))):
 
-        pyhrf.verbose(1, "-------- Iteration n° " + str(ni + 1) + " ---------")
+        logger.info("-------- Iteration n° " + str(ni + 1) + " ---------")
 
         #####################
         # EXPECTATION
         #####################
 
         # HRF H
-        pyhrf.verbose(3, "E H step ...")
+        logger.info("E H step ...")
         if estimateH:
-            pyhrf.verbose(3, "estimation")
-            #sigmaH = 0.0001            
+            logger.info("estimation")
+            #sigmaH = 0.0001
             print sigmaH
             Ht, Sigma_H = EM.expectation_H(Sigma_A, m_A, m_C, G, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
@@ -567,9 +565,9 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             print 'h_norm = ', h_norm
 
         # PRF G
-        pyhrf.verbose(3, "E G step ...")
+        logger.info("E G step ...")
         if estimateG:
-            pyhrf.verbose(3, "estimation")
+            logger.info("estimation")
             Gt, Sigma_G = EM.expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
                                            R, sigmaG)
@@ -581,18 +579,18 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             print 'g_norm = ', g_norm
 
         # A
-        pyhrf.verbose(3, "E A step ...")
+        logger.info("E A step ...")
         if estimateA:
-            pyhrf.verbose(3, "estimation")
+            logger.info("estimation")
             m_A, Sigma_A = EM.expectation_A(H, m_A, G, m_C, W, X, Gamma, q_Z,
                                             mu_Ma, sigma_Ma, D, J, M, K,
                                             y_tilde, Sigma_A, sigma_eps)
             print 'BRLS ERROR = ', EM.error(m_A, A)
 
         # C
-        pyhrf.verbose(3, "E C step ...")
+        logger.info("E C step ...")
         if estimateC:
-            pyhrf.verbose(3, "estimation")
+            logger.info("estimation")
             m_C, Sigma_C = EM.expectation_C(G, m_C, H, m_A, W, X, Gamma, q_Z,
                                             mu_Mc, sigma_Mc, D, J, M, K,
                                             y_tilde, Sigma_C, sigma_eps)
@@ -601,9 +599,9 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             print 'PRLS ERROR = ', EM.error(m_C, C)
 
         # Q labels
-        pyhrf.verbose(3, "E Z step ...")
+        logger.info("E Z step ...")
         if estimateZ:
-            pyhrf.verbose(3, "estimation")
+            logger.info("estimation")
             q_Z, Z_tilde = EM.expectation_Z(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
                                             Beta, Z_tilde, q_Z, graph, M, J, K)
@@ -642,18 +640,18 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # HRF: Sigma_h
         if estimateSigmaH:
-            pyhrf.verbose(3, "M sigma_H step ...")
+            logger.info("M sigma_H step ...")
             print gamma_h
             sigmaH = EM.maximization_sigma_prior(D, R, H, gamma_h)
-            pyhrf.verbose(3, 'sigmaH = ' + str(sigmaH))
+            logger.info('sigmaH = ' + str(sigmaH))
         # PRF: Sigma_g
         if estimateSigmaG:
-            pyhrf.verbose(3, "M sigma_G step ...")
+            logger.info("M sigma_G step ...")
             sigmaG = EM.maximization_sigma_prior(D, R, G, gamma_g)
-            pyhrf.verbose(3, 'sigmaG = ' + str(sigmaG))
+            logger.info('sigmaG = ' + str(sigmaG))
         # (mu,sigma)
         if estimateMP:
-            pyhrf.verbose(3, "M (mu,sigma) a and c step ...")
+            logger.info("M (mu,sigma) a and c step ...")
             Mu_Ma, sigma_Ma = EM.maximization_mu_sigma(mu_Ma, sigma_Ma,
                                                    q_Z, m_A, K, M, Sigma_A)
             mu_Mc, sigma_Mc = EM.maximization_mu_sigma(mu_Mc, sigma_Mc,
@@ -673,18 +671,18 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # Beta
         if estimateBeta:
-            pyhrf.verbose(3, "estimating beta")
+            logger.info("estimating beta")
             for m in xrange(0, M):
                 Beta[m] = EM.maximization_beta(Beta[m], q_Z, Z_tilde,
                                         J, K, m, graph, gamma,
                                         neighboursIndexes, maxNeighbours)
             print Beta
-            pyhrf.verbose(3, "End estimating beta")
-            pyhrf.verbose.printNdarray(3, Beta)
+            logger.info("End estimating beta")
+            logger.info(Beta)
 
         # Sigma noise
         if estimateNoise:
-            pyhrf.verbose(3, "M sigma noise step ...")
+            logger.info("M sigma noise step ...")
             sigma_eps = EM.maximization_sigma_noise(Y, X, m_A, Sigma_A, H,
                           m_C, Sigma_C, G, W, M, N, J, y_tilde, sigma_eps)
             print 'NOISE ERROR = ', EM.error(sigma_eps,
@@ -755,23 +753,22 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         plt.plot(h_norm_array)
         plt.savefig('./HRF_Norm_ASL.png')"""
 
-    pyhrf.verbose(1, "Nb iterations to reach criterion: %d" % ni)
-    pyhrf.verbose(1, "Computational time = " + str(np.int(CompTime // 60)) + \
-                        " min " + str(np.int(CompTime % 60)) + " s")
+    logger.info("Nb iterations to reach criterion: %d",  ni)
+    logger.info("Computational time = %s min %s s",
+                str(np.int(CompTime // 60)), str(np.int(CompTime % 60)))
 
     StimulusInducedSignal = EM.computeFit(H, m_A, G, m_C, W, X, J, N)
     SNR = 20 * (np.log(np.linalg.norm(Y) / \
                 np.linalg.norm(Y - StimulusInducedSignal - PL))) / np.log(10.)
 
-    if pyhrf.verbose.verbosity > 1:
-        print 'mu_Ma:', mu_Ma
-        print 'sigma_Ma:', sigma_Ma
-        print "sigma_H = " + str(sigmaH)
-        print 'mu_Mc:', mu_Mc
-        print 'sigma_Mc:', sigma_Mc
-        print "sigma_G = " + str(sigmaG)
-        print "Beta = " + str(Beta)
-        print 'SNR comp =', SNR
+    logger.info('mu_Ma: %f', mu_Ma)
+    logger.info('sigma_Ma: %f', sigma_Ma)
+    logger.info("sigma_H = %s" + str(sigmaH))
+    logger.info('mu_Mc: %f', mu_Mc)
+    logger.info('sigma_Mc: %f', sigma_Mc)
+    logger.info("sigma_G = %s" + str(sigmaG))
+    logger.info("Beta = %s" + str(Beta))
+    logger.info('SNR comp = %f', SNR)
 
     return ni, m_A, H, m_C, G, q_Z, sigma_eps, cZ[2:],\
            cTime, cTimeMean, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \

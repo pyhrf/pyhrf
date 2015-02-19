@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
+
 import unittest
 import os
-
 import tempfile
 import shutil
 import time
+import logging
+
+from pprint import pformat
 
 import numpy as np
 import numpy.testing as npt
 
+import pyhrf.tools as mtools
+import pyhrf
+
 from pyhrf.tools import (diagBlock, get_2Dtable_string, do_if_nonexistent_file,
                          peelVolume3D, cartesian, cached_eval, Pipeline,
                          resampleToGrid, set_leaf, get_leaf, tree_rearrange)
-import pyhrf.tools as mtools
-from pyhrf._verbose import dictToString
-import pyhrf
 
 
 class GeometryTest(unittest.TestCase):
@@ -44,10 +47,6 @@ class CropTest(unittest.TestCase):
     def testBasic(self):
         a = np.zeros((4, 4))
         a[1:3, 1:3] = 1
-##        print 'a :'
-##        print a
-##        print 'cropped a:'
-##        print cropArray(a)
 
 
 class MiscTest(unittest.TestCase):
@@ -104,20 +103,10 @@ class PeelVolumeTest(unittest.TestCase):
         peeledA = peelVolume3D(a)
         correctPeeling = np.zeros_like(a)
         correctPeeling[1:-1, 1:-1, 1:-1] = 1
-##        print "peeledA:"
-##        print peeledA
-##        print "correctPeeling:"
-##        print correctPeeling
         assert (peeledA == correctPeeling).all()
 
         m = np.zeros((6, 6, 6), dtype=int)
         m[1:-1, 1:-1, 1:-1] = 1
-        #m[3,3,3] = 0
-##        print 'm:'
-##        print m
-#        peeledM = peelVolume3D(m)
-##        print 'peeledM:'
-##        print peeledM
 
 
 def foo(a, b, c=1, d=2):
@@ -189,16 +178,12 @@ class DictToStringTest(unittest.TestCase):
              600: 143,
              }
 
-##        print dictToString(d)
-
     def testOnHierachicDict(self):
 
         d = {'k1': 'v1',
              'd2': {'d2k1': 0, 1: 190, 'd2-3': {'plop': 'plip', 435: 'fr'}},
              'k3': 1098,
              }
-
-##        print dictToString(d)
 
     def testOnNumpyArray(self):
 
@@ -209,12 +194,12 @@ class DictToStringTest(unittest.TestCase):
              'k3': 1098,
              }
 
-        sd1 = dictToString(d)
-        #print sd1
-        naf = {'precision': 2, 'max_line_width': 100}
-        sd2 = dictToString(d, numpyArrayFormat=naf)
-##        print sd2
-        #print np.array2string(na,**naf)
+        sd1 = pformat(d)
+        original = np.get_printoptions()
+        naf = {'precision': 2, 'linewidth': 100}
+        np.set_printoptions(**naf)
+        sd2 = pformat(d)
+        np.set_printoptions(**original)
 
     def testOnSpmMat(self):
         spmFile = '/export/TMP/thomas/Data/Localizer/bru2698/functional/fMRI/'\
@@ -222,7 +207,6 @@ class DictToStringTest(unittest.TestCase):
         if os.path.exists(spmFile):
             from scipy.io.mio import loadmat
             spm = loadmat(spmFile)
-##            print dictToString(spm, exclude=['private'])
 
 
 class TableStringTest(unittest.TestCase):
@@ -239,11 +223,9 @@ class TableStringTest(unittest.TestCase):
 
     def test1Darray(self):
         s = get_2Dtable_string(self.data1D, self.rownames, ['Value'])
-        #print s
 
     def test2Darray(self):
         s = get_2Dtable_string(self.data2D, self.rownames, self.colnames)
-        #print s
 
     def test3Darray(self):
         s = get_2Dtable_string(self.data3D, self.rownames, self.colnames)
@@ -272,73 +254,32 @@ class DiagBlockTest(unittest.TestCase):
 
         m1 = np.arange(2 * 3).reshape(2, 3)
         m2 = np.arange(2 * 4).reshape(2, 4)
-
-##        print 'm1 :'
-##        print m1
-##        print 'm2 :'
-##        print m2
         bm = diagBlock([m1, m2])
-
-##        print 'bm:'
-##        print bm
 
     def testFrom1D(self):
 
         m1 = np.arange(2 * 3)
-
-##        print 'm1 :'
-##        print m1
         bm = diagBlock([m1])
-
-##        print 'bm:'
-##        print bm
 
     def testFromNdarray(self):
         m1 = np.arange(2 * 3)
-
-##        print 'm1 :'
-##        print m1
         bm = diagBlock([m1])
-
-##        print 'bm:'
-##        print bm
 
     def testRepFrom1D(self):
 
         m1 = np.arange(2 * 3)
-
-##        print 'm1 :'
-##        print m1
         bm = diagBlock(m1, 5)
 
-##        print 'bm:'
-##        print bm
-
     def testRepFrom2D(self):
-
         m1 = np.arange(2 * 3).reshape(2, 3)
-
-##        print 'm1 :'
-##        print m1
         bm = diagBlock(m1, 2)
-
-##        print 'bm:'
-##        print bm
 
     def testRepFromBlocks(self):
 
         m1 = np.arange(2 * 3).reshape(2, 3)
         m2 = np.arange(2 * 4).reshape(2, 4)
 
-##        print 'm1 :'
-##        print m1
-##        print 'm2 :'
-##        print m2
-
         bm = diagBlock([m1, m2], 2)
-
-##        print 'bm:'
-##        print bm
 
 
 class ResampleTest(unittest.TestCase):
@@ -348,30 +289,24 @@ class ResampleTest(unittest.TestCase):
         import numpy
         size = 10
 
-        x = numpy.concatenate(([0.], numpy.sort(numpy.random.rand(size)), [1.]))
-        y = numpy.concatenate(([0.], numpy.sort(numpy.random.rand(size)), [1.]))
+        x = numpy.concatenate(
+            ([0.], numpy.sort(numpy.random.rand(size)), [1.]))
+        y = numpy.concatenate(
+            ([0.], numpy.sort(numpy.random.rand(size)), [1.]))
         grid = numpy.arange(0, 1., 0.01)
         ny = resampleToGrid(x, y, grid)
-
-        #import matplotlib.pyplot as plt
-        #plt.plot(x,y,'o-')
-        #plt.plot(grid,ny,'x-')
-        #plt.show()
 
     def testLargerTargetGrid(self):
 
         import numpy
         size = 10
 
-        x = numpy.concatenate(([0.], numpy.sort(numpy.random.rand(size)), [1.]))
-        y = numpy.concatenate(([0.], numpy.sort(numpy.random.rand(size)), [1.]))
+        x = numpy.concatenate(
+            ([0.], numpy.sort(numpy.random.rand(size)), [1.]))
+        y = numpy.concatenate(
+            ([0.], numpy.sort(numpy.random.rand(size)), [1.]))
         grid = numpy.arange(-0.2, 1.1, 0.01)
         ny = resampleToGrid(x, y, grid)
-
-##         import matplotlib.pyplot as plt
-##         plt.plot(x,y,'o-')
-##         plt.plot(grid,ny,'x-')
-##         plt.show()
 
 
 class treeToolsTest(unittest.TestCase):
@@ -379,7 +314,6 @@ class treeToolsTest(unittest.TestCase):
     def test_set_leaf(self):
         d = {}
         set_leaf(d, ['b1', 'b2', 'b3'], 'theLeaf')
-#        print d
 
     def test_get_leaf(self):
         d = {}
@@ -394,10 +328,6 @@ class treeToolsTest(unittest.TestCase):
         set_leaf(d, ['b1', 'b2.1', 'b3.1'], 'theLeaf1')
         set_leaf(d, ['b1', 'b2.1', 'b3.2'], 'theLeaf2')
         set_leaf(d, ['b1', 'b2.2', 'b3.3'], 'theLeaf3')
-#         print 'd:'
-#         print d
-#         for b in treeBranches(d):
-#             print 'b', b
 
     def test_stack_trees(self):
         d1 = {}
@@ -409,8 +339,6 @@ class treeToolsTest(unittest.TestCase):
         set_leaf(d2, ['b1', 'b2.1', 'b3.1'], 'd2Leaf1')
         set_leaf(d2, ['b1', 'b2.1', 'b3.2'], 'd2Leaf2')
         set_leaf(d2, ['b1', 'b2.2', 'b3.3'], 'd2Leaf3')
-
-#        print stack_trees([d1,d2])
 
     def test_rearrange(self):
 
@@ -424,31 +352,15 @@ class treeToolsTest(unittest.TestCase):
 
         nblabels = ['outname', 'p1', 'p2']
         tree_rearrange(d1, blabels, nblabels)
-        #from pprint import pprint
-        #pprint(d1)
-        #print ''
-        #print '->'
-        #print ''
-        #pprint(tree_rearrange(d1, blabels, nblabels))
-
-
-# class VerboseTest(unittest.TestCase):
-
-#     def test_new_line(self):
-#         pyhrf.verbose.set_verbosity(1)
-#         pyhrf.verbose(1,'some text to be continued ...', new_line=False)
-#         pyhrf.verbose(1,'cont\'d!')
-#         pyhrf.verbose(1,'Some other text')
-#         pyhrf.verbose.set_verbosity(0)
 
 
 def foo_func(a, b):
-    return a+b
+    return a + b
 
 
 def slow_func(a, b):
     time.sleep(1)
-    return a+b
+    return a + b
 
 
 class CachedEvalTest(unittest.TestCase):
@@ -465,29 +377,22 @@ class CachedEvalTest(unittest.TestCase):
         cached_eval(foo_func, {'a': 4, 'b': 6}, path=self.cache_dir)
 
     def test_slow_func(self):
-        #print '1'
         t0 = time.time()
         cached_eval(slow_func, {'a': 4, 'b': 6}, path=self.cache_dir)
         delta = time.time() - t0
-        #print delta
-        #print '2'
         t0 = time.time()
         cached_eval(slow_func, {'a': 4, 'b': 6}, path=self.cache_dir)
         delta = time.time() - t0
-        #print delta
         assert delta < .1
-        #print '3'
         t0 = time.time()
         cached_eval(slow_func, {'a': 4, 'b': 8}, path=self.cache_dir)
         delta = time.time() - t0
-        #print delta
 
     def test_code_digest(self):
         t0 = time.time()
         cached_eval(slow_func, {'a': 4, 'b': 8}, digest_code=True,
                     path=self.cache_dir)
         delta = time.time() - t0
-        #print 'took ', delta, 'sec'
 
     def tearDown(self):
         shutil.rmtree(self.cache_dir)
@@ -506,11 +411,11 @@ def computeF(g, e):
 
 
 def computeD(f, b, c):
-    return (f+b) * c
+    return (f + b) * c
 
 
 def computeJ(i, l):
-    return i**3 + l
+    return i ** 3 + l
 
 
 def computeK(j):
@@ -530,7 +435,7 @@ def foo_a(c=1):
 
 
 def foo_multiple_returns(e):
-    return e, e/2
+    return e, e / 2
 
 
 class PipelineTest(unittest.TestCase):
@@ -540,8 +445,6 @@ class PipelineTest(unittest.TestCase):
         tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.cache_dir = tmpDir
-
-        #pyhrf.verbose.set_verbosity(0)
 
         # Be sure to put scalars in arrays so that they can be referenced
         self.a = np.array([3])
@@ -584,13 +487,11 @@ class PipelineTest(unittest.TestCase):
     def testGoodDepTreeInit(self):
 
         data = Pipeline(self.depTree)
-        # print 'data.values:',
-        # print data.values
-        assert (data.get_value('b') == self.a+self.e).all()
-        assert (data.get_value('c') == self.a**2).all()
+        assert (data.get_value('b') == self.a + self.e).all()
+        assert (data.get_value('c') == self.a ** 2).all()
         assert (data.get_value('d') ==
-                (self.g/self.e + self.a + self.e) * self.a**2).all()
-        assert (data.get_value('f') == self.g/self.e).all()
+                (self.g / self.e + self.a + self.e) * self.a ** 2).all()
+        assert (data.get_value('f') == self.g / self.e).all()
 
     def testBadDepTreeInit(self):
 
@@ -598,14 +499,11 @@ class PipelineTest(unittest.TestCase):
             data = Pipeline(self.badDepTree)
         except Exception:
             pass
-            #print 'Exception normally raised :'+str(e)
         else:
             raise Exception()
 
     def testRepr(self):
         data = Pipeline(self.depTree)
-        #print 'printing all deps :'
-        #print data.reprAllDeps()
 
     def test_func_default_args(self):
         data = Pipeline({'a': foo_a,
@@ -621,31 +519,24 @@ class PipelineTest(unittest.TestCase):
                 'a': 5,
                 'b': 6,
                 'c': mem.cache(slow_func),
-                }
+            }
             data = Pipeline(dep_tree)
             t0 = time.time()
             data.resolve()
             delta = time.time() - t0
-            #print 'delta 1:', delta
 
             t0 = time.time()
             data.resolve()
             delta = time.time() - t0
             assert delta < .1
-            #print 'delta 2:', delta
         except:
             pass
 
     def test_multiple_output_values(self):
 
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
         data = Pipeline({'e': foo_a,
                          'b': foo_default_arg,
                          ('a', 'd'): foo_multiple_returns})
         data.resolve()
-
-        #data.save_graph_plot('./g.png')
-
-        # if data['e'] != :
-        #     raise Exception('Wrong value for quantity "e". Got %s, expected %s'\
-        #                     %(str(data[e]), str())

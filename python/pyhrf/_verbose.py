@@ -1,11 +1,16 @@
-
-
 # -*- coding: utf-8 -*-
+
+"""WARNING: DEPRECATED!
+This module implements a logging facility."""
+
 import sys
 import inspect
 import string
 import types
 import numpy as _np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # VERB_NONE = 0
@@ -17,115 +22,112 @@ import numpy as _np
 # VERB_DEBUG = 6
 
 verboseLevels = {
-    0 : 'no verbose',
-    1 : 'minimal verbose',
-    2 : 'main steps',
-    3 : 'main function calls',
-    4 : 'main variable values',
-    5 : 'detailled variable values',
-    6 : 'debug (everything)',
-    }
+    0: 'no verbose',
+    1: 'minimal verbose',
+    2: 'main steps',
+    3: 'main function calls',
+    4: 'main variable values',
+    5: 'detailled variable values',
+    6: 'debug (everything)',
+}
 
-debug = False
 
-def unPrintable(o):
-    return inspect.ismethod(o) or inspect.ismethoddescriptor(o) or \
-           type(o) == types.BuiltinFunctionType or type(o) == types.MethodType \
-           or type(o) == types.FunctionType or type(o) == _np.ufunc \
-           or type(o) == type
+def unprintable(obj):
+    """Determine if object can be printed."""
+    return inspect.ismethod(obj) or inspect.ismethoddescriptor(obj) or \
+        isinstance(obj, (types.BuiltinFunctionType, types.MethodType,
+                         types.FunctionType, _np.ufunc, type))
 
-def dictToString(d, prefix='',
-                 numpyArrayFormat={'precision':3,'max_line_width':100},
-                 visited=None, exclude=None):
-    if debug:
-        print 'dictToString recieved :', d
-        print '    ->:', type(d)
-        print ' unPrintable ?:', unPrintable(d)
-    if visited == None:
+
+def dict_to_string(dikt, prefix='', numpy_array_format=None,
+                   visited=None, exclude=None):
+    """Convert dictionnary to displayable string."""
+    if numpy_array_format is None:
+        numpy_array_format = {'precision': 3, 'max_line_width': 100}
+    logger.debug('dict_to_string received: %s\n'
+                 '    ->: %s\n'
+                 'unprintable: %s', dikt, type(dikt), unprintable(dikt))
+    if visited is None:
         visited = []
-    if exclude == None:
+    if exclude is None:
         exclude = []
-    
-    if (id(d) in visited) and not (type(d)==int or type(d)==str \
-                                       or type(d)==float or _np.isscalar(d)):
-        if debug: print 'already seen :', d, type(d)
-        return prefix+' ### \n'
 
-    visited += [id(d)]
+    if (id(dikt) in visited) and not (isinstance(dikt, (int, str, float)) or
+                                      _np.isscalar(dikt)):
+        logger.debug('Already seen: %s %s', dikt, type(dikt))
+        return prefix + ' ### \n'
+
+    visited += [id(dikt)]
     space = '  '
-    if type(d) == str or type(d) == unicode or _np.isscalar(d):
-        return prefix+repr(d)+'\n'
-    elif type(d) == dict:
-        sOut = prefix+'{\n'
-        for k,v in d.iteritems():
-            if type(k) == dict :
-                sOut += '\n'
-                sOut += dictToString(k, prefix=prefix+space,
-                                     numpyArrayFormat=numpyArrayFormat,
-                                     visited=visited, exclude=exclude)
+    if isinstance(dikt, (str, unicode)) or _np.isscalar(dikt):
+        return prefix + repr(dikt) + '\n'
+    elif isinstance(dikt, dict):
+        sout = prefix + '{\n'
+        for k, v in dikt.iteritems():
+            if isinstance(k, dict):
+                sout += '\n'
+                sout += dict_to_string(k, prefix=prefix + space,
+                                       numpy_array_format=numpy_array_format,
+                                       visited=visited, exclude=exclude)
             else:
-                sOut += prefix+str(k)
-                if debug: print 'k:', k
-            sOut += ' : '+'\n'
-            sOut += dictToString(v, prefix=prefix+space,
-                                 numpyArrayFormat=numpyArrayFormat,
-                                 visited=visited, exclude=exclude)
-            if sOut[-1] != '\n': sOut += '\n'
-        sOut+= prefix+'}'
-        if sOut[-1] != '\n': sOut += '\n'
-    elif type(d) == set:
-        sOut = prefix+str(d)
-    elif type(d) == list or \
-         (type(d) == _np.ndarray and d.dtype == _np.object) :
-        sOut = prefix+'[\n'
-        for e in d:
-            sOut += dictToString(e, prefix=prefix+space,
-                                 numpyArrayFormat=numpyArrayFormat,
-                                 visited=visited, exclude=exclude)
-            sOut += prefix+',\n'
-        sOut+= prefix+']\n'
-    elif type(d) == tuple :
-        sOut = prefix+'(\n'
-        for e in d:
-            sOut += dictToString(e, prefix=prefix+space,
-                                 numpyArrayFormat=numpyArrayFormat,
-                                 visited=visited, exclude=exclude)
-            sOut += prefix+',\n'
-        sOut+= prefix+')\n'
-    elif type(d) == _np.ndarray:
-        if d.size < 1000:
-            sv = _np.array2string(d, **numpyArrayFormat)
-            sOut = string.join([prefix+s for s in sv.split('\n')],'\n')
-            #print '%% sOut[-1] :', sOut[-1]
+                sout += prefix + str(k)
+                logger.debug('k: %s', k)
+            sout += ' : ' + '\n'
+            sout += dict_to_string(v, prefix=prefix + space,
+                                   numpy_array_format=numpy_array_format,
+                                   visited=visited, exclude=exclude)
+            if sout[-1] != '\n':
+                sout += '\n'
+        sout += prefix + '}'
+        if sout[-1] != '\n':
+            sout += '\n'
+    elif isinstance(dikt, set):
+        sout = prefix + str(dikt)
+    elif isinstance(dikt, list) or \
+            (isinstance(dikt, _np.ndarray) and dikt.dtype == _np.object):
+        sout = prefix + '[\n'
+        for e in dikt:
+            sout += dict_to_string(e, prefix=prefix + space,
+                                   numpy_array_format=numpy_array_format,
+                                   visited=visited, exclude=exclude)
+            sout += prefix + ',\n'
+        sout += prefix + ']\n'
+    elif isinstance(dikt, tuple):
+        sout = prefix + '(\n'
+        for e in dikt:
+            sout += dict_to_string(e, prefix=prefix + space,
+                                   numpy_array_format=numpy_array_format,
+                                   visited=visited, exclude=exclude)
+            sout += prefix + ',\n'
+        sout += prefix + ')\n'
+    elif isinstance(dikt, _np.ndarray):
+        if dikt.size < 1000:
+            sva = _np.array2string(dikt, **numpy_array_format)
+            sout = string.join([prefix + s for s in sva.split('\n')], '\n')
         else:
-            sOut = prefix + '%s -- %1.3g(%1.3g)[%1.3g;%1.3g]' \
-                   %(str(d.shape), d.mean(), d.std(), d.min(), d.max())
-        if not sOut.endswith('\n') : sOut += '\n'
-    else: #type(d) == types.InstanceType :
-        #print 'no direct policy for ', str(d)
-        sOut = ''
-        for attr in dir(d):
-            attrObj = getattr(d,attr)
-            if attr[0] != '_' and not unPrintable(attrObj) and \
-                   attr not in exclude:
-                
-                if debug: print 'attr :', attr
-                if debug: print ' -> ', type(attrObj)
-                sOut += prefix+'.'+attr+':'+'\n'
-                sOut += dictToString(getattr(d,attr), prefix=prefix+space,
-                                     numpyArrayFormat=numpyArrayFormat,
-                                     visited=visited, exclude=exclude)
-        #sOut += '\n'
-    #else:
-    #    print 'unknown type for printing:', type(d)
-    #    sOut = str(d)
+            sout = prefix + '%s -- %1.3g(%1.3g)[%1.3g;%1.3g]' \
+                % (str(dikt.shape), dikt.mean(), dikt.std(),
+                   dikt.min(), dikt.max())
+        if not sout.endswith('\n'):
+            sout += '\n'
+    else:
+        sout = ''
+        for attr in dir(dikt):
+            attrobj = getattr(dikt, attr)
+            if attr[0] != '_' and not unprintable(attrobj) and \
+                    attr not in exclude:
 
-    return sOut
+                logger.debug('attr: %s\n'
+                             '    -> %s', attr, type(attr))
+                sout += prefix + '.' + attr + ':' + '\n'
+                sout += dict_to_string(getattr(dikt, attr), prefix=prefix + space,
+                                       numpy_array_format=numpy_array_format,
+                                       visited=visited, exclude=exclude)
+    return sout
 
 
-
-class Verbose:
-
+class Verbose(object):
+    """Do not use. Implement a deprecated logging class. Use logging module."""
     default_state = 0
     line_to_be_continued = 1
 
@@ -134,14 +136,16 @@ class Verbose:
         self.log = log
         self.state = self.default_state
 
-    def set_log(self,log):
+    def set_log(self, log):
+        """Set the log file/stream to use."""
         self.log = log
 
     def set_verbosity(self, verbosity):
+        """Define verbosity level."""
         self.verbosity = verbosity
-    
+
     def __call__(self, verbosity, msg, new_line=True):
-        if self.verbosity >= verbosity :
+        if self.verbosity >= verbosity:
             if isinstance(self.log, file):
                 for line in msg.split('\n'):
                     if self.state == self.default_state:
@@ -162,17 +166,19 @@ class Verbose:
                     self.log.flush()
             else:
                 for line in msg.split('\n'):
-                    s = ('*' * verbosity) + ' ' + line
-                    self.log.write(s)
+                    slog = ('*' * verbosity) + ' ' + line
+                    self.log.write(slog)
 
-    def printNdarray(self, verbosity, a):
-        if self.verbosity >= verbosity :
-            if type(a) == _np.ndarray:
-                self.printDict(verbosity, a),
+    def print_ndarray(self, verbosity, ndarray):
+        """Displays a representation of an ndarray instance."""
+        if self.verbosity >= verbosity:
+            if isinstance(ndarray, _np.ndarray):
+                self.print_dict(verbosity, ndarray),
             else:
-                self.__call__(verbosity, repr(a))
+                self.__call__(verbosity, repr(ndarray))
 
-    def printDict(self, verbosity, d, subprefix='', exclude=None):
-        if self.verbosity >= verbosity :
-            print dictToString(d, prefix='*' * verbosity+' '+subprefix,
-                               exclude=exclude),
+    def print_dict(self, verbosity, dikt, subprefix='', exclude=None):
+        """Displays a representation of a dictionnary."""
+        if self.verbosity >= verbosity:
+            print dict_to_string(dikt, prefix='*' * verbosity + ' ' + subprefix,
+                                 exclude=exclude),

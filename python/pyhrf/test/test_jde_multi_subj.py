@@ -1,22 +1,29 @@
 # -*- coding: utf-8 -*-
+
 import os
 import os.path as op
 import unittest
-import numpy as np
-from pyhrf.jde.jde_multi_sujets import BOLDGibbs_Multi_SubjSampler as BMSS
-from pyhrf.jde.jde_multi_sujets import simulate_single_subject
-from pyhrf.jde import jde_multi_sujets as jms
-
-import pyhrf
-from pyhrf.ui.jde import JDEMCMCAnalyser
-from pyhrf.ui.treatment import FMRITreatment
 import shutil
+import logging
 
 from copy import deepcopy
 
+import numpy as np
+
+import pyhrf
 import pyhrf.boldsynth.scenarios as sim
+
+from pyhrf.jde.jde_multi_sujets import BOLDGibbs_Multi_SubjSampler as BMSS
+from pyhrf.jde.jde_multi_sujets import simulate_single_subject
+from pyhrf.jde import jde_multi_sujets as jms
+from pyhrf.ui.jde import JDEMCMCAnalyser
+from pyhrf.ui.treatment import FMRITreatment
 from pyhrf import Condition
 from pyhrf.core import FmriData, FmriGroupData
+
+
+logger = logging.getLogger(__name__)
+
 
 def simulate_subjects(output_dir, snr_scenario='high_snr',
                       spatial_size='tiny', hrf_group=None, nb_subjects=15,
@@ -27,53 +34,52 @@ def simulate_subjects(output_dir, snr_scenario='high_snr',
     drift_coeff_var = 1.
     drift_amplitude = 10.
 
-
     lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
 
-    if snr_scenario == 'low_snr': #low snr
+    if snr_scenario == 'low_snr':  # low snr
         vars_noise = np.zeros(nb_subjects) + 1.5
         conditions = [
             Condition(name='audio', m_act=3., v_act=.3, v_inact=.3,
-                        label_map=lmap1),
+                      label_map=lmap1),
             Condition(name='video', m_act=2.5, v_act=.3, v_inact=.3,
-                        label_map=lmap2),
+                      label_map=lmap2),
             Condition(name='damier', m_act=2, v_act=.3, v_inact=.3,
-                        label_map=lmap3),
-            ]
-    else: #high snr
+                      label_map=lmap3),
+        ]
+    else:  # high snr
 
         vars_noise = np.zeros(nb_subjects) + .2
         conditions = [
             Condition(name='audio', m_act=13., v_act=.2, v_inact=.1,
-                        label_map=lmap1),
-            #Condition(name='video', m_act=11.5, v_act=.2, v_inact=.1,
-                        #label_map=lmap2),
-            #Condition(name='damier', m_act=10, v_act=.2, v_inact=.1,
-                        #label_map=lmap3),
-            ]
+                      label_map=lmap1),
+            # Condition(name='video', m_act=11.5, v_act=.2, v_inact=.1,
+            # label_map=lmap2),
+            # Condition(name='damier', m_act=10, v_act=.2, v_inact=.1,
+            # label_map=lmap3),
+        ]
     vars_hrfs = np.zeros(nb_subjects) + vhrf
-
 
     # Common variable across subjects:
     labels_vol = sim.create_labels_vol(conditions)
-    labels     = sim.flatten_labels_vol(labels_vol)
+    labels = sim.flatten_labels_vol(labels_vol)
 
     # use smooth multivariate gaussian prior:
-    if hrf_group is None:# simulate according to gaussian prior
+    if hrf_group is None:  # simulate according to gaussian prior
         var_hrf_group = 0.1
         hrf_group = sim.create_gsmooth_hrf(dt=0.6, hrf_var=var_hrf_group,
                                            normalize_hrf=False)
-        n = (hrf_group**2).sum()**.5
+        n = (hrf_group ** 2).sum() ** .5
         hrf_group /= n
-        var_hrf_group /= n**2
+        var_hrf_group /= n ** 2
 
     simu_subjects = []
     simus = []
 
     for isubj in xrange(nb_subjects):
         if output_dir is not None:
-            out_dir = op.join(output_dir, 'subject_%d' %isubj)
-            if not op.exists(out_dir): os.makedirs(out_dir)
+            out_dir = op.join(output_dir, 'subject_%d' % isubj)
+            if not op.exists(out_dir):
+                os.makedirs(out_dir)
         else:
             out_dir = None
         s = simulate_single_subject(out_dir, conditions, vars_hrfs[isubj],
@@ -82,7 +88,7 @@ def simulate_subjects(output_dir, snr_scenario='high_snr',
                                     drift_amplitude, hrf_group, dt=0.6, dsf=4,
                                     var_hrf_group=vhrf_group)
         if 0:
-            print 'simu subj %d:' %isubj
+            print 'simu subj %d:' % isubj
             print 'vhs:', s['var_subject_hrf']
             print 'hg:', s['hrf_group']
             print 'vhg:', s['var_hrf_group']
@@ -91,7 +97,6 @@ def simulate_subjects(output_dir, snr_scenario='high_snr',
         simu_subjects.append(FmriData.from_simulation_dict(s))
     simu_subjects = FmriGroupData(simu_subjects)
 
-
     return simu_subjects
 
 
@@ -99,15 +104,12 @@ class MultiSubjTest(unittest.TestCase):
 
     def setUp(self):
 
-        pyhrf.verbose.set_verbosity(0)
+        # pyhrf.verbose.set_verbosity(0)
+        pyhrf.logger.setLevel(logging.WARNING)
 
         np.random.seed(8652761)
 
-        #self.simu_dir = './simulation'
-        #if not op.exists(self.simu_dir): os.makedirs(self.simu_dir)
-
         self.simu_dir = pyhrf.get_tmp_path()
-        
 
         # Parameters to setup a Sampler where all samplers are OFF and
         # set to their true values.
@@ -115,57 +117,55 @@ class MultiSubjTest(unittest.TestCase):
         # which will turn on specific samplers to test.
 
         self.sampler_params_for_single_test = {
-            'nb_iterations' : 40,
-            'smpl_hist_pace' : -1,
-            'obs_hist_pace' : -1,
+            'nb_iterations': 40,
+            'smpl_hist_pace': -1,
+            'obs_hist_pace': -1,
             # HRF by subject
-            'hrf_subj' :  jms.HRF_Sampler(do_sampling=False,
-                                          normalise=1.,
-                                          use_true_value=True,
-                                          zero_contraint=False,
-                                          prior_type='singleHRF'),
+            'hrf_subj': jms.HRF_Sampler(do_sampling=False,
+                                        normalise=1.,
+                                        use_true_value=True,
+                                        zero_contraint=False,
+                                        prior_type='singleHRF'),
 
             # HRF variance
-            'hrf_var_subj' : jms.HRFVarianceSubjectSampler(do_sampling=False,
-                                                           use_true_value=True),
+            'hrf_var_subj': jms.HRFVarianceSubjectSampler(do_sampling=False,
+                                                          use_true_value=True),
             # HRF group
-            'hrf_group' :  jms.HRF_Group_Sampler(do_sampling=False,
-                                                 normalise=1.,
-                                                 use_true_value=True,
-                                                 zero_contraint=False,
-                                                 prior_type='singleHRF'),
+            'hrf_group': jms.HRF_Group_Sampler(do_sampling=False,
+                                               normalise=1.,
+                                               use_true_value=True,
+                                               zero_contraint=False,
+                                               prior_type='singleHRF'),
             # HRF variance
-            'hrf_var_group' : jms.RHGroupSampler(do_sampling=False,
-                                                 use_true_value=True),
+            'hrf_var_group': jms.RHGroupSampler(do_sampling=False,
+                                                use_true_value=True),
 
             # neural response levels (stimulus-induced effects) by subject
-            'response_levels' : jms.NRLs_Sampler(do_sampling=False,
-                                                 use_true_value=True),
-            'labels' : jms.LabelSampler(do_sampling=False,
-                                        use_true_value=True),
+            'response_levels': jms.NRLs_Sampler(do_sampling=False,
+                                                use_true_value=True),
+            'labels': jms.LabelSampler(do_sampling=False,
+                                       use_true_value=True),
             # drift
-            'drift' : jms.Drift_MultiSubj_Sampler(do_sampling=False,
+            'drift': jms.Drift_MultiSubj_Sampler(do_sampling=False,
+                                                 use_true_value=True),
+            # drift variance
+            'drift_var': jms.ETASampler_MultiSubj(do_sampling=False,
                                                   use_true_value=True),
-            #drift variance
-            'drift_var' : jms.ETASampler_MultiSubj(do_sampling=False,
-                                                   use_true_value=True),
-            #noise variance
-            'noise_var' : \
-              jms.NoiseVariance_Drift_MultiSubj_Sampler(do_sampling=False,
-                                                        use_true_value=False),
-            #weights o fthe mixture
-            #parameters of the mixture
-            'mixt_params' : jms.MixtureParamsSampler(do_sampling=False,
-                                                              use_true_value=False),
+            # noise variance
+            'noise_var':
+            jms.NoiseVariance_Drift_MultiSubj_Sampler(do_sampling=False,
+                                                      use_true_value=False),
+            # weights o fthe mixture
+            # parameters of the mixture
+            'mixt_params': jms.MixtureParamsSampler(do_sampling=False,
+                                                    use_true_value=False),
             #'alpha_subj' : Alpha_hgroup_Sampler(dict_alpha_single),
             #'alpha_var_subj' : AlphaVar_Sampler(dict_alpha_var_single),
-            'check_final_value' : 'none', #print or raise
+            'check_final_value': 'none',  # print or raise
         }
-
 
     def tearDown(self):
         shutil.rmtree(self.simu_dir)
-
 
     def _test_specific_samplers(self, sampler_names, simu,
                                 nb_its=None, use_true_val=None,
@@ -179,9 +179,9 @@ class MultiSubjTest(unittest.TestCase):
         Test specific samplers.
         """
         if use_true_val is None:
-            use_true_val = dict( (n,False) for n in sampler_names )
+            use_true_val = dict((n, False) for n in sampler_names)
 
-        pyhrf.verbose(1, '_test_specific_samplers %s ...' %str(sampler_names))
+        logger.info('_test_specific_samplers %s ...', str(sampler_names))
 
         params = deepcopy(self.sampler_params_for_single_test)
 
@@ -211,7 +211,6 @@ class MultiSubjTest(unittest.TestCase):
                 params[var_name] = var_class(do_sampling=True,
                                              use_true_value=use_tval)
 
-
         if nb_its is not None:
             params['nb_iterations'] = nb_its
 
@@ -234,15 +233,12 @@ class MultiSubjTest(unittest.TestCase):
         treatment = FMRITreatment(fmri_data=simu, analyser=analyser,
                                   output_dir=output_dir)
 
-
         outputs = treatment.run()
-        #print 'out_dir:', output_dir
+        # print 'out_dir:', output_dir
         return outputs
-
 
     def test_quick(self):
         """ Test running of JDE multi subject (do not test result accuracy) """
         simu = simulate_subjects(self.simu_dir, nb_subjects=2)
         self._test_specific_samplers(['hrf_subj'], simu, nb_its=2,
                                      check_fv=None)
-

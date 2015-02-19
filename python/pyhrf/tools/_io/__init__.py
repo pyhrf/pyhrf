@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
-import spmio
-from _io import *
+import pyhrf.tools._io.spmio
+import pyhrf.tools._io._zip
+from pyhrf.tools._io._io import *
