@@ -13,13 +13,13 @@ import pyhrf
 from pyhrf.jde.samplerbase import GibbsSampler, GibbsSamplerVariable
 from pyhrf import xmlio
 from pyhrf.ndarray import xndarray, stack_cuboids
-from pyhrf.jde.models import WN_BiG_Drift_BOLDSamplerInput, GSDefaultCallbackHandler
+from pyhrf.jde.models import (WN_BiG_Drift_BOLDSamplerInput,
+                              GSDefaultCallbackHandler)
 from pyhrf.boldsynth.hrf import genGaussianSmoothHRF, getCanoHRF
 from pyhrf.boldsynth.scenarios import build_ctrl_tag_matrix
 from pyhrf.jde.intensivecalc import asl_compute_y_tilde
 from pyhrf.jde.intensivecalc import sample_potts
-# TODO: fix the following non existing import
-from pyhrf.sandbox.physio2 import PHY_PARAMS_FRISTON00
+from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00
 
 
 logger = logging.getLogger(__name__)
@@ -274,8 +274,7 @@ class ResponseSampler(GibbsSamplerVariable):
 
             if self.name == 'prf':
                 hrf_length = self.currentValue.shape[0] + 2.
-                #from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
-                from pyhrf.sandbox.physio2 import linear_rf_operator
+                from pyhrf.sandbox.physio import linear_rf_operator
                 self.omega_operator = linear_rf_operator(hrf_length,
                                                          self.phy_params, self.dt,
                                                          calculating_brf=False)
@@ -296,8 +295,7 @@ class ResponseSampler(GibbsSamplerVariable):
             self.finalValue = fv
             if self.name == 'prf':
                 hrf_length = self.currentValue.shape[0] + 6.
-                #from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
-                from pyhrf.sandbox.physio2 import linear_rf_operator
+                from pyhrf.sandbox.physio import linear_rf_operator
                 self.omega_operator = linear_rf_operator(hrf_length,
                                                          self.phy_params, self.dt,
                                                          calculating_brf=False)
@@ -525,8 +523,7 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
 
     def samplingWarmUp(self, variables):
 
-        #from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00 as phy_params
-        from pyhrf.sandbox.physio2 import linear_rf_operator
+        from pyhrf.sandbox.physio import linear_rf_operator
 
         hrf_length = self.currentValue.shape[0]
 

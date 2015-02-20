@@ -1,24 +1,4 @@
 [report]
 omit =
-    */site-packages/nipy/*
-    */site-packages/numpy/*
-    */site-packages/matplotlib/*
-    */site-packages/nibabel/*
-    */site-packages/joblib/*
-    */site-packages/sklearn/*
-    */site-packages/pygraph/*
-    */site-packages/sympy/*
-    */site-packages/scipy/*
-    */site-packages/dateutil/*
-    */site-packages/PIL/*
-    */site-packages/nose/*
-    */site-packages/munkres/*
-    */site-packages/Pillow/*
-    */site-packages/_markerlib/*
-    */site-packages/munkres.py
-    */site-packages/pkg_resources.py
-    */site-packages/six.py
-    */site-packages/pyparsing.py
-    */distutils/*
     */pyhrf/test/*
-    /usr/*
+    */pyhrf/validation/*
