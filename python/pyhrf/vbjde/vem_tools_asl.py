@@ -356,6 +356,29 @@ def expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
     return m_G, Sigma_G
 
 
+def expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
+                  sigma_epsilone, scale, R, sigmaG, OmegaH):
+    Y_bar_tilde = np.zeros((D), dtype=float)
+    S_c = scale * R / sigmaG
+    y_tildeG = y_tilde.copy()
+    for i in xrange(0, J):
+        Gamma_i = Gamma / max(sigma_epsilone[i], eps)
+        tmp = np.zeros((N, D), dtype=float)
+        for m, k in enumerate(X):                  # Loop over the M conditions
+            tmp += m_C[i, m] * np.dot(W, X[k])
+            y_tildeG[:, i] -= m_A[i, m] * np.dot(X[k], H)
+        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeG[:, i])
+        S_c += np.dot(np.dot(tmp.T, Gamma_i), tmp)
+        for m1, k1 in enumerate(X):                # Loop over the M conditions
+            for m2, k2 in enumerate(X):            # Loop over the M conditions
+                S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
+                                            X[k1].T, W.T), Gamma_i), W), X[k2])
+    Y_bar_tilde += np.dot(scale * R / sigmaG, OmegaH)
+    Sigma_G = np.linalg.inv(S_c)
+    m_G = np.dot(Sigma_G, Y_bar_tilde)
+    return m_G, Sigma_G
+    
+    
 def constraint_norm1(Ftilde, Sigma_F, positivity=False):
     """ Constrain with optimization strategy """
     import cvxpy as cvx
@@ -403,21 +426,21 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
         'F(end)==0'
         return F[-1]
     
-    if positivity:
+    if perfusion is not None:
         def ec0(F):
-            'F>=0'
-            return F
+            'F>=perfusion'
+            return F - [perfusion[0]] * (len(zeros_F))
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3], ieqcons=[ec0],
-                       bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
+        #               bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
         #               bounds=[(None, None)] * (len(zeros_F)))
-        #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+        y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
     else:
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3],
-                       bounds=[(None, None)] * (len(zeros_F)))
-        #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],
+        #               bounds=[(None, None)] * (len(zeros_F)))
+        y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
 
     #print y
     if 0:
@@ -452,50 +475,6 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
         plt.show()
         stop
     return y
-
-
-def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
-                  mu_Mc, Beta, p_q_t, p_Q, graph, M, J, K):
-    energy = np.zeros(K)
-    Gauss = energy.copy()
-    # Compute p_q_t
-    for i in xrange(0, J):
-        for m in xrange(0, M):
-            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
-                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
-            alpha /= alpha.mean()
-            p_q_neighb = sum(p_q_t[m, :, graph[i]], 0)
-            for k in xrange(0, K):
-                extern_field = alpha[k] \
-                            + max(np.log(normpdf(m_A[i, m], mu_Ma[m, k],
-                                         sigma_Ma[m, k]) + eps), -100)\
-                            + max(np.log(normpdf(m_C[i, m], mu_Mc[m, k],
-                                         sigma_Mc[m, k]) + eps), -100)
-                local_energy = Beta[m] * p_q_neighb[k]
-                energy[k] = extern_field + local_energy
-            Probas = np.exp(energy - max(energy))
-            p_q_t[m, :, i] = Probas / (sum(Probas) + eps)
-    # Compute p_Q
-    for i in xrange(0, J):
-        for m in xrange(0, M):
-            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
-                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
-            alpha /= alpha.mean()
-            p_q_neighb = sum(p_q_t[m, :, graph[i]], 0)
-            for k in xrange(0, K):
-                # variances term
-                extern_field = alpha[k]
-                # Beta depndent term
-                local_energy = Beta[m] * p_q_neighb[k]
-                energy[k] = extern_field + local_energy
-                Gauss[k] = normpdf(m_A[i, m], mu_Ma[m, k], \
-                                    np.sqrt(sigma_Ma[m, k])) \
-                         * normpdf(m_C[i, m], mu_Mc[m, k], \
-                                    np.sqrt(sigma_Mc[m, k]))
-            Probas = np.exp(energy - max(energy))
-            p_Q[m, :, i] = Gauss * Probas / sum(Probas)
-            p_Q[m, :, i] /= sum(p_Q[m, :, i])
-    return p_Q, p_q_t
 
 
 def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
@@ -677,8 +656,8 @@ def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
 
 def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour,
                       maxNeighbours):
-    print gamma
-    print beta
+    #print gamma
+    #print beta
     Gr = 200
     step = 0.003
     ni = 1
@@ -688,7 +667,7 @@ def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour,
         #print 'beta[%d] = %f' % (ni, beta)
         ni += 1
     if beta<eps:
-        print 'beta set to 0.01'
+        #print 'beta set to 0.01'
         beta = 0.01
     return beta
 

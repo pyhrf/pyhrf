@@ -756,7 +756,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             if simulation is not None:
                 print 'NOISE ERROR = ', EM.error(sigma_eps,
                                              np.var(simulation['noise'], 0))
-
+            
         for m in xrange(M):
             SUM_p_Q[m] += [sum(p_Q[m, 1, :])]
             mua1[m] += [mu_Ma[m, 1]]
