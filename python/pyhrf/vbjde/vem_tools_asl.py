@@ -282,7 +282,7 @@ def expectation_H_physiob(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
 
 
 def expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
-                  sigma_epsilone, scale, R, sigmaH, Omega):
+                  sigma_epsilone, scale, R, sigmaH, sigmaG, Omega):
     Y_bar_tilde = np.zeros((D), dtype=float)
     S_a = scale * R / sigmaH
     y_tildeH = y_tilde.copy()
@@ -455,16 +455,16 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
             'F>=perfusion'
             return F - [perfusion[0]] * (len(zeros_F))
         #print 'SLSQP method: '
-        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
-        #               bounds=[(None, None)] * (len(zeros_F)))
+        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
+                       bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
         #               bounds=[(None, None)] * (len(zeros_F)))
-        y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+        #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
     else:
         #print 'SLSQP method: '
-        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],
-        #               bounds=[(None, None)] * (len(zeros_F)))
-        y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],
+                       bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
 
     #print y
     if 0:
