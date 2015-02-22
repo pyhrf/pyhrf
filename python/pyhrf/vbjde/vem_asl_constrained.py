@@ -18,8 +18,7 @@ import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
 import pyhrf.vbjde.vem_tools_asl as EM
 
-from pyhrf.boldsynth.hrf import getCanoHRF
-
+from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF
 
 logger = logging.getLogger(__name__)
 
@@ -439,7 +438,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     # Conditions
     X, XX = EM.create_conditions(Onsets, M, N, D, TR, dt)
     # Covariance matrix
-    R = EM.covariance_matrix(2, D, dt)
+    #R = EM.covariance_matrix(2, D, dt)
+    _, R = genGaussianSmoothHRF_s(False, D, dt, 1., 2)
     # Noise matrix
     Gamma = np.identity(N)
     # Noise initialization
@@ -536,30 +536,14 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     #print simulation['condition_defs'][0]
     #print simulation['condition_defs'][0]
 
-    #sigmaH = 0.0001
-    #sigmaG = 0.0001
-
-
     ###########################################################################
     #############################################             VBJDE
 
     t1 = time.time()
     ni = 0
-    print 'iteration ', ni
-    print Crit_AH
-    print Crit_CG
-    print Thresh
-    print NitMin
-    print NitMax
     
     while ((ni < NitMin + 1) or ((Crit_AH > Thresh) and (Crit_CG > Thresh) \
             and (ni < NitMax))):
-        print 'iteration ', ni
-        print Crit_AH
-        print Crit_CG
-        print Thresh
-        print NitMin
-        print NitMax
         
         logger.info("-------- Iteration n° " + str(ni + 1) + " ---------")
 
@@ -570,7 +554,6 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         # HRF H
         logger.info("E H step ...")
         if estimateH:
-            print 'estimo H'
             logger.info("estimation")
             Ht, Sigma_H = EM.expectation_H(Sigma_A, m_A, m_C, G, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
@@ -590,7 +573,6 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E G step ...")
         if estimateG:
             logger.info("estimation")
-            print 'estimo G'
             Gt, Sigma_G = EM.expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
                                            R, sigmaG)
@@ -610,7 +592,6 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E A step ...")
         if estimateA:
             logger.info("estimation")
-            print 'estimo A'
             m_A, Sigma_A = EM.expectation_A(H, m_A, G, m_C, W, X, Gamma, q_Z,
                                             mu_Ma, sigma_Ma, D, J, M, K,
                                             y_tilde, Sigma_A, sigma_eps)
@@ -627,7 +608,6 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E C step ...")
         if estimateC:
             logger.info("estimation")
-            print 'estimo C'
             m_C, Sigma_C = EM.expectation_C(G, m_C, H, m_A, W, X, Gamma, q_Z,
                                             mu_Mc, sigma_Mc, D, J, M, K,
                                             y_tilde, Sigma_C, sigma_eps)
@@ -646,7 +626,6 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E Z step ...")
         if estimateZ:
             logger.info("estimation")
-            print 'estimo Q'
             q_Z, Z_tilde = EM.expectation_Z(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
                                             Beta, Z_tilde, q_Z, graph, M, J, K)
@@ -810,10 +789,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         plt.hold(False)
         plt.legend(('mu_a', 'mu_c'))
         plt.savefig('./info/mu1_Iter_ASL.png')
-        plt.figure(6)
-        plt.plot(h_norm_array)
-        plt.savefig('./info/HRF_Norm_ASL.png')
-
+        
     logger.info("Nb iterations to reach criterion: %d",  ni)
     logger.info("Computational time = %s min %s s",
                 str(np.int(CompTime // 60)), str(np.int(CompTime % 60)))
@@ -821,7 +797,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     StimulusInducedSignal = EM.computeFit(H, m_A, G, m_C, W, X, J, N)
     SNR = 20 * (np.log(np.linalg.norm(Y) / \
                 np.linalg.norm(Y - StimulusInducedSignal - PL))) / np.log(10.)
-
+    """
     logger.info('mu_Ma: %f', mu_Ma)
     logger.info('sigma_Ma: %f', sigma_Ma)
     logger.info("sigma_H = %s" + str(sigmaH))
@@ -829,10 +805,11 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     logger.info('sigma_Mc: %f', sigma_Mc)
     logger.info("sigma_G = %s" + str(sigmaG))
     logger.info("Beta = %s" + str(Beta))
-    logger.info('SNR comp = %f', SNR)
+    logger.info('SNR comp = %f', SNR)"""
 
-    return ni, m_A, H, m_C, G, q_Z, sigma_eps, cA[2:], cH[2:], cZ[2:], \
-           cAH[2:], cCG[2:], cTime[2:], cTimeMean[2:], \
+    return ni, m_A, H, m_C, G, q_Z, sigma_eps, \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-           Sigma_A, Sigma_C, StimulusInducedSignal
-           #cA[2:], cH[2:],  cAH[2:],\
+           Sigma_A, Sigma_C
+           #cA[2:], cH[2:], cZ[2:], \
+           #cAH[2:], cCG[2:], cTime[2:], cTimeMean[2:], \
+ 
