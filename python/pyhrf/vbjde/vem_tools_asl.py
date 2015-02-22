@@ -248,6 +248,29 @@ def expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
     return m_G, Sigma_G
 
 
+def expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
+                  sigma_epsilone, scale, R, sigmaG, OmegaH):
+    Y_bar_tilde = np.zeros((D), dtype=float)
+    S_c = scale * R / sigmaG
+    y_tildeG = y_tilde.copy()
+    for i in xrange(0, J):
+        Gamma_i = Gamma / max(sigma_epsilone[i], eps)
+        tmp = np.zeros((N, D), dtype=float)
+        for m, k in enumerate(X):                  # Loop over the M conditions
+            tmp += m_C[i, m] * np.dot(W, X[k])
+            y_tildeG[:, i] -= m_A[i, m] * np.dot(X[k], H)
+        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeG[:, i])
+        S_c += np.dot(np.dot(tmp.T, Gamma_i), tmp)
+        for m1, k1 in enumerate(X):                # Loop over the M conditions
+            for m2, k2 in enumerate(X):            # Loop over the M conditions
+                S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
+                                            X[k1].T, W.T), Gamma_i), W), X[k2])
+    Y_bar_tilde += np.dot(scale * R / sigmaG, OmegaH)
+    Sigma_G = np.linalg.inv(S_c)
+    m_G = np.dot(Sigma_G, Y_bar_tilde)
+    return m_G, Sigma_G
+    
+    
 def constraint_norm1(Ftilde, Sigma_F, positivity=False):
     """ Constrain with optimization strategy """
     import cvxpy as cvx
@@ -288,20 +311,30 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     def ec1(F):
         'Norm2(F)==1'
         return - 1 + np.linalg.norm(F, 2)
-
+    
+    def ec2(F):
+        'F(0)==0'
+        return F[0]
+    
+    def ec3(F):
+        'F(end)==0'
+        return F[-1]
+    
     if perfusion is not None:
-        def ec2(F):
+        def ec0(F):
             'F>=perfusion'
             return F - [perfusion[0]] * (len(zeros_F))
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
-                       bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
+        #               bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
         #               bounds=[(None, None)] * (len(zeros_F)))
+        y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
     else:
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],
-                       bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],
+        #               bounds=[(None, None)] * (len(zeros_F)))
+        y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
 
     #print y
     if 0:
@@ -312,10 +345,13 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
         print "Random perturbations of optimal point"
         for _ in xrange(20):
             z = y + np.random.randn(*y.shape) * 1e-3
-            print "fun(z) = %g" % fun(z)    
-    
+            print "fun(z) = %g" % fun(z)
+
         print 'L-BFGS-B method: '
-        y2 = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+        print [(-1, 1)] * (len(zeros_F)/2) + [(0, 1)] * (len(zeros_F)/2)
+        print len([(-1, 1)] * (len(zeros_F)/2 +1) + [(0, 1)] * (len(zeros_F)/2))
+        bound0 = len([(-1, 1)] * (len(zeros_F)/2 +1) + [(0, None)] * (len(zeros_F)/2))
+        y2 = fmin_l_bfgs_b(fung, zeros_F, bounds=bound0)
         print y2[0]
         print len(y2)
         print fung(y2[0])
@@ -325,51 +361,14 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
             z = y2[0] + np.random.randn(*y2[0].shape) * 1e-3
             w = fung(z)
             print "fung(z) = %g" % w[0]    
+        import matplotlib.pyplot as plt
+        plt.hold('on')
+        plt.plot(y)
+        plt.hold('on')
+        plt.plot(y2[0])
+        plt.show()
+        stop
     return y
-    #fun = lambda F: np.dot(np.dot((F - Ftilde).T, Sigma_F_inv),
-    #                              (F - Ftilde))
-    #cons = ({'type': 'ineq', 'fun': lambda F: - np.linalg.norm(F, 2) + 1})
-    #res = fmin_slsqp(fun, zeros_F, constraints=cons)
-    #res = minimize(fun, zeros_F, constraints=cons)
-    #print res.message
-    #return res.x
-
-def expectation_Zb(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
-                  mu_Mc, Beta, Z_tilde, q_Z, graph, M, J, K):
-    energy = np.zeros(K)
-    Gauss = energy.copy()
-    # Compute Z_tilde
-    for i in xrange(0, J):
-        for m in xrange(0, M):
-            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
-                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
-            #alpha /= alpha.mean()
-            local_energy = Beta[m] * sum(Z_tilde[m, graph[i]])
-            for k in xrange(0, K):
-                extern_field = alpha[k] \
-                     + np.log(normpdf(m_A[i, m], mu_Ma[m, k], sigma_Ma[m, k]))\
-                     + np.log(normpdf(m_C[i, m], mu_Mc[m, k], sigma_Mc[m, k]))
-                # check if the sigma is sqrt or not!!
-                energy[k] = extern_field + local_energy
-            Probas = np.exp(energy - max(energy))
-            Z_tilde[m, i] = Probas[0] / (sum(Probas))
-    # Compute q_Z
-    for i in xrange(0, J):
-        for m in xrange(0, M):
-            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
-                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
-            alpha /= alpha.mean()
-            local_energy = Beta[m] * sum(Z_tilde[m, graph[i]], 0)
-            for k in xrange(0, K):
-                extern_field = alpha[k]
-                energy[k] = extern_field + local_energy
-                Gauss[k] = normpdf(m_A[i, m], mu_Ma[m, k], sigma_Ma[m, k]) \
-                + normpdf(m_C[i, m], mu_Mc[m, k], sigma_Mc[m, k])
-            Probas = np.exp(energy - max(energy))
-            aux = (Gauss * Probas / sum(Probas))
-            q_Z[m, i] = (aux / sum(aux))[0]
-            q_Z[m, i] /= sum(q_Z[m, i])
-    return q_Z, Z_tilde
 
 
 def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
@@ -516,8 +515,8 @@ def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
 
 def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour,
                       maxNeighbours):
-    print gamma
-    print beta
+    #print gamma
+    #print beta
     Gr = 200
     step = 0.003
     ni = 1
@@ -527,7 +526,7 @@ def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour,
         #print 'beta[%d] = %f' % (ni, beta)
         ni += 1
     if beta<eps:
-        print 'beta set to 0.01'
+        #print 'beta set to 0.01'
         beta = 0.01
     return beta
 
