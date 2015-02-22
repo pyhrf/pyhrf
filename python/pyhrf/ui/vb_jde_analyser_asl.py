@@ -11,6 +11,7 @@ import pyhrf
 from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.vem_asl_constrained import (Main_vbjde_c_constrained,
                                              Main_vbjde_constrained)
+from pyhrf.vbjde.vem_asl_physio import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools_asl import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
@@ -18,6 +19,7 @@ from pyhrf.ui.jde import JDEAnalyser
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def change_dim(labels):
@@ -154,7 +156,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         t_start = time()
 
         logger.info("fast VEM with drift estimation and a constraint")
-        try:        
+        try:
             simu = roiData.simulation[0]
         except:
             try:
@@ -164,92 +166,90 @@ class JDEVEMAnalyser(JDEAnalyser):
 
         if self.fast:
             NbIter, nrls, estimated_hrf, \
-                labels, noiseVar, mu_k, sigma_k, \
-                Beta, L, PL, \
-                cA, cH, cZ, cAH, cTime, cTimeMean, \
-                Sigma_nrls, StimuIndSignal,\
-                FreeEnergy = Main_vbjde_c_constrained(graph, data, Onsets,
-                                                      self.hrfDuration, self.nbClasses, TR,
-                                                      beta, self.dt, scale,
-                                                      estimateSigmaH=self.estimateSigmaH,
-                                                      estimateSigmaG=self.estimateSigmaG,
-                                                      sigmaH=self.sigmaH, sigmaG=self.sigmaG,
-                                                      NitMax=self.nItMax, NitMin=self.nItMin,
-                                                      estimateBeta=self.estimateBeta,
-                                                      PLOT=self.PLOT, idx_first_tag=idx_tag1,
-                                                      simulation=simu,
-                                                      estimateH=self.estimateH,
-                                                      estimateG=self.estimateG,
-                                                      estimateA=self.estimateA,
-                                                      estimateC=self.estimateC,
-                                                      estimateZ=self.estimateLabels,
-                                                      estimateNoise=self.estimateNoise,
-                                                      estimateMP=self.estimateMixtParam,
-                                                      estimateLA=self.estimateLA)
+            labels, noiseVar, mu_k, sigma_k, \
+            Beta, L, PL, \
+            cA, cH, cZ, cAH, cTime, cTimeMean, \
+            Sigma_nrls, StimuIndSignal,\
+            FreeEnergy = Main_vbjde_c_constrained(graph, data, Onsets,
+                                                  self.hrfDuration, self.nbClasses, TR,
+                                                  beta, self.dt, scale,
+                                                  estimateSigmaH=self.estimateSigmaH,
+                                                  estimateSigmaG=self.estimateSigmaG,
+                                                  sigmaH=self.sigmaH, sigmaG=self.sigmaG,
+                                                  NitMax=self.nItMax, NitMin=self.nItMin,
+                                                  estimateBeta=self.estimateBeta,
+                                                  PLOT=self.PLOT, idx_first_tag=idx_tag1,
+                                                  simulation=simu,
+                                                  estimateH=self.estimateH,
+                                                  estimateG=self.estimateG,
+                                                  estimateA=self.estimateA,
+                                                  estimateC=self.estimateC,
+                                                  estimateZ=self.estimateLabels,
+                                                  estimateNoise=self.estimateNoise,
+                                                  estimateMP=self.estimateMixtParam,
+                                                  estimateLA=self.estimateLA)
         else:
-            NbIter, brls, estimated_brf, prls, estimated_prf, \
-            labels, noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean, \
-            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-            Sigma_brls, Sigma_prls, \
-            StimulusInducedSignal = Main_vbjde_constrained(graph, data, Onsets,
-                                                           self.hrfDuration, self.nbClasses, TR,
-                                                           beta, self.dt, scale=scale,
-                                                           estimateSigmaH=self.estimateSigmaH,
-                                                           estimateSigmaG=self.estimateSigmaG,
-                                                           sigmaH=self.sigmaH, sigmaG=self.sigmaG,
-                                                           NitMax=self.nItMax, NitMin=self.nItMin,
-                                                           estimateBeta=self.estimateBeta,
-                                                           PLOT=self.PLOT, idx_first_tag=idx_tag1,
-                                                           simulation=simu,
-                                                           estimateH=self.estimateH,
-                                                           estimateG=self.estimateG,
-                                                           estimateA=self.estimateA,
-                                                           estimateC=self.estimateC,
-                                                           estimateZ=self.estimateLabels,
-                                                           estimateNoise=self.estimateNoise,
-                                                           estimateMP=self.estimateMixtParam,
-                                                           estimateLA=self.estimateLA)
-
+            """NbIter, brls, estimated_brf, prls, estimated_prf, labels,
+            noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean,
+            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL,
+            Sigma_brls, Sigma_prls = """
+            NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
+            noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
+            Sigma_brls, Sigma_prls = Main_vbjde_physio(graph, data, Onsets,
+                                       self.hrfDuration, self.nbClasses, TR,
+                                       beta, self.dt, scale=scale,
+                                       estimateSigmaH=self.estimateSigmaH,
+                                       estimateSigmaG=self.estimateSigmaG,
+                                       sigmaH=self.sigmaH, sigmaG=self.sigmaG,
+                                       NitMax=self.nItMax, NitMin=self.nItMin,
+                                       estimateBeta=self.estimateBeta,
+                                       PLOT=self.PLOT, idx_first_tag=idx_tag1,
+                                       simulation=simu,
+                                       estimateH=self.estimateH,
+                                       estimateG=self.estimateG,
+                                       estimateA=self.estimateA,
+                                       estimateC=self.estimateC,
+                                       estimateZ=self.estimateLabels,
+                                       estimateNoise=self.estimateNoise,
+                                       estimateMP=self.estimateMixtParam,
+                                       estimateLA=self.estimateLA)
+        
+        print 'donnnneeeeeeee'                                               
         # Plot analysis duration
         self.analysis_duration = time() - t_start
         logger.info('JDE VEM analysis took: %s',
                     format_duration(self.analysis_duration))
 
         # OUTPUTS: Pack all outputs within a dict
+        print 'prepare outputs'                                                   
+        logger.info("Preparing outputs... ")
         outputs = {}
         brf_time = np.arange(len(estimated_brf)) * self.dt
         outputs['brf'] = xndarray(estimated_brf, axes_names=['time'],
                                   axes_domains={'time': brf_time},
                                   value_label="BRF")
-
         domCondition = {'condition': cNames}
         outputs['brls'] = xndarray(brls.T, value_label="BRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
-
         prf_time = np.arange(len(estimated_prf)) * self.dt
         outputs['prf'] = xndarray(estimated_prf, axes_names=['time'],
                                   axes_domains={'time': prf_time},
                                   value_label="PRF")
-
         outputs['prls'] = xndarray(prls.T, value_label="PRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
 
         ad = {'condition': cNames, 'condition2': Onsets.keys()}
-
         outputs['Sigma_brls'] = xndarray(Sigma_brls, value_label="Sigma_BRLs",
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
-
         outputs['Sigma_prls'] = xndarray(Sigma_prls, value_label="Sigma_PRLs",
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
-
         outputs['NbIter'] = xndarray(np.array([NbIter]), value_label="NbIter")
-
         outputs['beta'] = xndarray(Beta, value_label="beta",
                                    axes_names=['condition'],
                                    axes_domains=domCondition)
@@ -293,10 +293,12 @@ class JDEVEMAnalyser(JDEAnalyser):
                                               axes_names=['coeff', 'voxel'])
             outputs['drift'] = xndarray(PL, value_label="Delta BOLD",
                                         axes_names=['time', 'voxel'])
+        print 'done'                                                   
 
         #######################################################################
         # CONVERGENCE
-        if 1:
+        if 0:
+            logger.info("Saving convergence... ")
             axes_names = ['duration']
             outName = 'Convergence_Labels'
             ax = np.arange(self.nItMax) * cTimeMean
@@ -335,11 +337,15 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs[outName] = xndarray(c, axes_names=axes_names,
                                         axes_domains=ad,
                                         value_label='Conv_Criterion_C')
+            logger.info("Convergence saved ")
 
         #######################################################################
         # SIMULATION
 
         if self.simulation:
+            print 'simulation parameters'                                                   
+
+            logger.info("Prepare parameters to compare if simulation")
             labels_vem_audio = roiData.simulation[0]['labels'][0]
             labels_vem_video = roiData.simulation[0]['labels'][1]
             M = labels.shape[0]
@@ -352,7 +358,6 @@ class JDEVEMAnalyser(JDEAnalyser):
             #true_labels[0, :] = np.reshape(labels_vem_audio, (J))
             #true_labels[1, :] = np.reshape(labels_vem_video, (J))
             newlabels = np.reshape(labels[:, 1, :], (M, J))
-
             #true_labels = roiData.simulation[0]['labels']
             #newlabels = labels
 
@@ -406,12 +411,16 @@ class JDEVEMAnalyser(JDEAnalyser):
             true_drift = roiData.simulation[0]['drift']
             true_noise = roiData.simulation[0]['noise']
 
-            self.finalizeEstimation(true_labels, newlabels, nvox,
-                                    true_brf, estimated_brf,
-                                    true_prf, estimated_prf,
-                                    true_brls, brls.T,
-                                    true_prls, prls.T,
-                                    true_drift, PL, L, true_noise, noiseVar)
+            if simu is not None:
+                logger.info("Check parameters errors")
+                print 'check errors'
+                self.finalizeEstimation(true_labels, newlabels, nvox,
+                                        true_brf, estimated_brf,
+                                        true_prf, estimated_prf,
+                                        true_brls, brls.T,
+                                        true_prls, prls.T,
+                                        true_drift, PL, L,
+                                        true_noise, noiseVar)
 
         # END SIMULATION
         #######################################################################
@@ -420,7 +429,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                 [self.analysis_duration]),
                                                 axes_names=['parcel_size'],
                                                 axes_domains=d)
-
+        print 'finaaaal!!'
         return outputs
 
     def finalizeEstimation(self, true_labels, labels, nvox,
