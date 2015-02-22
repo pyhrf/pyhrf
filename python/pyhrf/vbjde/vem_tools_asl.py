@@ -281,6 +281,30 @@ def expectation_H_physiob(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
     return m_H, Sigma_H
 
 
+def expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
+                  sigma_epsilone, scale, R, sigmaH, Omega):
+    Y_bar_tilde = np.zeros((D), dtype=float)
+    S_a = scale * R / sigmaH
+    y_tildeH = y_tilde.copy()
+    for i in xrange(0, J):
+        Gamma_i = Gamma / max(sigma_epsilone[i], eps)
+        tmp = np.zeros((N, D), dtype=float)
+        for m, k in enumerate(X):                  # Loop over the M conditions
+            tmp += m_A[i, m] * X[k]
+            y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k]), G)
+        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeH[:, i])
+        S_a += np.dot(np.dot(tmp.T, Gamma_i), tmp)
+        for m1, k1 in enumerate(X):                # Loop over the M conditions
+            for m2, k2 in enumerate(X):            # Loop over the M conditions
+                S_a += Sigma_A[m1, m2, i] * np.dot(np.dot(X[k1].T,
+                                                          Gamma_i), X[k2])
+    S_a += np.dot(np.dot(Omega.T, scale * R / sigmaG), Omega)
+    Y_bar_tilde += np.dot(np.dot(Omega.T, scale * R / sigmaG), G)
+    Sigma_H = np.linalg.inv(S_a)
+    m_H = np.dot(Sigma_H, Y_bar_tilde)
+    return m_H, Sigma_H
+
+
 def expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
                   sigma_epsilone, scale, R, sigmaG, mu_term=0):
     Y_bar_tilde = np.zeros((D), dtype=float)

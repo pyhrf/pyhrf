@@ -144,7 +144,7 @@ class ASLTest(unittest.TestCase):
         from pyhrf.jde.asl import simulate_asl
         simu = simulate_asl(self.tmp_dir, spatial_size='normal')
         fdata = FmriData.from_simulation_dict(simu)
-        self._test_specific_parameters(['beta','labels'], fdata, simu,
+        self._test_specific_parameters(['beta', 'labels'], fdata, simu,
                                        nItMax=100, estimateBeta=True,
                                        estimateZ=True)
         print 'pyhrf_view %s/*beta*nii' % self.tmp_dir
