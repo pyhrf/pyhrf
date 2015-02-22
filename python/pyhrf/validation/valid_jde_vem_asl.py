@@ -136,6 +136,18 @@ class ASLTest(unittest.TestCase):
                                        nItMax=100, estimateBeta=True)
         print 'pyhrf_view %s/*beta*nii' % self.tmp_dir
 
+    def test_beta_labels(self):
+        """ Validate estimation of drift at high SNR"""
+        # pyhrf.verbose.set_verbosity(2)
+        pyhrf.logger.setLevel(logging.INFO)
+        from pyhrf.jde.asl import simulate_asl
+        simu = simulate_asl(self.tmp_dir, spatial_size='normal')
+        fdata = FmriData.from_simulation_dict(simu)
+        self._test_specific_parameters(['beta','labels'], fdata, simu,
+                                       nItMax=100, estimateBeta=True,
+                                       estimateZ=True)
+        print 'pyhrf_view %s/*beta*nii' % self.tmp_dir
+
     def test_sigmaH(self):
         """ Validate estimation of drift at high SNR"""
         # pyhrf.verbose.set_verbosity(2)
