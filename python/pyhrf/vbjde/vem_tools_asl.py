@@ -651,39 +651,46 @@ def maximization_sigma_noise(Y, X, m_A, Sigma_A, Ht, m_C, Sigma_C, Gt, W, \
 
 def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
     Gr = gamma
+    #print 'Gr initial = ', Gr
     for i in xrange(0, J):
+        #print '*** voxel ', i
+        #print 'neighbours = ', graph[i]
+        #print 'Ztilde = ', Z_tilde[m, :, graph[i]]
         tmp2 = beta * sum(Z_tilde[m, :, graph[i]], 0)
+        #print 'beta * sum_j\inN(i) = ', tmp2
         Emax = max(tmp2)
+        #print 'Emax = ', Emax
         Sum = sum(np.exp(tmp2 - Emax))
+        #Sum = sum(np.exp(tmp2))
+        #print 'exp(beta * sum_k\inN(i) - Emax)', Sum
         for k in xrange(0, K):
+            #print 'class ', k
             tmp = sum(Z_tilde[m, k, graph[i]], 0)
+            #print 'sum_j\inN(i) class = ', tmp
             energy = beta * tmp
+            #print 'beta * sum_j\inN(i) class = ', energy
             Pmf_ik = np.exp(energy - Emax) / (Sum + eps)
+            #print 'Pmf_i = ', Pmf_ik
             Gr += tmp * (-q_Z[m, k, i] + Pmf_ik)
     return Gr
 
 
 def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour,
                       maxNeighbours):
+    print gamma
+    print beta
     Gr = 200
     step = 0.003
     ni = 1
     while ((abs(Gr) > 0.0001) and (ni < 200)):
         Gr = gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma)
         beta -= step * Gr
+        #print 'beta[%d] = %f' % (ni, beta)
         ni += 1
-    if beta < eps:
+    if beta<eps:
+        print 'beta set to 0.01'
         beta = 0.01
     return beta
-
-
-def maximization_mu(Omega, R, H, G, sigmaH, sigmaG, sigmaM):
-    I = np.eye(R.shape[0])
-    R_inv = np.linalg.inv(R)
-    aux = np.linalg.inv(I / sigmaH + np.dot(Omega.T, Omega) / sigmaG \
-                        + R_inv / sigmaM)
-    Mu = np.dot(aux, H / sigmaH + np.dot(Omega.T, G) / sigmaG)
-    return Mu
 
 
 # Other functions
