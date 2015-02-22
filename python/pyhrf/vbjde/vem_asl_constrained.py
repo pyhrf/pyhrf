@@ -413,8 +413,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     np.random.seed(6537546)
 
     # Initialization
-    gamma_h = 10000000000  # 7.5 1000000000
-    gamma_g = 10000000000  # 7.5 1000000000
+    gamma_h = 1000000000  #7.5
+    gamma_g = 1000000000  #7.5
     gamma = 7.5
     beta = 1.
     Thresh = 1e-5
@@ -430,10 +430,10 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     cAH, cCG = [], []
     cA, cC, cH, cG, cZ = [], [], [], [], []
     h_norm, g_norm = [], []
-    SUM_p_Q = [[] for m in xrange(M)]
+    SUM_q_Z = [[] for m in xrange(M)]
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
-
+    
     # Neighbours
     maxNeighbours, neighboursIndexes = EM.create_neighbours(graph, J)
     # Conditions
@@ -462,8 +462,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     #Omega = linear_rf_operator(len(H), phy_params, dt, calculating_brf=False)
     #G = np.dot(Omega, Mu)
     G = copy.deepcopy(H)
-    G1 = copy.deepcopy(G)
-    Gt = copy.deepcopy(G)
+    G1 = copy.deepcopy(H)
+    Gt = copy.deepcopy(H)
     Sigma_G = copy.deepcopy(Sigma_H)
     # others
     Beta = beta * np.ones((M), dtype=np.float64)
@@ -519,7 +519,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         if not estimateC:
             m_C = C
         Z = simulation['labels']
-        Z = np.append(1 - Z[:, np.newaxis, :], Z[:, np.newaxis, :], axis=1)
+        Z = np.append(1-Z[:, np.newaxis, :], Z[:, np.newaxis, :], axis=1)
         #Z[:, 1, :] = 1
         if not estimateZ:
             p_Q = copy.deepcopy(Z)
@@ -548,10 +548,22 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
     t1 = time.time()
     ni = 0
-
+    print 'iteration ', ni
+    print Crit_AH
+    print Crit_CG
+    print Thresh
+    print NitMin
+    print NitMax
+    
     while ((ni < NitMin + 1) or ((Crit_AH > Thresh) and (Crit_CG > Thresh) \
             and (ni < NitMax))):
-
+        print 'iteration ', ni
+        print Crit_AH
+        print Crit_CG
+        print Thresh
+        print NitMin
+        print NitMax
+        
         logger.info("-------- Iteration n° " + str(ni + 1) + " ---------")
 
         #####################
@@ -561,6 +573,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         # HRF H
         logger.info("E H step ...")
         if estimateH:
+            print 'estimo H'
             logger.info("estimation")
             Ht, Sigma_H = EM.expectation_H(Sigma_A, m_A, m_C, G, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
@@ -580,8 +593,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E G step ...")
         if estimateG:
             logger.info("estimation")
-            scale = 1
-            Gt, Sigma_G = EM.expectation_G(Sigma_C, m_C, m_A, Ht, X, W, Gamma,
+            print 'estimo G'
+            Gt, Sigma_G = EM.expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
                                            R, sigmaG)
             G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=False)
@@ -599,7 +612,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E A step ...")
         if estimateA:
             logger.info("estimation")
-            m_A, Sigma_A = EM.expectation_A(H, m_A, G, m_C, W, X, Gamma, p_Q,
+            print 'estimo A'
+            m_A, Sigma_A = EM.expectation_A(H, m_A, G, m_C, W, X, Gamma, q_Z,
                                             mu_Ma, sigma_Ma, D, J, M, K,
                                             y_tilde, Sigma_A, sigma_eps)
             if simulation is not None:
@@ -610,12 +624,13 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                         np.linalg.norm(np.reshape(m_A1, (M * J)))) ** 2
             cA += [Crit_A]
             m_A1[:, :] = m_A[:, :]
-
+        
         # C
         logger.info("E C step ...")
         if estimateC:
             logger.info("estimation")
-            m_C, Sigma_C = EM.expectation_C(G, m_C, H, m_A, W, X, Gamma, p_Q,
+            print 'estimo C'
+            m_C, Sigma_C = EM.expectation_C(G, m_C, H, m_A, W, X, Gamma, q_Z,
                                             mu_Mc, sigma_Mc, D, J, M, K,
                                             y_tilde, Sigma_C, sigma_eps)
             #print 'true values: ', C
@@ -633,14 +648,15 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E Z step ...")
         if estimateZ:
             logger.info("estimation")
-            p_Q, p_q_t = EM.expectation_Q(Sigma_A, m_A, Sigma_C, m_C,
+            print 'estimo Q'
+            q_Z, Z_tilde = EM.expectation_Z(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
-                                            Beta, p_q_t, p_Q, graph, M, J, K)
+                                            Beta, Z_tilde, q_Z, graph, M, J, K)
             if simulation is not None:
-                print 'LABELS ERROR = ', EM.error(p_Q, Z)
-                #print 'Z =   ', (Z.flatten()).astype(np.int32)
-                #print 'p_Q = ', (p_Q.flatten() * 100).astype(np.int32)
-                #print 'Z_t = ', (p_q_t.flatten() * 100).astype(np.int32)
+                print 'LABELS ERROR = ', EM.error(q_Z, Z)
+                print 'Z =   ', (Z.flatten()).astype(np.int32)
+                print 'q_Z = ', (q_Z.flatten()*100).astype(np.int32)
+                print 'Z_t = ', (Z_tilde.flatten()*100).astype(np.int32)
             # crit. Z
             Crit_Z = (np.linalg.norm((p_Q - p_Q1).flatten()) / \
                          (np.linalg.norm(p_Q1).flatten() + eps)) ** 2
@@ -659,7 +675,9 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                   (np.linalg.norm(np.reshape(CG1, (M * J * D))) + eps)) ** 2
         cCG += [Crit_CG]
         CG1 = CG
-        
+        print Crit_AH
+        print Crit_CG
+
         if PLOT and ni >= 0:  # Plotting HRF and PRF
             import matplotlib.pyplot as plt
             if ni == 0:
@@ -708,12 +726,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             logger.info(sigma_Mc)
         # Drift L, alpha
         if estimateLA:
-            # WARNING! noise structure missing!
-            # but if Gamma = Identity, it is equivalent
-            #L, alpha = EM.maximization_L_alpha(Y, m_A, m_C, X, W, w, H, \
-            #                                   G, L, P, alpha)
-            L, alpha = EM.maximization_LA(Y, m_A, m_C, X, W, w, H, \
-                                          G, L, P, alpha, Gamma, sigma_eps)
+            L, alpha = EM.maximization_L_alpha(Y, m_A, m_C, X, W, w, H, \
+                                               G, L, P, alpha)
             if simulation is not None:
                 print 'ALPHA ERROR = ', EM.error(alpha, np.mean(\
                                             simulation['perf_baseline'], 0))
@@ -788,7 +802,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         plt.legend(('CAH', 'CCG'))
         plt.grid(True)
         plt.savefig('./info/Crit_ASL.png')
-        plt.figure(M + 4)
+        plt.figure(7)
         plt.plot(cA[1:-1], 'lightblue')
         plt.hold(True)
         plt.plot(cC[1:-1], 'm')
@@ -798,13 +812,13 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         plt.legend(('CA', 'CC', 'CH', 'CG'))
         plt.grid(True)
         plt.savefig('./info/Crit_all.png')
-        plt.figure(M + 5)
+        plt.figure(4)
         for m in xrange(M):
             plt.plot(SUM_p_Q_array[m])
             plt.hold(True)
         plt.hold(False)
-        plt.savefig('./info/Sum_p_Q_Iter_ASL.png')
-        plt.figure(M + 6)
+        plt.savefig('./info/Sum_q_Z_Iter_ASL.png')
+        plt.figure(5)
         for m in xrange(M):
             plt.plot(mua1_array[m])
             plt.hold(True)
@@ -812,6 +826,9 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         plt.hold(False)
         plt.legend(('mu_a', 'mu_c'))
         plt.savefig('./info/mu1_Iter_ASL.png')
+        plt.figure(6)
+        plt.plot(h_norm_array)
+        plt.savefig('./info/HRF_Norm_ASL.png')
 
     logger.info("Nb iterations to reach criterion: %d",  ni)
     logger.info("Computational time = %s min %s s",
@@ -830,8 +847,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     logger.info("Beta = %s" + str(Beta))
     logger.info('SNR comp = %f', SNR)"""
 
-    return ni, m_A, H, m_C, G, p_Q, sigma_eps, \
+    return ni, m_A, H, m_C, G, q_Z, sigma_eps, cA[2:], cH[2:], cZ[2:], \
+           cAH[2:], cCG[2:], cTime[2:], cTimeMean[2:], \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-           Sigma_A, Sigma_C
-           #cA[2:], cH[2:], cZ[2:], \
-           #cAH[2:], cCG[2:], cTime[2:], cTimeMean[2:], \
+           Sigma_A, Sigma_C, StimulusInducedSignal
+           #cA[2:], cH[2:],  cAH[2:],\
