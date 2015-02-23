@@ -413,8 +413,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     np.random.seed(6537546)
 
     # Initialization
-    gamma_h = 1000000000  #7.5
-    gamma_g = 1000000000  #7.5
+    gamma_h = 10000000000  #7.5 1000000000
+    gamma_g = 100000000  #7.5 1000000000
     gamma = 7.5
     beta = 1.
     Thresh = 1e-5
@@ -440,7 +440,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     X, XX = EM.create_conditions(Onsets, M, N, D, TR, dt)
     # Covariance matrix
     #R = EM.covariance_matrix(2, D, dt)
-    _, R = genGaussianSmoothHRF_s(False, D, dt, 1., 2)
+    _, R = genGaussianSmoothHRF(False, D, dt, 1., 2)
     # Noise matrix
     Gamma = np.identity(N)
     # Noise initialization

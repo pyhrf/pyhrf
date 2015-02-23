@@ -200,13 +200,13 @@ class JDEVEMAnalyser(JDEAnalyser):
             Sigma_brls, Sigma_prls = """
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-            Sigma_brls, Sigma_prls = Main_vbjde_constrained(graph, data, Onsets,
+            Sigma_brls, Sigma_prls = Main_vbjde_physio(graph, data, Onsets,
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
-                                       estimateSigmaH=self.estimateSigmaH,
                                        estimateSigmaG=self.estimateSigmaG,
                                        sigmaH=self.sigmaH, sigmaG=self.sigmaG,
                                        NitMax=self.nItMax, NitMin=self.nItMin,
+                                       estimateSigmaH=self.estimateSigmaH,
                                        estimateBeta=self.estimateBeta,
                                        PLOT=self.PLOT, idx_first_tag=idx_tag1,
                                        simulation=simu,
@@ -214,9 +214,9 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        estimateG=self.estimateG,
                                        estimateA=self.estimateA,
                                        estimateC=self.estimateC,
-                                       estimateZ=self.estimateLabels,
                                        estimateNoise=self.estimateNoise,
                                        estimateMP=self.estimateMixtParam,
+                                       estimateZ=self.estimateLabels,
                                        estimateLA=self.estimateLA)
         
         print 'donnnneeeeeeee'                                               
