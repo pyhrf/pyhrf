@@ -319,9 +319,7 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     from scipy.optimize import fmin_l_bfgs_b, fmin_slsqp
     Sigma_F_inv = np.linalg.inv(Sigma_F)
     zeros_F = np.zeros_like(Ftilde)
-    #print 'm_H = ', Ftilde
-    #print 'Sigma_H = ', Sigma_F_inv
-
+    
     def fun(F):
         'function to minimize'
         return np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde))
