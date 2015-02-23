@@ -18,8 +18,8 @@ import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
 import pyhrf.vbjde.vem_tools_asl as EM
 
-from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
-                                genGaussianSmoothHRF_cust
+from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF_s, \
+                                genGaussianSmoothHRF
 from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
                                         linear_rf_operator
 
@@ -35,21 +35,18 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                        estimateSigmaH=True, estimateSigmaG=True,
                        sigmaH=0.05, sigmaG=0.05, gamma_h=0, gamma_g=0,
                        NitMax=-1, NitMin=1, estimateBeta=True, PLOT=False,
-                       idx_first_tag=0, simulation=None, sigmaMu=None,
+                       idx_first_tag=0, simulation=None,
                        estimateH=True, estimateG=True, estimateA=True,
                        estimateC=True, estimateZ=True, estimateNoise=True,
-                       estimateMP=True, estimateLA=True, use_hyperprior=False,
-                       positivity=False):
+                       estimateMP=True, estimateLA=True):
     """ Version modified by Lofti from Christine's version """
     logger.info("EM for ASL!")
     np.random.seed(6537546)
     #NitMax=NitMin=0
-    logger.info("data shape: ")
-    logger.info(Y.shape)
-        
+    
     # Initialization
-    gamma_h = 10000000000 #10000000000  #7.5
-    gamma_g = 10000000000  #7.5
+    gamma_h = 1000000000  #7.5
+    gamma_g = 1000000000  #7.5
     gamma = 7.5
     beta = 1.
     Thresh = 1e-5
@@ -68,16 +65,14 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     SUM_q_Z = [[] for m in xrange(M)]
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
-
+    
     # Neighbours
     maxNeighbours, neighboursIndexes = EM.create_neighbours(graph, J)
     # Conditions
     X, XX = EM.create_conditions(Onsets, M, N, D, TR, dt)
     # Covariance matrix
     #R = EM.covariance_matrix(2, D, dt)
-    _, R = genGaussianSmoothHRF(False, D, dt, 1., 2)
-    #_, R = genGaussianSmoothHRF_cust(False, D, dt, 1., 2)
-    R_inv = np.linalg.inv(R)
+    _, R = genGaussianSmoothHRF_s(False, D, dt, 1., 2)
     # Noise matrix
     Gamma = np.identity(N)
     # Noise initialization
@@ -96,13 +91,11 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     H1 = np.array(m_h).astype(np.float64)
     Ht = copy.deepcopy(H)
     Sigma_H = np.zeros((D, D), dtype=np.float64)
-    Omega = linear_rf_operator(len(H), phy_params, dt, calculating_brf=False)
-    #print 'Omega1 = ', Omega
-    OmegaH = np.dot(Omega, H)
-    Omega /= np.linalg.norm(OmegaH)
-    #print 'Omega2 = ', Omega
-    #I = np.eye(R.shape[0])
-    G = np.dot(Omega, H)
+    omega_operator = linear_rf_operator_s(len(H), phy_params, dt,
+                                        calculating_brf=False)
+    OmegaH = np.dot(omega_operator, H)
+    #OmegaH /= np.linalg.norm(OmegaH)
+    G = copy.deepcopy(H)
     G1 = copy.deepcopy(H)
     Gt = copy.deepcopy(H)
     Sigma_G = copy.deepcopy(Sigma_H)
@@ -146,10 +139,10 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         # simulated values
         if not estimateH:
             H = Ht = simulation['brf'][:, 0]
-            sigmaH = sigmaH
+            sigmaH = 20.
         if not estimateG:
             G = Gt = simulation['prf'][:, 0]
-            sigmaG = sigmaG
+            sigmaG = 40.
         A = simulation['brls'].T
         if not estimateA:
             m_A = A
@@ -196,10 +189,14 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E H step ...")
         if estimateH:
             logger.info("estimation")
-            Ht, Sigma_H = EM.expectation_H_physio(Sigma_A, m_A, m_C, G, X, W,
-                                                  Gamma, D, J, N, y_tilde,
-                                                  sigma_eps, scale, R,
-                                                  sigmaH, sigmaG, Omega)
+            #import matplotlib.pyplot as plt
+            #plt.close('all')            
+            #plt.plot(H)
+            #plt.plot(OmegaH)
+            #plt.show()
+            Ht, Sigma_H = EM.expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma,
+                                           D, J, N, y_tilde, sigma_eps, scale,
+                                           R, sigmaH, sigmaG, omega_operator)
             H = EM.constraint_norm1_b(Ht, Sigma_H)
             #H = Ht / np.linalg.norm(Ht)
             if simulation is not None:
@@ -210,17 +207,18 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             Crit_H = (np.linalg.norm(H - H1) / np.linalg.norm(H1)) ** 2
             cH += [Crit_H]
             H1 = H
-            OmegaH = np.dot(Omega, H)
+            OmegaH = np.dot(omega_operator, H)
             #OmegaH /= np.linalg.norm(OmegaH)
 
         # PRF G
         logger.info("E G step ...")
         if estimateG:
             logger.info("estimation")
-            Gt, Sigma_G = EM.expectation_G_physio(Sigma_C, m_C, m_A, H, X, W,
-                                          Gamma, D, J, N, y_tilde, sigma_eps,
-                                          scale, R, sigmaG, OmegaH)
-            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
+            Gt, Sigma_G = EM.expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma,
+                                           D, J, N, y_tilde, sigma_eps, scale,
+                                           R, sigmaG, OmegaH)
+            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=True,
+                                      perfusion=alpha)
             #G = Gt / np.linalg.norm(Gt)
             if simulation is not None:
                 print 'PRF ERROR = ', EM.error(G, simulation['prf'][:, 0])
@@ -246,7 +244,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                         np.linalg.norm(np.reshape(m_A1, (M * J)))) ** 2
             cA += [Crit_A]
             m_A1[:, :] = m_A[:, :]
-
+        
         # C
         logger.info("E C step ...")
         if estimateC:
@@ -267,22 +265,20 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E Z step ...")
         if estimateZ:
             logger.info("estimation")
-            q_Z, Z_tilde = EM.expectation_Q(Sigma_A, m_A, Sigma_C, m_C,
+            q_Z, Z_tilde = EM.expectation_Z(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
                                             Beta, Z_tilde, q_Z, graph, M, J, K)
             if simulation is not None:
                 print 'LABELS ERROR = ', EM.error(q_Z, Z)
-                #print 'Z =   ', (Z.flatten()).astype(np.int32)
-                #print 'q_Z = ', (q_Z.flatten() * 100).astype(np.int32)
-                #print 'Z_t = ', (Z_tilde.flatten() * 100).astype(np.int32)
+                print 'Z =   ', (Z.flatten()).astype(np.int32)
+                print 'q_Z = ', (q_Z.flatten() * 100).astype(np.int32)
+                print 'Z_t = ', (Z_tilde.flatten() * 100).astype(np.int32)
             # crit. Z
-            logger.info("crit. Z")
             Crit_Z = (np.linalg.norm((q_Z - q_Z1).flatten()) / \
                          (np.linalg.norm(q_Z1).flatten() + eps)) ** 2
             cZ += [Crit_Z]
             q_Z1 = q_Z
 
-        logger.info("crit. AH and CG")
         # crit. AH and CG
         for d in xrange(0, D):
             AH[:, :, d] = m_A[:, :] * H[d]
@@ -295,23 +291,15 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                   (np.linalg.norm(np.reshape(CG1, (M * J * D))) + eps)) ** 2
         cCG += [Crit_CG]
         CG1 = CG
-        
+
         if PLOT and ni >= 0:  # Plotting HRF and PRF
-            logger.info("Plotting HRF and PRF for current iteration")
             import matplotlib.pyplot as plt
-            import matplotlib.colors as colors
-            import matplotlib.cm as cmx
-            jet = plt.get_cmap('jet')
-            cNorm = colors.Normalize(vmin=0, vmax=NitMin + 1)
-            scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
-            if ni == 0:
-                plt.close('all')
-            colorVal = scalarMap.to_rgba(ni)
-            plt.figure(M + 1)
-            plt.plot(H, color=colorVal)
+            plt.close('all')
+            plt.figure(1)
+            plt.plot(H)
             plt.hold(True)
-            plt.figure(M + 2)
-            plt.plot(G, color=colorVal)
+            plt.figure(2)
+            plt.plot(G)
             plt.hold(True)
 
         #####################
@@ -321,21 +309,13 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         # HRF: Sigma_h
         if estimateSigmaH:
             logger.info("M sigma_H step ...")
-            Aux0 = np.dot(np.dot(Omega.T, R_inv), G)
-            if not use_hyperprior:
-                gamma_h = 0
-            Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) + gamma_h
-            sigmaH = EM.maximization_sigma_prior(D, R, H, Aux)
+            print gamma_h
+            sigmaH = EM.maximization_sigma_prior(D, R, H, gamma_h)
             logger.info('sigmaH = ' + str(sigmaH))
         # PRF: Sigma_g
         if estimateSigmaG:
             logger.info("M sigma_G step ...")
-            Aux = G - np.dot(Omega, H)
-            #use_hyperprior = False
-            if use_hyperprior:
-                sigmaG = EM.maximization_sigma_prior(D, R, Aux, gamma_g)
-            else:
-                sigmaG = EM.maximization_sigma(D, R, Aux)
+            sigmaG = EM.maximization_sigma_prior(D, R, G, gamma_g)
             logger.info('sigmaG = ' + str(sigmaG))
         # (mu,sigma)
         if estimateMP:
@@ -347,12 +327,8 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # Drift L, alpha
         if estimateLA:
-            logger.info("M L, alpha step ...")
-            L, alpha = EM.maximization_LA(Y, m_A, m_C, X, W, w, H, \
-                                          G, L, P, alpha, Gamma, sigma_eps)
-            #L, alpha = EM.maximization_L_alpha(Y, m_A, m_C, X, W, w, H, \
-            #                              G, L, P, alpha, Gamma, sigma_eps)
-            logger.info("  estimation done")
+            L, alpha = EM.maximization_L_alpha(Y, m_A, m_C, X, W, w, H, \
+                                               G, L, P, alpha)
             if simulation is not None:
                 print 'ALPHA ERROR = ', EM.error(alpha, np.mean(\
                                             simulation['perf_baseline'], 0))
@@ -364,7 +340,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         # Beta
         if estimateBeta:
-            logger.info("M estimating beta")
+            logger.info("estimating beta")
             for m in xrange(0, M):
                 Beta[m] = EM.maximization_beta(Beta[m], q_Z, Z_tilde,
                                         J, K, m, graph, gamma,
@@ -385,8 +361,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             SUM_q_Z[m] += [sum(q_Z[m, 1, :])]
             mua1[m] += [mu_Ma[m, 1]]
             muc1[m] += [mu_Mc[m, 1]]
-        
-        logger.info("end of iteration")
+
         ni += 1
         t02 = time.time()
         cTime += [t02 - t1]
@@ -397,33 +372,30 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
     ###########################################################################
     ##########################################    PLOTS and SNR computation
-    
-    logger.info("prepare to plot")
 
-    SUM_p_Q_array = np.zeros((M, ni), dtype=np.float64)
+    SUM_q_Z_array = np.zeros((M, ni), dtype=np.float64)
     mua1_array = np.zeros((M, ni), dtype=np.float64)
     muc1_array = np.zeros((M, ni), dtype=np.float64)
     #h_norm_array = np.zeros((ni), dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
-            SUM_p_Q_array[m, i] = SUM_q_Z[m][i]
+            SUM_q_Z_array[m, i] = SUM_q_Z[m][i]
             mua1_array[m, i] = mua1[m][i]
             muc1_array[m, i] = muc1[m][i]
             #h_norm_array[i] = h_norm[i]
-    logger.info("plots")
 
     if PLOT:
+        logger.info("Plotting some figures...")
         font = {'size': 15}
         import matplotlib
         import matplotlib.pyplot as plt
         matplotlib.rc('font', **font)
-        label = '_vh' + str(sigmaH) + '_vg' + str(sigmaG)
-        plt.figure(M + 1)
-        plt.savefig('./info/BRF_Iter_ASL' + label + '.png')
-        plt.figure(M + 2)
-        plt.savefig('./info/PRF_Iter_ASL' + label + '.png')
+        plt.figure(1)
+        plt.savefig('./info/BRF_Iter_ASL.png')
+        plt.figure(2)
+        plt.savefig('./info/PRF_Iter_ASL.png')
         plt.hold(False)
-        plt.figure(M + 4)
+        plt.figure(3)
         plt.plot(cAH[1:-1], 'lightblue')
         plt.hold(True)
         plt.plot(cCG[1:-1], 'm')
@@ -431,7 +403,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         plt.legend(('CAH', 'CCG'))
         plt.grid(True)
         plt.savefig('./info/Crit_ASL.png')
-        plt.figure(M + 5)
+        plt.figure(6)
         plt.plot(cA[1:-1], 'lightblue')
         plt.hold(True)
         plt.plot(cC[1:-1], 'm')
@@ -441,30 +413,31 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         plt.legend(('CA', 'CC', 'CH', 'CG'))
         plt.grid(True)
         plt.savefig('./info/Crit_all.png')
-        plt.figure(M + 6)
+        plt.figure(4)
         for m in xrange(M):
-            plt.plot(SUM_p_Q_array[m])
+            plt.plot(SUM_q_Z_array[m])
             plt.hold(True)
         plt.hold(False)
-        plt.savefig('./info/Sum_p_Q_Iter_ASL.png')
-        plt.figure(M + 7)
+        plt.savefig('./info/Sum_q_Z_Iter_ASL.png')
+        plt.figure(5)
         for m in xrange(M):
             plt.plot(mua1_array[m])
             plt.hold(True)
             plt.plot(muc1_array[m])
         plt.hold(False)
+        """if M>1:
+            plt.legend(('mu_a, cond0', 'mu_c, cond0', 'mu_a, cond1', 'mu_c, cond1'))
+        else:"""
         plt.legend(('mu_a', 'mu_c'))
         plt.savefig('./info/mu1_Iter_ASL.png')
-
+        
     logger.info("Nb iterations to reach criterion: %d",  ni)
     logger.info("Computational time = %s min %s s",
                 str(np.int(CompTime // 60)), str(np.int(CompTime % 60)))
 
     StimulusInducedSignal = EM.computeFit(H, m_A, G, m_C, W, X, J, N)
     SNR = 20 * (np.log(np.linalg.norm(Y) / \
-                np.linalg.norm(Y - StimulusInducedSignal - PL - wa))) / np.log(10.)
-    print 'SNR = ', SNR
-    print 'ASL signal shape = ', Y.shape
+                np.linalg.norm(Y - StimulusInducedSignal - PL))) / np.log(10.)
 
     #logger.info('mu_Ma: %f', mu_Ma)
     #logger.info('sigma_Ma: %f', sigma_Ma)
