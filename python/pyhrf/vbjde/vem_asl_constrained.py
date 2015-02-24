@@ -661,7 +661,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
         if PLOT and ni >= 0:  # Plotting HRF and PRF
             import matplotlib.pyplot as plt
-            if ni == 0:
+            if ni==0:
                 plt.close('all')
             plt.figure(M + 1)
             plt.plot(H)
