@@ -345,9 +345,9 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     if perfusion is not None:
         def ec0(F):
             'F>=perfusion'
-            return F - [perfusion[0]] * (len(zeros_F))
+            return F  # + [perfusion[0]] * (len(zeros_F))
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
+        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], #ieqcons=[ec0],
                        bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
         #               bounds=[(None, None)] * (len(zeros_F)))
@@ -446,9 +446,9 @@ def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
             S = sum(q_Z[m, k, :])
             if S == 0.:
                 S = eps
-            #Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2) +
-            #                        Sigma_X[m, m, :])) / S
-            Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2))) / S
+            Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2) +
+                                    Sigma_X[m, m, :])) / S
+            #Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2))) / S
             if Sigma[m, k] < eps:
                 Sigma[m, k] = eps
             if k != 0:          # mu_0 = 0 a priori
