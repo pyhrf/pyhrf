@@ -200,7 +200,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             Sigma_brls, Sigma_prls = """
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-            Sigma_brls, Sigma_prls = Main_vbjde_physio(graph, data, Onsets,
+            Sigma_brls, Sigma_prls = Main_vbjde_constrained(graph, data, Onsets,
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
                                        estimateSigmaG=self.estimateSigmaG,

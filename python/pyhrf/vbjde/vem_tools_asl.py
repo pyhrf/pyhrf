@@ -452,9 +452,9 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     if perfusion is not None:
         def ec0(F):
             'F>=perfusion'
-            return F - [perfusion[0]] * (len(zeros_F))
+            return F  # + [perfusion[0]] * (len(zeros_F))
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
+        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], #ieqcons=[ec0],
                        bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
         #               bounds=[(None, None)] * (len(zeros_F)))
