@@ -18,8 +18,8 @@ import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
 import pyhrf.vbjde.vem_tools_asl as EM
 
-from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF_s, \
-                                genGaussianSmoothHRF
+from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF  #, \
+                                #genGaussianSmoothHRF
 from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
                                         linear_rf_operator
 
