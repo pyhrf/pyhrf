@@ -11,12 +11,12 @@ python:
     - 2.7
 
 #use this to make PyQt4 importable
-virtualenv:
-    system_site_packages: true
+#virtualenv:
+#    system_site_packages: true
 
 before_install:
     - sudo apt-get install -qq libatlas-dev libatlas-base-dev gfortran libpng-dev
-    - sudo apt-get install -qq python-qt4 
+#    - sudo apt-get install -qq python-qt4 
     - pip install --no-index -f http://wheels2.astropy.org -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy "matplotlib<1.4";
     - pip install nibabel
     - pip install sympy
