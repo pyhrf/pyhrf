@@ -35,15 +35,6 @@ def checkPyhrf():
         return False
     return True
 
-def check_pyqt3():
-    return False
-    try:
-        import qt
-    except ImportError,e :
-        print e
-        return False
-    return True
-
 dependCheckers = {}
 
 dependFlags = dependCheck(dependCheckers)
