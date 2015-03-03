@@ -46,7 +46,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_parameters(['prf'], fdata, simu, nItMax=20,
                                        estimateG=True)
-        print 'pyhrf_view_qt3 %s/*nii' % self.tmp_dir
 
     def test_brf(self):
         """ Validate estimation of BRF at high SNR"""
@@ -57,7 +56,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_parameters(['brf'], fdata, simu, nItMax=100,
                                        estimateH=True)
-        print 'pyhrf_view_qt3 %s/*brf*nii' % self.tmp_dir
 
     def test_brls(self):
         """ Validate estimation of BRLs at high SNR"""
@@ -68,7 +66,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_parameters(['bold_response_levels'], fdata, simu,
                                        nItMax=100, estimateA=True)
-        print 'pyhrf_view_qt3 %s/*brl*nii' % self.tmp_dir
 
     def test_prls(self):
         """ Validate estimation of PRLs at high SNR"""
@@ -79,7 +76,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_parameters(['perf_response_levels'], fdata, simu,
                                        nItMax=100, estimateC=True)
-        print 'pyhrf_view_qt3 %s/*prl*nii' % self.tmp_dir
 
     def test_labels(self):
         """ Validate estimation of labels at high SNR"""

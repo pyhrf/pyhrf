@@ -35,15 +35,6 @@ def checkPyhrf():
         return False
     return True
 
-def check_pyqt3():
-    return False
-    try:
-        import qt
-    except ImportError,e :
-        print e
-        return False
-    return True
-
 dependCheckers = {}
 
 dependFlags = dependCheck(dependCheckers)
@@ -72,8 +63,6 @@ except ImportError:
     sys.exit(1)
 
 excluded_packages = []
-if not check_pyqt3():
-    excluded_packages.append('pyhrf.viewer.qt3*')
 
 # disable some setuptools' magic that prevents exclusion of submodule
 from setuptools.command import sdist
@@ -110,7 +99,6 @@ optional_deps = {
     'PIL' : 'loading of image file as simulation maps',
     'munkres' : 'computation of distance between parcellations',
     'pygraphviz' : '(python-graph-core) -- save plot of simulation pipelines',
-    'PyQt4': 'viewer and xml editor',
     }
 
 def check_opt_dep(dep_name, dep_descrip):

@@ -14,7 +14,11 @@ import socket, threading
 from optparse import OptionParser
 warnings.filterwarnings('ignore', 'Python C API version mismatch',
                                                 RuntimeWarning)
-import paramiko
+try:
+    import paramiko
+except ImportError:
+    pass
+
 from pyhrf.tools.message import msg
 
 # Commentaires divers :

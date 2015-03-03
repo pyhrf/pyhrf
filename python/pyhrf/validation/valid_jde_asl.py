@@ -88,7 +88,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['prf'], fdata, nb_its=100,
                                      check_fv='raise')
-        # print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
 
     def test_brf(self):
         """ Validate estimation of BRF at high SNR"""
@@ -99,7 +98,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['brf'], fdata, nb_its=100,
                                      check_fv='raise')
-        # print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
 
     def test_brls(self):
         """ Validate estimation of BRLs at high SNR"""
@@ -110,7 +108,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['bold_response_levels'], fdata, nb_its=100,
                                      check_fv='raise')
-        # print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
 
     def test_prls(self):
         """ Validate estimation of PRLs at high SNR"""
@@ -121,7 +118,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['perf_response_levels'], fdata, nb_its=100,
                                      check_fv='raise')
-        # print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
 
     def test_labels(self):
         """ Validate estimation of labels at high SNR"""
@@ -132,7 +128,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['labels'], fdata, nb_its=100,
                                      check_fv='raise')
-        # print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
 
     def test_noise_var(self):
         """ Validate estimation of noise variances at high SNR"""
@@ -143,7 +138,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['noise_var'], fdata, nb_its=100,
                                      check_fv='raise')
-        # print 'pyhrf_view_qt3 %s/*prf*nii' %self.tmp_dir
 
     def test_drift(self):
         """ Validate estimation of drift at high SNR"""
@@ -154,7 +148,6 @@ class ASLTest(unittest.TestCase):
         fdata = FmriData.from_simulation_dict(simu)
         self._test_specific_samplers(['drift'], fdata, nb_its=100,
                                      check_fv='print')
-        print 'pyhrf_view_qt3 %s/*nii' % self.tmp_dir
 
     def test_all(self):
         """ Validate estimation of full ASL model at high SNR"""
@@ -169,7 +162,6 @@ class ASLTest(unittest.TestCase):
              'perf_baseline', 'perf_baseline_var']
 
         self._test_specific_samplers(v, fdata, nb_its=100, check_fv='print')
-        print 'pyhrf_view_qt3 %s' % self.tmp_dir
 
     def _test_specific_samplers(self, sampler_names, fdata,
                                 nb_its=None, use_true_val=None,
