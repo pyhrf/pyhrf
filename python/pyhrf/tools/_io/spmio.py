@@ -48,7 +48,7 @@ def get_tr_from_spm_dict(spm):
     return float(get_field(get_field(spm,'xY')[0][0],'RT'))
 
 def get_contrasts(spm):
-
+    
     if isinstance(spm, numpy.ndarray):
         spm = spm[0]
     if isinstance(spm, numpy.ndarray):

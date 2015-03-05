@@ -1800,12 +1800,13 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
                       perf_v_inact=.3,
                       bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap1),
-            Condition(name='video', perf_m_act=1.6, perf_v_act=.3,
-                      perf_v_inact=.3,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
-                      label_map=lmap2),
+            #Condition(name='video', perf_m_act=1.6, perf_v_act=.3,
+            #          perf_v_inact=.3,
+            #          bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+            #          label_map=lmap2),
         ]
-
+    from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11
+    brf = create_canonical_hrf()
     simulation_steps = {
         'dt': dt,
         'dsf': dsf,
@@ -1823,10 +1824,11 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         # Prls
         'prls': create_time_invariant_gaussian_prls,
         # BRF
-        'primary_brf': create_canonical_hrf,
+        'primary_brf': brf,
         'brf': duplicate_brf,
         # PRF
         'primary_prf': create_prf,  # canonical HRF for testing
+        #'primary_prf': create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11),
         'prf': duplicate_prf,
         # Perf baseline
         'perf_baseline': create_perf_baseline,
