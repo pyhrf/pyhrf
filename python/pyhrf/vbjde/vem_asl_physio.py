@@ -18,8 +18,8 @@ import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
 import pyhrf.vbjde.vem_tools_asl as EM
 
-from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \  
-                                genGaussianSmoothHRF_s
+from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF #, \  
+                                #genGaussianSmoothHRF_s
 from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
                                         linear_rf_operator
 
@@ -216,7 +216,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             Gt, Sigma_G = EM.expectation_G_physio(Sigma_C, m_C, m_A, H, X, W,
                                           Gamma, D, J, N, y_tilde, sigma_eps,
                                           scale, R, sigmaG, OmegaH)
-            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=True)
+            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=False)
             #G = Gt / np.linalg.norm(Gt)
             if simulation is not None:
                 print 'PRF ERROR = ', EM.error(G, simulation['prf'][:, 0])
