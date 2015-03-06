@@ -316,12 +316,12 @@ def plot_maps(plot_params, anat_fn, anat_slice_def, output_dir='./',
 
 if __name__ == '__main__':
     
-    subjects = [#'AINSI_010_TV', 'AINSI_001_GC', 'AINSI_007_AB', 'AINSI_006_FM',
+    subjects = ['AINSI_010_TV', 'AINSI_001_GC', 'AINSI_007_AB', 'AINSI_006_FM',
                 'AINSI_005_SB', 'AINSI_004_AE', 'AINSI_003_CP', 'AINSI_002_EV']
     
     conds = ['audio', 'video']
     #conds = ['video']
-    conds = ['audio']
+    #conds = ['audio']
     #cond = ['clicGaudio', 'clicGvideo',
     #                   'clicDaudio', 'clicDvideo',
     #                   'phraseaudio', 'phrasevideo']
@@ -336,15 +336,20 @@ if __name__ == '__main__':
             archives = './archives'
             data_dir = op.join(archives, subject)
             anat_dir = op.join(data_dir, 'anat')
+            parcel_dir = op.join(data_dir, 'ASLf', 'parcellation')
             #paradigm_fn = './archives/paradigm.csv'
             #roi_mask_fn = op.join(data_dir, 'ASLf', 'parcellation',
             #                      'parcellation_func.nii')
             if cond == 'audio':
                 paradigm_fn = op.join(archives, 'paradigm_a.csv')
-                roi_mask_fn = op.join(archives, 'roi_mask_audio.nii')
+                #roi_mask_fn = op.join(archives, 'roi_mask_audio.nii')
+                roi_mask_fn = op.join(parcel_dir, 'parcellation_audio_func_masked.nii')
             else:
                 paradigm_fn = op.join(archives, 'paradigm_v.csv')
-                roi_mask_fn = op.join(archives, 'roi_mask_visual_2.nii')
+                #roi_mask_fn = op.join(archives, 'roi_mask_visual_2.nii')
+                roi_mask_fn = op.join(parcel_dir, 'parcellation_video_func_masked.nii')
+            #paradigm_fn = op.join(archives, 'paradigm_av.csv')
+            #roi_mask_fn = op.join(parcel_dir, 'parcellation_func_masked.nii')
             
             # BOLD data
             bold_fn = op.join(data_dir, 'ASLf', 'funct', 'normalise', \
@@ -365,7 +370,9 @@ if __name__ == '__main__':
             print 'mean bold = ', np.mean(Y)
             print Y.shape
             
-            for can in xrange(0,3):
+            #   for can in xrange(0):
+            if 1:
+                can = 1
                 # Design matrix
                 if can==1:
                     labc = '_K11'
@@ -374,6 +381,7 @@ if __name__ == '__main__':
                         labc= '_F00'
                     else:
                         labc = '_can'
+                labc = labc + '_big'
                 dm, rn = gen_spm_regs(subject, nscans, tr, dt, paradigm_fn, [cond], can)
                 
                 """
