@@ -18,8 +18,8 @@ import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
 import pyhrf.vbjde.vem_tools_asl as EM
 
-from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF #, \  
-                                #genGaussianSmoothHRF_s
+from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
+                                genGaussianSmoothHRF_cust
 from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
                                         linear_rf_operator
 
@@ -45,7 +45,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     #NitMax=NitMin=0
 
     # Initialization
-    gamma_h = 10000000000  #7.5
+    gamma_h = 10000000000 #10000000000  #7.5
     gamma_g = 10000000000  #7.5
     gamma = 7.5
     beta = 1.
@@ -65,7 +65,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     SUM_q_Z = [[] for m in xrange(M)]
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
-    
+
     # Neighbours
     maxNeighbours, neighboursIndexes = EM.create_neighbours(graph, J)
     # Conditions
@@ -73,6 +73,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     # Covariance matrix
     #R = EM.covariance_matrix(2, D, dt)
     _, R = genGaussianSmoothHRF(False, D, dt, 1., 2)
+    #_, R = genGaussianSmoothHRF_cust(False, D, dt, 1., 2)
     R_inv = np.linalg.inv(R)
     # Noise matrix
     Gamma = np.identity(N)
@@ -318,16 +319,16 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         if estimateSigmaH:
             logger.info("M sigma_H step ...")
             Aux0 = np.dot(np.dot(Omega.T, R_inv), G)
-            Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) + gamma_h
+            Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) #+ gamma_h
             sigmaH = EM.maximization_sigma_prior(D, R, H, Aux)
             logger.info('sigmaH = ' + str(sigmaH))
         # PRF: Sigma_g
         if estimateSigmaG:
             logger.info("M sigma_G step ...")
             Aux = G - np.dot(Omega, H)
-            sigmaG = EM.maximization_sigma_prior(D, R, Aux, gamma_g)
-            print sigmaG
-            #sigmaG = EM.maximization_sigma(D, R, Aux)
+            #sigmaG = EM.maximization_sigma_prior(D, R, Aux, gamma_g)
+            #print sigmaG
+            sigmaG = EM.maximization_sigma(D, R, Aux)
             logger.info('sigmaG = ' + str(sigmaG))
         # (mu,sigma)
         if estimateMP:
