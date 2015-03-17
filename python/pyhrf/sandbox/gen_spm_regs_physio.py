@@ -250,7 +250,7 @@ def format_duration(dt):
     return s
 
 
-def plot_maps(plot_params, anat_fn, anat_slice_def, output_dir='./',
+def plot_maps2(plot_params, anat_fn, anat_slice_def, output_dir='./',
               flip_sign=False, crop_def=None, norm=None, cond='video'):
 
     ldata = []
@@ -314,10 +314,111 @@ def plot_maps(plot_params, anat_fn, anat_slice_def, output_dir='./',
     return
 
 
+def plot_maps(plot_params, anat_fn, roi_mask_fn, anat_slice_def, flip_sign=False,
+              crop_def=None, norm=None, cond='video', subject=None, fig_dir='./'):
+    ldata = []
+    for ip, p in enumerate(plot_params):
+        #print 'load:', p['fn']
+        prl = 'prl' in p['fn']
+        c = xndarray.load(p['fn'])#.sub_cuboid(condition=cond)
+        c.set_orientation(['coronal', 'axial', 'sagittal'])
+        c.data *= p.get('scale_factor', 1.)
+        #print c.data.shape
+        if flip_sign:
+            ldata = c.data * -1.
+        else:
+            ldata = c.data
+
+    all_data = np.array(ldata)
+    #all_data_left = np.array(ldata)
+    all_data_mean = np.array(ldata)
+    #all_data_right = np.array(ldata)
+    #all_data_right[:,:,:all_data_right.shape[2]/2] = 0
+    ind = np.unravel_index(all_data.argmax(), all_data.shape)
+    #print 'Index of the maximum left: ', ind_left
+    print 'Index of the maximum: ', ind
+    roi_mask = xndarray.load(roi_mask_fn)
+    roi_mask.set_orientation(['coronal', 'axial', 'sagittal'])
+    #print roi_mask.data.sum()
+    mask = roi_mask.data
+    #print 'ROI of the maximum left: ', mask[ind_left]
+    print 'ROI of the maximum right: ', mask[ind]
+    
+    #sum_data[:,:,sum_data.shape[2]/2:] = 0
+    #inds = np.unravel_index(np.argmax(sum_data), sum_data.shape)
+    for mind in xrange(0, 220):
+        all_data_mean[np.where(mask==mind)] = np.mean(all_data_mean[np.where(mask==mind)])
+    ind_mean = np.unravel_index(all_data_mean.argmax(), all_data.shape)
+    print 'Index of the mean max: ', ind_mean
+    print 'ROI of the mean max: ', mask[ind_mean]
+     
+    #m = np.where(mask > 0)
+    #all_data_masked = all_data[:, m[0], m[1]]
+    #print mask.shape
+    if cond == 'video':
+        #voxel2 = ind_left #[12, 22, 42]
+        voxel = ind #[12, 25, 20]
+        roi_voxel = mask[voxel[0], voxel[1], voxel[2]]
+        m = np.where(mask == roi_voxel)
+        print 'voxel = ', voxel
+        print 'voxel ROI = ', roi_voxel    
+        #roi_voxel = mask[voxel2[0], voxel2[1], voxel2[2]]
+        #print 'voxel2 = ', voxel2
+        #print 'voxel2 ROI = ', roi_voxel    
+        #m2 = np.where(mask == roi_voxel)
+    else:
+        #voxel2 = ind_left #[38, 25, 51]
+        voxel = ind #[40, 24, 11]
+        roi_voxel = mask[voxel[0], voxel[1], voxel[2]]
+        m = np.where(mask == roi_voxel)
+        print 'voxel = ', voxel
+        print 'voxel ROI = ', roi_voxel    
+        #roi_voxel = mask[voxel2[0], voxel2[1], voxel2[2]]
+        #print 'voxel2 = ', voxel2
+        #print 'voxel2 ROI = ', roi_voxel    
+        #m2 = np.where(mask == roi_voxel)
+    #print m
+    all_data_masked1 = all_data[:, voxel[1], :]
+    mask_data = np.zeros_like(all_data)
+    mask_data[m] = 1.
+
+    if norm == None:
+        print all_data_masked1.min()
+        print all_data_masked1.max()
+        print all_data[m].max()
+        norm = normalize(all_data_masked1.min(), all_data_masked1.max())
+
+    data = np.reshape(all_data, c.data.shape)
+    print data.shape
+    c_anat = xndarray.load(anat_fn)
+    c_anat.set_orientation(['coronal', 'axial', 'sagittal'])
+    print c_anat.data.shape
+    
+    for isl in xrange(0, data.shape[1]):
+        
+        plt.figure()
+        plot_func_slice(data[:, isl, :], anatomy=c_anat.data[:, isl*3, :],
+                        parcellation=mask[:, isl, :],# func_cmap='hot',
+                        parcels_line_width=1., func_norm=norm)
+        set_ticks_fontsize(fs)
+        fn = plot_params[0]['fn']
+        output_fig_fn = op.join(fig_dir, '%s_sum_%s_%s_slice%d.png' \
+                                % (op.splitext(op.basename(fn))[0],
+                                   subject, cond, isl))
+        #print 'Save to: %s' % output_fig_fn
+        plt.savefig(output_fig_fn)
+        autocrop(output_fig_fn)
+        plt.close()
+
+    del c_anat, data, mask, all_data_masked1
+
+    return norm
+
+
 if __name__ == '__main__':
     
-    subjects = ['AINSI_010_TV', 'AINSI_001_GC', 'AINSI_007_AB', 'AINSI_006_FM',
-                'AINSI_005_SB', 'AINSI_004_AE', 'AINSI_003_CP', 'AINSI_002_EV']
+    subjects = ['AINSI_010_TV']#, 'AINSI_001_GC', 'AINSI_007_AB', 'AINSI_006_FM',
+                #'AINSI_005_SB', 'AINSI_004_AE', 'AINSI_003_CP', 'AINSI_002_EV']
     
     conds = ['audio', 'video']
     #conds = ['video']
@@ -438,7 +539,7 @@ if __name__ == '__main__':
                         ax_slice = 21
                         crop_def = "140x181+0+174"
                     slice_def = {'axial': ax_slice}  # , 'condition': cond}
-                    fig_fn = rn[ib] + '_' + cond + '.png'
+                    fig_fn = rn[ib] + '_' + cond + '_' + subject + '.png'
                     #fig_fn = rn[ib] + '.png'
                     mask = xndarray.load(roi_mask_fn)
                     mask = mask.sub_cuboid(axial=ax_slice).reorient(\
@@ -446,9 +547,20 @@ if __name__ == '__main__':
                     regressors.append({'fn': fn, 'slice_def': slice_def,
                                        'mask': mask.data, 'output_fig_fn': fig_fn})
         
-                anat_fn = op.join(anat_dir, 'w' + subject + '_anat-0001.nii')
-                plot_maps(regressors, anat_fn, {"axial": ax_slice * 3},
-                          output_dir=output_dir1, crop_def=crop_def, cond=cond)
+                    anat_fn = op.join(anat_dir, 'w' + subject + '_anat-0001.nii')
+                    #plot_maps(regressors, anat_fn, {"axial": ax_slice * 3},
+                    #          output_dir=output_dir1, crop_def=crop_def, cond=cond)
+                    norm = plot_maps(regressors, anat_fn,
+                                             roi_mask_fn, {"axial": ax_slice * 3},
+                                             crop_def=crop_def, cond=rn[ib],
+                                             subject=subject, fig_dir=output_dir1)
+                    cmap = 'hot'
+                    plot_palette(cmap, norm, 45)
+                    palette_fig_fn = op.join(output_dir1,
+                                             'real_data_brls_palette_%s_%s_%s.png' \
+                                             % (cond, subject, rn[ib]))
+                    plt.savefig(palette_fig_fn)
+                    autocrop(palette_fig_fn)
                 
             del roi_mask, mask, bold_mean, bold_range, fdata, my_glm, \
                 regressors, rn, dm
