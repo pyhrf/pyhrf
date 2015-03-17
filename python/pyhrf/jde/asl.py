@@ -1788,10 +1788,10 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
             Condition(name='video', perf_m_act=11., perf_v_act=.11, perf_v_inact=.21,
                       bold_m_act=14., bold_v_act=.11, bold_v_inact=.21,
                       label_map=lmap2),
-            Condition(name='damier', perf_m_act=12.,
-                      perf_v_act=.12, perf_v_inact=.22,
-                      bold_m_act=20., bold_v_act=.12, bold_v_inact=.22,
-                      label_map=lmap3),
+            #Condition(name='damier', perf_m_act=12.,
+            #          perf_v_act=.12, perf_v_inact=.22,
+            #          bold_m_act=20., bold_v_act=.12, bold_v_inact=.22,
+            #          label_map=lmap3),
         ]
     else:  # low_snr
         v_noise = 2.
