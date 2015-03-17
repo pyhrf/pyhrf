@@ -124,6 +124,29 @@ onsets_loc = OrderedDict([
                                167.7, 195.,
                                246., 288.])]),
 ])
+"""
+onsets_loc_long = OrderedDict([
+    ('calculaudio', [np.array([35.4, 44.7, 48., 83.4, 108., 135.,
+                               137.7, 173.7,
+                               191.7, 251.7])]),
+    ('calculvideo', [np.array([0., 2.4, 125.4, 153., 164.4, 198.,
+                               201., 221.4,
+                               234., 260.4])]),
+    ('clicDaudio', [np.array([11.4, 87., 143.4, 162., 230.])]),
+    ('clicDvideo', [np.array([18., 69., 227.7, 275.4, 291.])]),
+    ('clicGaudio', [np.array([23.7, 62.4, 170.4, 254.7, 257.4])]),
+    ('clicGvideo', [np.array([26.7, 71.4, 116.7, 212.7, 215.7])]),
+    ('damier_H', [np.array([8.7, 59.7, 149.4, 176.7, 188.4, 218.7,
+                            224.7, 248.4, 266.7, 269.7])]),
+    ('damier_V', [np.array([33., 96., 122.7, 140.4, 156., 203.7,
+                            207., 210., 264., 278.4])]),
+    ('phraseaudio', [np.array([15., 20.7, 29.7, 89.7, 119.4, 146.7,
+                               236.7, 284.4,
+                               293.4, 296.7])]),
+    ('phrasevideo', [np.array([39., 41.7, 56.4, 75., 131.4, 159.,
+                               167.7, 195.,
+                               246., 288.])]),
+])"""
 
 builtin_paradigms.append('loc')
 
@@ -280,6 +303,20 @@ default_contrasts_loc_av_d = {
     'video-audio': 'video-audio',
 }
 builtin_paradigms.append('loc_av_d')
+
+"""
+# audio, video, damier
+o, d = onsets_loc_long, durations_loc
+o, d = merge_onsets(o, 'audio', durations=d)
+o, d = merge_onsets(o, 'video', durations=d)
+o, d = merge_onsets(o, 'damier', durations=d)
+onsets_loc_av_d, durations_loc_av_d = o, d
+default_contrasts_loc_av_d = {
+    'audio-video': 'audio-video',
+    'video-audio': 'video-audio',
+}
+builtin_paradigms.append('loc_av_d')
+"""
 
 # only one condition (audio)
 o, d = onsets_loc, durations_loc

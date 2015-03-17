@@ -596,8 +596,8 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
     drift_var = 10.
     dt = .5
     dsf = 2 #down sampling factor
-    #tr = dt * dsf
-    tr = 3.
+    tr = dt * dsf
+    #tr = 3.
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
@@ -662,7 +662,7 @@ def simulate_asl_physio_rfs(output_dir=None, noise_scenario='high_snr',
         'labels' : simbase.flatten_labels_vol,
         'nb_voxels': lambda labels: labels.shape[1],
         # Physiological model (for generation of RFs)
-        'physiological_params' : PHY_PARAMS_FRISTON00,
+        'physiological_params' : PHY_PARAMS_KHALIDOV11,
         # Brls
         'brls' : simbase.create_time_invariant_gaussian_brls,
         # Prls

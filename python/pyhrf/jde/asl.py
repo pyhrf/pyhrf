@@ -1763,13 +1763,14 @@ from pyhrf.boldsynth.scenarios import *
 
 
 def simulate_asl(output_dir=None, noise_scenario='high_snr',
-                 spatial_size='tiny'):
+                 spatial_size='tiny', v_noise=None):
     from pyhrf import Condition
     from pyhrf.tools import Pipeline
 
     drift_var = 10.
-
-    dt = .5
+    
+    tr = 1.
+    dt = 0.5
     dsf = 2  # down sampling factor
 
     if spatial_size == 'tiny':
@@ -1777,10 +1778,10 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
     elif spatial_size == 'random_small':
         lmap1, lmap2, lmap3 = 'random_small', 'random_small', 'random_small'
     else:
-        lmap1, lmap2, lmap3 = 'icassp13', 'ghost', 'house_sun'
+        lmap1, lmap2, lmap3 = 'ghost', 'icassp13', 'house_sun'
 
     if noise_scenario == 'high_snr':
-        v_noise = 0.05
+        v_noise = v_noise or 0.05
         conditions = [
             Condition(name='audio', perf_m_act=10., perf_v_act=.1, perf_v_inact=.2,
                       bold_m_act=15., bold_v_act=.1, bold_v_inact=.2,
@@ -1788,29 +1789,41 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
             Condition(name='video', perf_m_act=11., perf_v_act=.11, perf_v_inact=.21,
                       bold_m_act=14., bold_v_act=.11, bold_v_inact=.21,
                       label_map=lmap2),
-            Condition(name='damier', perf_m_act=12.,
-                      perf_v_act=.12, perf_v_inact=.22,
-                      bold_m_act=20., bold_v_act=.12, bold_v_inact=.22,
-                      label_map=lmap3),
+            #Condition(name='damier', perf_m_act=12.,
+            #          perf_v_act=.12, perf_v_inact=.22,
+            #          bold_m_act=20., bold_v_act=.12, bold_v_inact=.22,
+            #          label_map=lmap3),
         ]
-    else:  # low_snr
-        v_noise = 2.
+    elif noise_scenario == 'low_snr_low_prl':
+        v_noise = v_noise or 7.
+        scale = .3
         conditions = [
-            Condition(name='audio', perf_m_act=1.6, perf_v_act=.3,
-                      perf_v_inact=.3,
+            Condition(name='audio', perf_m_act=1.6*scale, perf_v_act=.1,
+                      perf_v_inact=.1,
                       bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap1),
-            #Condition(name='video', perf_m_act=1.6, perf_v_act=.3,
-            #          perf_v_inact=.3,
-            #          bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
-            #          label_map=lmap2),
+            Condition(name='video', perf_m_act=1.6*scale, perf_v_act=.1,
+                      perf_v_inact=.1,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap2),
+                      ]
+    else:  # low_snr
+        v_noise = v_noise or 2.
+        conditions = [
+            Condition(name='audio', perf_m_act=1.6, perf_v_act=.3, perf_v_inact=.3,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap1),
+            Condition(name='video', perf_m_act=1.6, perf_v_act=.3, perf_v_inact=.3,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap2),
         ]
+
     from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11
     brf = create_canonical_hrf()
     simulation_steps = {
         'dt': dt,
         'dsf': dsf,
-        'tr': dt * dsf,
+        'tr': tr,
         'condition_defs': conditions,
         # Paradigm
         'paradigm': create_localizer_paradigm_avd,
@@ -1827,8 +1840,8 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         'primary_brf': brf,
         'brf': duplicate_brf,
         # PRF
-        'primary_prf': create_prf,  # canonical HRF for testing
-        #'primary_prf': create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11),
+        #'primary_prf': create_prf,  # canonical HRF for testing
+        'primary_prf': create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11),
         'prf': duplicate_prf,
         # Perf baseline
         'perf_baseline': create_perf_baseline,
