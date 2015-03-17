@@ -86,8 +86,8 @@ class JDEVEMAnalyser(JDEAnalyser):
     def __init__(self, hrfDuration=25., dt=.6, fast=True, constrained=False,
                  nbClasses=2, PLOT=False, nItMax=1, nItMin=1, scale=False,
                  beta=1.0, simulation=None, fmri_data=None,
-                 estimateH=True, estimateG=True,
-                 estimateSigmaH=True, estimateSigmaG=True,
+                 estimateH=True, estimateG=True, use_hyperprior=False,
+                 estimateSigmaH=True, estimateSigmaG=True, positivity=False,
                  sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=False,
                  estimateLabels=True, estimateMixtParam=True,
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
@@ -185,7 +185,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                   NitMax=self.nItMax, NitMin=self.nItMin,
                                                   estimateBeta=self.estimateBeta,
                                                   PLOT=self.PLOT, idx_first_tag=idx_tag1,
-                                                  simulation=simu,
+                                                  simulation=simu, 
                                                   estimateH=self.estimateH,
                                                   estimateG=self.estimateG,
                                                   estimateA=self.estimateA,
@@ -218,7 +218,9 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        estimateNoise=self.estimateNoise,
                                        estimateMP=self.estimateMixtParam,
                                        estimateZ=self.estimateLabels,
-                                       estimateLA=self.estimateLA)
+                                       estimateLA=self.estimateLA,
+                                       positivity=self.positivity,
+                                       use_hyperprior=self.use_hyperprior)
         else:
             """NbIter, brls, estimated_brf, prls, estimated_prf, labels,
             noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean,
@@ -269,6 +271,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                   axes_domains={'time': prf_time},
                                   value_label="PRF")
         logger.info("PRF prepared ")
+        print prls.T.shape
         outputs['prls'] = xndarray(prls.T, value_label="PRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
@@ -331,7 +334,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         axes_names=['time', 'voxel'])
             logger.info("drift prepared ")
         logger.info("outputs prepared ")
-            
+
         #######################################################################
         # CONVERGENCE
         if 0:

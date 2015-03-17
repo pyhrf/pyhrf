@@ -38,7 +38,8 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
                        idx_first_tag=0, simulation=None, sigmaMu=None,
                        estimateH=True, estimateG=True, estimateA=True,
                        estimateC=True, estimateZ=True, estimateNoise=True,
-                       estimateMP=True, estimateLA=True):
+                       estimateMP=True, estimateLA=True, use_hyperprior=False,
+                       positivity=False):
     """ Version modified by Lofti from Christine's version """
     logger.info("EM for ASL!")
     np.random.seed(6537546)
@@ -169,10 +170,10 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             sigma_eps = np.var(simulation['noise'], 0)
         if not estimateMP:
             #print simulation['condition_defs'][0]
-            mu_Ma = np.array([[0, 2.2]])
-            sigma_Ma = np.array([[.3, .3]])
-            mu_Mc = np.array([[0, 1.6]])
-            sigma_Mc = np.array([[.3, .3]])
+            mu_Ma = np.array([[0, 2.2], [0, 2.2]])
+            sigma_Ma = np.array([[.3, .3], [.3, .3]])
+            mu_Mc = np.array([[0, 1.6], [0, 1.6]])
+            sigma_Mc = np.array([[.3, .3], [.3, .3]])
 
     ###########################################################################
     #############################################             VBJDE
@@ -217,7 +218,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             Gt, Sigma_G = EM.expectation_G_physio(Sigma_C, m_C, m_A, H, X, W,
                                           Gamma, D, J, N, y_tilde, sigma_eps,
                                           scale, R, sigmaG, OmegaH)
-            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=False)
+            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
             #G = Gt / np.linalg.norm(Gt)
             if simulation is not None:
                 print 'PRF ERROR = ', EM.error(G, simulation['prf'][:, 0])
@@ -264,7 +265,7 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         logger.info("E Z step ...")
         if estimateZ:
             logger.info("estimation")
-            q_Z, Z_tilde = EM.expectation_Z(Sigma_A, m_A, Sigma_C, m_C,
+            q_Z, Z_tilde = EM.expectation_Q(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
                                             Beta, Z_tilde, q_Z, graph, M, J, K)
             if simulation is not None:
@@ -319,16 +320,20 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         if estimateSigmaH:
             logger.info("M sigma_H step ...")
             Aux0 = np.dot(np.dot(Omega.T, R_inv), G)
-            Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) #+ gamma_h
+            if not use_hyperprior:
+                gamma_h = 0
+            Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) + gamma_h
             sigmaH = EM.maximization_sigma_prior(D, R, H, Aux)
             logger.info('sigmaH = ' + str(sigmaH))
         # PRF: Sigma_g
         if estimateSigmaG:
             logger.info("M sigma_G step ...")
             Aux = G - np.dot(Omega, H)
-            #sigmaG = EM.maximization_sigma_prior(D, R, Aux, gamma_g)
-            #print sigmaG
-            sigmaG = EM.maximization_sigma(D, R, Aux)
+            #use_hyperprior = False
+            if use_hyperprior:
+                sigmaG = EM.maximization_sigma_prior(D, R, Aux, gamma_g)
+            else:
+                sigmaG = EM.maximization_sigma(D, R, Aux)
             logger.info('sigmaG = ' + str(sigmaG))
         # (mu,sigma)
         if estimateMP:
@@ -453,7 +458,9 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
 
     StimulusInducedSignal = EM.computeFit(H, m_A, G, m_C, W, X, J, N)
     SNR = 20 * (np.log(np.linalg.norm(Y) / \
-                np.linalg.norm(Y - StimulusInducedSignal - PL))) / np.log(10.)
+                np.linalg.norm(Y - StimulusInducedSignal - PL - wa))) / np.log(10.)
+    print 'SNR = ', SNR
+    print 'ASL signal shape = ', Y.shape
 
     #logger.info('mu_Ma: %f', mu_Ma)
     #logger.info('sigma_Ma: %f', sigma_Ma)
