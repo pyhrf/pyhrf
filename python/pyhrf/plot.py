@@ -56,7 +56,7 @@ def plot_func_slice(func_slice_data, anatomy=None, parcellation=None,
         highlighted_parcels_col = {}
 
     if func_cmap is None:
-        func_cmap = plt.get_cmap('jet')
+        func_cmap = plt.get_cmap('hot')
 
     if anatomy is not None:
         if func_slice_data.shape != anatomy.shape:
