@@ -3,6 +3,7 @@
 
 import sys
 import logging
+import os
 import os.path as op
 
 from optparse import OptionParser
@@ -12,6 +13,14 @@ import pyhrf
 from pyhrf.ndarray import xndarray
 
 logger = logging.getLogger(__name__)
+
+try:
+    os.environ['DISPLAY']
+except KeyError:
+    # Non interactive terminal
+    # Let's disable graphical backend for matplotlib
+    import matplotlib
+    matplotlib.use('Agg')
 
 usage = 'usage: %%prog [options] VOL_FILE'
 description = 'Plot slice(s) of a given volume '

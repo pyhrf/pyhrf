@@ -9,6 +9,12 @@ import difflib
 import numpy as np
 import numpy.testing as npt
 
+try:
+    os.environ["DISPLAY"]
+except KeyError:
+    import matplotlib
+    matplotlib.use("Agg")
+
 from pyhrf.ndarray import *
 from pyhrf.tools import add_suffix
 
