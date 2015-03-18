@@ -25,12 +25,28 @@ try:
     from scipy.maxentropy import logsumexp
 except ImportError:
     from scipy.misc import logsumexp
-from sklearn.base import BaseEstimator, ClusterMixin
 from scipy.sparse import cs_graph_components
-from sklearn.externals.joblib import Memory
-from sklearn.metrics import euclidean_distances
-from sklearn.utils import array2d
-from sklearn.cluster._feature_agglomeration import AgglomerationTransform
+try:
+    from sklearn.base import BaseEstimator, ClusterMixin
+    from sklearn.externals.joblib import Memory
+    from sklearn.metrics import euclidean_distances
+    from sklearn.utils import array2d
+    from sklearn.cluster._feature_agglomeration import AgglomerationTransform
+    from sklearn.mixture import GMM
+    from sklearn.cluster import Ward as WardSK
+except ImportError:
+    class BaseEstimator(object):
+        pass
+    class ClusterMixin(object):
+        pass
+    def Memory(*args, **kwargs):
+        pass
+    class AgglomerationTransform(object):
+        pass
+    # This is only for tests including doctests (since nose try to import
+    # everything) in the case of minimal requirements (without scikit-learn)
+    # TODO: find a better way of handling this case (or make sklearn a required
+    # dependency)
 
 import pyhrf
 
@@ -323,7 +339,6 @@ def compute_mixt_dist(features, alphas, coord_row, coord_col, cluster_masks,
     return res
 
 
-from sklearn.mixture import GMM
 
 
 def compute_mixt_dist_skgmm(features, alphas, coord_row, coord_col,
@@ -1515,7 +1530,6 @@ def feature_extraction(fmri_data, method, dt=.5, time_length=25., ncond=1):
 import pyhrf.graph as pgraph
 
 
-from sklearn.cluster import Ward as WardSK
 
 
 def spatial_ward_sk(features, graph, nb_clusters=0):
