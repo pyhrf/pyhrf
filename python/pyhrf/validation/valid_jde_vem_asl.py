@@ -7,7 +7,11 @@ import logging
 
 import numpy as np
 
-from sklearn.externals.joblib import Memory
+try:
+    from sklearn.externals.joblib import Memory
+except ImportError:
+    def Memory(*args, **kwargs):
+        pass
 
 import pyhrf
 

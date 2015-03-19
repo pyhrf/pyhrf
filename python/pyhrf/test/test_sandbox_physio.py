@@ -14,6 +14,7 @@ import pyhrf
 import pyhrf.sandbox.physio as phy
 
 from pyhrf import Condition
+from pyhrf.tools import is_importable
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class SimulationTest(unittest.TestCase):
             logger.info('cleaning temporary folder ...')
             shutil.rmtree(self.tmp_path)
 
+    @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_full_physio(self):
 
         # pyhrf.verbose.set_verbosity(0)
@@ -49,6 +51,7 @@ class SimulationTest(unittest.TestCase):
         # self.assertEqual(r['bold'].shape, (297, 4)) #nb scans, flat spatial
         # axis
 
+    @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_full_physio_outputs(self):
 
         # pyhrf.verbose.set_verbosity(0)
@@ -62,6 +65,7 @@ class SimulationTest(unittest.TestCase):
         self.assertTrue(op.exists(makefn('flow_induction.nii')))
         self.assertTrue(op.exists(makefn('neural_efficacies_audio.nii')))
 
+    @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_physio_rfs(self):
 
         # pyhrf.verbose.set_verbosity(0)

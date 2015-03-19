@@ -29,8 +29,8 @@ before_install:
     - pip install coveralls
     # set non-interactive matplotlib backend to avoid issues related to $DISPLAY
     # not found
-    - wget -q http://matplotlib.org/1.3.1/_static/matplotlibrc
-    - sed -i.bak  's/^backend.*/backend:Agg/' matplotlibrc
+    # - wget -q http://matplotlib.org/1.3.1/_static/matplotlibrc
+    # - sed -i.bak  's/^backend.*/backend:Agg/' matplotlibrc
 # command to install dependencies
 # e.g. pip install -r requirements.txt # --use-mirrors
 install:
