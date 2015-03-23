@@ -44,7 +44,9 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     logger.info("EM for ASL!")
     np.random.seed(6537546)
     #NitMax=NitMin=0
-
+    logger.info("data shape: ")
+    logger.info(Y.shape)
+        
     # Initialization
     gamma_h = 10000000000 #10000000000  #7.5
     gamma_g = 10000000000  #7.5
@@ -348,6 +350,8 @@ def Main_vbjde_physio(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             logger.info("M L, alpha step ...")
             L, alpha = EM.maximization_LA(Y, m_A, m_C, X, W, w, H, \
                                           G, L, P, alpha, Gamma, sigma_eps)
+            #L, alpha = EM.maximization_L_alpha(Y, m_A, m_C, X, W, w, H, \
+            #                              G, L, P, alpha, Gamma, sigma_eps)
             logger.info("  estimation done")
             if simulation is not None:
                 print 'ALPHA ERROR = ', EM.error(alpha, np.mean(\
