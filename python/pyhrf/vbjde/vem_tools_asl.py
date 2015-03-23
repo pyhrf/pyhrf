@@ -294,14 +294,14 @@ def expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
             tmp0 += m_C[i, m] * X[k]
             y_tildeG[:, i] -= m_A[i, m] * np.dot(X[k], H)
         Y_bar_tilde += np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), y_tildeG[:, i])
-        #S_c += np.dot(np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), W), tmp0)
-        tmp = np.zeros((N, D), dtype=float)
-        tmp2 = np.zeros((N, D), dtype=float)
+        S_c += np.dot(np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), W), tmp0)
+        #tmp = np.zeros((N, D), dtype=float)
+        #tmp2 = np.zeros((N, D), dtype=float)
         for m1, k1 in enumerate(X):                # Loop over the M conditions
             for m2, k2 in enumerate(X):            # Loop over the M conditions
-                tmp = m_C[i, m1] * X[k1]
-                tmp2 = m_C[i, m2] * X[k2]
-                S_c += np.dot(np.dot(np.dot(np.dot(tmp.T, W.T), Gamma_i), W), tmp2)
+                #tmp = m_C[i, m1] * X[k1]
+                #tmp2 = m_C[i, m2] * X[k2]
+                #S_c += np.dot(np.dot(np.dot(np.dot(tmp.T, W.T), Gamma_i), W), tmp2)
                 S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
                                             X[k1].T, W.T), Gamma_i), W), X[k2])
     Sigma_G = np.linalg.inv(S_c)
