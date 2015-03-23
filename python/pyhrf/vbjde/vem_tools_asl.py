@@ -294,14 +294,14 @@ def expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
             tmp0 += m_C[i, m] * X[k]
             y_tildeG[:, i] -= m_A[i, m] * np.dot(X[k], H)
         Y_bar_tilde += np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), y_tildeG[:, i])
-        #S_c += np.dot(np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), W), tmp0)
-        tmp = np.zeros((N, D), dtype=float)
-        tmp2 = np.zeros((N, D), dtype=float)
+        S_c += np.dot(np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), W), tmp0)
+        #tmp = np.zeros((N, D), dtype=float)
+        #tmp2 = np.zeros((N, D), dtype=float)
         for m1, k1 in enumerate(X):                # Loop over the M conditions
             for m2, k2 in enumerate(X):            # Loop over the M conditions
-                tmp = m_C[i, m1] * X[k1]
-                tmp2 = m_C[i, m2] * X[k2]
-                S_c += np.dot(np.dot(np.dot(np.dot(tmp.T, W.T), Gamma_i), W), tmp2)
+                #tmp = m_C[i, m1] * X[k1]
+                #tmp2 = m_C[i, m2] * X[k2]
+                #S_c += np.dot(np.dot(np.dot(np.dot(tmp.T, W.T), Gamma_i), W), tmp2)
                 S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
                                             X[k1].T, W.T), Gamma_i), W), X[k2])
     Sigma_G = np.linalg.inv(S_c)
@@ -577,8 +577,15 @@ def maximization_L_alpha(Y, m_A, m_C, X, W, w, Ht, Gt, L, P, alpha, Gamma,
             S += m_C[i, m] * np.dot(np.dot(W, X[k]), Gt)
         S1 += S + np.dot(w, alpha[i])
         S2 += S + np.dot(P, L[:, i])
-        L[:, i] = np.dot(P.T, Y[:, i] - S1)
+        term = np.linalg.inv(np.dot(np.dot(P.T, Gamma_i), P))
+        print term.shape
+        print P.T.shape
+        print Y[:, i].shape
+        print S1.shape
+        L[:, i] = np.dot(np.dot(np.dot(term, P.T), Gamma_i), Y[:, i] - S1)
+        #L[:, i] = np.dot(P.T, Y[:, i] - S1)
         alpha[i] = np.dot(w.T, Y[:, i] - S2) / (np.dot(w.T, w))
+        #AL[:, i] = np.dot(np.dot(np.dot(term, WP.T), Gamma_i), Y[:, i] - S)
     return L, alpha
 
 
@@ -690,3 +697,77 @@ def computeFit(m_H, m_A, m_G, m_C, W, X, J, N):
                                  + m_C[i, m] * np.dot(np.dot(W, X[k]), m_G)
             m += 1
     return stimIndSignal
+
+
+# Entropy functions
+##############################################################
+
+eps_FreeEnergy = 0.00000001
+
+
+def RL_Entropy(Sigma_RL, M, J):
+    logger.info('Computing RLs Entropy ...')
+    Det_Sigma_RL_j = np.zeros(J, dtype=np.float64)
+    Entropy = 0.0
+    for j in xrange(0, J):
+        Det_Sigma_RL_j = np.linalg.det(Sigma_RL[:, :, j])
+        Const = (2 * np.pi * np.exp(1)) ** M
+        Entropy_j = np.sqrt(Const * Det_Sigma_RL_j)
+        Entropy += np.log(Entropy_j + eps_FreeEnergy)
+    Entropy = - Entropy
+    return Entropy
+
+
+def RF_Entropy(Sigma_RF, D):
+    logger.info('Computing RF Entropy ...')
+    Det_Sigma_RF = np.linalg.det(Sigma_RF)
+    Const = (2 * np.pi * np.exp(1)) ** D
+    Entropy = np.sqrt(Const * Det_Sigma_RF)
+    Entropy = - np.log(Entropy + eps_FreeEnergy)
+    return Entropy
+
+
+def Q_Entropy(q_Z, M, J):
+    logger.info('Computing Z Entropy ...')
+    Entropy = 0.0
+    for j in xrange(0, J):
+        for m in xrange(0, M):
+            Entropy += q_Z[m, 1, j] * np.log(q_Z[m, 1, j] + eps_FreeEnergy) + q_Z[
+                m, 0, j] * np.log(q_Z[m, 0, j] + eps_FreeEnergy)
+
+    return Entropy
+
+
+def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_M, sigma_M, m_H, Sigma_H,
+                       R, Det_invR, sigmaH, p_Wtilde, tau1, tau2, q_Z,
+                       neighboursIndexes, maxNeighbours, Beta, sigma_epsilone,
+                       XX, Gamma, Det_Gamma, XGamma, J, D, M, N, K, S, Model):
+
+        # First part (Entropy):
+    EntropyA = RL_Entropy(Sigma_A, M, J)
+    EntropyC = RL_Entropy(Sigma_C, M, J)
+    EntropyH = RF_Entropy(Sigma_H, D)
+    EntropyG = RF_Entropy(Sigma_H, D)
+    EntropyQ = Q_Entropy(q_Z, M, J)
+
+    # if Model=="CompMod":
+    Total_Entropy = EntropyA + EntropyH + EntropyC + EntropyG + EntropyQ
+    # print 'Total Entropy =', Total_Entropy
+
+    # Second Part (likelihood)
+    EPtildeLikelihood = UtilsC.expectation_Ptilde_Likelihood(y_tilde, m_A, m_H, XX.astype(
+        int32), Sigma_A, sigma_epsilone, Sigma_H, Gamma, p_Wtilde, XGamma, J, D, M, N, Det_Gamma)
+    EPtildeA = UtilsC.expectation_Ptilde_A(
+        m_A, Sigma_A, p_Wtilde, q_Z, mu_M, sigma_M, J, M, K)
+    EPtildeH = UtilsC.expectation_Ptilde_H(
+        R, m_H, Sigma_H, D, sigmaH, Det_invR)
+    EPtildeZ = UtilsC.expectation_Ptilde_Z(
+        q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+    ##EPtildeZ = UtilsC.expectation_Ptilde_Z_MF_Begin(q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+    # if Model=="CompMod":
+    logger.debug("Computing Free Energy for CompMod")
+    EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeC + EPtildeG + EPtildeZ
+
+    FreeEnergy = EPtilde - Total_Entropy
+
+    return FreeEnergy
