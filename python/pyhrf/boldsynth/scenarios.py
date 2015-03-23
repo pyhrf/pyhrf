@@ -116,7 +116,9 @@ def create_localizer_paradigm_avd(condition_defs):
     ons = mpar.onsets_loc_av_d
     cnames = [c.name for c in condition_defs]
     onsets = OrderedDict(zip(cnames, [ons[c] for c in cnames]))
-    par = mpar.Paradigm(onsets, sessionDurations=[300.])
+    par = mpar.Paradigm(onsets, sessionDurations=[300.*2.8])
+    print 'Paradigm information: '
+    print par.get_info()
     return par
 
 
