@@ -18,6 +18,8 @@ from matplotlib.colors import normalize, LinearSegmentedColormap
 matplotlib.rcParams['text.latex.preamble'] = [r"\usepackage{amsmath}"]
 
 from matplotlib import rc
+# TODO: clean the code
+
 rc('text', usetex=True)
 rc('font', family='sans serif')
 
