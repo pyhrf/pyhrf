@@ -19,7 +19,8 @@ from pyhrf.boldsynth.hrf import genGaussianSmoothHRF, getCanoHRF
 from pyhrf.boldsynth.scenarios import build_ctrl_tag_matrix
 from pyhrf.jde.intensivecalc import asl_compute_y_tilde
 from pyhrf.jde.intensivecalc import sample_potts
-from pyhrf.sandbox.physio import PHY_PARAMS_FRISTON00
+from pyhrf.sandbox.physio_params import (PHY_PARAMS_FRISTON00,
+                                         linear_rf_operator)
 
 
 logger = logging.getLogger(__name__)
@@ -274,7 +275,6 @@ class ResponseSampler(GibbsSamplerVariable):
 
             if self.name == 'prf':
                 hrf_length = self.currentValue.shape[0] + 2.
-                from pyhrf.sandbox.physio import linear_rf_operator
                 self.omega_operator = linear_rf_operator(hrf_length,
                                                          self.phy_params, self.dt,
                                                          calculating_brf=False)
@@ -295,7 +295,6 @@ class ResponseSampler(GibbsSamplerVariable):
             self.finalValue = fv
             if self.name == 'prf':
                 hrf_length = self.currentValue.shape[0] + 6.
-                from pyhrf.sandbox.physio import linear_rf_operator
                 self.omega_operator = linear_rf_operator(hrf_length,
                                                          self.phy_params, self.dt,
                                                          calculating_brf=False)
@@ -522,8 +521,6 @@ class PhysioPerfResponseSampler(ResponseSampler, xmlio.XmlInitable):
             return self.dataInput.matXtX
 
     def samplingWarmUp(self, variables):
-
-        from pyhrf.sandbox.physio import linear_rf_operator
 
         hrf_length = self.currentValue.shape[0]
 
