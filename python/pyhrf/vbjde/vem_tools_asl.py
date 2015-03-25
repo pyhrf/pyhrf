@@ -47,7 +47,7 @@ def normpdf(x, mu, sigma):
 
 
 def covariance_matrix(order, D, dt):
-    D2 = vt.buildFiniteDiffMatrix(order, D)
+    D2 = vt.buildFiniteDiffMatrix_s(order, D)
     R = np.dot(D2, D2) / pow(dt, 2 * order)
     return R
 
@@ -205,7 +205,7 @@ def expectation_C(G, m_C, H, m_A, W, X, Gamma, q_Z, mu_Mc, sigma_Mc,
 
 
 def expectation_H(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
-                  sigma_epsilone, scale, R, sigmaH):
+                  sigma_epsilone, scale, R, sigmaH, mu_term=0):
     Y_bar_tilde = np.zeros((D), dtype=float)
     S_a = scale * R / sigmaH
     y_tildeH = y_tilde.copy()
@@ -222,12 +222,118 @@ def expectation_H(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
                 S_a += Sigma_A[m1, m2, i] * np.dot(np.dot(X[k1].T,
                                                           Gamma_i), X[k2])
     Sigma_H = np.linalg.inv(S_a)
+    m_H = np.dot(Sigma_H, Y_bar_tilde + mu_term)
+    return m_H, Sigma_H
+
+
+def expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
+                  sigma_epsilone, scale, R, sigmaH, sigmaG, Omega):
+    Y_bar_tilde = np.zeros((D), dtype=float)
+    S_a = scale * R / sigmaH
+    y_tildeH = y_tilde.copy()
+    for i in xrange(0, J):
+        Gamma_i = Gamma / max(sigma_epsilone[i], eps)
+        tmp = np.zeros((N, D), dtype=float)
+        for m, k in enumerate(X):                  # Loop over the M conditions
+            tmp += m_A[i, m] * X[k]
+            y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k]), G)
+        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeH[:, i])
+        S_a += np.dot(np.dot(tmp.T, Gamma_i), tmp)
+        for m1, k1 in enumerate(X):                # Loop over the M conditions
+            for m2, k2 in enumerate(X):            # Loop over the M conditions
+                S_a += Sigma_A[m1, m2, i] * np.dot(np.dot(X[k1].T,
+                                                          Gamma_i), X[k2])
+    S_a += np.dot(np.dot(Omega.T, scale * R / sigmaG), Omega)
+    Y_bar_tilde += np.dot(np.dot(Omega.T, scale * R / sigmaG), G)
+    Sigma_H = np.linalg.inv(S_a)
+    m_H = np.dot(Sigma_H, Y_bar_tilde)
+    return m_H, Sigma_H
+
+
+def expectation_H_physiob(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
+                  sigma_epsilone, scale, R, sigmaH, sigmaG, Omega):
+    Y_bar_tilde = np.zeros((D), dtype=float)
+    S_a = scale * R / sigmaH
+    y_tildeH = y_tilde.copy()
+    print m_A.shape
+    print Sigma_A.shape
+    for i in xrange(0, J):
+        Gamma_i = Gamma / max(sigma_epsilone[i], eps)
+        tmp = np.zeros((N, D), dtype=float)
+        for m, k in enumerate(X):                  # Loop over the M conditions
+            tmp += m_A[i, m] * X[k]
+            y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k]), G)
+        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeH[:, i])
+        #S_a += np.dot(np.dot(tmp.T, Gamma_i), tmp)
+        tmp = np.zeros((N, D), dtype=float)
+        tmp2 = np.zeros((N, D), dtype=float)
+        for m1, k1 in enumerate(X):                # Loop over the M conditions
+            for m2, k2 in enumerate(X):            # Loop over the M conditions
+                tmp += m_A[i, m1] * X[k1]
+                tmp2 += m_A[i, m2] * X[k2]
+                S_a += np.dot(np.dot(tmp.T, Gamma_i), tmp2)
+                S_a += Sigma_A[m1, m2, i] * np.dot(np.dot(X[k1].T,
+                                                          Gamma_i), X[k2])
+    S_a += np.dot(np.dot(Omega.T, scale * R / sigmaG), Omega)
+    Y_bar_tilde += np.dot(np.dot(Omega.T, scale * R / sigmaG), G)
+    Sigma_H = np.linalg.inv(S_a)
     m_H = np.dot(Sigma_H, Y_bar_tilde)
     return m_H, Sigma_H
 
 
 def expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
+                  sigma_epsilone, scale, R, sigmaG, mu_term=0):
+    Y_bar_tilde = np.zeros((D), dtype=float)
+    S_c = scale * R / sigmaG
+    y_tildeG = y_tilde.copy()
+    for i in xrange(0, J):
+        Gamma_i = Gamma / max(sigma_epsilone[i], eps)
+        tmp0 = np.zeros((N, D), dtype=float)
+        for m, k in enumerate(X):                  # Loop over the M conditions
+            #tmp += m_C[i, m] * np.dot(W, X[k])
+            tmp0 += m_C[i, m] * X[k]
+            y_tildeG[:, i] -= m_A[i, m] * np.dot(X[k], H)
+        Y_bar_tilde += np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), y_tildeG[:, i])
+        S_c += np.dot(np.dot(np.dot(np.dot(tmp0.T, W.T), Gamma_i), W), tmp0)
+        #tmp = np.zeros((N, D), dtype=float)
+        #tmp2 = np.zeros((N, D), dtype=float)
+        for m1, k1 in enumerate(X):                # Loop over the M conditions
+            for m2, k2 in enumerate(X):            # Loop over the M conditions
+                #tmp = m_C[i, m1] * X[k1]
+                #tmp2 = m_C[i, m2] * X[k2]
+                #S_c += np.dot(np.dot(np.dot(np.dot(tmp.T, W.T), Gamma_i), W), tmp2)
+                S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
+                                            X[k1].T, W.T), Gamma_i), W), X[k2])
+    Sigma_G = np.linalg.inv(S_c)
+    m_G = np.dot(Sigma_G, Y_bar_tilde + mu_term)
+    return m_G, Sigma_G
+
+
+def expectation_G_b(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
                   sigma_epsilone, scale, R, sigmaG):
+    Y_bar_tilde = np.zeros((D), dtype=float)
+    S_c = scale * R / sigmaG
+    y_tildeG = y_tilde.copy()
+    for i in xrange(0, J):
+        Gamma_i = Gamma / max(sigma_epsilone[i], eps)
+        tmp = np.zeros((N, D), dtype=float)
+        for m, k in enumerate(X):                  # Loop over the M conditions
+            #tmp += m_C[i, m] * np.dot(W, X[k])
+            tmp += m_C[i, m] * X[k]
+            y_tildeG[:, i] -= m_A[i, m] * np.dot(X[k], H)
+        Y_bar_tilde += np.dot(np.dot(np.dot(tmp.T, W.T), Gamma_i), y_tildeG[:, i])
+        S_c += np.dot(np.dot(np.dot(np.dot(tmp.T, W.T), Gamma_i), W), tmp)
+        for m1, k1 in enumerate(X):                # Loop over the M conditions
+            for m2, k2 in enumerate(X):            # Loop over the M conditions
+                S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
+                                            X[k1].T, W.T), Gamma_i), W), X[k2])
+    Sigma_G = np.linalg.inv(S_c)
+    m_G = np.dot(Sigma_G, Y_bar_tilde)
+    return m_G, Sigma_G
+    
+
+def expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
+                  sigma_epsilone, scale, R, sigmaG, OmegaH):
     Y_bar_tilde = np.zeros((D), dtype=float)
     S_c = scale * R / sigmaG
     y_tildeG = y_tilde.copy()
@@ -243,6 +349,7 @@ def expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
             for m2, k2 in enumerate(X):            # Loop over the M conditions
                 S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
                                             X[k1].T, W.T), Gamma_i), W), X[k2])
+    Y_bar_tilde += np.dot(scale * R / sigmaG, OmegaH)
     Sigma_G = np.linalg.inv(S_c)
     m_G = np.dot(Sigma_G, Y_bar_tilde)
     return m_G, Sigma_G
@@ -272,9 +379,7 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     from scipy.optimize import fmin_l_bfgs_b, fmin_slsqp
     Sigma_F_inv = np.linalg.inv(Sigma_F)
     zeros_F = np.zeros_like(Ftilde)
-    #print 'm_H = ', Ftilde
-    #print 'Sigma_H = ', Sigma_F_inv
-
+    
     def fun(F):
         'function to minimize'
         return np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde))
@@ -288,20 +393,30 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     def ec1(F):
         'Norm2(F)==1'
         return - 1 + np.linalg.norm(F, 2)
-
-    if perfusion is not None:
-        def ec2(F):
-            'F>=perfusion'
-            return F - [perfusion[0]] * (len(zeros_F))
+    
+    def ec2(F):
+        'F(0)==0'
+        return F[0]
+    
+    def ec3(F):
+        'F(end)==0'
+        return F[-1]
+    
+    if positivity:
+        def ec0(F):
+            'F>=0'
+            return F
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],# ieqcons=[ec2],
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3], ieqcons=[ec0],
                        bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
         #               bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
     else:
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, zeros_F, eqcons=[ec1],
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3],
                        bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
 
     #print y
     if 0:
@@ -312,10 +427,13 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
         print "Random perturbations of optimal point"
         for _ in xrange(20):
             z = y + np.random.randn(*y.shape) * 1e-3
-            print "fun(z) = %g" % fun(z)    
-    
+            print "fun(z) = %g" % fun(z)
+
         print 'L-BFGS-B method: '
-        y2 = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+        print [(-1, 1)] * (len(zeros_F)/2) + [(0, 1)] * (len(zeros_F)/2)
+        print len([(-1, 1)] * (len(zeros_F)/2 +1) + [(0, 1)] * (len(zeros_F)/2))
+        bound0 = len([(-1, 1)] * (len(zeros_F)/2 +1) + [(0, None)] * (len(zeros_F)/2))
+        y2 = fmin_l_bfgs_b(fung, zeros_F, bounds=bound0)
         print y2[0]
         print len(y2)
         print fung(y2[0])
@@ -325,51 +443,14 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
             z = y2[0] + np.random.randn(*y2[0].shape) * 1e-3
             w = fung(z)
             print "fung(z) = %g" % w[0]    
+        import matplotlib.pyplot as plt
+        plt.hold('on')
+        plt.plot(y)
+        plt.hold('on')
+        plt.plot(y2[0])
+        plt.show()
+        stop
     return y
-    #fun = lambda F: np.dot(np.dot((F - Ftilde).T, Sigma_F_inv),
-    #                              (F - Ftilde))
-    #cons = ({'type': 'ineq', 'fun': lambda F: - np.linalg.norm(F, 2) + 1})
-    #res = fmin_slsqp(fun, zeros_F, constraints=cons)
-    #res = minimize(fun, zeros_F, constraints=cons)
-    #print res.message
-    #return res.x
-
-def expectation_Zb(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
-                  mu_Mc, Beta, Z_tilde, q_Z, graph, M, J, K):
-    energy = np.zeros(K)
-    Gauss = energy.copy()
-    # Compute Z_tilde
-    for i in xrange(0, J):
-        for m in xrange(0, M):
-            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
-                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
-            #alpha /= alpha.mean()
-            local_energy = Beta[m] * sum(Z_tilde[m, graph[i]])
-            for k in xrange(0, K):
-                extern_field = alpha[k] \
-                     + np.log(normpdf(m_A[i, m], mu_Ma[m, k], sigma_Ma[m, k]))\
-                     + np.log(normpdf(m_C[i, m], mu_Mc[m, k], sigma_Mc[m, k]))
-                # check if the sigma is sqrt or not!!
-                energy[k] = extern_field + local_energy
-            Probas = np.exp(energy - max(energy))
-            Z_tilde[m, i] = Probas[0] / (sum(Probas))
-    # Compute q_Z
-    for i in xrange(0, J):
-        for m in xrange(0, M):
-            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
-                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
-            alpha /= alpha.mean()
-            local_energy = Beta[m] * sum(Z_tilde[m, graph[i]], 0)
-            for k in xrange(0, K):
-                extern_field = alpha[k]
-                energy[k] = extern_field + local_energy
-                Gauss[k] = normpdf(m_A[i, m], mu_Ma[m, k], sigma_Ma[m, k]) \
-                + normpdf(m_C[i, m], mu_Mc[m, k], sigma_Mc[m, k])
-            Probas = np.exp(energy - max(energy))
-            aux = (Gauss * Probas / sum(Probas))
-            q_Z[m, i] = (aux / sum(aux))[0]
-            q_Z[m, i] /= sum(q_Z[m, i])
-    return q_Z, Z_tilde
 
 
 def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
@@ -415,6 +496,50 @@ def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     return q_Z, Z_tilde
 
 
+def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+                  mu_Mc, Beta, p_q_t, p_Q, graph, M, J, K):
+    energy = np.zeros(K)
+    Gauss = energy.copy()
+    # Compute p_q_t
+    for i in xrange(0, J):
+        for m in xrange(0, M):
+            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
+                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
+            alpha /= alpha.mean()
+            p_q_neighb = sum(p_q_t[m, :, graph[i]], 0)
+            for k in xrange(0, K):
+                extern_field = alpha[k] \
+                            + max(np.log(normpdf(m_A[i, m], mu_Ma[m, k],
+                                         sigma_Ma[m, k]) + eps), -100)\
+                            + max(np.log(normpdf(m_C[i, m], mu_Mc[m, k],
+                                         sigma_Mc[m, k]) + eps), -100)
+                local_energy = Beta[m] * p_q_neighb[k]
+                energy[k] = extern_field + local_energy
+            Probas = np.exp(energy - max(energy))
+            p_q_t[m, :, i] = Probas / (sum(Probas) + eps)
+    # Compute p_Q
+    for i in xrange(0, J):
+        for m in xrange(0, M):
+            alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
+                    - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
+            alpha /= alpha.mean()
+            p_q_neighb = sum(p_q_t[m, :, graph[i]], 0)
+            for k in xrange(0, K):
+                # variances term
+                extern_field = alpha[k]
+                # Beta depndent term
+                local_energy = Beta[m] * p_q_neighb[k]
+                energy[k] = extern_field + local_energy
+                Gauss[k] = normpdf(m_A[i, m], mu_Ma[m, k], \
+                                    np.sqrt(sigma_Ma[m, k])) \
+                         * normpdf(m_C[i, m], mu_Mc[m, k], \
+                                    np.sqrt(sigma_Mc[m, k]))
+            Probas = np.exp(energy - max(energy))
+            p_Q[m, :, i] = Gauss * Probas / sum(Probas)
+            p_Q[m, :, i] /= sum(p_Q[m, :, i])
+    return p_Q, p_q_t
+
+
 # Maximization functions
 ##############################################################
 
@@ -425,9 +550,9 @@ def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
             S = sum(q_Z[m, k, :])
             if S == 0.:
                 S = eps
-            #Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2) +
-            #                        Sigma_X[m, m, :])) / S
-            Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2))) / S
+            Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2) +
+                                    Sigma_X[m, m, :])) / S
+            #Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2))) / S
             if Sigma[m, k] < eps:
                 Sigma[m, k] = eps
             if k != 0:          # mu_0 = 0 a priori
@@ -438,8 +563,12 @@ def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
     return Mu, Sigma
 
 
-def maximization_L_alpha(Y, m_A, m_C, X, W, w, Ht, Gt, L, P, alpha):
+def maximization_L_alpha(Y, m_A, m_C, X, W, w, Ht, Gt, L, P, alpha, Gamma,
+                         sigma_eps):
+    #, Gamma, sigma_eps):
+    # WARNING! Noise missing, but if Gamma = Identity, it is equivalent
     for i in xrange(0, Y.shape[1]):
+        Gamma_i = Gamma / max(sigma_eps[i], eps)
         S = np.zeros((P.shape[0]), dtype=np.float64)  # zerosP.copy()
         S1 = S.copy()
         S2 = S.copy()
@@ -448,16 +577,46 @@ def maximization_L_alpha(Y, m_A, m_C, X, W, w, Ht, Gt, L, P, alpha):
             S += m_C[i, m] * np.dot(np.dot(W, X[k]), Gt)
         S1 += S + np.dot(w, alpha[i])
         S2 += S + np.dot(P, L[:, i])
-        L[:, i] = np.dot(P.T, Y[:, i] - S1)
+        term = np.linalg.inv(np.dot(np.dot(P.T, Gamma_i), P))
+        print term.shape
+        print P.T.shape
+        print Y[:, i].shape
+        print S1.shape
+        L[:, i] = np.dot(np.dot(np.dot(term, P.T), Gamma_i), Y[:, i] - S1)
+        #L[:, i] = np.dot(P.T, Y[:, i] - S1)
         alpha[i] = np.dot(w.T, Y[:, i] - S2) / (np.dot(w.T, w))
+        #AL[:, i] = np.dot(np.dot(np.dot(term, WP.T), Gamma_i), Y[:, i] - S)
     return L, alpha
+
+
+def maximization_LA(Y, m_A, m_C, X, W, w, Ht, Gt, L, P, alpha, Gamma,
+                    sigma_eps):
+    AL = np.append(alpha[np.newaxis, :], L, axis=0)
+    WP = np.append(w[:, np.newaxis], P, axis=1)
+    for i in xrange(0, Y.shape[1]):
+        Gamma_i = Gamma / max(sigma_eps[i], eps)
+        S = np.zeros((WP.shape[0]), dtype=np.float64)  # zerosP.copy()
+        for m, k in enumerate(X):
+            S += m_A[i, m] * np.dot(X[k], Ht)
+            S += m_C[i, m] * np.dot(np.dot(W, X[k]), Gt)
+        term = np.linalg.inv(np.dot(np.dot(WP.T, Gamma_i), WP))
+        AL[:, i] = np.dot(np.dot(np.dot(term, WP.T), Gamma_i), Y[:, i] - S)
+        L[:, i] = AL[1:, i]
+        alpha[i] = AL[0, i]
+    return L, alpha
+
+
+def maximization_sigma(D, R, m_X):
+    sigmaX = (np.dot(mult(m_X, m_X), R)).trace()
+    sigmaX /= D
+    return sigmaX
 
 
 def maximization_sigma_prior(D, R, m_X, gamma_x):
     R_inv = np.linalg.inv(R)
     alpha = (np.dot(mult(m_X, m_X), R_inv)).trace()
     #sigmaH = (D + sqrt(D * D + 8 * gamma_h * alpha)) / (4* gamma_h)
-    sigmaX = (-D + sqrt(D * D + 8 * gamma_x * alpha)) / (4 * gamma_x)
+    sigmaX = (1 - D + sqrt((D - 1) * (D - 1) + 8 * gamma_x * alpha)) / (4 * gamma_x)
     return sigmaX
 
 
@@ -490,44 +649,39 @@ def maximization_sigma_noise(Y, X, m_A, Sigma_A, Ht, m_C, Sigma_C, Gt, W, \
 
 def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
     Gr = gamma
-    print 'Gr initial = ', Gr
     for i in xrange(0, J):
-        print '*** voxel ', i
-        print 'neighbours = ', graph[i]
-        print 'Ztilde = ', Z_tilde[m, :, graph[i]]
         tmp2 = beta * sum(Z_tilde[m, :, graph[i]], 0)
-        print 'beta * sum_j\inN(i) = ', tmp2
         Emax = max(tmp2)
-        print 'Emax = ', Emax
-        #Sum = sum(np.exp(tmp2 - Emax))
-        Sum = sum(np.exp(tmp2))
-        print 'exp(beta * sum_k\inN(i) - Emax)', Sum
+        Sum = sum(np.exp(tmp2 - Emax))
         for k in xrange(0, K):
-            print 'class ', k
             tmp = sum(Z_tilde[m, k, graph[i]], 0)
-            print 'sum_j\inN(i) class = ', tmp
             energy = beta * tmp
-            print 'beta * sum_j\inN(i) class = ', energy
-            #Pmf_ik = np.exp(energy - Emax)
-            Pmf_ik = np.exp(energy) / (Sum + eps)
-            print 'Pmf_i = ', Pmf_ik
-            #Gr += tmp * (-q_Z[m, k, i] + Pmf_ik)
-            Gr += (-q_Z[m, k, i] + Pmf_ik)
-    print 'Gr = ', Gr
+            Pmf_ik = np.exp(energy - Emax) / (Sum + eps)
+            Gr += tmp * (-q_Z[m, k, i] + Pmf_ik)
     return Gr
 
 
 def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour,
                       maxNeighbours):
-    Gr = 100
-    step = 0.005
+    Gr = 200
+    step = 0.003
     ni = 1
     while ((abs(Gr) > 0.0001) and (ni < 200)):
         Gr = gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma)
         beta -= step * Gr
-        print 'beta[%d] = %f' % (ni, beta)
         ni += 1
-    return max(beta, eps)
+    if beta < eps:
+        beta = 0.01
+    return beta
+
+
+def maximization_mu(Omega, R, H, G, sigmaH, sigmaG, sigmaM):
+    I = np.eye(R.shape[0])
+    R_inv = np.linalg.inv(R)
+    aux = np.linalg.inv(I / sigmaH + np.dot(Omega.T, Omega) / sigmaG \
+                        + R_inv / sigmaM)
+    Mu = np.dot(aux, H / sigmaH + np.dot(Omega.T, G) / sigmaG)
+    return Mu
 
 
 # Other functions
@@ -543,3 +697,77 @@ def computeFit(m_H, m_A, m_G, m_C, W, X, J, N):
                                  + m_C[i, m] * np.dot(np.dot(W, X[k]), m_G)
             m += 1
     return stimIndSignal
+
+
+# Entropy functions
+##############################################################
+
+eps_FreeEnergy = 0.00000001
+
+
+def RL_Entropy(Sigma_RL, M, J):
+    logger.info('Computing RLs Entropy ...')
+    Det_Sigma_RL_j = np.zeros(J, dtype=np.float64)
+    Entropy = 0.0
+    for j in xrange(0, J):
+        Det_Sigma_RL_j = np.linalg.det(Sigma_RL[:, :, j])
+        Const = (2 * np.pi * np.exp(1)) ** M
+        Entropy_j = np.sqrt(Const * Det_Sigma_RL_j)
+        Entropy += np.log(Entropy_j + eps_FreeEnergy)
+    Entropy = - Entropy
+    return Entropy
+
+
+def RF_Entropy(Sigma_RF, D):
+    logger.info('Computing RF Entropy ...')
+    Det_Sigma_RF = np.linalg.det(Sigma_RF)
+    Const = (2 * np.pi * np.exp(1)) ** D
+    Entropy = np.sqrt(Const * Det_Sigma_RF)
+    Entropy = - np.log(Entropy + eps_FreeEnergy)
+    return Entropy
+
+
+def Q_Entropy(q_Z, M, J):
+    logger.info('Computing Z Entropy ...')
+    Entropy = 0.0
+    for j in xrange(0, J):
+        for m in xrange(0, M):
+            Entropy += q_Z[m, 1, j] * np.log(q_Z[m, 1, j] + eps_FreeEnergy) + q_Z[
+                m, 0, j] * np.log(q_Z[m, 0, j] + eps_FreeEnergy)
+
+    return Entropy
+
+
+def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_M, sigma_M, m_H, Sigma_H,
+                       R, Det_invR, sigmaH, p_Wtilde, tau1, tau2, q_Z,
+                       neighboursIndexes, maxNeighbours, Beta, sigma_epsilone,
+                       XX, Gamma, Det_Gamma, XGamma, J, D, M, N, K, S, Model):
+
+        # First part (Entropy):
+    EntropyA = RL_Entropy(Sigma_A, M, J)
+    EntropyC = RL_Entropy(Sigma_C, M, J)
+    EntropyH = RF_Entropy(Sigma_H, D)
+    EntropyG = RF_Entropy(Sigma_H, D)
+    EntropyQ = Q_Entropy(q_Z, M, J)
+
+    # if Model=="CompMod":
+    Total_Entropy = EntropyA + EntropyH + EntropyC + EntropyG + EntropyQ
+    # print 'Total Entropy =', Total_Entropy
+
+    # Second Part (likelihood)
+    EPtildeLikelihood = UtilsC.expectation_Ptilde_Likelihood(y_tilde, m_A, m_H, XX.astype(
+        int32), Sigma_A, sigma_epsilone, Sigma_H, Gamma, p_Wtilde, XGamma, J, D, M, N, Det_Gamma)
+    EPtildeA = UtilsC.expectation_Ptilde_A(
+        m_A, Sigma_A, p_Wtilde, q_Z, mu_M, sigma_M, J, M, K)
+    EPtildeH = UtilsC.expectation_Ptilde_H(
+        R, m_H, Sigma_H, D, sigmaH, Det_invR)
+    EPtildeZ = UtilsC.expectation_Ptilde_Z(
+        q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+    ##EPtildeZ = UtilsC.expectation_Ptilde_Z_MF_Begin(q_Z, neighboursIndexes.astype(int32), Beta, J, K, M, maxNeighbours)
+    # if Model=="CompMod":
+    logger.debug("Computing Free Energy for CompMod")
+    EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeC + EPtildeG + EPtildeZ
+
+    FreeEnergy = EPtilde - Total_Entropy
+
+    return FreeEnergy

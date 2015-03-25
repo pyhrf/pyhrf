@@ -87,6 +87,27 @@ def genGaussianSmoothHRF(zc, length, eventdt, rh, order=2):
     return (hrf[:,0],matQ)
 
 
+def genGaussianSmoothHRF_cust(zc, length, eventdt, rh, order=2):
+
+    prcov = length-(2*zc)
+    matQ = buildFiniteDiffMatrix(order, prcov)
+    aux = np.append(np.ones((matQ.shape[0]/2+1, matQ.shape[1])),
+                    np.ones((matQ.shape[0]/4, matQ.shape[1]))*5,
+                    axis=0)
+    aux = np.append(aux, np.ones((matQ.shape[0]/4 + 1, matQ.shape[1]))*10,
+                    axis=0)
+    matQ = np.multiply(aux, matQ)
+    matQ = np.divide(np.dot(matQ.transpose(),matQ), eventdt**(order**2))
+    matL = np.array(np.transpose(np.linalg.cholesky(matQ/rh)))
+
+    hrf = np.linalg.solve(matL, np.random.randn(prcov,1))
+    #hrf = np.sqrt(rh)*hrf
+    if zc :
+        hrf = np.concatenate(([[0]],hrf,[[0]]))
+
+    return (hrf[:,0],matQ)
+    
+
 def genExpHRF(timeAxis=np.arange(0,25,0.5), ttp=6, pa=1, pw=0.2,
               ttu=11, ua=0.2, uw=0.01):
     pic = pa*np.exp(-pw*(timeAxis-ttp)**2)
