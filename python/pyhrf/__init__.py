@@ -107,4 +107,7 @@ verbose = Verbose(verbosity=verb)
 
 # FIXME: The following are two things we want to avoid:
 # import not at the beginning and wildcard import
+# and furthermore it erase the logger variable in the namespace
+tmplogger = logger
 from pyhrf.core import *
+logger = tmplogger
