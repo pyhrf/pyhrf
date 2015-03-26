@@ -69,7 +69,7 @@ The version of nibabel and nipy packages available in the Ubuntu 12.04 repositor
 
 Optional dependencies::
 
-    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-munkres
+    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-pygraphviz python-PIL python-munkres
 
 Ubuntu 14.04
 ============
@@ -82,7 +82,7 @@ Required packages::
 
 Optional dependencies::
 
-    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-munkres
+    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-pygraphviz python-PIL python-munkres
 
 Debian 7 (wheezy)
 =================
@@ -99,7 +99,7 @@ Not available on system repositories::
 
 Optional dependencies::
 
-    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-munkres
+    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-pygraphviz python-PIL python-munkres
 
 Fedora 20
 =========
@@ -118,7 +118,7 @@ by hand ::
 
 Optional dependencies::
 
-    $ sudo yum install PyQt4 python-matplotlib-qt4 graphviz-python python-sphinx python-scikit-learn python-joblib
+    $ sudo yum install PyQt4 python-matplotlib-qt4 graphviz-python python-sphinx python-scikit-learn python-pillow python-joblib
     $ pip install --user munkres
 
 .. _Pyhrf download:
