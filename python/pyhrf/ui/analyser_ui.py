@@ -71,8 +71,8 @@ class FMRIAnalyser(xmlio.XmlInitable):
         try:
             res = self.analyse_roi(roiData)
         except Exception:
-            logger.info('!! Sampling crashed !!')
-            logger.info('Exception traceback :')
+            logger.error('!! Sampling crashed !!')
+            logger.error('Exception traceback :')
             sio = StringIO.StringIO()
             traceback.print_exc(file=sio)
             # Make sure that the traceback is well garbage collected and
@@ -82,7 +82,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
             report = sio.getvalue()
             sio.close()
             del sio
-            logger.info(report)
+            logger.error(report)
             res = None
 
         return (roiData, res, report)
@@ -96,8 +96,8 @@ class FMRIAnalyser(xmlio.XmlInitable):
             try:
                 res = self.analyse_roi(roiData)
             except Exception:
-                logger.info('!! Sampling crashed !!')
-                logger.info('Exception traceback :')
+                logger.error('!! Sampling crashed !!')
+                logger.error('Exception traceback :')
                 sio = StringIO.StringIO()
                 traceback.print_exc(file=sio)
                 # Make sure that the traceback is well garbage collected and
@@ -107,7 +107,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
                 report = sio.getvalue()
                 sio.close()
                 del sio
-                logger.info(report)
+                logger.error(report)
                 res = None
         else:
             res = self.analyse_roi(roiData)
@@ -146,12 +146,12 @@ class FMRIAnalyser(xmlio.XmlInitable):
             roi_data, result, report = r
             roi_id = roi_data.get_roi_id()
             if report != 'ok':
-                logger.info('-> Sampling crashed, roi %d!', roi_id)
-                logger.info(report)
+                logger.error('-> Sampling crashed, roi %d!', roi_id)
+                logger.error(report)
                 to_pop.insert(0, i)
 
             elif result is None:
-                logger.info('-> Sampling crashed (result is None), roi %d!',
+                logger.error('-> Sampling crashed (result is None), roi %d!',
                             roi_id)
                 to_pop.insert(0, i)
 
@@ -296,7 +296,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
         results = self.filter_crashed_results(results)
 
         if len(results) == 0:
-            logger.info('No more result to treat. Did everything crash ?')
+            logger.warning('No more result to treat. Did everything crash ?')
             return {}, []
 
         # Merge all the analysis outputs
@@ -363,7 +363,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
             results.pop(i)
 
         if len(results) == 0:
-            logger.info('No more result to treat. Did everything crash ?')
+            logger.warning('No more result to treat. Did everything crash ?')
             return
 
         def load_any(fns, load_func):

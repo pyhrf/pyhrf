@@ -738,7 +738,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
         np.log(
             np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL))
     SNR /= np.log(10.)
-    print 'SNR comp =', SNR
+    logger.info('SNR comp = %f', SNR)
     # ,FreeEnergyArray
     return ni, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, L, PL, CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], cTime[2:], cTimeMean, Sigma_A, StimulusInducedSignal
 
@@ -1538,8 +1538,8 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1
     logger.info("Nb iterations to reach criterion: %d", ni)
     logger.info("Computational time = %s min %s s", str(
         np.int(CompTime // 60)), str(np.int(CompTime % 60)))
-    logger.info('mu_M: %f', mu_M)
-    logger.info('sigma_M: %f', sigma_M)
+    logger.info('mu_M: %s', mu_M)
+    logger.info('sigma_M: %s', sigma_M)
     logger.info("sigma_H = %s" + str(sigmaH))
     logger.info("Beta = %s" + str(Beta))
 
@@ -1548,6 +1548,6 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1
         np.log(
             np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL))
     SNR /= np.log(10.)
-    print 'SNR comp =', SNR
+    logger.info('SNR comp = %f', SNR)
     # ,FreeEnergyArray
     return ni, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, L, PL, CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], cTime[2:], cTimeMean, Sigma_A, StimulusInducedSignal

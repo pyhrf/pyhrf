@@ -455,7 +455,7 @@ class JDEVEMAnalyser(JDEAnalyser):
 # Function to use directly in parallel computation
 def run_analysis(**params):
     # pyhrf.verbose.set_verbosity(1)
-    pyhrf.logger.setLevel(logging.INFO)
+    # pyhrf.logger.setLevel(logging.INFO)
     fdata = params.pop('roi_data')
     # print 'doing params:'
     # print params
