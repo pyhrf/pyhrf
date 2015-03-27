@@ -104,9 +104,9 @@ if not options.variational_em:
 else:
     if options.nbIterations is not None:
         analyser = JDEVEMAnalyser(nItMax=options.nbIterations,
-                                  contrasts=contrasts, jpde=options.jpde)
+                                  contrasts=contrasts)
     else:
-        analyser = JDEVEMAnalyser(contrasts=contrasts, jpde=options.jpde)
+        analyser = JDEVEMAnalyser(contrasts=contrasts)
 
 
 #print 'options:', options

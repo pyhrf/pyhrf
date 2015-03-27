@@ -503,7 +503,7 @@ def run_analysis(**params):
     # from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
     # import pyhrf
     # pyhrf.verbose.set_verbosity(1)
-    pyhrf.logger.setLevel(logging.INFO)
+    # pyhrf.logger.setLevel(logging.INFO)
     fdata = params.pop('roi_data')
     # print 'doing params:'
     # print params

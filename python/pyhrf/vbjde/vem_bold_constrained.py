@@ -780,7 +780,7 @@ def Main_vbjde_Python_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale
         np.log(
             np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL))
     SNR /= np.log(10.)
-    print 'SNR comp =', SNR
+    logger.info('SNR comp = %f', SNR)
     return m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, L, PL
 
 
@@ -1100,5 +1100,5 @@ def Main_vbjde_Extension_constrained_stable(graph, Y, Onsets, Thrf, K, TR, beta,
         np.log(
             np.linalg.norm(Y) / np.linalg.norm(Y - StimulusInducedSignal - PL))
     SNR /= np.log(10.)
-    print 'SNR comp =', SNR
+    logger.info('SNR comp = %f', SNR)
     return ni, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, L, PL, CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], cTime[2:], cTimeMean, Sigma_A, StimulusInducedSignal
