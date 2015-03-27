@@ -105,33 +105,33 @@ setup(
     zip_safe = False,
     )
 
+if sys.argv[1] == "install":
+    # optional deps and description of associated feature:
+    optional_deps = {
+        "sklearn": "(scikit-learn) -- spatial ward parcellation",
+        "joblib": "local parallel feature (eg pyhrf_jde_estim -x local)",
+        "soma_workflow": "cluster parallel feature (eg pyhrf_jde_estim -x cluster)",
+        "PIL": "loading of image file as simulation maps",
+        "munkres": "computation of distance between parcellations",
+        "pygraph": "(python-graph-core) -- save plot of simulation pipelines",
+        "pygraphviz": "optimized graph operations and outputs",
+        }
 
-# optional deps and description of associated feature:
-optional_deps = {
-    "sklearn": "(scikit-learn) -- spatial ward parcellation",
-    "joblib": "local parallel feature (eg pyhrf_jde_estim -x local)",
-    "soma_workflow": "cluster parallel feature (eg pyhrf_jde_estim -x cluster)",
-    "PIL": "loading of image file as simulation maps",
-    "munkres": "computation of distance between parcellations",
-    "pygraph": "(python-graph-core) -- save plot of simulation pipelines",
-    "pygraphviz": "optimized graph operations and outputs",
-    }
+    def check_opt_dep(dep_name, dep_descrip):
+        """
+        Return a message telling if dependency *dep_name* is available
+        with an import
+        """
+        try:
+            __import__(dep_name)
+        except ImportError:
+            return "%s *NOT IMPORTABLE*, %s will *NOT* be available" %(dep_name,
+                                                                       dep_descrip)
+        return "%s is importable, %s will be available" %(dep_name, dep_descrip)
 
-def check_opt_dep(dep_name, dep_descrip):
-    """
-    Return a message telling if dependency *dep_name* is available
-    with an import
-    """
-    try:
-        __import__(dep_name)
-    except ImportError:
-        return "%s *NOT IMPORTABLE*, %s will *NOT* be available" %(dep_name,
-                                                                   dep_descrip)
-    return "%s is importable, %s will be available" %(dep_name, dep_descrip)
-
-print "Optional dependencies:"
-print "\n".join(["- "+ check_opt_dep(dn, dd) for dn, dd in optional_deps.items()])
+    print "Optional dependencies:"
+    print "\n".join(["- "+ check_opt_dep(dn, dd) for dn, dd in optional_deps.items()])
 
 
-print ("\nIf the installation was successfull, you may run "
-       '"pyhrf_maketests" to run package tests.\n')
+    print ("\nIf the installation was successfull, you may run "
+           '"pyhrf_maketests" to run package tests.\n')
