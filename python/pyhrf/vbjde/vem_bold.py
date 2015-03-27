@@ -20,6 +20,7 @@ import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
 
 from pyhrf.tools._io import read_volume
+from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.ndarray import xndarray
 try:
@@ -1130,7 +1131,11 @@ def Main_vbjde(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=
     return m_A, m_H, q_Z, sigma_epsilone, (np.array(Hist_sigmaH)).transpose()
 
 
-def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=True, sigmaH=0.05, NitMax=-1, NitMin=1, estimateBeta=True, PLOT=False, contrasts=[], computeContrast=False, gamma_h=0):
+def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
+                                scale=1, estimateSigmaH=True, sigmaH=0.05,
+                                NitMax=-1, NitMin=1, estimateBeta=True,
+                                PLOT=False, contrasts=[], computeContrast=False,
+                                gamma_h=0):
     """ Version modified by Lofti from Christine's version """
     logger.info(
         "Fast EM with C extension started ... Here is the stable version !")

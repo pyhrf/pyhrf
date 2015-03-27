@@ -181,12 +181,12 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         beta,self.dt,scale,self.estimateSigmaH,
                                         self.sigmaH,self.nItMax, self.nItMin,
                                         self.estimateBeta,self.PLOT,
-                                        self.contrasts,self.computeContrast,
-                                        self.hyper_prior_sigma_H,self.estimateHRF,
-                                        self.TrueHrfFlag, self.HrfFilename,
-                                        self.estimateLabels,self.LabelsFilename,
-                                        self.MFapprox,self.InitVar,self.InitMean,
-                                        self.MiniVemFlag,self.NbItMiniVem)
+                                        self.contrasts,self.computeContrast) #,
+                                        # self.hyper_prior_sigma_H,self.estimateHRF,
+                                        # self.TrueHrfFlag, self.HrfFilename,
+                                        # self.estimateLabels,self.LabelsFilename,
+                                        # self.MFapprox,self.InitVar,self.InitMean,
+                                        # self.MiniVemFlag,self.NbItMiniVem)
             else:
                 logger.info("fast VEM with drift estimation and a constraint")
 
@@ -448,7 +448,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                 axes_names=['parcel_size'],
                                                 axes_domains=d)
 
-        return #outputs
+        return outputs
 
 
 
