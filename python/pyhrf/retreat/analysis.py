@@ -262,19 +262,6 @@ contrasts['H0: [perfusion] left = right'][0, 7] = -1
 contrasts['H0: [perfusion] left = right'][1, 6] = 1
 contrasts['H0: [perfusion] left = right'][1, 8] = -1
 
-# interactions
-if False:  # TODO: check meaning
-    contrasts['[d5000] left - right'] = np.zeros((n_columns,))
-    contrasts['[d5000] left - right'][5] = 1
-    contrasts['[d5000] left - right'][6] = -1
-    contrasts['[d5000] left - right'][7] = 1
-    contrasts['[d5000] left - right'][8] = -1
-    
-    contrasts['[left] d2500 - d5000'] = np.zeros((n_columns,))
-    contrasts['[left] d2500 - d5000'][5] = 1
-    contrasts['[left] d2500 - d5000'][7] = -1
-
-
 ########################################
 # Perform a GLM analysis
 ########################################
@@ -297,7 +284,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     z_map, = fmri_glm.contrast(contrast_val, con_id=contrast_id, output_z=True)
     save(z_map, image_path)
     # Create snapshots of the contrasts
-#    cut_coords = (-39, -27, 48)
+    # TODO: cut at motor regions e.g. (-39, -27, 48)
     vmax = max(-z_map.get_data().min(), z_map.get_data().max())
     plot_map(z_map.get_data(), z_map.get_affine(),
              cmap=cm.cold_hot, vmin=-vmax, vmax=vmax,
