@@ -19,7 +19,7 @@ from nipy.modalities.fmri.experimental_paradigm import \
 from nipy.modalities.fmri.glm import FMRILinearModel
 from nipy.modalities.fmri.design_matrix import make_dmtx
 from nipy.labs.viz import plot_map, cm
-from nipy.labs.viz_tools.coord_tools import find_cut_coords
+
 
 def fix_paradigm(paradigm):
     """Fix a paradigm. Force its amplitude to be an array of floats.
@@ -81,7 +81,8 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
     'spm_time': this is the spm model plus its time derivative (2 regressors)
     'spm_time_dispersion': idem, plus dispersion derivative (3 regressors)
     'canonical': this one corresponds to the Glover hrf
-    'canonical with derivative': the Glover hrf + time derivative (2 regressors)
+    'canonical with derivative': the Glover hrf + time derivative (2 
+    regressors)
     'fir': finite impulse response basis, a set of delayed dirac models
     with arbitrary length. This one currently assumes regularly spaced
     frametimes (i.e. fixed time of repetition).
@@ -174,6 +175,7 @@ print('Computation will be performed in directory: %s' % write_dir)
 #####################################
 # ASL additionnal regressors
 #####################################
+
 paradigm = load_paradigm_from_csv_file(paradigm_file)['0']
 fix_paradigm(paradigm)
 
@@ -311,13 +313,16 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     image_path = os.path.join(write_dir, '%s_z_map.nii' % contrast_id)
     z_map, = fmri_glm.contrast(contrast_val, con_id=contrast_id, output_z=True)
     nibabel.save(z_map, image_path)
+
     # Create snapshots of the contrasts
     # TODO: cut at motor regions e.g. (-39, -27, 48)
     data = z_map.get_data()
     vmax = data[np.isfinite(data)].max()
     vmin = data[np.isfinite(data)].min()
     vmax = max(-vmin, vmax)
-#    cut_coords = find_cut_coords(z_map.get_data())#, mask=mask_img.get_data())
+    # TODO from nipy.labs.viz_tools.coord_tools import find_cut_coords 
+    # and use cut_coords = find_cut_coords(z_map.get_data()),
+    # mask=mask_img.get_data()) with slicer='ortho' to produce cuts
 
     anat_img = nibabel.load(anat_file)
     plot_map(z_map.get_data(), z_map.get_affine(),
@@ -325,7 +330,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
              slicer='z', black_bg=True, threshold=3.1,  # 3.1 for pval<1e-3
              title=contrast_id, anat=anat_img.get_data(),
              anat_affine=anat_img.get_affine())
-#    plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
+    plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
 
 print("All the  results were witten in %s" % write_dir)
 
