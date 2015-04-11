@@ -1,9 +1,10 @@
 import os
+import glob
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from nibabel import save
+import nibabel
 from nipy.modalities.fmri.hemodynamic_models import _hrf_kernel
 try:
     from nipy.modalities.fmri.hemodynamic_models import (sample_condition,
@@ -18,7 +19,7 @@ from nipy.modalities.fmri.experimental_paradigm import \
 from nipy.modalities.fmri.glm import FMRILinearModel
 from nipy.modalities.fmri.design_matrix import make_dmtx
 from nipy.labs.viz import plot_map, cm
-
+from nipy.labs.viz_tools.coord_tools import find_cut_coords
 
 def fix_paradigm(paradigm):
     """Fix a paradigm. Force its amplitude to be an array of floats.
@@ -80,7 +81,7 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
     'spm_time': this is the spm model plus its time derivative (2 regressors)
     'spm_time_dispersion': idem, plus dispersion derivative (3 regressors)
     'canonical': this one corresponds to the Glover hrf
-    'canonical_derivative': the Glover hrf + time derivative (2 regressors)
+    'canonical with derivative': the Glover hrf + time derivative (2 regressors)
     'fir': finite impulse response basis, a set of delayed dirac models
     with arbitrary length. This one currently assumes regularly spaced
     frametimes (i.e. fixed time of repetition).
@@ -124,13 +125,30 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
 # Data and analysis parameters
 #######################################
 
-# volume and paradigm
-data_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                         'gin_struct/archives/RG130377/ASLf/funct',
-                         'smooth/swrRG130377_ASLf_correctionT1.nii')
+# functionals, grey mask and paradigm
+subjects = ['RG130377', 'SC120530', 'CD110147']
+subject = 'RG130377'
+func_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                         'gin_struct/archives', subject, 'standard',
+                         'swr' + subject + '_ASLf_correctionT1.nii')
+gm_file = glob.glob(os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                                 'gin_struct/archives', subject, 'standard',
+                                 'wc1anat_*.nii'))[0]
+anat_file = glob.glob(os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                                   'gin_struct/archives', subject, 'standard',
+                                   'wmanat_*.nii'))[0]
 paradigm_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                              'gin_struct/archives',
                              'paradigm_bilateral_v2_no_final_rest.csv')
+
+# Compute binary grey matter mask
+img = nibabel.load(gm_file)
+mask = img.get_data()
+mask[mask <= 0.1] = 0
+mask[mask > 0.1] = 1
+mask_img = nibabel.Nifti1Image(mask, img.get_affine(), img.get_header())
+mask_file = '/tmp/gm_mask.nii'
+nibabel.save(mask_img, mask_file)
 
 # timing  # TODO: load timing parameters
 n_scans = 164
@@ -138,7 +156,7 @@ tr = 2.5
 frametimes = np.arange(0, n_scans * tr, tr)
 
 # HRF, PRF, drift and GLM models
-hrf_model = 'canonical'
+hrf_model = 'canonical with derivative'
 prf_model = 'physio'
 prf_matrix = None
 drift_model = 'polynomial'
@@ -147,7 +165,7 @@ model = 'ar1'  # other possible choice: 'ols'
 
 # write directory
 write_dir = os.path.join(os.getcwd(), 'results')
-write_dir = '/tmp/glm'
+write_dir = os.path.join('/tmp/glm_mask', subject)
 if not os.path.exists(write_dir):
     os.mkdir(write_dir)
 
@@ -160,8 +178,9 @@ paradigm = load_paradigm_from_csv_file(paradigm_file)['0']
 fix_paradigm(paradigm)
 
 # Baseline ASL regressor
-reg = .5 * np.ones(n_scans)
-reg[::2] *= -1
+reg = np.ones(n_scans)
+reg[1::2] *= 0.5
+reg[::2] *= -0.5
 add_regs = [reg]
 add_reg_names = ['perfusion_baseline']
 
@@ -202,6 +221,16 @@ print('Loading design matrix...')
 design_matrix = make_dmtx(frametimes, paradigm=paradigm, hrf_model=hrf_model,
                           drift_model=drift_model, drift_order=drift_order,
                           add_regs=add_regs, add_reg_names=add_reg_names)
+reg_names = []
+for name in design_matrix.names:
+    if 'perfusion' in name:
+        name = name.replace('_checkerboard_motor', '')
+    else:
+        name = name.replace('checkerboard_motor', 'BOLD')
+    name = name.replace('_', ' ')
+    print name
+    reg_names.append(name)
+design_matrix.names = reg_names
 ax = design_matrix.show()
 ax.set_position([.05, .25, .9, .65])
 ax.set_title('Design matrix')
@@ -211,64 +240,63 @@ plt.savefig(os.path.join(write_dir, 'design_matrix.png'))
 #########################################
 # Specify the contrasts
 #########################################
+# TODO plot the contrasts
 
 # simplest ones
 contrasts = {}
 n_columns = len(design_matrix.names)
-
 for n, name in enumerate(design_matrix.names):
-    contrasts['H0: ' + name + ' = 0'] = np.zeros((n_columns,))
-    contrasts['H0: ' + name + ' = 0'][n] = 1
+    contrasts[name] = np.zeros((n_columns,))
+    contrasts[name][n] = 1
 
 # t_tests
-contrasts['H1: [BOLD d2500] left > right'] = np.zeros((n_columns,))
-contrasts['H1: [BOLD d2500] left > right'][0] = 1
-contrasts['H1: [BOLD d2500] left > right'][1] = -1
+contrasts['[BOLD d2500] left - right'] = \
+    contrasts['BOLD d2500 left'] - contrasts['BOLD d2500 right']
+contrasts['[BOLD d5000] left - right'] = \
+    contrasts['BOLD d5000 left'] - contrasts['BOLD d5000 right']
+contrasts['[perfusion d2500] left - right'] = \
+    contrasts['perfusion d2500 left'] - contrasts['perfusion d2500 right']
+contrasts['[perfusion d5000] left - right'] = \
+    contrasts['perfusion d5000 left'] - contrasts['perfusion d5000 right']
 
-contrasts['H1: [BOLD d5000] left > right'] = np.zeros((n_columns,))
-contrasts['H1: [BOLD d5000] left > right'][2] = 1
-contrasts['H1: [BOLD d5000] left > right'][3] = -1
-
-contrasts['H1: [perfusion d2500] left > right'] = np.zeros((n_columns,))
-contrasts['H1: [perfusion d2500] left > right'][5] = 1
-contrasts['H1: [perfusion d2500] left > right'][6] = -1
-
-contrasts['H1: [perfusion d5000] left > right'] = np.zeros((n_columns,))
-contrasts['H1: [perfusion d5000] left > right'][7] = 1
-contrasts['H1: [perfusion d5000] left > right'][8] = -1
+# pooled t-tests
+contrasts['BOLD left'] = contrasts['BOLD d2500 left'] + \
+    contrasts['BOLD d5000 left']
+contrasts['BOLD right'] = contrasts['BOLD d2500 right'] + \
+    contrasts['BOLD d5000 right']
+contrasts['perfusion left'] = contrasts['perfusion d2500 left'] + \
+    contrasts['perfusion d5000 left']
+contrasts['perfusion right'] = contrasts['perfusion d2500 right'] + \
+    contrasts['perfusion d5000 right']
+contrasts['[BOLD] left - right'] = \
+    contrasts['[BOLD d2500] left - right'] + \
+    contrasts['[BOLD d5000] left - right']
+contrasts['[perfusion] left - right'] = \
+    contrasts['[perfusion d2500] left - right'] + \
+    contrasts['[perfusion d5000] left - right']
 
 # F-tests
-contrasts['H0: [BOLD] d2500 = d5000'] = np.zeros((2, n_columns))
-contrasts['H0: [BOLD] d2500 = d5000'][0, 0] = 1
-contrasts['H0: [BOLD] d2500 = d5000'][0, 2] = -1
-contrasts['H0: [BOLD] d2500 = d5000'][1, 1] = 1
-contrasts['H0: [BOLD] d2500 = d5000'][1, 3] = -1
+do_Ftests = False
+if do_Ftests:
+    contrasts['H0: [BOLD] d2500 = d5000'] = np.zeros((2, n_columns))
+    contrasts['H0: [BOLD] d2500 = d5000'][0, 0] = 1
+    contrasts['H0: [BOLD] d2500 = d5000'][0, 2] = -1
+    contrasts['H0: [BOLD] d2500 = d5000'][1, 1] = 1
+    contrasts['H0: [BOLD] d2500 = d5000'][1, 3] = -1
+    contrasts['H0: [perfusion] left = right'] = np.zeros((2, n_columns))
+    contrasts['H0: [perfusion] left = right'][0, 5] = 1
+    contrasts['H0: [perfusion] left = right'][0, 7] = -1
+    contrasts['H0: [perfusion] left = right'][1, 6] = 1
+    contrasts['H0: [perfusion] left = right'][1, 8] = -1
 
-contrasts['H0: [BOLD] left = right'] = np.zeros((2, n_columns))
-contrasts['H0: [BOLD] left = right'][0, 0] = 1
-contrasts['H0: [BOLD] left = right'][0, 1] = -1
-contrasts['H0: [BOLD] left = right'][1, 2] = 1
-contrasts['H0: [BOLD] left = right'][1, 3] = -1
-
-contrasts['H0: [perfusion] d2500 = d5000'] = np.zeros((2, n_columns))
-contrasts['H0: [perfusion] d2500 = d5000'][0, 5] = 1
-contrasts['H0: [perfusion] d2500 = d5000'][0, 6] = -1
-contrasts['H0: [perfusion] d2500 = d5000'][1, 7] = 1
-contrasts['H0: [perfusion] d2500 = d5000'][1, 8] = -1
-
-contrasts['H0: [perfusion] left = right'] = np.zeros((2, n_columns))
-contrasts['H0: [perfusion] left = right'][0, 5] = 1
-contrasts['H0: [perfusion] left = right'][0, 7] = -1
-contrasts['H0: [perfusion] left = right'][1, 6] = 1
-contrasts['H0: [perfusion] left = right'][1, 8] = -1
 
 ########################################
 # Perform a GLM analysis
 ########################################
 
 print('Fitting a GLM (this takes time)...')
-fmri_glm = FMRILinearModel(data_file, design_matrix.matrix,
-                           mask='compute')
+fmri_glm = FMRILinearModel(func_file, design_matrix.matrix,
+                           mask=mask_file)
 fmri_glm.fit(do_scaling=True, model=model)
 
 #########################################
@@ -282,15 +310,22 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     # save the z_image
     image_path = os.path.join(write_dir, '%s_z_map.nii' % contrast_id)
     z_map, = fmri_glm.contrast(contrast_val, con_id=contrast_id, output_z=True)
-    save(z_map, image_path)
+    nibabel.save(z_map, image_path)
     # Create snapshots of the contrasts
     # TODO: cut at motor regions e.g. (-39, -27, 48)
-    vmax = max(-z_map.get_data().min(), z_map.get_data().max())
+    data = z_map.get_data()
+    vmax = data[np.isfinite(data)].max()
+    vmin = data[np.isfinite(data)].min()
+    vmax = max(-vmin, vmax)
+#    cut_coords = find_cut_coords(z_map.get_data())#, mask=mask_img.get_data())
+
+    anat_img = nibabel.load(anat_file)
     plot_map(z_map.get_data(), z_map.get_affine(),
              cmap=cm.cold_hot, vmin=-vmax, vmax=vmax,
-             slicer='z', black_bg=True, threshold=2.5,
-             title=contrast_id)
-    plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
+             slicer='z', black_bg=True, threshold=3.1,  # 3.1 for pval<1e-3
+             title=contrast_id, anat=anat_img.get_data(),
+             anat_affine=anat_img.get_affine())
+#    plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
 
 print("All the  results were witten in %s" % write_dir)
 
