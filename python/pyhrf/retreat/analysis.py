@@ -19,6 +19,10 @@ from nipy.modalities.fmri.experimental_paradigm import \
 from nipy.modalities.fmri.glm import FMRILinearModel
 from nipy.modalities.fmri.design_matrix import make_dmtx
 from nipy.labs.viz import plot_map, cm
+from nipy.labs.statistical_mapping import (get_3d_peaks, cluster_stats)
+from nipy.labs.utils.mask import compute_mask_files
+
+from locator import anat_auditory, anat_motor, get_maxima
 
 
 def fix_paradigm(paradigm):
@@ -81,7 +85,7 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
     'spm_time': this is the spm model plus its time derivative (2 regressors)
     'spm_time_dispersion': idem, plus dispersion derivative (3 regressors)
     'canonical': this one corresponds to the Glover hrf
-    'canonical with derivative': the Glover hrf + time derivative (2 
+    'canonical with derivative': the Glover hrf + time derivative (2
     regressors)
     'fir': finite impulse response basis, a set of delayed dirac models
     with arbitrary length. This one currently assumes regularly spaced
@@ -128,27 +132,37 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
 
 # functionals, grey mask and paradigm
 subjects = ['RG130377', 'SC120530', 'CD110147']
-subject = 'RG130377'
+subject = 'CD110147'
 func_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                          'gin_struct/archives', subject, 'standard',
                          'swr' + subject + '_ASLf_correctionT1.nii')
+unsmoothed_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                               'gin_struct/archives', subject, 'standard',
+                               'wr' + subject + '_ASLf_correctionT1.nii')
+func_mask_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                              'gin_struct/archives', subject, 'standard',
+                              'func_mask_' + subject)
+anat_file = glob.glob(os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                                   'gin_struct/archives', subject, 'standard',
+                                   'wmanat_*brain*'))[0]
 gm_file = glob.glob(os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                                  'gin_struct/archives', subject, 'standard',
                                  'wc1anat_*.nii'))[0]
-anat_file = glob.glob(os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                                   'gin_struct/archives', subject, 'standard',
-                                   'wmanat_*.nii'))[0]
 paradigm_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                              'gin_struct/archives',
                              'paradigm_bilateral_v2_no_final_rest.csv')
 
-# Compute binary grey matter mask
+# Compute binary grey matter mask cut beyond the neck
+# TODO: mask with 50% of all tissues
+# TODO: use modulated masks
+img = nibabel.load(unsmoothed_file)
+func_mask = compute_mask_files(unsmoothed_file, func_mask_file,  m=0.3, M=.4,
+                               cc=0, opening=0)
 img = nibabel.load(gm_file)
-mask = img.get_data()
-mask[mask <= 0.1] = 0
-mask[mask > 0.1] = 1
-mask_img = nibabel.Nifti1Image(mask, img.get_affine(), img.get_header())
-mask_file = '/tmp/gm_mask.nii'
+gm_mask = img.get_data()
+gm_mask[func_mask == 0] = 0  # to cut beyond the neck
+mask_img = nibabel.Nifti1Image(gm_mask, img.get_affine(), img.get_header())
+mask_file = '/tmp/cut_gm_mask.nii'
 nibabel.save(mask_img, mask_file)
 
 # timing  # TODO: load timing parameters
@@ -157,7 +171,7 @@ tr = 2.5
 frametimes = np.arange(0, n_scans * tr, tr)
 
 # HRF, PRF, drift and GLM models
-hrf_model = 'canonical with derivative'
+hrf_model = 'canonical'
 prf_model = 'physio'
 prf_matrix = None
 drift_model = 'polynomial'
@@ -277,21 +291,6 @@ contrasts['[perfusion] left - right'] = \
     contrasts['[perfusion d2500] left - right'] + \
     contrasts['[perfusion d5000] left - right']
 
-# F-tests
-do_Ftests = False
-if do_Ftests:
-    contrasts['H0: [BOLD] d2500 = d5000'] = np.zeros((2, n_columns))
-    contrasts['H0: [BOLD] d2500 = d5000'][0, 0] = 1
-    contrasts['H0: [BOLD] d2500 = d5000'][0, 2] = -1
-    contrasts['H0: [BOLD] d2500 = d5000'][1, 1] = 1
-    contrasts['H0: [BOLD] d2500 = d5000'][1, 3] = -1
-    contrasts['H0: [perfusion] left = right'] = np.zeros((2, n_columns))
-    contrasts['H0: [perfusion] left = right'][0, 5] = 1
-    contrasts['H0: [perfusion] left = right'][0, 7] = -1
-    contrasts['H0: [perfusion] left = right'][1, 6] = 1
-    contrasts['H0: [perfusion] left = right'][1, 8] = -1
-
-
 ########################################
 # Perform a GLM analysis
 ########################################
@@ -307,7 +306,7 @@ fmri_glm.fit(do_scaling=True, model=model)
 
 print('Computing contrasts...')
 for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
-    print('  Contrast % 2i out of %i: %s' %
+    print(' Contrast % 2i out of %i: %s' %
           (index + 1, len(contrasts), contrast_id))
     # save the z_image
     image_path = os.path.join(write_dir, '%s_z_map.nii' % contrast_id)
@@ -315,24 +314,64 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     nibabel.save(z_map, image_path)
 
     # Create snapshots of the contrasts
-    # TODO: cut at motor regions e.g. (-39, -27, 48)
     data = z_map.get_data()
     vmax = data[np.isfinite(data)].max()
     vmin = data[np.isfinite(data)].min()
     vmax = max(-vmin, vmax)
-    # TODO from nipy.labs.viz_tools.coord_tools import find_cut_coords 
-    # and use cut_coords = find_cut_coords(z_map.get_data()),
-    # mask=mask_img.get_data()) with slicer='ortho' to produce cuts
-
     anat_img = nibabel.load(anat_file)
     plot_map(z_map.get_data(), z_map.get_affine(),
              cmap=cm.cold_hot, vmin=-vmax, vmax=vmax,
-             slicer='z', black_bg=True, threshold=3.1,  # 3.1 for pval<1e-3
+             slicer='z', black_bg=True, threshold=3.1,  # pval<1e-3
              title=contrast_id, anat=anat_img.get_data(),
              anat_affine=anat_img.get_affine())
     plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
 
+    if 'BOLD' in contrast_id and contrast_id != 'perfusion baseline':
+        # Get motor and primary auditory regions from the literature
+        auditory_names, auditory_coords = anat_auditory()
+        motor_names, motor_coords = anat_motor()
+        regions = auditory_names[:2] + motor_names
+        cuts = auditory_coords[:2] + motor_coords
+        regions = []
+        cuts = []
+
+        # Find the clusters
+        # TODO: debug nipy.labs.viz_tools.coord_tools.find_cut_coords
+        clusters, info = cluster_stats(z_map, mask=mask_img, height_th=.05,
+                                       height_control='bonferroni',
+                                       cluster_th=10, nulls={})
+        if clusters:
+            print('  {} clusters'.format(len(clusters)))
+            for n, cluster in enumerate(clusters):
+                maxima_regions, maxima_coords = get_maxima(cluster,
+                                                           min_distance=20.)
+                print '   cluster of size {0}: {1}'.format(cluster['size'],
+                                                    maxima_regions)
+                if n < 6:
+                    n_regions = min(3, len(maxima_regions))
+                    regions += maxima_regions[:n_regions]
+                    cuts += maxima_coords[:n_regions]
+
+        # TODO: move to locator.py
+        # Find the peaks
+        plot_peaks = False
+        peaks = get_3d_peaks(z_map, mask=None, threshold=3.1, nn=18,
+                             order_th=0)
+        if peaks and plot_peaks:
+            n_peaks = min(len(peaks), 0)
+            for n, peak in enumerate(peaks[:n_peaks]):
+                regions.append(' peak {}'.format(n))
+                cuts.append(tuple(peak['pos']))
+                print peak['val']
+
+        for (region, cut_coords) in zip(regions, cuts):
+                title = contrast_id + ', ' + region
+                plot_map(z_map.get_data(), z_map.get_affine(),
+                         cmap=cm.cold_hot, vmin=-vmax, vmax=vmax,
+                         slicer='ortho', black_bg=True, threshold=3.1,
+                         title=title, anat=anat_img.get_data(),
+                         anat_affine=anat_img.get_affine(),
+                         cut_coords=cut_coords)
+        plt.show()
+
 print("All the  results were witten in %s" % write_dir)
-
-plt.show()
-
