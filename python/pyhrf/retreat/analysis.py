@@ -346,7 +346,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                 maxima_regions, maxima_coords = get_maxima(cluster,
                                                            min_distance=20.)
                 print '   cluster of size {0}: {1}'.format(cluster['size'],
-                                                    maxima_regions)
+                                                           maxima_regions)
                 if n < 6:
                     n_regions = min(3, len(maxima_regions))
                     regions += maxima_regions[:n_regions]
