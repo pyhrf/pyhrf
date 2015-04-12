@@ -92,10 +92,13 @@ def genGaussianSmoothHRF_cust(zc, length, eventdt, rh, order=2):
     prcov = length-(2*zc)
     matQ = buildFiniteDiffMatrix(order, prcov)
     aux = np.append(np.ones((matQ.shape[0]/2+1, matQ.shape[1])),
-                    np.ones((matQ.shape[0]/4, matQ.shape[1]))*5,
+                    np.ones((matQ.shape[0]/2, matQ.shape[1]))*10,
                     axis=0)
-    aux = np.append(aux, np.ones((matQ.shape[0]/4 + 1, matQ.shape[1]))*10,
-                    axis=0)
+    #aux = np.append(np.ones((matQ.shape[0]/2+1, matQ.shape[1])),
+    #                np.ones((matQ.shape[0]/4, matQ.shape[1]))*5,
+    #                axis=0)
+    #aux = np.append(aux, np.ones((matQ.shape[0]/4 + 1, matQ.shape[1]))*10,
+    #                axis=0)
     matQ = np.multiply(aux, matQ)
     matQ = np.divide(np.dot(matQ.transpose(),matQ), eventdt**(order**2))
     matL = np.array(np.transpose(np.linalg.cholesky(matQ/rh)))
