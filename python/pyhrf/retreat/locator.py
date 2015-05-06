@@ -9,7 +9,7 @@ import numpy as np
 import nibabel
 from nilearn import datasets
 from nipy.labs.viz_tools.coord_tools import coord_transform
-from nipy.labs.viz_tools.anat_cache import mni_sform_inv
+from nipy.labs.viz_tools.meta_cache import mni_sform_inv
 
 
 def mni_to_tal(x, y, z):
@@ -20,7 +20,7 @@ def mni_to_tal(x, y, z):
     pass
 
 
-def anat_auditory(abbreviate=True, mni=True):
+def meta_auditory(abbreviate=True, mni=True):
 # TODO : check for meta-analyses coordinates
     """ Non-primary auditory field areas from: Spectral and Temporal Processing
     in Human Auditory Cortex. Deborah A Hall et al., Cereb. Cortex (2002).
@@ -68,7 +68,7 @@ def anat_auditory(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_attention(abbreviate=True, mni=True):
+def meta_attention(abbreviate=True, mni=True):
 # TODO: get sepearately DAN and VAN from 
 # Breakdown of Functional Connectivity in Frontoparietal Networks
 # Underlies Behavioral Deficits in Spatial Neglect, Biyu J. He1, Abraham Z.
@@ -108,7 +108,7 @@ def anat_attention(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_default_mode(abbreviate=True, mni=True):
+def meta_default_mode(abbreviate=True, mni=True):
 # ToDO complete all regions
     """Default mode regions from Scale-Free Properties of the Functional
     Magnetic Resonance Imaging Signal during Rest and Task, He BJ. The Journal
@@ -142,7 +142,7 @@ def anat_default_mode(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_non_cortical(abbreviate=True, mni=True):
+def meta_non_cortical(abbreviate=True, mni=True):
     whole_names = ['left thalamus',
                    'right thalamus',
                    'right Cerebellum',
@@ -167,7 +167,7 @@ def anat_non_cortical(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_saliency(abbreviate=True, mni=True):
+def meta_saliency(abbreviate=True, mni=True):
     whole_names = ['right frontoinsular cortex',
                    'Dorsal anterior cingulate cortex']
     abbrevs = [' R FI', ' dACC']
@@ -187,7 +187,7 @@ def anat_saliency(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_visual(abbreviate=True, mni=True):
+def meta_visual(abbreviate=True, mni=True):
     whole_names = ['left ventral primary visual cortex',
                    'right ventral primary visual cortex',
                    'left dorsal primary visual cortex',
@@ -211,7 +211,7 @@ def anat_visual(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_motor0(abbreviate=True, mni=True):
+def meta_motor0(abbreviate=True, mni=True):
 # ToDO complete for right motor regions
 # motor regions: Biswal, B., Yetkin, F.Z., Haughton, V.M., Hyde, J.S., 1995.
 # Functional connectivity in the motor cortex of resting human brain using
@@ -243,7 +243,7 @@ def anat_motor0(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_motor(abbreviate=True, mni=True):
+def meta_motor(abbreviate=True, mni=True):
     """Motor regions from: Three-dimensional locations and boundaries of
     motor and premotor cortices as defined by functional brain imaging:
     A meta-analysis Mary A. Mayka, Daniel M. Corcos, Sue E. Leurgans, and David
@@ -278,7 +278,8 @@ def anat_motor(abbreviate=True, mni=True):
     return names, coords
 
 
-def anat_working_memory(abbreviate=True, mni=True):
+def func_working_memory(abbreviate=True, mni=True):
+    """Working memory coordinates from servier Placebo study"""
 # TODO: check conversion: here done with wfu pickatlas
     whole_names = ['left inferior parietal lobule',
                    'left middle frontal gyrus',
