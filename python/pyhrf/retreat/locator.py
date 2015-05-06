@@ -14,7 +14,7 @@ from nipy.labs.viz_tools.anat_cache import mni_sform_inv
 
 def mni_to_tal(x, y, z):
     """ Transforms coordinates from MNI space to Talairach space"""
-# (z ≥ 0): x′ = 0.9900x, y′ = 0.9688y + 0.0460z, z′ = -0.0485y + 0.9189z
+# (z >=0): x' = 0.9900x, y' = 0.9688y + 0.0460z, z' = -0.0485y + 0.9189z
 # (Duncan et al., 2000;
 # http://www.mrc-cbu.cam.ac.uk/Imaging/Common/mnispace.shtml
     pass
