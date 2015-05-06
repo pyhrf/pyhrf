@@ -4,7 +4,7 @@
 import numpy as _np
 
 from pyhrf.boldsynth.spatialconfig import *
-from pyhrf.boldsynth.pottsfield import pottsfield_c
+#from pyhrf.boldsynth.pottsfield import pottsfield_c
 from pyhrf.boldsynth.pottsfield.swendsenwang import *
 
 def genPepperSaltField(size, nbLabels, initProps=None):

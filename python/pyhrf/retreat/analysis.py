@@ -113,6 +113,10 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
         pkernel = prf_matrix.dot(hkernel)
     else:
         pkernel = hkernel
+#    plt.plot(hkernel, label='HRF')
+#    plt.plot(pkernel, label='PRF')
+#    plt.legend()
+#    plt.show()
 
     # convolve the regressor and hrf, and downsample the regressor
     conv_reg = np.array([np.convolve(hr_regressor, pkernel)[
@@ -132,22 +136,17 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
 
 # functionals, grey mask and paradigm
 subjects = ['RG130377', 'SC120530', 'CD110147']
-subject = 'CD110147'
-func_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                         'gin_struct/archives', subject, 'standard',
-                         'swr' + subject + '_ASLf_correctionT1.nii')
-unsmoothed_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                               'gin_struct/archives', subject, 'standard',
+subject = 'RG130377'
+data_dir = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                        'gin_struct/archives', subject, 'standard')
+func_file = os.path.join(data_dir, 'swr' + subject + '_ASLf_correctionT1.nii')
+unsmoothed_file = os.path.join(data_dir,
                                'wr' + subject + '_ASLf_correctionT1.nii')
-func_mask_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                              'gin_struct/archives', subject, 'standard',
-                              'func_mask_' + subject)
-anat_file = glob.glob(os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                                   'gin_struct/archives', subject, 'standard',
-                                   'wmanat_*brain*'))[0]
-gm_file = glob.glob(os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                                 'gin_struct/archives', subject, 'standard',
-                                 'wc1anat_*.nii'))[0]
+func_mask_file = os.path.join(data_dir, 'func_mask_' + subject)
+anat_file = glob.glob(os.path.join(data_dir, 'wmanat_*brain*'))[0]
+gm_file = glob.glob(os.path.join(data_dir, 'wc1anat_*.nii'))[0]
+wm_file = glob.glob(os.path.join(data_dir, 'wc2anat_*.nii'))[0]
+mvt_file = glob.glob(os.path.join(data_dir, 'rp_*.txt'))[0]
 paradigm_file = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                              'gin_struct/archives',
                              'paradigm_bilateral_v2_no_final_rest.csv')
@@ -160,9 +159,18 @@ func_mask = compute_mask_files(unsmoothed_file, func_mask_file,  m=0.3, M=.4,
                                cc=0, opening=0)
 img = nibabel.load(gm_file)
 gm_mask = img.get_data()
+img = nibabel.load(wm_file)
+wm_mask = img.get_data()
+tissue_mask = gm_mask + wm_mask
 gm_mask[func_mask == 0] = 0  # to cut beyond the neck
+tissue_mask[func_mask == 0] = 0  # to cut beyond the neck
+tissue_mask[tissue_mask < 0.5] = 0
+tissue_mask[tissue_mask > 0.5] = 1
+tissue_mask[gm_mask > 0.1] = 1
 mask_img = nibabel.Nifti1Image(gm_mask, img.get_affine(), img.get_header())
 mask_file = '/tmp/cut_gm_mask.nii'
+mask_img = nibabel.Nifti1Image(tissue_mask, img.get_affine(), img.get_header())
+mask_file = '/tmp/cut_tissue_mask.nii'
 nibabel.save(mask_img, mask_file)
 
 # timing  # TODO: load timing parameters
@@ -170,17 +178,26 @@ n_scans = 164
 tr = 2.5
 frametimes = np.arange(0, n_scans * tr, tr)
 
-# HRF, PRF, drift and GLM models
+# HRF and PRF
 hrf_model = 'canonical'
 prf_model = 'physio'
 prf_matrix = None
+hrf_length = 32.
+oversampling = 16  # default oversampling in nipy
+dt = tr / oversampling
+from pyhrf.sandbox.physio_params import (linear_rf_operator,
+                                         PHY_PARAMS_KHALIDOV11)
+prf_matrix = linear_rf_operator(hrf_length / dt,  PHY_PARAMS_KHALIDOV11, dt,
+                                calculating_brf=False)
+prf_matrix = None
+# drift and GLM models
 drift_model = 'polynomial'
 drift_order = 4
 model = 'ar1'  # other possible choice: 'ols'
 
 # write directory
-write_dir = os.path.join(os.getcwd(), 'results')
-write_dir = os.path.join('/tmp/glm_mask', subject)
+write_dir = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
+                         'outputs/tissue_mask/motion_regs/physio', subject)
 if not os.path.exists(write_dir):
     os.mkdir(write_dir)
 
@@ -200,7 +217,7 @@ reg[::2] *= -0.5
 add_regs = [reg]
 add_reg_names = ['perfusion_baseline']
 
-
+bold_regs = []
 # Activation ASL regressors
 for condition_name in np.unique(paradigm.con_id):
     onsets = paradigm.onset[paradigm.con_id == condition_name]
@@ -212,20 +229,41 @@ for condition_name in np.unique(paradigm.con_id):
                                           prf_matrix=prf_matrix,
                                           con_id=condition_name,
                                           oversampling=16)
+    bold_regs.append(compute_prf_regressor(exp_condition, hrf_model,
+                                          frametimes, prf_model=prf_model,
+                                          prf_matrix=None,
+                                          con_id=condition_name,
+                                          oversampling=16)[0])
     reg[1::2] *= 0.5
     reg[::2] *= -0.5
     add_regs.append(reg)
     add_reg_names.append(reg_name[0] + '_' + condition_name)
 
+bold_regs = np.array(bold_regs).squeeze(axis=-1)
+bold_regs = bold_regs.transpose()
 add_regs = np.array(add_regs).transpose()
-f, axes = plt.subplots(2)
-axes[0].plot(add_regs[:, 0])
-axes[0].set_ylabel('perfusion baseline')
-axes[1].plot(add_regs[:, 1:])
-axes[1].set_ylabel('task-related perfusion')
-plt.savefig(os.path.join(write_dir, 'asl_regressors.png'))
-# TODO: add motion regressors
 
+f, axes = plt.subplots(3)
+axes[0].plot(bold_regs)
+axes[0].set_ylabel('task-related BOLD')
+axes[1].plot(add_regs[:, 0])
+axes[1].set_ylabel('perfusion baseline')
+axes[2].plot(add_regs[:, 1:5])
+axes[2].set_ylabel('task-related perfusion')
+plt.savefig(os.path.join(write_dir, 'asl_regressors.png'))
+
+# Motion regressors
+add_regs = np.hstack((add_regs, np.genfromtxt(mvt_file, skip_header=1)))
+add_reg_names += ['translation x', 'translation y', 'translation z',
+                  'pitch', 'roll', 'yaw']
+f, axes = plt.subplots(2)
+axes[0].plot(add_regs[:, 5:8])
+axes[0].set_ylabel('translation (mm)')
+axes[1].plot(add_regs[:, 8:])
+axes[1].set_ylabel('rotation (deg)')
+plt.savefig(os.path.join(write_dir, 'mvt_regressors.png'))
+
+# TODO: include mean WM and CSF signals
 ########################################
 # Design matrix
 ########################################
@@ -290,7 +328,9 @@ contrasts['[BOLD] left - right'] = \
 contrasts['[perfusion] left - right'] = \
     contrasts['[perfusion d2500] left - right'] + \
     contrasts['[perfusion d5000] left - right']
-
+contrasts['movements'] = contrasts['translation x'] + \
+    contrasts['translation y'] + contrasts['translation z'] + \
+    contrasts['roll'] + contrasts['pitch'] + contrasts['yaw']
 ########################################
 # Perform a GLM analysis
 ########################################
@@ -305,6 +345,12 @@ fmri_glm.fit(do_scaling=True, model=model)
 #########################################
 
 print('Computing contrasts...')
+# Compute Z-score threshold corrected for multiple comparisons
+from scipy.stats import norm
+n_voxels = np.sum(gm_mask)
+threshold = norm.isf(0.05 / n_voxels)  # Bonferroni correction
+unc_threshold = norm.isf(1e-3)  # Uncorrected
+
 for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     print(' Contrast % 2i out of %i: %s' %
           (index + 1, len(contrasts), contrast_id))
@@ -314,19 +360,23 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     nibabel.save(z_map, image_path)
 
     # Create snapshots of the contrasts
-    data = z_map.get_data()
-    vmax = data[np.isfinite(data)].max()
-    vmin = data[np.isfinite(data)].min()
+    z_data = z_map.get_data()
+    signif_mask = np.abs(z_data) > threshold
+    vmax = z_data[np.isfinite(z_data)].max()
+    vmin = z_data[np.isfinite(z_data)].min()
     vmax = max(-vmin, vmax)
     anat_img = nibabel.load(anat_file)
-    plot_map(z_map.get_data(), z_map.get_affine(),
-             cmap=cm.cold_hot, vmin=-vmax, vmax=vmax,
-             slicer='z', black_bg=True, threshold=3.1,  # pval<1e-3
-             title=contrast_id, anat=anat_img.get_data(),
-             anat_affine=anat_img.get_affine())
-    plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
 
-    if 'BOLD' in contrast_id and contrast_id != 'perfusion baseline':
+    if np.max(np.abs(z_data)) > threshold:
+        plot_map(z_map.get_data(), z_map.get_affine(),
+                 cmap=cm.cold_hot, vmin=-vmax, vmax=vmax,
+                 slicer='z', black_bg=True, threshold=unc_threshold,
+                 title=contrast_id, anat=anat_img.get_data(),
+                 anat_affine=anat_img.get_affine())
+        plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
+
+    reg_type = 'BOLD'
+    if reg_type in contrast_id and contrast_id != 'perfusion baseline':
         # Get motor and primary auditory regions from the literature
         auditory_names, auditory_coords = anat_auditory()
         motor_names, motor_coords = anat_motor()
@@ -337,9 +387,14 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
 
         # Find the clusters
         # TODO: debug nipy.labs.viz_tools.coord_tools.find_cut_coords
+        # TODO: use the same cuts over contrasts ?
+        if reg_type == 'perfusion':
+            cluster_th = 0
+        else:
+            cluster_th = 0
         clusters, info = cluster_stats(z_map, mask=mask_img, height_th=.05,
                                        height_control='bonferroni',
-                                       cluster_th=10, nulls={})
+                                       cluster_th=cluster_th, nulls={})
         if clusters:
             print('  {} clusters'.format(len(clusters)))
             for n, cluster in enumerate(clusters):
@@ -347,7 +402,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                                                            min_distance=20.)
                 print '   cluster of size {0}: {1}'.format(cluster['size'],
                                                            maxima_regions)
-                if n < 6:
+                if n < 6 or 'Heschl' in maxima_regions:
                     n_regions = min(3, len(maxima_regions))
                     regions += maxima_regions[:n_regions]
                     cuts += maxima_coords[:n_regions]
@@ -355,7 +410,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
         # TODO: move to locator.py
         # Find the peaks
         plot_peaks = False
-        peaks = get_3d_peaks(z_map, mask=None, threshold=3.1, nn=18,
+        peaks = get_3d_peaks(z_map, mask=None, threshold=threshold, nn=18,
                              order_th=0)
         if peaks and plot_peaks:
             n_peaks = min(len(peaks), 0)
@@ -365,13 +420,23 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                 print peak['val']
 
         for (region, cut_coords) in zip(regions, cuts):
-                title = contrast_id + ', ' + region
+            title = contrast_id + ', ' + region
+            if np.max(np.abs(z_data)) > unc_threshold:
                 plot_map(z_map.get_data(), z_map.get_affine(),
                          cmap=cm.cold_hot, vmin=-vmax, vmax=vmax,
-                         slicer='ortho', black_bg=True, threshold=3.1,
+                         slicer='ortho', black_bg=True,
+                         threshold=unc_threshold,
                          title=title, anat=anat_img.get_data(),
                          anat_affine=anat_img.get_affine(),
                          cut_coords=cut_coords)
+                region = region.replace(' ', '_')
+                if len(region) > 10:
+                    region = region[:10]
+                folder = os.path.join(write_dir, region)
+                if not os.path.isdir(folder):
+                    os.mkdir(folder)
+                plt.savefig(os.path.join(folder,
+                                     '{0}_z_map.png'.format(contrast_id)))
         plt.show()
 
 print("All the  results were witten in %s" % write_dir)
