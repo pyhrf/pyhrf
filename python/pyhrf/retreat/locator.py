@@ -9,8 +9,7 @@ import numpy as np
 import nibabel
 from nilearn import datasets
 from nipy.labs.viz_tools.coord_tools import coord_transform
-from nipy.labs.viz_tools.meta_cache import mni_sform_inv
-
+from nipy.labs.viz_tools.maps_3d import mni_sform_inv
 
 def mni_to_tal(x, y, z):
     """ Transforms coordinates from MNI space to Talairach space"""
