@@ -55,7 +55,7 @@ def main():
 
     # Tags
     simulate = True
-    analyse_jde = False
+    analyse_jde = True
     do_jde_asl = True
 
     for dt in np.array([ 1.]):   # 2.5, 1.25, 0.5

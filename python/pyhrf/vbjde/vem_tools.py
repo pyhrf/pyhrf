@@ -91,11 +91,10 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     # construction will only work if dt is a multiple of tr
     if int(osf) != osf:
         raise Exception('OSF (%f) is not an integer' % osf)
-
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
-    paradigm_bins = restarize_events(onsets, np.zeros_like(onsets), dt, tmax)
+    paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
     firstrow = np.concatenate(
@@ -103,6 +102,55 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp[os_indexes]
+    return x
+    
+
+def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
+    if durations is None:  # assume spiked stimuli
+        durations = np.zeros_like(onsets)
+    osf = tr / dt  # over-sampling factor
+    # construction will only work if dt is a multiple of tr
+    if int(osf) != osf:
+        raise Exception('OSF (%f) is not an integer' % osf)
+
+    x = np.zeros((nbscans, lhrf), dtype=float)
+    tmax = nbscans * tr  # total session duration
+    lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    paradigm_bins = restarize_events(onsets, durations, dt, tmax)
+    #print 'paradigm_bins = ', paradigm_bins
+    #print 'paradigm_bins = ', paradigm_bins.shape
+    firstcol = np.concatenate(
+        (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
+    #print 'firstcol = ', firstcol
+    #print 'firstcol = ', firstcol.shape
+    firstrow = np.concatenate(
+        ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
+    #print 'firstrow = ', firstrow
+    #print 'firstrow = ', firstrow.shape
+    x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
+    #print 'x_tmp shape = ', x_tmp.shape
+    x_tmp2 = np.zeros_like(x_tmp)
+    #print 'design matrix '
+    #print firstrow.shape[0]
+    #print tr / dt
+    #print np.arange(0, firstrow.shape[0], tr / dt)
+    for ix in np.arange(0, firstrow.shape[0], tr / dt):
+        #print ix
+        x_tmp2[:, ix] = x_tmp[:, ix]
+    #print 'x_tmp = ', x_tmp
+    #print 'x_tmp = ', x_tmp.shape
+    if 0:
+        import matplotlib.pyplot as plt
+        from matplotlib.pylab import *
+        plt.matshow(x_tmp2[:50, :])
+        plt.show()
+
+    os_indexes = [(np.arange(nbscans) * osf).astype(int)]
+    #print 'os_indexes = ', os_indexes
+    #print 'os_indexes = ', os_indexes.shape
+    x = x_tmp2[os_indexes]
+    #print 'x = ', x
+    #print 'x = ', x.shape
     return x
 
 
@@ -264,8 +312,7 @@ def expectation_Z(Sigma_A, m_A, sigma_M, Beta, Z_tilde, mu_M, q_Z, graph, M, J, 
             alpha /= np.mean(alpha) + eps
             tmp = sum(Z_tilde[m, :, graph[i]], 0)
             for k in xrange(0, K):
-                extern_field = alpha[
-                    k] + max(np.log(normpdf(m_A[i, m], mu_M[m, k], np.sqrt(sigma_M[m, k])) + eps), -100)
+                extern_field = alpha[k] + max(np.log(normpdf(m_A[i, m], mu_M[m, k], np.sqrt(sigma_M[m, k])) + eps), -100)
                 local_energy = Beta[m] * tmp[k]
                 energy[k] = extern_field + local_energy
             Emax = max(energy)
@@ -328,14 +375,16 @@ def maximization_L(Y, m_A, X, m_H, L, P, zerosP):
 
 def maximization_sigmaH(D, Sigma_H, R, m_H):
     sigmaH = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
-    sigmaH /= D
+    #sigmaH /= D
+    sigmaH /= (D-1)
     return sigmaH
 
 
 def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
     alpha = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
     #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
-    sigmaH = (-D + sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
+    #sigmaH = (-D + sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
+    sigmaH = (-(D-1) + sqrt((D-1) * (D-1) + 8 * gamma_h * alpha)) / (4*gamma_h)
 
     return sigmaH
 

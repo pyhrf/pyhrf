@@ -58,6 +58,43 @@ def create_conditions(Onsets, M, N, D, TR, dt):
     for condition, Ons in Onsets.iteritems():
         X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
+        
+        if 0:
+            import matplotlib.pyplot as plt
+            print 'printing matrices... '
+            plt.matshow(np.array(X[condition]))        
+            #print condition+', TR = '+str(TR)+', dt = '+str(dt)
+            #plt.title('cond '+str(i)+', dt = '+str(dt))
+            #print 'title fait'
+            plt.savefig('./'+condition+'_dt'+str(dt)+'_old_block.png')
+            plt.close()
+            #plt.show()
+    XX = np.zeros((M, N, D), dtype=np.int32)
+    nc = 0
+    for condition, Ons in Onsets.iteritems():
+        XX[nc, :, :] = X[condition]
+        nc += 1
+    return X, XX
+
+
+def create_conditions_block(Onsets, durations, M, N, D, TR, dt):
+    condition_names = []
+    X = OrderedDict([])
+    i = 0
+    for condition, Ons in Onsets.iteritems():
+        Dur = durations[condition]
+        X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt,
+                                                Ons, durations=Dur)
+        if 0:
+            import matplotlib.pyplot as plt
+            from matplotlib.pylab import *
+            plt.matshow(np.array(X[condition]))
+            plt.title('cond '+str(i)+', dt = '+str(dt))
+            plt.savefig('./'+condition+'_dt'+str(dt)+'_old.png')
+            plt.close()
+            #plt.show()
+            i = i + 1
+        condition_names += [condition]
     XX = np.zeros((M, N, D), dtype=np.int32)
     nc = 0
     for condition, Ons in Onsets.iteritems():
@@ -165,6 +202,14 @@ def expectation_A(H, m_A, G, m_C, W, X, Gamma, q_Z, mu_Ma, sigma_Ma,
         for m, k1 in enumerate(X):
             # from X, we take k1=cond_name, m=index_cond
             y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k1]), G)
+            #print W.shape
+            #print X[k1].shape
+            """import matplotlib.pyplot as plt
+            plt.matshow(X[k1])
+            plt.matshow(W)
+            plt.matshow(np.dot(W, X[k1]))
+            plt.show()
+            stop"""
             for m2, k2 in enumerate(X):
                 Sigma_A[m, m2, i] = np.dot(np.dot(np.dot(np.dot(H.T, \
                                                  X[k1].T), Gamma_i), X[k2]), H)
@@ -235,14 +280,27 @@ def expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
         Gamma_i = Gamma / max(sigma_epsilone[i], eps)
         tmp = np.zeros((N, D), dtype=float)
         for m, k in enumerate(X):                  # Loop over the M conditions
+            if 0:
+                print 'loop condition 1'
+                print 'm_A[i, m] shape = ', m_A[i, m].shape
+                print 'm_C[i, m] shape = ', m_C[i, m].shape
+                print 'X[k] shape = ', X[k].shape
+                print 'W shape = ', W.shape
+                print 'G shape = ', G.shape
+                print 'y_tildeH shape = ', y_tildeH.shape
             tmp += m_A[i, m] * X[k]
             y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k]), G)
+        #print 'salgo de loop condition 1'
         Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeH[:, i])
         S_a += np.dot(np.dot(tmp.T, Gamma_i), tmp)
+        #print 'primer loop out'
         for m1, k1 in enumerate(X):                # Loop over the M conditions
+            #print 'loop condition 2'
             for m2, k2 in enumerate(X):            # Loop over the M conditions
                 S_a += Sigma_A[m1, m2, i] * np.dot(np.dot(X[k1].T,
                                                           Gamma_i), X[k2])
+            #print 'sali del loop condition 2'
+    #print 'sali del loop voxel'
     S_a += np.dot(np.dot(Omega.T, scale * R / sigmaG), Omega)
     Y_bar_tilde += np.dot(np.dot(Omega.T, scale * R / sigmaG), G)
     Sigma_H = np.linalg.inv(S_a)
@@ -567,7 +625,6 @@ def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
 
 def maximization_L_alpha(Y, m_A, m_C, X, W, w, Ht, Gt, L, P, alpha, Gamma,
                          sigma_eps):
-    #, Gamma, sigma_eps):
     # WARNING! Noise missing, but if Gamma = Identity, it is equivalent
     for i in xrange(0, Y.shape[1]):
         Gamma_i = Gamma / max(sigma_eps[i], eps)
@@ -632,10 +689,10 @@ def maximization_sigma_noise(Y, X, m_A, Sigma_A, Ht, m_C, Sigma_C, Gt, W, \
         for m, k in enumerate(X):
             for m2, k2 in enumerate(X):
                 hXXh[m, m2] = np.dot(np.dot(np.dot(Ht.T, X[k].T), X[k2]), Ht)
-                gXXg[m, m2] = np.dot(np.dot(np.dot(np.dot(np.dot( \
-                                           Gt.T, X[k].T), W.T), W), X[k2]), Gt)
+                gXXg[m, m2] = np.dot(np.dot(np.dot(np.dot(np.dot(Gt.T, W.T),
+                                                    X[k].T), W), X[k2]), Gt)
                 gXXh[m, m2] = np.dot(np.dot(np.dot(np.dot( \
-                                               Gt.T, X[k].T), W.T), X[k2]), Ht)
+                                               Gt.T, W.T), X[k].T), X[k2]), Ht)
             S += m_A[i, m] * np.dot(X[k], Ht) + \
                  m_C[i, m] * np.dot(np.dot(W, X[k]), Gt)
         sigma_eps[i] = np.dot(np.dot(m_A[i, :].T, hXXh), m_A[i, :])

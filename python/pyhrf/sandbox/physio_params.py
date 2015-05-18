@@ -445,7 +445,7 @@ def linear_rf_operator(rf_size, phy_params, dt, calculating_brf=False):
     k1, k2, k3 = create_k_parameters(phy_params)
     c = tau_m_inv * (1 + (1 - E0) * np.log(1 - E0) / E0)
 
-    from pyhrf.sandbox.physio2 import buildOrder1FiniteDiffMatrix_central
+    from pyhrf.sandbox.physio import buildOrder1FiniteDiffMatrix_central
     D = buildOrder1FiniteDiffMatrix_central(rf_size, dt)  # numpy matrix
     eye = np.matrix(np.eye(rf_size))  # numpy matrix
 

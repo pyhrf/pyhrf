@@ -676,8 +676,9 @@ class Paradigm:
                 jons = np.concatenate((jons, shiftedOns))
                 scanStartTime = self.sessionDurations[iSess]
             jOnsets[cn] = jons
-        # print 'jOnsets:'
-        # print jOnsets
+        #print 'jOnsets:'
+        #print jOnsets
+        
         return jOnsets
 
     def get_nb_trials(self):
@@ -688,7 +689,7 @@ class Paradigm:
         """
         jDurations = OrderedDict([])
         for cn, sessDur in self.stimDurations.iteritems():
-            # print 'sessDur:', sessDur
+            #print 'sessDur:', sessDur
             jDurations[cn] = np.concatenate(tuple(sessDur))
 
         return jDurations

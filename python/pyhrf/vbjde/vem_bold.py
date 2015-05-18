@@ -18,6 +18,7 @@ import numpy as np
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
+import pyhrf.vbjde.vem_tools_asl as EM
 
 from pyhrf.tools._io import read_volume
 from pyhrf.boldsynth.hrf import getCanoHRF
@@ -29,12 +30,20 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 eps = 1e-4
 
 
-def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=True, sigmaH=0.05, NitMax=-1, NitMin=1, estimateBeta=True, PLOT=False, contrasts=[], computeContrast=False, gamma_h=0, estimateHRF=True, TrueHrfFlag=False, HrfFilename='hrf.nii', estimateLabels=True, LabelsFilename='labels.nii', MFapprox=False, InitVar=0.5, InitMean=2.0, MiniVEMFlag=False, NbItMiniVem=5):
+def Main_vbjde_Extension(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt, scale=1, 
+                         estimateSigmaH=True, sigmaH=0.05, NitMax=-1, NitMin=1,
+                         estimateBeta=True, PLOT=False, contrasts=[],
+                         computeContrast=False, gamma_h=0, estimateHRF=True,
+                         TrueHrfFlag=False, HrfFilename='hrf.nii',
+                         estimateLabels=True, LabelsFilename='labels.nii',
+                         MFapprox=False, InitVar=0.5, InitMean=2.0,
+                         MiniVEMFlag=False, NbItMiniVem=5):
     # VEM BOLD classic, using extension in C
 
     logger.info("Fast EM with C extension started ...")
@@ -51,7 +60,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
     if NitMax < 0:
         NitMax = 100
     gamma = 7.5  # 7.5
-    #gamma_h = 1000
+    gamma_h = 0  # 1000
     gradientStep = 0.003
     MaxItGrad = 200
     Thresh = 1e-5
@@ -73,15 +82,16 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
         neighboursIndexes[i, :len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
 
-    X = OrderedDict([])
-    for condition, Ons in Onsets.iteritems():
-        X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
-        condition_names += [condition]
-    XX = np.zeros((M, N, D), dtype=np.int32)
-    nc = 0
-    for condition, Ons in Onsets.iteritems():
-        XX[nc, :, :] = X[condition]
-        nc += 1
+    #X = OrderedDict([])
+    #for condition, Ons in Onsets.iteritems():
+    #    X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
+    #    condition_names += [condition]
+    #XX = np.zeros((M, N, D), dtype=np.int32)
+    #nc = 0
+    #for condition, Ons in Onsets.iteritems():
+    #    XX[nc, :, :] = X[condition]
+    #    nc += 1
+    X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
 
     order = 2
     D2 = vt.buildFiniteDiffMatrix(order, D)
@@ -177,7 +187,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
         for m in xrange(0, M):
             for k in xrange(0, K):
                 m_A[j, m] += np.random.normal(mu_M[m, k],
-                                              np.sqrt(sigma_M[m, k])) * q_Z[m, k, j]
+                                      np.sqrt(sigma_M[m, k])) * q_Z[m, k, j]
     m_A1 = m_A
 
     t1 = time.time()
@@ -187,15 +197,18 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
                     str(ni + 1) + " ------------------------------")
         logger.info("E A step ...")
         UtilsC.expectation_A(q_Z, mu_M, sigma_M, PL, sigma_epsilone, Gamma,
-                             Sigma_H, Y, y_tilde, m_A, m_H, Sigma_A, XX.astype(np.int32), J, D, M, N, K)
+                             Sigma_H, Y, y_tilde, m_A, m_H, Sigma_A,
+                             XX.astype(np.int32), J, D, M, N, K)
 
         val = np.reshape(m_A, (M * J))
         val[np.where((val <= 1e-50) & (val > 0.0))] = 0.0
         val[np.where((val >= -1e-50) & (val < 0.0))] = 0.0
 
         if estimateHRF:
-            UtilsC.expectation_H(XGamma, Q_barnCond, sigma_epsilone, Gamma, R, Sigma_H, Y,
-                                 y_tilde, m_A, m_H, Sigma_A, XX.astype(np.int32), J, D, M, N, scale, sigmaH)
+            UtilsC.expectation_H(XGamma, Q_barnCond, sigma_epsilone, Gamma,
+                                 R, Sigma_H, Y, y_tilde, m_A, m_H, Sigma_A,
+                                 XX.astype(np.int32), J, D, M, N, scale,
+                                 sigmaH)
             m_H[0] = 0
             m_H[-1] = 0
             h_norm += [np.linalg.norm(m_H)]
@@ -312,7 +325,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
         if estimateBeta:
             logger.info("estimating beta")
             for m in xrange(0, M):
-                Beta[m] = UtilsC.maximization_beta(beta, q_Z[m, :, :].astype(np.float64), Z_tilde[m, :, :].astype(
+                Beta[m] = UtilsC.maximization_beta(Beta[m], q_Z[m, :, :].astype(np.float64), Z_tilde[m, :, :].astype(
                     np.float64), J, K, neighboursIndexes.astype(np.int32), gamma, maxNeighbours, MaxItGrad, gradientStep)
             logger.info("End estimating beta")
             logger.info(Beta)
@@ -457,7 +470,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
     if estimateBeta:
         logger.info("estimating beta")
         for m in xrange(0, M):
-            Beta[m] = UtilsC.maximization_beta(beta, q_Z[m, :, :].astype(np.float64), Z_tilde[m, :, :].astype(
+            Beta[m] = UtilsC.maximization_beta(Beta[m], q_Z[m, :, :].astype(np.float64), Z_tilde[m, :, :].astype(
                 np.float64), J, K, neighboursIndexes.astype(np.int32), gamma, maxNeighbours, MaxItGrad, gradientStep)
         logger.info("End estimating beta")
         logger.info(Beta)
@@ -583,9 +596,11 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
                 if estimateSigmaH:
                     logger.info("M sigma_H step ...")
                     if gamma_h > 0:
+                        logger.info("   using hyperprior")
                         sigmaH = vt.maximization_sigmaH_prior(
-                            D, Sigma_H, R, m_H, gamma_h)
+                                                D, Sigma_H, R, m_H, gamma_h)
                     else:
+                        logger.info("   not using hyperprior")
                         sigmaH = vt.maximization_sigmaH(D, Sigma_H, R, m_H)
                     logger.info('sigmaH = %s', str(sigmaH))
 
@@ -603,7 +618,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
             if estimateBeta:
                 logger.info("estimating beta")
                 for m in xrange(0, M):
-                    Beta[m] = UtilsC.maximization_beta(beta, q_Z[m, :, :].astype(np.float64), Z_tilde[m, :, :].astype(
+                    Beta[m] = UtilsC.maximization_beta(Beta[m], q_Z[m, :, :].astype(np.float64), Z_tilde[m, :, :].astype(
                         np.float64), J, K, neighboursIndexes.astype(np.int32), gamma, maxNeighbours, MaxItGrad, gradientStep)
                 logger.info("End estimating beta")
                 logger.info(Beta)
@@ -740,7 +755,9 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
     SNR /= np.log(10.)
     print 'SNR comp =', SNR
     # ,FreeEnergyArray
-    return ni, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, L, PL, CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], cTime[2:], cTimeMean, Sigma_A, StimulusInducedSignal
+    return ni, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, L, PL, \
+           CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], cTime[2:], \
+           cTimeMean, Sigma_A, StimulusInducedSignal
 
 
 def Main_vbjde_Python(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=True, sigmaH=0.1, NitMax=-1, NitMin=1, estimateBeta=False, PLOT=False):
@@ -1130,7 +1147,11 @@ def Main_vbjde(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=
     return m_A, m_H, q_Z, sigma_epsilone, (np.array(Hist_sigmaH)).transpose()
 
 
-def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=True, sigmaH=0.05, NitMax=-1, NitMin=1, estimateBeta=True, PLOT=False, contrasts=[], computeContrast=False, gamma_h=0):
+def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
+                                scale=1, estimateSigmaH=True, sigmaH=0.05,
+                                NitMax=-1, NitMin=1, estimateBeta=True,
+                                PLOT=False, contrasts=[],
+                                computeContrast=False, gamma_h=0):
     """ Version modified by Lofti from Christine's version """
     logger.info(
         "Fast EM with C extension started ... Here is the stable version !")

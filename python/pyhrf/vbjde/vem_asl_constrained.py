@@ -400,14 +400,15 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
            cTimeMean, Sigma_A, StimulusInducedSignal
 
 
-def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
-                           estimateSigmaH=True, estimateSigmaG=True,
+def Main_vbjde_constrained(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
+                           scale=1, estimateSigmaH=True, estimateSigmaG=True,
                            sigmaH=0.05, sigmaG=0.05, gamma_h=0, gamma_g=0,
                            NitMax=-1, NitMin=1, estimateBeta=True, PLOT=False,
                            idx_first_tag=0, simulation=None,
                            estimateH=True, estimateG=True, estimateA=True,
                            estimateC=True, estimateZ=True, estimateNoise=True,
-                           estimateMP=True, estimateLA=True):
+                           estimateMP=True, estimateLA=True,
+                           use_hyperprior=False, positivity=False):
     """ Version modified by Lofti from Christine's version """
     logger.info("EM for ASL!")
     np.random.seed(6537546)
@@ -437,7 +438,8 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
     # Neighbours
     maxNeighbours, neighboursIndexes = EM.create_neighbours(graph, J)
     # Conditions
-    X, XX = EM.create_conditions(Onsets, M, N, D, TR, dt)
+    X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
+    print 'design matrix '
     # Covariance matrix
     #R = EM.covariance_matrix(2, D, dt)
     _, R = genGaussianSmoothHRF(False, D, dt, 1., 2)
@@ -534,10 +536,15 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             sigma_eps = np.var(simulation['noise'], 0)
         if not estimateMP:
             #print simulation['condition_defs'][0]
-            mu_Ma = np.array([[0, 2.2], [0, 2.2]])
-            sigma_Ma = np.array([[.3, .3], [.3, .3]])
-            mu_Mc = np.array([[0, 1.8], [0, 1.8]])
-            sigma_Mc = np.array([[.3, .3], [.3, .3]])
+            #mu_Ma = np.array([[0, 2.2], [0, 2.2]])
+            #sigma_Ma = np.array([[.3, .3], [.3, .3]])
+            #mu_Mc = np.array([[0, 1.8], [0, 1.8]])
+            #sigma_Mc = np.array([[.3, .3], [.3, .3]])
+            mu_Ma = np.array([[0, 15.], [0, 10.], [0, 15.], [0, 10.]])
+            sigma_Ma = np.array([[.2, .1], [.2, .1], [.2, .1], [.2, .1]])
+            mu_Mc = np.array([[0, 14.], [0, 11.], [0, 14.], [0, 11.]])
+            sigma_Mc = np.array([[.21, .11], [.21, .11], [.21, .11], [.21, .11]])
+
     #print simulation['condition_defs'][0]
     #print simulation['condition_defs'][0]
     print 'sigmaH = ', sigmaH
@@ -584,7 +591,7 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
             Gt, Sigma_G = EM.expectation_G(Sigma_C, m_C, m_A, Ht, X, W, Gamma,
                                            D, J, N, y_tilde, sigma_eps, scale,
                                            R, sigmaG)
-            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=False)
+            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
             #G = Gt / np.linalg.norm(Gt)
             if simulation is not None:
                 print 'PRF ERROR = ', EM.error(G, simulation['prf'][:, 0])
@@ -679,18 +686,20 @@ def Main_vbjde_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         if estimateSigmaH:
             logger.info("M sigma_H step ...")
             print gamma_h
-            #sigmaH = EM.maximization_sigma_prior(D, R, H, gamma_h)
-            #print sigmaH
-            sigmaH = EM.maximization_sigma(D, R, H)
+            if use_hyperprior:
+                sigmaH = EM.maximization_sigma_prior(D, R, H, gamma_h)
+            else:
+                sigmaH = EM.maximization_sigma(D, R, H)
             print sigmaH
             logger.info("sigmaH = " + str(sigmaH))
         # PRF: Sigma_g
         if estimateSigmaG:
             logger.info("M sigma_G step ...")
             print gamma_g
-            #sigmaG = EM.maximization_sigma_prior(D, R, G, gamma_g)
-            #print sigmaG
-            sigmaG = EM.maximization_sigma(D, R, G)
+            if use_hyperprior:
+                sigmaG = EM.maximization_sigma_prior(D, R, G, gamma_g)
+            else:
+                sigmaG = EM.maximization_sigma(D, R, G)
             print 'sigmaG', sigmaG
             logger.info('sigmaG = ' + str(sigmaG))
         # (mu,sigma)

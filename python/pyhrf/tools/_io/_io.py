@@ -458,7 +458,7 @@ def load_paradigm_from_csv(csvFile, delim=None):
         reader = csv.reader(csv_file, delimiter=delim, skipinitialspace=True)
 
         for row in reader:
-            # print 'row:', row
+            #print 'row:', row
             isession = int(row[0])
             cond = row[1]
             onset = float(row[2])

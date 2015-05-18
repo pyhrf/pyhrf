@@ -143,6 +143,9 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData.graph #list of neighbours
         data = roiData.bold
         Onsets = roiData.get_joined_onsets()
+        #print 'onsets = ', Onsets
+        durations = roiData.get_joined_durations()
+        #print 'durations = ', durations
         TR = roiData.tr
         # K = 2                      # number of classes
         beta = self.beta
@@ -201,7 +204,8 @@ class JDEVEMAnalyser(JDEAnalyser):
             Sigma_brls, Sigma_prls = """
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-            Sigma_brls, Sigma_prls = Main_vbjde_physio(graph, data, Onsets,
+            Sigma_brls, Sigma_prls, rerror = Main_vbjde_physio(graph, 
+                                       data, Onsets, durations,
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
                                        estimateSigmaG=self.estimateSigmaG,
@@ -229,8 +233,9 @@ class JDEVEMAnalyser(JDEAnalyser):
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
             Sigma_brls, Sigma_prls = Main_vbjde_constrained(graph, data, Onsets,
-                                       self.hrfDuration, self.nbClasses, TR,
-                                       beta, self.dt, scale=scale,
+                                       durations, self.hrfDuration,
+                                       self.nbClasses, TR, beta,
+                                       self.dt, scale=scale,
                                        estimateSigmaG=self.estimateSigmaG,
                                        sigmaH=self.sigmaH, sigmaG=self.sigmaG,
                                        NitMax=self.nItMax, NitMin=self.nItMin,
@@ -245,7 +250,9 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        estimateNoise=self.estimateNoise,
                                        estimateMP=self.estimateMixtParam,
                                        estimateZ=self.estimateLabels,
-                                       estimateLA=self.estimateLA)
+                                       estimateLA=self.estimateLA,
+                                       positivity=self.positivity,
+                                       use_hyperprior=self.use_hyperprior)
         
         # Plot analysis duration
         self.analysis_duration = time() - t_start
@@ -381,22 +388,16 @@ class JDEVEMAnalyser(JDEAnalyser):
 
         #######################################################################
         # SIMULATION
-
-        if self.simulation:
+        if self.simulation is not None:
             logger.info("Prepare parameters to compare if simulation")
             M = labels.shape[0]
             K = labels.shape[1]
             J = labels.shape[2]
-            labels_vem_audio = roiData.simulation[0]['labels'][0]
-            if M>1:
-                labels_vem_video = roiData.simulation[0]['labels'][1]
-            true_labels = np.zeros((K, J))
-            # print true_labels.shape
-            true_labels[0, :] = labels_vem_audio.flatten()
-            if M>1:
-                true_labels[1, :] = labels_vem_video.flatten()
-            #true_labels[0, :] = np.reshape(labels_vem_audio, (J))
-            #true_labels[1, :] = np.reshape(labels_vem_video, (J))
+
+            true_labels = np.zeros((M, J))
+            for m in xrange(0,M):
+                true_labels[m, :] = roiData.simulation[0]['labels'][m].flatten()
+
             newlabels = np.reshape(labels[:, 1, :], (M, J))
             #true_labels = roiData.simulation[0]['labels']
             #newlabels = labels
@@ -468,6 +469,8 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                 [self.analysis_duration]),
                                                 axes_names=['parcel_size'],
                                                 axes_domains=d)
+        outputs['rerror'] = xndarray(np.array(  rerror),
+                                                axes_names=['parcel_size'])
         return outputs
 
     def finalizeEstimation(self, true_labels, labels, nvox,

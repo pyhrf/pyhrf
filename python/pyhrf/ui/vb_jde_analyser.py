@@ -18,6 +18,7 @@ import os.path as op
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def change_dim(labels):
@@ -91,12 +92,12 @@ class JDEVEMAnalyser(JDEAnalyser):
     def __init__(self, hrfDuration=25., sigmaH=0.1, fast=True,
                  computeContrast=True, nbClasses=2, PLOT=False, nItMax=1,
                  nItMin=1, scale=False, beta=1.0, estimateSigmaH=True,
-                 estimateHRF=True, TrueHrfFlag=False,HrfFilename='hrf.nii',
+                 estimateHRF=True, TrueHrfFlag=False, HrfFilename='hrf.nii',
                  estimateDrifts=True, hyper_prior_sigma_H=1000, dt=.6,
                  estimateBeta=True, contrasts={'1':'rel1'}, simulation=False,
                  estimateLabels=True, LabelsFilename='labels.nii',
-                 MFapprox=False, estimateMixtParam=True, constrained = False,
-                 InitVar=0.5,InitMean=2.0,MiniVemFlag=False,NbItMiniVem=5):
+                 MFapprox=False, estimateMixtParam=True, constrained=False,
+                 InitVar=0.5, InitMean=2.0, MiniVemFlag=False, NbItMiniVem=5):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_')
@@ -136,7 +137,6 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.hyper_prior_sigma_H = hyper_prior_sigma_H
         self.constrained = constrained
 
-
         logger.info("VEM analyzer:")
         logger.info(" - estimate sigma H: %s", str(self.estimateSigmaH))
         logger.info(" - init sigma H: %f", self.sigmaH)
@@ -151,6 +151,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         #roiData.graph #list of neighbours
         data = roiData.bold
         Onsets = roiData.get_joined_onsets()
+        durations = roiData.get_joined_durations()
         TR = roiData.tr
         #K = 2 #number of classes
         beta = self.beta
@@ -167,26 +168,53 @@ class JDEVEMAnalyser(JDEAnalyser):
         graph = roiData.get_graph()
 
         t_start = time()
-
+        
+        print 'graph = ',graph
+        print 'data = ',data
+        print 'Onsets = ',Onsets
+        print 'durations = ',durations
+        print 'Thrf = ',self.hrfDuration
+        print 'K = ',self.nbClasses
+        print 'TR = ',TR
+        print 'beta = ',beta
+        print 'dt = ',self.dt
+        
         if self.fast:
             if not self.constrained:
                 logger.info("fast VEM with drift estimation")
 
+                """ni, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, 
+                L, PL, CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], 
+                cTime[2:], cTimeMean, Sigma_A, StimulusInducedSignal"""
                 NbIter, nrls, estimated_hrf, \
                 labels, noiseVar, mu_k, sigma_k, \
                 Beta, L, PL, CONTRAST, CONTRASTVAR, \
                 cA,cH,cZ,cAH,cTime,cTimeMean, Sigma_nrls, \
-                StimuIndSignal = Main_vbjde_Extension_stable(graph,data,Onsets, \
-                                        self.hrfDuration, self.nbClasses,TR,
-                                        beta,self.dt,scale,self.estimateSigmaH,
-                                        self.sigmaH,self.nItMax, self.nItMin,
-                                        self.estimateBeta,self.PLOT,
-                                        self.contrasts,self.computeContrast,
-                                        self.hyper_prior_sigma_H,self.estimateHRF,
-                                        self.TrueHrfFlag, self.HrfFilename,
-                                        self.estimateLabels,self.LabelsFilename,
-                                        self.MFapprox,self.InitVar,self.InitMean,
-                                        self.MiniVemFlag,self.NbItMiniVem)
+                StimuIndSignal = Main_vbjde_Extension(graph,data,Onsets,durations,\
+                                        self.hrfDuration,self.nbClasses,TR,beta,self.dt,
+                                        scale=scale,estimateSigmaH=self.estimateSigmaH,
+                                        sigmaH=self.sigmaH,NitMax=self.nItMax,NitMin=self.nItMin,
+                                        estimateBeta=self.estimateBeta,PLOT=self.PLOT,
+                                        contrasts=self.contrasts,computeContrast=self.computeContrast,
+                                        gamma_h=self.hyper_prior_sigma_H,estimateHRF=self.estimateHRF,
+                                        TrueHrfFlag=self.TrueHrfFlag, HrfFilename=self.HrfFilename,
+                                        estimateLabels=self.estimateLabels,LabelsFilename=self.LabelsFilename,
+                                        MFapprox=self.MFapprox,InitVar=self.InitVar,InitMean=self.InitMean,
+                                        MiniVEMFlag=self.MiniVemFlag,NbItMiniVem=self.NbItMiniVem)
+                                        
+                """Main_vbjde_Extension( graph, Y, Onsets, durations,
+                         Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=True,
+                         sigmaH=0.05, NitMax=-1, NitMin=1,
+                         estimateBeta=True, PLOT=False, 
+                         contrasts=[], computeContrast=False, 
+                         gamma_h=0, estimateHRF=True,
+                         TrueHrfFlag=False, HrfFilename='hrf.nii',
+                         estimateLabels=True, LabelsFilename='labels.nii',
+                         MFapprox=False, InitVar=0.5, InitMean=2.0,
+                         MiniVEMFlag=False, NbItMiniVem=5)"""
+                         
+                logger.info("estimation done!")
+
             else:
                 logger.info("fast VEM with drift estimation and a constraint")
 
@@ -226,7 +254,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         logger.info('JDE VEM analysis took: %s',
                     format_duration(self.analysis_duration))
 
-
+        logger.info("saving outputs... ")
         if self.fast:
             ### OUTPUTS: Pack all outputs within a dict
             outputs = {}
@@ -286,20 +314,22 @@ class JDEVEMAnalyser(JDEAnalyser):
                 'component':['mean','var']}
             outputs['mixt_p'] = xndarray(mixtp, axes_names=an, axes_domains=ad)
 
-            ad = {'class' : ['inactiv','activ'],
+            ad = {'Act_class' : ['inactiv','activ'],
                 'condition': cNames,
                 }
             outputs['labels'] = xndarray(labels,value_label="Labels",
-                                    axes_names=['condition','class','voxel'],
+                                    axes_names=['condition','Act_class','voxel'],
                                     axes_domains=ad)
             outputs['noiseVar'] = xndarray(noiseVar,value_label="noiseVar",
                                         axes_names=['voxel'])
             if self.estimateDrifts:
+                logger.info("saving drifts... ")
                 outputs['drift_coeff'] = xndarray(L,value_label="Drift",
                                 axes_names=['coeff','voxel'])
                 outputs['drift'] = xndarray(PL,value_label="Delta BOLD",
                             axes_names=['time','voxel'])
             if (len(self.contrasts) >0) and self.computeContrast:
+                logger.info("saving contrasts... ")
                 #keys = list((self.contrasts[nc]) for nc in self.contrasts)
                 domContrast = {'contrast':self.contrasts.keys()}
                 outputs['contrasts'] = xndarray(CONTRAST, value_label="Contrast",
@@ -317,39 +347,42 @@ class JDEVEMAnalyser(JDEAnalyser):
                                             value_label="Normalized Contrast",
                                             axes_names=['voxel','contrast'],
                                             axes_domains=domContrast)
-
+                                            
             ################################################################################
             # CONVERGENCE
-
-            axes_names = ['duration']
-            outName = 'Convergence_Labels'
-            ax = np.arange(self.nItMax)*cTimeMean
-            ax[:len(cTime)] = cTime
-            ad = {'duration':ax}
-            c = np.zeros(self.nItMax) #-.001 #
-            c[:len(cZ)] = cZ
-            outputs[outName] = xndarray(c, axes_names=axes_names,
-                                        axes_domains=ad,
-                                        value_label='Conv_Criterion_Z')
-            outName = 'Convergence_HRF'
-            #ad = {'Conv_Criterion':np.arange(len(cH))}
-            c = np.zeros(self.nItMax) #-.001 #
-            c[:len(cH)] = cH
-            outputs[outName] = xndarray(c, axes_names=axes_names,
-                                        axes_domains=ad,
-                                        value_label='Conv_Criterion_H')
-            outName = 'Convergence_NRL'
-            c = np.zeros(self.nItMax)# -.001 #
-            c[:len(cA)] = cA
-            #ad = {'Conv_Criterion':np.arange(len(cA))}
-            outputs[outName] = xndarray(c, axes_names=axes_names,
-                                        axes_domains=ad,
-                                        value_label='Conv_Criterion_A')
+            logger.info("saving convergence... ")
+            
+            if 0:
+                axes_names = ['duration']
+                outName = 'Convergence_Labels'
+                ax = np.arange(self.nItMax)*cTimeMean
+                ax[:len(cTime)] = cTime
+                ad = {'duration':ax}
+                c = np.zeros(self.nItMax) #-.001 #
+                c[:len(cZ)] = cZ
+                outputs[outName] = xndarray(c, axes_names=axes_names,
+                                            axes_domains=ad,
+                                            value_label='Conv_Criterion_Z')
+                outName = 'Convergence_HRF'
+                #ad = {'Conv_Criterion':np.arange(len(cH))}
+                c = np.zeros(self.nItMax) #-.001 #
+                c[:len(cH)] = cH
+                outputs[outName] = xndarray(c, axes_names=axes_names,
+                                            axes_domains=ad,
+                                            value_label='Conv_Criterion_H')
+                outName = 'Convergence_NRL'
+                c = np.zeros(self.nItMax)# -.001 #
+                c[:len(cA)] = cA
+                #ad = {'Conv_Criterion':np.arange(len(cA))}
+                outputs[outName] = xndarray(c, axes_names=axes_names,
+                                            axes_domains=ad,
+                                            value_label='Conv_Criterion_A')
 
         ################################################################################
         # SIMULATION
-
-        if self.simulation and self.fast:
+        
+        if self.simulation and self.fast and 0:
+            logger.info("saving errors if simulation... ")
             from pyhrf.stats import compute_roc_labels
             labels_vem_audio = roiData.simulation['labels'][0]
             labels_vem_video = roiData.simulation['labels'][1]
@@ -442,13 +475,13 @@ class JDEVEMAnalyser(JDEAnalyser):
 
         # END SIMULATION
         ##########################################################################
-        if self.fast:
+        if self.fast and 0:
             d = {'parcel_size':np.array([nvox])}
             outputs['analysis_duration'] = xndarray(np.array([self.analysis_duration]),
                                                 axes_names=['parcel_size'],
                                                 axes_domains=d)
-
-        return #outputs
+        logger.info("outputs prepared")
+        return outputs
 
 
 
