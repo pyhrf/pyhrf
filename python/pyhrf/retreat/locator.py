@@ -4,12 +4,14 @@ Anatomical locations from literature
 # TODO: factorize abbreviation and mni parameters
 # TODO: add function mapping harvard oxford regions to their functions
 # TODO: rely on Broadman areas and their functions
+# TODO: add spheres masks generator and plotter from alex's functions
 import numpy as np
 
 import nibabel
 from nilearn import datasets
 from nipy.labs.viz_tools.coord_tools import coord_transform
 from nipy.labs.viz_tools.maps_3d import mni_sform_inv
+
 
 def mni_to_tal(x, y, z):
     """ Transforms coordinates from MNI space to Talairach space"""
@@ -108,7 +110,6 @@ def meta_attention(abbreviate=True, mni=True):
 
 
 def meta_default_mode(abbreviate=True, mni=True):
-# ToDO complete all regions
     """Default mode regions from Scale-Free Properties of the Functional
     Magnetic Resonance Imaging Signal during Rest and Task, He BJ. The Journal
     of Neuroscience (2011).
@@ -286,9 +287,9 @@ def func_working_memory(abbreviate=True, mni=True):
                    'left cerebellum posterior Lobe',
                    'right cerebellum posterior Lobe peak1',
                    'right cerebellum posterior Lobe peak2',
-                   'left thalamus']
+                   'left Thalamus']
     abbrevs = [' L IPL', ' L MFG', ' R MFG', ' L CPL', ' R CPL1', ' R CPL2',
-               ' L thalamus']
+               ' L Th']
     coords_talairach = [(-26.73, -60.16, 39.86),
                         (-26.73, 10.41, 52.9), (5.94, 24.26, 38.4),
                         (32.67, -63.34, -23.74), (11.88, -77.75, -20.5),
