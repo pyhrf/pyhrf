@@ -26,7 +26,7 @@ import numpy as np
 import pyhrf
 from pyhrf import FmriData
 from pyhrf.ui.treatment import FMRITreatment
-#from pyhrf.ui.jde import JDEMCMCAnalyser
+from pyhrf.ui.jde import JDEMCMCAnalyser
 #from pyhrf.ui.vb_jde_analyser_asl import JDEVEMAnalyser
 #import pyhrf.jde.asl as jdem
 from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
@@ -44,6 +44,8 @@ from matplotlib import rc
 rc('text', usetex=True)
 rc('font', family='sans serif', size=23)
 
+pyhrf.logger.setLevel("INFO")
+
 
 ############################
 ##### JDE BOLD Set Up  #####
@@ -55,14 +57,16 @@ def main():
 
     # Tags
     simulate = True
-    analyse_jde = True
     do_jde_asl = True
+    analyse_vem = False
+    analyse_mcmc = True
+    plot_results_jde = False
 
     for dt in np.array([ 1.]):   # 2.5, 1.25, 0.5
 
         # Folder names
         fig_prefix = 'vem_asl_TR25_dt' + str(np.round(dt*10).astype(np.int32))\
-                        + '_dur0_lowSNR_'
+                        + '_dur15_lowSNR_'
         simulation_dir = fig_prefix + 'simulated_bold'
         fig_dir = fig_prefix + 'figs'
     
@@ -96,33 +100,41 @@ def main():
 
             if do_jde_asl:
                 np.random.seed(48258)
-                old_output_dir = op.join(simulation_dir,
-                                         'jde_analysis_vn' + str(v_noise))
-                if not op.exists(old_output_dir):
-                    os.makedirs(old_output_dir)
+                vem_output_dir = op.join(simulation_dir,
+                                         'jde_vem_analysis_vn' + str(v_noise))
+                if not op.exists(vem_output_dir):
+                    os.makedirs(vem_output_dir)
+                mcmc_output_dir = op.join(simulation_dir,
+                                          'jde_mcmc_analysis_vn' + str(v_noise))
+                if not op.exists(mcmc_output_dir):
+                    os.makedirs(mcmc_output_dir)
 
-                print 'JDE analysis (old) on simulation ...'
-                if analyse_jde:
-                    analysis_tag = jde_analyse(simulation_dir, old_output_dir,
-                                               bold_items, dt=dt)
-                                               
-                print 'JDE analysis (old) on simulation done!'
-                error[ivn, m, :] = plot_jde_outputs(old_output_dir, fig_dir,
-                                                    'vn' + str(v_noise) + '_',
-                                                    norm, conds, bold_items)
-                plot_jde_rfs(simulation_dir, old_output_dir, fig_dir,
-                             'vn' + str(v_noise) + '_',
-                             bold_items)
+                if analyse_vem:
+                    print 'JDE analysis VEM on simulation ...'
+                    jde_analyse_vem(simulation_dir, vem_output_dir,
+                                    bold_items, dt=dt)
+                if analyse_mcmc:
+                    print 'JDE analysis MCMC on simulation ...'
+                    jde_analyse_mcmc(simulation_dir, mcmc_output_dir,
+                                     bold_items, dt=dt)
+
+                if plot_results_jde:
+                    print 'JDE analysis (old) on simulation done!'
+                    error[ivn, m, :] = plot_jde_outputs(old_output_dir, fig_dir,
+                                                        'vn' + str(v_noise) + '_',
+                                                        norm, conds, bold_items)
+                    plot_jde_rfs(simulation_dir, old_output_dir, fig_dir,
+                                 'vn' + str(v_noise) + '_',
+                                 bold_items)
         m += 1 
         #plot_error(fig_dir, v_noise_range, error)
 
 
 
-def jde_analyse(simulation_dir,output_dir,simulation,constrained=False,
+def jde_analyse_vem(simulation_dir,output_dir,simulation,constrained=False,
                 fast=True, dt=2.):
     # Create an FmriData object directly from the simulation dictionary:
     fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
-    pyhrf.verbose.set_verbosity(4)
     #JDE analysis
     jde_vem_analyser = JDEVEMAnalyser(beta=.8, dt=dt, hrfDuration=25.,
                                     nItMax=50, nItMin=9, estimateBeta=True,
@@ -133,6 +145,63 @@ def jde_analyse(simulation_dir,output_dir,simulation,constrained=False,
                              output_dir=output_dir)
     tjde_vem.run()
     return 
+
+
+def build_jde_mcmc_sampler(nbIterations, estimHrf=True, estimBeta=True,
+                           beta=.8, hrfVar=.001, use_true_nrls=False,
+                           use_true_labels=False):
+    """ Build a JDE MCMC sampler object with the given parameters
+
+    Args:
+        - nbIterations (int): number of iterations for the Gibbs Sampling
+                              (recommanded: 1000 to 3000)
+        - estimHrf (bool): flag to estimate the HRF or not. If not, then it
+                           is set to the canonical HRF.
+        - estimBeta (bool): flag to estimate beta (spatial regularization factor).
+                            If not estimated, then it is fixed to the value
+                            of the argument *beta*.
+        - beta (float): initial value of the spatial regularization factor.
+        - hrfVar (float): variance of the HRF (default is fine on simulation)
+        - use_true_nrls (bool): flag to initializ the NRLs to their simulated
+                                values
+        - use_true_labels (bool): flag to initialize the labels (= state of
+                                  voxels -> activated or nont) to their
+                                  simulated values.
+
+    Return:
+         instance of pyhrf.jde.models.BOLDGibbsSampler
+
+    """
+    from pyhrf.jde.models import BOLDGibbsSampler as BG
+    from pyhrf.jde.beta import BetaSampler as BS
+    from pyhrf.jde.nrl import NRLSampler as NS
+    from pyhrf.jde.hrf import RHSampler as HVS
+    from pyhrf.jde.hrf import HRFSampler as HS
+
+    sampler = BG(nb_iterations=nbIterations, 
+                 beta=BS(do_sampling=estimBeta, val_ini=np.array([beta])),
+                 hrf=HS(do_sampling=estimHrf), 
+                 hrf_var=HVS(do_sampling=False, val_ini=np.array([hrfVar])),
+                 response_levels=NS(use_true_nrls=use_true_nrls,
+                                    use_true_labels=use_true_labels))
+
+    return sampler
+
+
+
+def jde_analyse_mcmc(simulation_dir, output_dir, simulation, dt=2., nb_its=1500):
+    # Pack simulation into a pyhrf.core.FmriData object
+    #fmri_data = FmriData.from_vol_files(mask_file, paradigm_file, [bold_file], tr)
+    fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
+
+    # JDE
+    jde_mcmc_sampler = build_jde_mcmc_sampler(nb_its, 
+                                              use_true_nrls=False,
+                                              use_true_labels=True)
+    analyser = JDEMCMCAnalyser(jde_mcmc_sampler, dt=dt)
+    tjde_mcmc = FMRITreatment(fmri_data, analyser, output_dir=output_dir)
+    tjde_mcmc.execute()
+
 
 ##################
 ### Simulation ###
@@ -207,8 +276,8 @@ def simulate_bold(output_dir=None, noise_scenario='high_snr', v_noise=None,
                       label_map=lmap2),
             Condition(name=condition_names[2], m_act=2.2, v_act=.3, v_inact=.3,
                       label_map=lmap3),
-            #Condition(name=condition_names[3], m_act=2.2, v_act=.3, v_inact=.3,
-            #          label_map=lmap4),
+            Condition(name=condition_names[3], m_act=2.2, v_act=.3, v_inact=.3,
+                      label_map=lmap4),
         ]
 
     print 'creating simulation steps...'

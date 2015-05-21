@@ -30,7 +30,7 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
 
 
 eps = 1e-4
