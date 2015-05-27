@@ -1763,15 +1763,15 @@ from pyhrf.boldsynth.scenarios import *
 
 
 def simulate_asl(output_dir=None, noise_scenario='high_snr',
-                 spatial_size='tiny', v_noise=None):
+                 spatial_size='tiny', v_noise=None, dt=0.5):
     from pyhrf import Condition
     from pyhrf.tools import Pipeline
 
     drift_var = 10.
     
-    tr = 1.
-    dt = 0.5
-    dsf = 2  # down sampling factor
+    tr = 3.
+    #dt = 0.5
+    dsf = tr/dt  # down sampling factor
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
@@ -1819,7 +1819,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         ]
 
     from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11
-    brf = create_canonical_hrf()
+    brf = create_canonical_hrf(dt=dt)
     simulation_steps = {
         'dt': dt,
         'dsf': dsf,

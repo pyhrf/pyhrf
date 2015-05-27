@@ -156,6 +156,7 @@ def rasterize_paradigm(paradigm, dt, condition_defs):
     temporal resolution dt, for all conditions. 'paradigm' is expected to be
     an instance of 'pyhrf.paradigm.mpar.Paradigm'
     """
+    print paradigm
     rparadigm = paradigm.get_rastered(dt)
     return np.vstack([rparadigm[c.name][0] for c in condition_defs])
 

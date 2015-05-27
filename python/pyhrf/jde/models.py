@@ -323,6 +323,7 @@ class BOLDSamplerInput:
 
         lgt = int((self.ny + 2) * osf)
         allMatH = []
+
         for iSess in xrange(self.nbSessions):
             matH = np.zeros((lgt, self.nbConditions), dtype=int)
             for j in xrange(self.nbConditions):
@@ -382,14 +383,28 @@ class BOLDSamplerInput:
 #                        for a in xrange(matTmp.shape[1]):
 #                            print matTmp[b,a],
 #                        print ']'
-
+                
                 d0 = matTmp[self.varOSAvailDataIdx[iSess], :]
                 d1 = d0[:, self.hrfColIndex]
+                if 0: 
+                    d0 = matTmp[self.varOSAvailDataIdx[iSess], :self.lgCI]
+                    d1 = np.zeros_like(d0)
+                    for ix in np.arange(0, d1.shape[1], osf):
+                        d1[:, ix] = d0[:, ix]
+                
                 varX[j, :, :] = d1
-
             vX.append(varX)
         self.varX = hstack(vX)
         logger.info('varX : %s', str(self.varX.shape))
+
+        if 0:
+            print self.varX.shape
+
+            import matplotlib.pyplot as plt
+            #from matplotlib.pylab import *
+            plt.matshow(self.varX[0,:,:].squeeze())
+            plt.show()
+
         self.buildOtherMatX()
 
         self.nbColX = shape(self.varX)[2]

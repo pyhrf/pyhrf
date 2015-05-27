@@ -943,7 +943,7 @@ class GibbsSamplerVariable:
                      axes_domains=self.axes_domains,
                      value_label=self.value_label)
 
-        if self.trueValue is not None:
+        if self.trueValue is not None and 0:
             c_true = xndarray(np.array(self.get_true_value()),
                               axes_names=self.axes_names,
                               axes_domains=self.axes_domains,

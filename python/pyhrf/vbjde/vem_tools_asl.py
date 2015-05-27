@@ -272,22 +272,14 @@ def expectation_H(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
 
 
 def expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
-                  sigma_epsilone, scale, R, sigmaH, sigmaG, Omega):
+                  sigma_epsilone, scale, R_inv, sigmaH, sigmaG, Omega):
     Y_bar_tilde = np.zeros((D), dtype=float)
-    S_a = scale * R / sigmaH
+    S_a = scale * R_inv / sigmaH
     y_tildeH = y_tilde.copy()
     for i in xrange(0, J):
         Gamma_i = Gamma / max(sigma_epsilone[i], eps)
         tmp = np.zeros((N, D), dtype=float)
         for m, k in enumerate(X):                  # Loop over the M conditions
-            if 0:
-                print 'loop condition 1'
-                print 'm_A[i, m] shape = ', m_A[i, m].shape
-                print 'm_C[i, m] shape = ', m_C[i, m].shape
-                print 'X[k] shape = ', X[k].shape
-                print 'W shape = ', W.shape
-                print 'G shape = ', G.shape
-                print 'y_tildeH shape = ', y_tildeH.shape
             tmp += m_A[i, m] * X[k]
             y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k]), G)
         #print 'salgo de loop condition 1'
@@ -301,8 +293,8 @@ def expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
                                                           Gamma_i), X[k2])
             #print 'sali del loop condition 2'
     #print 'sali del loop voxel'
-    S_a += np.dot(np.dot(Omega.T, scale * R / sigmaG), Omega)
-    Y_bar_tilde += np.dot(np.dot(Omega.T, scale * R / sigmaG), G)
+    S_a += np.dot(np.dot(Omega.T, scale * R_inv / sigmaG), Omega)
+    Y_bar_tilde += np.dot(np.dot(Omega.T, scale * R_inv / sigmaG), G)
     Sigma_H = np.linalg.inv(S_a)
     m_H = np.dot(Sigma_H, Y_bar_tilde)
     return m_H, Sigma_H
@@ -368,9 +360,9 @@ def expectation_G(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
 
 
 def expectation_G_b(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
-                  sigma_epsilone, scale, R, sigmaG):
+                  sigma_epsilone, scale, R_inv, sigmaG):
     Y_bar_tilde = np.zeros((D), dtype=float)
-    S_c = scale * R / sigmaG
+    S_c = scale * R_inv / sigmaG
     y_tildeG = y_tilde.copy()
     for i in xrange(0, J):
         Gamma_i = Gamma / max(sigma_epsilone[i], eps)
@@ -392,9 +384,9 @@ def expectation_G_b(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
     
 
 def expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
-                  sigma_epsilone, scale, R, sigmaG, OmegaH):
+                  sigma_epsilone, scale, R_inv, sigmaG, OmegaH):
     Y_bar_tilde = np.zeros((D), dtype=float)
-    S_c = scale * R / sigmaG
+    S_c = scale * R_inv / sigmaG
     y_tildeG = y_tilde.copy()
     for i in xrange(0, J):
         Gamma_i = Gamma / max(sigma_epsilone[i], eps)
@@ -408,7 +400,7 @@ def expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
             for m2, k2 in enumerate(X):            # Loop over the M conditions
                 S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
                                             X[k1].T, W.T), Gamma_i), W), X[k2])
-    Y_bar_tilde += np.dot(scale * R / sigmaG, OmegaH)
+    Y_bar_tilde += np.dot(scale * R_inv / sigmaG, OmegaH)
     Sigma_G = np.linalg.inv(S_c)
     m_G = np.dot(Sigma_G, Y_bar_tilde)
     return m_G, Sigma_G
@@ -463,7 +455,7 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     
     if positivity:
         def ec0(F):
-            'F>=0'
+            'F>=0 ?? or F>=-baseline??'
             return F
         #print 'SLSQP method: '
         y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3], ieqcons=[ec0],
@@ -473,7 +465,9 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
         #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
     else:
         #print 'SLSQP method: '
-        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3],
+        #y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3],
+        #               bounds=[(None, None)] * (len(zeros_F)))
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],
                        bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
 
@@ -665,14 +659,15 @@ def maximization_LA(Y, m_A, m_C, X, W, w, Ht, Gt, L, P, alpha, Gamma,
     return L, alpha
 
 
-def maximization_sigma(D, R, m_X):
-    sigmaX = (np.dot(mult(m_X, m_X), R)).trace()
-    sigmaX /= D
+def maximization_sigma(D, R_inv, m_X):
+    sigmaX = (np.dot(mult(m_X, m_X), R_inv)).trace()
+    sigmaX /= (D - 1)
     return sigmaX
 
 
-def maximization_sigma_prior(D, R, m_X, gamma_x):
-    R_inv = np.linalg.inv(R)
+def maximization_sigma_prior(D, R_inv, m_X, gamma_x):
+    #R_inv = np.linalg.inv(R)
+    #alpha = (np.dot(mult(m_X, m_X), R_inv)).trace()
     alpha = (np.dot(mult(m_X, m_X), R_inv)).trace()
     #sigmaH = (D + sqrt(D * D + 8 * gamma_h * alpha)) / (4* gamma_h)
     sigmaX = (1 - D + sqrt((D - 1) * (D - 1) + 8 * gamma_x * alpha)) / (4 * gamma_x)
@@ -689,10 +684,11 @@ def maximization_sigma_noise(Y, X, m_A, Sigma_A, Ht, m_C, Sigma_C, Gt, W, \
         for m, k in enumerate(X):
             for m2, k2 in enumerate(X):
                 hXXh[m, m2] = np.dot(np.dot(np.dot(Ht.T, X[k].T), X[k2]), Ht)
-                gXXg[m, m2] = np.dot(np.dot(np.dot(np.dot(np.dot(Gt.T, W.T),
-                                                    X[k].T), W), X[k2]), Gt)
+                gXXg[m, m2] = np.dot(np.dot(np.dot(np.dot(np.dot(Gt.T, X[k].T),
+                                                          W.T), W), X[k2]), Gt)
+
                 gXXh[m, m2] = np.dot(np.dot(np.dot(np.dot( \
-                                               Gt.T, W.T), X[k].T), X[k2]), Ht)
+                                               Gt.T, X[k].T), W.T), X[k2]), Ht)
             S += m_A[i, m] * np.dot(X[k], Ht) + \
                  m_C[i, m] * np.dot(np.dot(W, X[k]), Gt)
         sigma_eps[i] = np.dot(np.dot(m_A[i, :].T, hXXh), m_A[i, :])

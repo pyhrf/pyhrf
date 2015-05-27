@@ -182,7 +182,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         if self.fast:
             if not self.constrained:
                 logger.info("fast VEM with drift estimation")
-
+                print "I am inside fast not constrained"
                 """ni, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, 
                 L, PL, CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], 
                 cTime[2:], cTimeMean, Sigma_A, StimulusInducedSignal"""

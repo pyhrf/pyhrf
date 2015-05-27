@@ -102,6 +102,11 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp[os_indexes]
+    if 0:
+        print x.shape
+        import matplotlib.pyplot as plt
+        plt.matshow(x[:200, :])
+        plt.show()
     return x
     
 
@@ -117,40 +122,36 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
-    #print 'paradigm_bins = ', paradigm_bins
-    #print 'paradigm_bins = ', paradigm_bins.shape
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
-    #print 'firstcol = ', firstcol
-    #print 'firstcol = ', firstcol.shape
     firstrow = np.concatenate(
         ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
-    #print 'firstrow = ', firstrow
-    #print 'firstrow = ', firstrow.shape
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
-    #print 'x_tmp shape = ', x_tmp.shape
     x_tmp2 = np.zeros_like(x_tmp)
-    #print 'design matrix '
-    #print firstrow.shape[0]
-    #print tr / dt
-    #print np.arange(0, firstrow.shape[0], tr / dt)
-    for ix in np.arange(0, firstrow.shape[0], tr / dt):
-        #print ix
-        x_tmp2[:, ix] = x_tmp[:, ix]
-    #print 'x_tmp = ', x_tmp
-    #print 'x_tmp = ', x_tmp.shape
+    print x_tmp.shape
+    print firstrow.shape
+    print np.arange(0, firstrow.shape[0], tr / dt)
     if 0:
         import matplotlib.pyplot as plt
         from matplotlib.pylab import *
-        plt.matshow(x_tmp2[:50, :])
+        plt.matshow(x_tmp[:300, :])
+        plt.show()
+
+    for ix in np.arange(0, firstrow.shape[0], tr / dt):
+        x_tmp2[:, ix] = x_tmp[:, ix]
+    if 0:
+        import matplotlib.pyplot as plt
+        from matplotlib.pylab import *
+        plt.matshow(x_tmp2[:300, :])
         plt.show()
 
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
-    #print 'os_indexes = ', os_indexes
-    #print 'os_indexes = ', os_indexes.shape
     x = x_tmp2[os_indexes]
-    #print 'x = ', x
-    #print 'x = ', x.shape
+    if 0:
+        import matplotlib.pyplot as plt
+        from matplotlib.pylab import *
+        plt.matshow(x[:300, :])
+        plt.show()
     return x
 
 

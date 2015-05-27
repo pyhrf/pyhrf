@@ -60,13 +60,13 @@ def main():
     do_jde_asl = True
     analyse_vem = False
     analyse_mcmc = True
-    plot_results_jde = False
+    plot_results_jde = True
 
     for dt in np.array([ 1.]):   # 2.5, 1.25, 0.5
 
         # Folder names
-        fig_prefix = 'vem_asl_TR25_dt' + str(np.round(dt*10).astype(np.int32))\
-                        + '_dur15_lowSNR_'
+        fig_prefix = 'asl_TR25_dt' + str(np.round(dt*10).astype(np.int32))\
+                        + '_dur15_block2_dt1_dtsim05_lowSNR_'
         simulation_dir = fig_prefix + 'simulated_bold'
         fig_dir = fig_prefix + 'figs'
     
@@ -112,20 +112,25 @@ def main():
                 if analyse_vem:
                     print 'JDE analysis VEM on simulation ...'
                     jde_analyse_vem(simulation_dir, vem_output_dir,
-                                    bold_items, dt=dt)
+                                    bold_items, dt=dt/2.)
                 if analyse_mcmc:
                     print 'JDE analysis MCMC on simulation ...'
                     jde_analyse_mcmc(simulation_dir, mcmc_output_dir,
-                                     bold_items, dt=dt)
+                                     bold_items, dt=dt/2., nb_its=1000)
 
                 if plot_results_jde:
-                    print 'JDE analysis (old) on simulation done!'
-                    error[ivn, m, :] = plot_jde_outputs(old_output_dir, fig_dir,
-                                                        'vn' + str(v_noise) + '_',
-                                                        norm, conds, bold_items)
-                    plot_jde_rfs(simulation_dir, old_output_dir, fig_dir,
-                                 'vn' + str(v_noise) + '_',
-                                 bold_items)
+                    print 'printing results for VEM...'
+                    plot_jde_outputs(vem_output_dir, fig_dir,'vn' + str(v_noise) +'_vem' + '_',
+                                     norm, conds, bold_items)
+                    
+                    print 'printing results for MCMC...'
+                    plot_jde_outputs(mcmc_output_dir, fig_dir, 'vn' + str(v_noise) +'_mcmc' + '_',
+                                     norm, conds, bold_items, tag='mcmc')
+                    
+                    print 'printing HRF results together...'
+                    output_dir_tag = 'analysis_vn' + str(v_noise)
+                    plot_jde_rfs(simulation_dir, output_dir_tag, fig_dir,
+                                 'vn' + str(v_noise) + '_',    bold_items)
         m += 1 
         #plot_error(fig_dir, v_noise_range, error)
 
@@ -135,6 +140,8 @@ def jde_analyse_vem(simulation_dir,output_dir,simulation,constrained=False,
                 fast=True, dt=2.):
     # Create an FmriData object directly from the simulation dictionary:
     fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
+    print 'dt = ', dt
+
     #JDE analysis
     jde_vem_analyser = JDEVEMAnalyser(beta=.8, dt=dt, hrfDuration=25.,
                                     nItMax=50, nItMin=9, estimateBeta=True,
@@ -148,7 +155,7 @@ def jde_analyse_vem(simulation_dir,output_dir,simulation,constrained=False,
 
 
 def build_jde_mcmc_sampler(nbIterations, estimHrf=True, estimBeta=True,
-                           beta=.8, hrfVar=.001, use_true_nrls=False,
+                           beta=.8, hrfVar=.01, use_true_nrls=False,
                            use_true_labels=False):
     """ Build a JDE MCMC sampler object with the given parameters
 
@@ -189,18 +196,20 @@ def build_jde_mcmc_sampler(nbIterations, estimHrf=True, estimBeta=True,
 
 
 
-def jde_analyse_mcmc(simulation_dir, output_dir, simulation, dt=2., nb_its=1500):
+def jde_analyse_mcmc(simulation_dir, output_dir, simulation, dt=2., nb_its=1000):
     # Pack simulation into a pyhrf.core.FmriData object
     #fmri_data = FmriData.from_vol_files(mask_file, paradigm_file, [bold_file], tr)
     fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
+    print 'dt = ', dt
 
     # JDE
     jde_mcmc_sampler = build_jde_mcmc_sampler(nb_its, 
                                               use_true_nrls=False,
                                               use_true_labels=True)
     analyser = JDEMCMCAnalyser(jde_mcmc_sampler, dt=dt)
-    tjde_mcmc = FMRITreatment(fmri_data, analyser, output_dir=output_dir)
-    tjde_mcmc.execute()
+    tjde_mcmc = FMRITreatment(fmri_data, analyser, output_dir=output_dir,
+                              make_outputs=True)
+    tjde_mcmc.run()
 
 
 ##################
@@ -335,7 +344,7 @@ def simulate_bold(output_dir=None, noise_scenario='high_snr', v_noise=None,
         # cPickle.dump(simulation, f)
         # f.close()
 
-    return simulation, condition_names[0:3]
+    return simulation, condition_names
     
     
 def load_paradigm(fn):
@@ -458,20 +467,27 @@ def plot_cub_as_curve(c, orientation=None, colors=None, plot_kwargs=None,
 
 
 def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
-                     asl_items=None):
+                     asl_items=None, tag='vem'):
     fs = 23            # fontsize
     lw = 2             # linewtidth -> better bigger since image is often small
     enorm = plt.normalize(0., 1.)
     print conds
+    plt.close('all')
     
     #BRF
+    if tag=='mcmc':
+        name = 'jde_mcmc_hrf_pm.nii'
+    else:
+        name = 'jde_vem_hrf.nii'
     plt.figure()
-    ch = xndarray.load(op.join(jde_dir, 'jde_vem_hrf.nii'))
+    ch = xndarray.load(op.join(jde_dir, name))
+    #print ch.sub_cuboid(ROI=1).roll('time')
     plot_cub_as_curve(ch.sub_cuboid(ROI=1).roll('time'),
-                colors={'estim': 'b', 'true': 'r'}, legend_prefix='BRF ',
+                colors={'estim': 'b', 'true': 'w'}, legend_prefix='BRF ',
                 plot_kwargs={'linewidth': lw})
     plt.legend()
     set_ticks_fontsize(fs)
+
     save_and_crop(op.join(fig_dir, fig_prefix + 'brf_est.png'))
     hrf1 = ch.sub_cuboid(ROI=1).roll('time').data
     #print asl_items
@@ -484,16 +500,26 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
         print ' - Mean Relative Error = ', np.mean(error_hrf_rel)
 
     #BRLS
-    b_nrls = xndarray.load(op.join(jde_dir, 'jde_vem_nrls.nii'))
+    if tag=='mcmc':
+        name = 'jde_mcmc_nrl_pm.nii'
+    else:
+        name = 'jde_vem_nrls.nii'
+    b_nrls = xndarray.load(op.join(jde_dir, name))
     for icond, cond in enumerate(conds):
         print cond
         cmap = plt.cm.jet
-        plt.matshow(b_nrls.data[0, :, :, icond], cmap=cmap, norm=norm)  # there are 2
+        print b_nrls.data.shape
+        if tag=='mcmc' and 0:
+            nrls_data = b_nrls.data[0, :, :, icond, 0]
+            plt.matshow(nrls_data, cmap=cmap, norm=norm)  # there are 2
+        else:
+            nrls_data = b_nrls.data[0, :, :, icond]
+            plt.matshow(nrls_data, cmap=cmap, norm=norm)  # there are 2
         plt.gca().set_axis_off()
         save_and_crop(op.join(fig_dir, fig_prefix + 'brl_pm_' + cond + '.png'))
         plot_palette(cmap, norm=norm, fontsize=fs * 2)
         save_and_crop(op.join(fig_dir, fig_prefix + 'brls_pm_' + cond + '_palette_est.png'))
-        nrls1 = b_nrls.data[0, :, :, icond].flatten()
+        nrls1 = nrls_data.flatten()
         nrls2 = asl_items['nrls'][icond]
         error_nrls_abs = np.abs(nrls1 - nrls2)
         error_nrls_rel = np.abs((nrls1 - nrls2) / (nrls2))
@@ -520,10 +546,18 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
         plt.close('all')
 
     #Labels
-    labels = xndarray.load(op.join(jde_dir, 'jde_vem_labels.nii'))
-    labels = labels.sub_cuboid(Act_class='activ')
+    if tag=='mcmc':
+        name = 'jde_mcmc_pm_Labels_marked.nii'
+    else:
+        name = 'jde_vem_labels.nii'
+    labels = xndarray.load(op.join(jde_dir, name))
+    if tag=='mcmc':
+        labels = labels.sub_cuboid()
+    else:
+        labels = labels.sub_cuboid(Act_class='activ')
     cmap = plt.cm.jet
     for icond, cond in enumerate(conds):
+        
         plt.matshow(labels.data[0, :, :, icond], cmap=cmap)  # there are 2
         plt.gca().set_axis_off()
         save_and_crop(op.join(fig_dir, fig_prefix + 'labels_pm_' + cond + '.png'))
@@ -535,13 +569,28 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
            #np.mean(error_nrls_rel), np.mean(error_prls_rel)
     
 
-def plot_jde_rfs(simu_dir, jde_dir, fig_dir, fig_prefix, asl_items=None):
+def plot_jde_rfs(simu_dir, jde_dir_tag, fig_dir, fig_prefix, asl_items=None):
     fs = 23            # fontsize
     lw = 2             # linewtidth -> better bigger since image is often small
     enorm = plt.normalize(0., 1.)
-
+    plt.close('all')
+    
     #BRF
     plt.figure()
+    jde_dir = op.join(simu_dir, 'jde_mcmc_'+jde_dir_tag)
+    ch = xndarray.load(op.join(jde_dir, 'jde_mcmc_hrf_pm.nii'))
+    plot_cub_as_curve(ch.sub_cuboid(ROI=1).roll('time'),
+                      colors={'estim': 'b', 'true': 'w'},
+                      legend_prefix=' JDE MCMC HRF ',
+                      plot_kwargs={'linewidth': lw})
+    plt.hold('on')
+    jde_dir = op.join(simu_dir, 'jde_vem_'+jde_dir_tag)
+    ch = xndarray.load(op.join(jde_dir, 'jde_vem_hrf.nii'))
+    plot_cub_as_curve(ch.sub_cuboid(ROI=1).roll('time'),
+                      #colors={'estim': 'b', 'true': 'r'},
+                      legend_prefix=' JDE VEM HRF ',
+                      plot_kwargs={'linewidth': lw, 'color': 'r'})
+    plt.hold('on')
     ch = xndarray.load(op.join(simu_dir, 'hrf.nii'))
     plot_cub_as_curve(ch.sub_cuboid(sagittal=0, coronal=0,
                                     axial=0).roll('time'),
@@ -549,12 +598,6 @@ def plot_jde_rfs(simu_dir, jde_dir, fig_dir, fig_prefix, asl_items=None):
                       legend_prefix='simulated BRF ',
                       plot_kwargs={'linewidth': lw, 'linestyle': '--',
                                    'color': 'k'})
-    plt.hold('on')
-    ch = xndarray.load(op.join(jde_dir, 'jde_vem_hrf.nii'))
-    plot_cub_as_curve(ch.sub_cuboid(ROI=1).roll('time'),
-                      #colors={'estim': 'b', 'true': 'r'},
-                      legend_prefix=' estimated BRF ',
-                      plot_kwargs={'linewidth': lw, 'color': 'b'})
     plt.legend()
     set_ticks_fontsize(fs)
     save_and_crop(op.join(fig_dir, fig_prefix + 'brf_est.png'))

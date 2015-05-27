@@ -30,7 +30,7 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
-#logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)
 
 
 eps = 1e-4
@@ -82,16 +82,23 @@ def Main_vbjde_Extension(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt, sca
         neighboursIndexes[i, :len(graph[i])] = graph[i]
     #-----------------------------------------------------------------------#
 
-    #X = OrderedDict([])
-    #for condition, Ons in Onsets.iteritems():
-    #    X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
-    #    condition_names += [condition]
-    #XX = np.zeros((M, N, D), dtype=np.int32)
-    #nc = 0
-    #for condition, Ons in Onsets.iteritems():
-    #    XX[nc, :, :] = X[condition]
-    #    nc += 1
-    X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
+    logger.info("Creating design matrix ...")
+    print dt
+    if 0:
+        X = OrderedDict([])
+        for condition, Ons in Onsets.iteritems():
+            print condition
+            X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
+            print X[condition]
+            condition_names += [condition]
+        XX = np.zeros((M, N, D), dtype=np.int32)
+        nc = 0
+        for condition, Ons in Onsets.iteritems():
+            XX[nc, :, :] = X[condition]
+            nc += 1
+    else:
+        X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
+    logger.info("Design matrix created ...")
 
     order = 2
     D2 = vt.buildFiniteDiffMatrix(order, D)
