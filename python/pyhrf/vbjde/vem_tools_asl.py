@@ -282,22 +282,14 @@ def expectation_H_physio(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
         for m, k in enumerate(X):                  # Loop over the M conditions
             tmp += m_A[i, m] * X[k]
             y_tildeH[:, i] -= m_C[i, m] * np.dot(np.dot(W, X[k]), G)
-        #print 'salgo de loop condition 1'
-        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeH[:, i])
-        S_a += np.dot(np.dot(tmp.T, Gamma_i), tmp)
-        #print 'primer loop out'
-        for m1, k1 in enumerate(X):                # Loop over the M conditions
-            #print 'loop condition 2'
             for m2, k2 in enumerate(X):            # Loop over the M conditions
-                S_a += Sigma_A[m1, m2, i] * np.dot(np.dot(X[k1].T,
+                S_a += Sigma_A[m, m2, i] * np.dot(np.dot(X[k].T,
                                                           Gamma_i), X[k2])
-            #print 'sali del loop condition 2'
-    #print 'sali del loop voxel'
+        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeH[:, i])
+        S_a += np.dot(np.dot(tmp.T, Gamma_i), tmp)            
     S_a += np.dot(np.dot(Omega.T, scale * R_inv / sigmaG), Omega)
     Y_bar_tilde += np.dot(np.dot(Omega.T, scale * R_inv / sigmaG), G)
-    Sigma_H = np.linalg.inv(S_a)
-    m_H = np.dot(Sigma_H, Y_bar_tilde)
-    return m_H, Sigma_H
+    return np.dot(np.linalg.inv(S_a), Y_bar_tilde), np.linalg.inv(S_a)
 
 
 def expectation_H_physiob(Sigma_A, m_A, m_C, G, X, W, Gamma, D, J, N, y_tilde,
@@ -394,16 +386,13 @@ def expectation_G_physio(Sigma_C, m_C, m_A, H, X, W, Gamma, D, J, N, y_tilde,
         for m, k in enumerate(X):                  # Loop over the M conditions
             tmp += m_C[i, m] * np.dot(W, X[k])
             y_tildeG[:, i] -= m_A[i, m] * np.dot(X[k], H)
-        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeG[:, i])
-        S_c += np.dot(np.dot(tmp.T, Gamma_i), tmp)
-        for m1, k1 in enumerate(X):                # Loop over the M conditions
             for m2, k2 in enumerate(X):            # Loop over the M conditions
-                S_c += Sigma_C[m1, m2, i] * np.dot(np.dot(np.dot(np.dot( \
-                                            X[k1].T, W.T), Gamma_i), W), X[k2])
+                S_c += Sigma_C[m, m2, i] * np.dot(np.dot(np.dot(np.dot( \
+                                            X[k].T, W.T), Gamma_i), W), X[k2])
+        Y_bar_tilde += np.dot(np.dot(tmp.T, Gamma_i), y_tildeG[:, i])
+        S_c += np.dot(np.dot(tmp.T, Gamma_i), tmp)            
     Y_bar_tilde += np.dot(scale * R_inv / sigmaG, OmegaH)
-    Sigma_G = np.linalg.inv(S_c)
-    m_G = np.dot(Sigma_G, Y_bar_tilde)
-    return m_G, Sigma_G
+    return np.dot(np.linalg.inv(S_c), Y_bar_tilde), np.linalg.inv(S_c)
 
 
 def constraint_norm1(Ftilde, Sigma_F, positivity=False):
@@ -457,97 +446,61 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
         def ec0(F):
             'F>=0 ?? or F>=-baseline??'
             return F
-        #print 'SLSQP method: '
         y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3], ieqcons=[ec0],
                        bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
         #               bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
     else:
-        #print 'SLSQP method: '
         #y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3],
         #               bounds=[(None, None)] * (len(zeros_F)))
         y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],
                        bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
-
-    #print y
-    if 0:
-        print y
-        print len(y)
-        print fun(y)
-        print "Feasibility residue: %g" % ec1(y)
-        print "Random perturbations of optimal point"
-        for _ in xrange(20):
-            z = y + np.random.randn(*y.shape) * 1e-3
-            print "fun(z) = %g" % fun(z)
-
-        print 'L-BFGS-B method: '
-        print [(-1, 1)] * (len(zeros_F)/2) + [(0, 1)] * (len(zeros_F)/2)
-        print len([(-1, 1)] * (len(zeros_F)/2 +1) + [(0, 1)] * (len(zeros_F)/2))
-        bound0 = len([(-1, 1)] * (len(zeros_F)/2 +1) + [(0, None)] * (len(zeros_F)/2))
-        y2 = fmin_l_bfgs_b(fung, zeros_F, bounds=bound0)
-        print y2[0]
-        print len(y2)
-        print fung(y2[0])
-        print "Feasibility residue: %g" % ec1(y2[0])
-        print "Random perturbations of optimal point"
-        for _ in xrange(20):
-            z = y2[0] + np.random.randn(*y2[0].shape) * 1e-3
-            w = fung(z)
-            print "fung(z) = %g" % w[0]    
-        import matplotlib.pyplot as plt
-        plt.hold('on')
-        plt.plot(y)
-        plt.hold('on')
-        plt.plot(y2[0])
-        plt.show()
-        stop
     return y
 
 
-def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
-                  mu_Mc, Beta, p_q_t, p_Q, graph, M, J, K):
+def expectation_Z(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+                  mu_Mc, Beta, Z_tilde, q_Z, graph, M, J, K):
     energy = np.zeros(K)
     Gauss = energy.copy()
-    # Compute p_q_t
+    # Compute Z_tilde
     for i in xrange(0, J):
         for m in xrange(0, M):
             alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
                     - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
             alpha /= alpha.mean()
-            p_q_neighb = sum(p_q_t[m, :, graph[i]], 0)
+            tmp = sum(Z_tilde[m, :, graph[i]], 0)
             for k in xrange(0, K):
                 extern_field = alpha[k] \
                             + max(np.log(normpdf(m_A[i, m], mu_Ma[m, k],
                                          sigma_Ma[m, k]) + eps), -100)\
                             + max(np.log(normpdf(m_C[i, m], mu_Mc[m, k],
                                          sigma_Mc[m, k]) + eps), -100)
-                local_energy = Beta[m] * p_q_neighb[k]
+                # check if the sigma is sqrt or not!!
+                local_energy = Beta[m] * tmp[k]
                 energy[k] = extern_field + local_energy
             Probas = np.exp(energy - max(energy))
-            p_q_t[m, :, i] = Probas / (sum(Probas) + eps)
-    # Compute p_Q
+            Z_tilde[m, :, i] = Probas / (sum(Probas) + eps)
+    # Compute q_Z
     for i in xrange(0, J):
         for m in xrange(0, M):
             alpha = - 0.5 * Sigma_A[m, m, i] / (sigma_Ma[m, :] + eps) \
                     - 0.5 * Sigma_C[m, m, i] / (sigma_Mc[m, :] + eps)
             alpha /= alpha.mean()
-            p_q_neighb = sum(p_q_t[m, :, graph[i]], 0)
+            tmp = sum(Z_tilde[m, :, graph[i]], 0)
             for k in xrange(0, K):
-                # variances term
                 extern_field = alpha[k]
-                # Beta depndent term
-                local_energy = Beta[m] * p_q_neighb[k]
+                local_energy = Beta[m] * tmp[k]
                 energy[k] = extern_field + local_energy
                 Gauss[k] = normpdf(m_A[i, m], mu_Ma[m, k], \
                                     np.sqrt(sigma_Ma[m, k])) \
-                         * normpdf(m_C[i, m], mu_Mc[m, k], \
+                            + normpdf(m_C[i, m], mu_Mc[m, k], \
                                     np.sqrt(sigma_Mc[m, k]))
             Probas = np.exp(energy - max(energy))
-            p_Q[m, :, i] = Gauss * Probas / sum(Probas)
-            p_Q[m, :, i] /= sum(p_Q[m, :, i])
-    return p_Q, p_q_t
+            q_Z[m, :, i] = Gauss * Probas / sum(Probas)
+            q_Z[m, :, i] /= sum(q_Z[m, :, i])
+    return q_Z, Z_tilde
 
 
 def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
@@ -597,7 +550,7 @@ def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
 # Maximization functions
 ##############################################################
 
-def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
+def maximization_mu_sigma_original(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
     for m in xrange(0, M):
         for k in xrange(0, K):
             #S = sum( q_Z[m,k,:] ) + eps
@@ -612,6 +565,19 @@ def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
             if k != 0:          # mu_0 = 0 a priori
                 # Mu[m,k] = eps + sum( q_Z[m,k,:] * m_A[:,m] ) / S
                 Mu[m, k] = sum(q_Z[m, k, :] * m_X[:, m]) / S
+            else:
+                Mu[m, k] = 0.
+    return Mu, Sigma
+
+
+def maximization_mu_sigma(Mu, Sigma, q_Z, m_X, K, M, Sigma_X):
+    for m in xrange(0, M):
+        for k in xrange(0, K):
+            S = sum(q_Z[m, k, :])
+            Sigma[m, k] = sum(q_Z[m, k, :] * (pow(m_X[:, m] - Mu[m, k], 2) +
+                                    Sigma_X[m, m, :])) / (S + eps)
+            if k != 0:          # mu_0 = 0 a priori
+                Mu[m, k] = sum(q_Z[m, k, :] * m_X[:, m]) / (S + eps)
             else:
                 Mu[m, k] = 0.
     return Mu, Sigma
@@ -702,6 +668,22 @@ def maximization_sigma_noise(Y, X, m_A, Sigma_A, Ht, m_C, Sigma_C, Gt, W, \
     return sigma_eps
 
 
+
+def gradient0(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
+    Gr = gamma
+    for i in xrange(0, J):
+        Pmf_i = np.exp(beta * sum(Z_tilde[m, :, graph[i]], 1) \
+                 - max(beta * sum(Z_tilde[m, :, graph[i]], 0))) / \
+                sum(np.exp(beta * sum(Z_tilde[m, :, graph[i]], 0) \
+                     - max(beta * sum(Z_tilde[m, :, graph[i]], 0))))
+        print Pmf_i.shape
+        print q_Z[m, :, i].shape
+        print sum(Z_tilde[m, :, graph[i]])
+        Gr += sum( sum(Z_tilde[m, :, graph[i]]) * (-q_Z[m, :, i] + Pmf_i), 0)
+        print Gr
+    return Gr
+
+
 def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
     Gr = gamma
     for i in xrange(0, J):
@@ -711,8 +693,8 @@ def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
         for k in xrange(0, K):
             tmp = sum(Z_tilde[m, k, graph[i]], 0)
             energy = beta * tmp
-            Pmf_ik = np.exp(energy - Emax) / (Sum + eps)
-            Gr += tmp * (-q_Z[m, k, i] + Pmf_ik)
+            Pzmi = np.exp(energy - Emax) / (Sum + eps)
+            Gr += tmp * (-q_Z[m, k, i] + Pzmi)
     return Gr
 
 

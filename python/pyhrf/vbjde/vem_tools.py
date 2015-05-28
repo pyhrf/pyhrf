@@ -131,25 +131,17 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     print x_tmp.shape
     print firstrow.shape
     print np.arange(0, firstrow.shape[0], tr / dt)
-    if 0:
-        import matplotlib.pyplot as plt
-        from matplotlib.pylab import *
-        plt.matshow(x_tmp[:300, :])
-        plt.show()
-
     for ix in np.arange(0, firstrow.shape[0], tr / dt):
-        x_tmp2[:, ix] = x_tmp[:, ix]
-    if 0:
-        import matplotlib.pyplot as plt
-        from matplotlib.pylab import *
-        plt.matshow(x_tmp2[:300, :])
-        plt.show()
-
+        x_tmp2[:, ix] = x_tmp[:, ix]       
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp2[os_indexes]
     if 0:
         import matplotlib.pyplot as plt
         from matplotlib.pylab import *
+        plt.matshow(x_tmp[:300, :])
+        plt.show()
+        plt.matshow(x_tmp2[:300, :])
+        plt.show()
         plt.matshow(x[:300, :])
         plt.show()
     return x

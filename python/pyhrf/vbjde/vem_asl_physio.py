@@ -83,8 +83,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     w = - w
     W = np.diag(w)
     # Conditions
-    X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
-    #X, XX = EM.create_conditions(Onsets, M, N, D, TR, dt)
+    #X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
+    X, XX = EM.create_conditions(Onsets, M, N, D, TR, dt)
     
     # Covariance matrix
     #R = EM.covariance_matrix(2, D, dt)
@@ -103,23 +103,20 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     q_Z1 = copy.deepcopy(q_Z)
     Z_tilde = copy.deepcopy(q_Z)
     # H and G
-    print 'dt = ', dt
-    print Thrf
-    print D
     TT, m_h = getCanoHRF(Thrf, dt)
     m_h = m_h[:D]
     H = np.array(m_h).astype(np.float64)
-    print 'H shape = ', H.shape
     H1 = np.array(m_h).astype(np.float64)
     Ht = copy.deepcopy(H)
     Sigma_H = np.zeros((D, D), dtype=np.float64)
     Omega0 = linear_rf_operator(len(H), phy_params, dt, calculating_brf=False)
-    #print 'Omega1 = ', Omega
     OmegaH = np.dot(Omega0, H)
-    Omega = Omega0/np.linalg.norm(OmegaH)
-    OmegaH /=np.linalg.norm(OmegaH)
-    #print 'Omega2 = ', Omega
-    #I = np.eye(R.shape[0])
+    Omega = Omega0 
+    normg1 = True
+    if normg1:
+        Omega /= np.linalg.norm(OmegaH)
+        OmegaH /=np.linalg.norm(OmegaH)
+    
     G = np.dot(Omega, H)
     print 'G shape = ', G.shape
     G1 = copy.deepcopy(H)
@@ -244,10 +241,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info("constraint l2-norm = 1")
             H = EM.constraint_norm1_b(Ht, Sigma_H)
             #H = Ht / np.linalg.norm(Ht)
-            print H
-            print simulation['brf'][:, 0]
-            print H.shape
-            print simulation['brf'][:, 0].shape
+            if 0:
+                print H
+                print simulation['brf'][:, 0]
+                print H.shape
+                print simulation['brf'][:, 0].shape
             if simulation is not None and H.shape==simulation['brf'][:, 0].shape:
                 print 'BRF ERROR = ', EM.error(H, simulation['brf'][:, 0])
             h_norm = np.append(h_norm, np.linalg.norm(H))
@@ -257,8 +255,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             cH += [Crit_H]
             H1 = H
             OmegaH = np.dot(Omega0, H)
-            Omega = Omega0/np.linalg.norm(OmegaH)
-            OmegaH /= np.linalg.norm(OmegaH)
+            Omega = Omega0 
+            if normg1:
+                Omega /= np.linalg.norm(OmegaH)
+                OmegaH /= np.linalg.norm(OmegaH)
 
         # PRF G
         logger.info("E G step ...")
@@ -267,10 +267,12 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             Gt, Sigma_G = EM.expectation_G_physio(Sigma_C, m_C, m_A, H, X, W,
                                           Gamma, D, J, N, y_tilde, sigma_eps,
                                           scale, R_inv, sigmaG, OmegaH)
-            logger.info("constraint l2-norm = 1")
-            G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
-            #G = Gt / np.linalg.norm(Gt)
-            #G = Gt
+            if normg1:
+                logger.info("constraint l2-norm = 1")
+                G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
+                #G = Gt / np.linalg.norm(Gt)
+            else:
+                G = Gt
             if simulation is not None and G.shape==simulation['prf'][:, 0].shape:
                 print 'PRF ERROR = ', EM.error(G, simulation['prf'][:, 0])
             g_norm = np.append(g_norm, np.linalg.norm(G))
@@ -401,11 +403,18 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
         # Beta
         if estimateBeta:
+            MaxItGrad = 200
+            gradientStep = 0.003 
             logger.info("M estimating beta")
             for m in xrange(0, M):
                 Beta[m] = EM.maximization_beta(Beta[m], q_Z, Z_tilde,
                                         J, K, m, graph, gamma,
                                         neighboursIndexes, maxNeighbours)
+            #for m in xrange(0, M):
+            #    Beta[m] = UtilsC.maximization_beta(Beta[m], q_Z[m, :, :].astype(np.float64),
+            #                                       Z_tilde[m, :, :].astype(np.float64), J, K,
+            #                                       neighboursIndexes.astype(np.int32), gamma,
+            #                                       maxNeighbours, MaxItGrad, gradientStep)
             logger.info("End estimating beta")
             logger.info(Beta)
 
@@ -435,6 +444,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         rec_error = np.mean(rec_error_j) / np.mean(Y2)
         rerror = np.append(rerror, rec_error)
 
+    if not normg1:
+        Gnorm = np.linalg.norm(G)
+        G /= Gnorm
+        C*= Gnorm
+    
     t2 = time.time()
     CompTime = t2 - t1
     cTimeMean = CompTime / ni

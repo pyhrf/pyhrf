@@ -1763,13 +1763,13 @@ from pyhrf.boldsynth.scenarios import *
 
 
 def simulate_asl(output_dir=None, noise_scenario='high_snr',
-                 spatial_size='tiny', v_noise=None, dt=0.5):
+                 spatial_size='tiny', v_noise=None, dt=0.5, tr=2.5):
     from pyhrf import Condition
     from pyhrf.tools import Pipeline
 
     drift_var = 10.
     
-    tr = 3.
+    #tr = 2.5
     #dt = 0.5
     dsf = tr/dt  # down sampling factor
 
