@@ -50,13 +50,25 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     logger.info(Y.shape)
         
     # Initialization
-    gamma_h = 100000000000  # 10000000000  # 7.5
-    gamma_g = 100000000000  # 7.5
+    gamma_h = 1000000  # 10000000000  # 7.5
+    gamma_g = 1000000  # 7.5
+    
+    #Parameters to get very smooth RFs
+    #gamma_h = 100000000000
+    #gamma_g = 7.5
+
+    #Parameters to get close RFs but a biiiit noisy
+    #gamma_h = 1000000
+    #gamma_g = 1000000
+
+    #Parameters to get smooth but close RFs
+    #gamma_h = 6000000
+    #gamma_g = 6000000
+    
     gamma = 7.5
     beta = 1.
     Thresh = 1e-8
-    print 'dt = ', dt
-
+    
     #D, M = np.int(np.ceil(Thrf / dt)) + 1, len(Onsets)
     D, M = np.int(np.ceil(Thrf / dt)), len(Onsets)
     N, J = Y.shape[0], Y.shape[1]
@@ -360,8 +372,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             else:
                 logger.info("   ... with prior on sigma_H")
             Aux0 = np.dot(np.dot(Omega.T, R_inv), G)
-            Aux = np.dot(np.dot(Aux0.T, R_inv), Aux0) / sigmaG + gamma_h
-            #Aux = np.dot(np.dot(Aux0.T, R_inv), Aux0) / (2 * sigmaG) + gamma_h
+            #Aux = np.dot(np.dot(Aux0.T, R_inv), Aux0) / sigmaG + gamma_h
+            Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) + gamma_h
             sigmaH = EM.maximization_sigma_prior(D, R_inv, H, Aux)
             #sigmaH = EM.maximization_sigma(D, R_inv, H)
             logger.info('sigmaH = ' + str(sigmaH))
@@ -537,7 +549,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     #logger.info("Beta = %s" + str(Beta))
     #logger.info('SNR comp = %f', SNR)
 
-    return ni, m_A, H, m_C, G, q_Z, sigma_eps, \
+    return ni, m_A, H, m_C, G, Z_tilde, sigma_eps, \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
            Sigma_A, Sigma_C, rerror
 
