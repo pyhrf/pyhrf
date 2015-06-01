@@ -22,7 +22,7 @@ from nipy.labs.viz import plot_map, cm
 from nipy.labs.statistical_mapping import (get_3d_peaks, cluster_stats)
 from nipy.labs.utils.mask import compute_mask_files
 
-from locator import anat_auditory, anat_motor, get_maxima
+from locator import meta_auditory, meta_motor, get_maxima
 
 
 def fix_paradigm(paradigm):
@@ -39,7 +39,7 @@ def fix_paradigm(paradigm):
 
 def compute_prf_regressor(exp_condition, hrf_model, frametimes,
                           prf_model='physio', prf_matrix=None, con_id='cond',
-                          oversampling=16, fir_delays=None):
+                          oversampling=16, fir_delays=None, normalize=False):
     """ Convolve regressors with perfusion response function (PRF).
 
     Parameters
@@ -67,8 +67,11 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
     oversampling : int, optional
         Oversampling factor to perform the convolution.
 
-    fir_delays : array-like of int
+    fir_delays : array-like of int, optional
         Onsets corresponding to the fir basis.
+
+    normalize : bool, optional
+        If True, the PRF norm is set to one.
 
     Returns
     -------
@@ -113,8 +116,13 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
         pkernel = prf_matrix.dot(hkernel)
     else:
         pkernel = hkernel
-#    plt.plot(hkernel, label='HRF')
-#    plt.plot(pkernel, label='PRF')
+
+    if normalize:
+        hkernel /= np.linalg.norm(hkernel)
+        pkernel /= np.linalg.norm(pkernel)
+
+#    plt.plot(hkernel, label='HRF', marker='.')
+#    plt.plot(pkernel, label='PRF', marker='.')
 #    plt.legend()
 #    plt.show()
 
@@ -136,7 +144,7 @@ def compute_prf_regressor(exp_condition, hrf_model, frametimes,
 
 # functionals, grey mask and paradigm
 subjects = ['RG130377', 'SC120530', 'CD110147']
-subject = 'RG130377'
+subject = 'SC120530'
 data_dir = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                         'gin_struct/archives', subject, 'standard')
 func_file = os.path.join(data_dir, 'swr' + subject + '_ASLf_correctionT1.nii')
@@ -164,13 +172,13 @@ wm_mask = img.get_data()
 tissue_mask = gm_mask + wm_mask
 gm_mask[func_mask == 0] = 0  # to cut beyond the neck
 tissue_mask[func_mask == 0] = 0  # to cut beyond the neck
-tissue_mask[tissue_mask < 0.5] = 0
+tissue_mask[tissue_mask <= 0.5] = 0
 tissue_mask[tissue_mask > 0.5] = 1
 tissue_mask[gm_mask > 0.1] = 1
 mask_img = nibabel.Nifti1Image(gm_mask, img.get_affine(), img.get_header())
 mask_file = '/tmp/cut_gm_mask.nii'
 mask_img = nibabel.Nifti1Image(tissue_mask, img.get_affine(), img.get_header())
-mask_file = '/tmp/cut_tissue_mask.nii'
+mask_file = os.path.join(data_dir, 'cut_tissue_mask.nii') #'/tmp/cut_tissue_mask.nii'
 nibabel.save(mask_img, mask_file)
 
 # timing  # TODO: load timing parameters
@@ -189,7 +197,7 @@ from pyhrf.sandbox.physio_params import (linear_rf_operator,
                                          PHY_PARAMS_KHALIDOV11)
 prf_matrix = linear_rf_operator(hrf_length / dt,  PHY_PARAMS_KHALIDOV11, dt,
                                 calculating_brf=False)
-prf_matrix = None
+
 # drift and GLM models
 drift_model = 'polynomial'
 drift_order = 4
@@ -218,6 +226,7 @@ add_regs = [reg]
 add_reg_names = ['perfusion_baseline']
 
 bold_regs = []
+
 # Activation ASL regressors
 for condition_name in np.unique(paradigm.con_id):
     onsets = paradigm.onset[paradigm.con_id == condition_name]
@@ -228,12 +237,12 @@ for condition_name in np.unique(paradigm.con_id):
                                           frametimes, prf_model=prf_model,
                                           prf_matrix=prf_matrix,
                                           con_id=condition_name,
-                                          oversampling=16)
+                                          oversampling=16, normalize=True)
     bold_regs.append(compute_prf_regressor(exp_condition, hrf_model,
-                                          frametimes, prf_model=prf_model,
-                                          prf_matrix=None,
-                                          con_id=condition_name,
-                                          oversampling=16)[0])
+                                           frametimes, prf_model=prf_model,
+                                           prf_matrix=None,
+                                           con_id=condition_name,
+                                           oversampling=16, normalize=True)[0])
     reg[1::2] *= 0.5
     reg[::2] *= -0.5
     add_regs.append(reg)
@@ -285,12 +294,14 @@ for name in design_matrix.names:
     print name
     reg_names.append(name)
 design_matrix.names = reg_names
+
+# Use normalized BOLD regressors
+design_matrix.matrix[:, :4] = bold_regs
 ax = design_matrix.show()
 ax.set_position([.05, .25, .9, .65])
 ax.set_title('Design matrix')
 
 plt.savefig(os.path.join(write_dir, 'design_matrix.png'))
-
 #########################################
 # Specify the contrasts
 #########################################
@@ -302,6 +313,9 @@ n_columns = len(design_matrix.names)
 for n, name in enumerate(design_matrix.names):
     contrasts[name] = np.zeros((n_columns,))
     contrasts[name][n] = 1
+
+import copy
+indiv_contrasts = copy.copy(contrasts)
 
 # t_tests
 contrasts['[BOLD d2500] left - right'] = \
@@ -351,6 +365,17 @@ n_voxels = np.sum(gm_mask)
 threshold = norm.isf(0.05 / n_voxels)  # Bonferroni correction
 unc_threshold = norm.isf(1e-3)  # Uncorrected
 
+for index, (contrast_id, contrast_val) in enumerate(indiv_contrasts.items()):
+    print(' Contrast % 2i out of %i: %s' %
+          (index + 1, len(contrasts), contrast_id))
+    # save the z_image
+    image_path = os.path.join(write_dir, 'to_aina',
+                              '%s_t_map.nii' % contrast_id)
+    t_map, = fmri_glm.contrast(contrast_val, con_id=contrast_id,
+                               output_stat=True, output_z=False)
+    nibabel.save(t_map, image_path)
+
+to_write = []
 for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     print(' Contrast % 2i out of %i: %s' %
           (index + 1, len(contrasts), contrast_id))
@@ -378,8 +403,8 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     reg_type = 'BOLD'
     if reg_type in contrast_id and contrast_id != 'perfusion baseline':
         # Get motor and primary auditory regions from the literature
-        auditory_names, auditory_coords = anat_auditory()
-        motor_names, motor_coords = anat_motor()
+        auditory_names, auditory_coords = meta_auditory()
+        motor_names, motor_coords = meta_motor()
         regions = auditory_names[:2] + motor_names
         cuts = auditory_coords[:2] + motor_coords
         regions = []
@@ -397,11 +422,15 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                                        cluster_th=cluster_th, nulls={})
         if clusters:
             print('  {} clusters'.format(len(clusters)))
+            to_write.append('Contrast {0}: {1} clusters\n'.format(
+                    contrast_id, len(clusters)))
             for n, cluster in enumerate(clusters):
                 maxima_regions, maxima_coords = get_maxima(cluster,
                                                            min_distance=20.)
                 print '   cluster of size {0}: {1}'.format(cluster['size'],
                                                            maxima_regions)
+                to_write.append(' cluster of size {0}: {1}\n'.format(
+                        cluster['size'], maxima_regions))
                 if n < 6 or 'Heschl' in maxima_regions:
                     n_regions = min(3, len(maxima_regions))
                     regions += maxima_regions[:n_regions]
@@ -438,5 +467,12 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                 plt.savefig(os.path.join(folder,
                                      '{0}_z_map.png'.format(contrast_id)))
         plt.show()
+# Write clusters sizes and regions to file
+output_txt = os.path.join(write_dir, 'clusters.txt')
+with open(output_txt, "w") as text_file:
+    for line in to_write:
+        text_file.writelines(line)
+#    text_file.write('Contrast {0}: {1} clusters\n'.format(
+#        contrast_id, len(clusters)))
 
 print("All the  results were witten in %s" % write_dir)
