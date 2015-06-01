@@ -338,6 +338,30 @@ def locate_harvard_oxford(coords, atlas='cort-maxprob-thr25-1mm'):
     return label
 
 
+def mask_from_harvard_oxford(regions, file_name,
+                             atlas='cort-maxprob-thr25-1mm'):
+    """Creates a binary mask of regions extracted from Harvard-Oxford atlas.
+
+    Parameters
+    ==========
+    regions : list of str
+        Regions to include in mask.
+    """
+    atlas_file, labels = datasets.fetch_harvard_oxford(atlas)
+    atlas_img = nibabel.load(atlas_file)
+    data = atlas_img.get_data()
+    indices = np.unique(data.ravel())  # deal with missing label values
+    mask_data = np.zeros(data.shape)
+    for label, index in zip(labels, indices):
+        if label in regions:
+            mask_data += data == index
+    img = nibabel.Nifti1Image(mask_data, atlas_img.get_affine(),
+                              atlas_img.get_header())
+    print type(img)
+    nibabel.save(img, file_name)
+    return img
+
+
 def get_maxima(cluster, remove_background=True, min_distance=0):
 # TODO: return the function of the region and not the anatomical name
     """
