@@ -22,12 +22,18 @@ def make_parcellation(subject, dest_dir='parcellation', roi_mask_file=None):
     """
     # Loading names for folders and files
     # - T maps (input)
-    func_files = glob(op.join(op.join(op.join('./', subject), \
-                        't_maps'), 'BOLD*nii'))
+    #func_files = glob(op.join(op.join(op.join('./', subject), \
+    #                    't_maps'), 'BOLD*nii'))
+    func_files = glob(op.join('./', subject, 'ASLf', 'spm_analysis', \
+                                'spmT*img'))
     # - Mask (input)
     #spm_mask_file = op.join(spm_maps_dir, 'mask.img')
     mask_file = op.join(op.join(op.join('./', subject), \
                         'preprocessed_data'), 'cut_tissue_mask.nii')
+    
+    mask_file = op.join(op.join(op.join('./', subject), \
+                        'preprocessed_data'), 'cut_tissue_mask.nii')
+    
     # - parcellation (output)
     parcellation_dir = op.join('./', subject, dest_dir)
     if not op.exists(parcellation_dir): os.makedirs(parcellation_dir)

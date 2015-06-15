@@ -1810,12 +1810,13 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
     else:  # low_snr
         v_noise = v_noise or 2.
         conditions = [
-            Condition(name='audio', perf_m_act=1.6, perf_v_act=.3, perf_v_inact=.3,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+            Condition(name='audio', perf_m_act=1.7, perf_v_act=.31, perf_v_inact=.32,
+                      bold_m_act=2.3, bold_v_act=.31, bold_v_inact=.32,
                       label_map=lmap1),
-            Condition(name='video', perf_m_act=1.6, perf_v_act=.3, perf_v_inact=.3,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+            Condition(name='video', perf_m_act=1.2, perf_v_act=.3, perf_v_inact=.3,
+                      bold_m_act=2., bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap2),
+            # 2.2 .3  1.6 .3
         ]
 
     from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11

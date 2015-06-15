@@ -454,7 +454,7 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     else:
         #y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3],
         #               bounds=[(None, None)] * (len(zeros_F)))
-        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3],
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1], # ec2, ec3], 
                        bounds=[(None, None)] * (len(zeros_F)))
         #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
     return y

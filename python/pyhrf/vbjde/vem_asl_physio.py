@@ -124,7 +124,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     Omega0 = linear_rf_operator(len(H), phy_params, dt, calculating_brf=False)
     OmegaH = np.dot(Omega0, H)
     Omega = Omega0 
-    normg1 = True
+    normg1 = False
     if normg1:
         Omega /= np.linalg.norm(OmegaH)
         OmegaH /=np.linalg.norm(OmegaH)
@@ -371,6 +371,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 gamma_h = 0
             else:
                 logger.info("   ... with prior on sigma_H")
+            #gamma_h = 0
             Aux0 = np.dot(np.dot(Omega.T, R_inv), G)
             #Aux = np.dot(np.dot(Aux0.T, R_inv), Aux0) / sigmaG + gamma_h
             Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) + gamma_h

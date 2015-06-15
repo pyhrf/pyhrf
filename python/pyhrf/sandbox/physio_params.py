@@ -372,10 +372,10 @@ def create_physio_brf(physiological_params, response_dt=.5,
     brf = create_bold_from_hbr_and_cbv(physiological_params, q[:, 0], v[:, 0])
     if return_brf_q_v:
         # WARNING!! Added to compute figures
-        return brf / (brf**2).sum()**.5, q, v, s, f
-        # return  brf, q, v, s, f  #WARNING!! Added to compute figures
+        #return brf / (brf**2).sum()**.5 , q, v, s, f
+        return  brf, q, v, s, f 
     else:
-        return brf  # / (brf**2).sum()**.5
+        return brf / (brf**2).sum()**.5
 
 
 def create_physio_prf(physiological_params, response_dt=.5,
@@ -405,10 +405,10 @@ def create_physio_prf(physiological_params, response_dt=.5,
                                               response_dt)
     prf = f[:, 0] - f[0, 0]  # remove y-intercept
     if return_prf_q_v:
-        return prf / (prf**2).sum()**.5  # , q, v
-        # return prf, q, v
+        #return prf / (prf**2).sum()**.5  # , q, v
+        return prf, q, v
     else:
-        return prf  # / (prf**2).sum()**.5
+        return prf / (prf**2).sum()**.5
 
 
 def create_omega_prf(primary_brf, dt, phy_params):
