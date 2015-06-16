@@ -11,6 +11,7 @@ import nibabel
 from nilearn import datasets
 from nipy.labs.viz_tools.coord_tools import coord_transform
 from nipy.labs.viz_tools.maps_3d import mni_sform_inv
+from nipy.labs.viz_tools.slicers import _xyz_order
 
 
 def mni_to_tal(x, y, z):
@@ -278,6 +279,29 @@ def meta_motor(abbreviate=True, mni=True):
     return names, coords
 
 
+def meta_insula(abbreviate=True, mni=True):
+    """Insula from
+    http://figshare.com/articles/_Anatomical_region_left_and_MNI_coordinates_in_mm_right_of_the_center_of_each_of_the_intrinsic_network_ROIs_/1163645
+    """
+    whole_names = ['left anterior insula/frontal operculum',
+                   'right anterior insula/frontal operculum']
+    abbrevs = [' L aI/fO', ' R aI/fO']
+    coords_talairach = [(-35, 14, 6), (36, 16, 5)]  # False, to convert
+    coords_mni = [(-35, 14, 6), (36, 16, 5)]
+
+    if abbreviate:
+        names = abbrevs
+    else:
+        names = whole_names
+
+    if mni:
+        coords = coords_mni
+    else:
+        coords = coords_talairach
+
+    return names, coords
+
+
 def func_working_memory(abbreviate=True, mni=True):
     """Working memory coordinates from servier Placebo study"""
 # TODO: check conversion: here done with wfu pickatlas
@@ -336,6 +360,21 @@ def locate_harvard_oxford(coords, atlas='cort-maxprob-thr25-1mm'):
     label_values = np.unique(data.ravel())
     label = labels[label_values == label_value][0]
     return label
+
+
+def locate_pacellation(coords, file_path='cort-maxprob-thr25-1mm'):
+    """Locates coordinates in MNI space in a given label image"""
+    atlas_img = nibabel.load(file_path)
+    data = atlas_img.get_data()
+    affine = atlas_img.get_affine()
+    _, affine = _xyz_order(data, affine)
+    x_map, y_map, z_map = [int(np.round(c)) for c in
+                           coord_transform(coords[0],
+                                           coords[1],
+                                           coords[2],
+                                           np.linalg.inv(affine))]
+    label_value = data[x_map, y_map, z_map]
+    return label_value
 
 
 def mask_from_harvard_oxford(regions, file_name,

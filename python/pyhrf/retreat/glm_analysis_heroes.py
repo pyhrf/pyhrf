@@ -21,7 +21,7 @@ from glm_tools import combine_masks, fix_paradigm, compute_prf_regressor
 subjects = ['RG130377', 'SC120530', 'CD110147']
 subjects = np.genfromtxt(
     '/volatile/new/salma/asl/data/HEROES_ASL1/subjects.txt' ,dtype=str)
-subject = subjects[0]
+subject = subjects[1]
 data_dir = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                         'gin_struct/archives', subject, 'standard')
 
@@ -69,7 +69,7 @@ frametimes = np.arange(0, n_scans * tr, tr)
 
 # HRF and PRF
 hrf_model = 'canonical'
-prf_model = 'physio'
+prf_model = 'hrf'
 hrf_length = 32.
 oversampling = 16  # default oversampling in nipy
 dt = tr / oversampling
@@ -85,7 +85,7 @@ model = 'ar1'  # other possible choice: 'ols'
 
 # write directory
 write_dir = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
-                         'outputs/tissue_mask/motion_regs/physio', subject)
+                         'outputs/tissue_mask/motion_regs', prf_model, subject)
 if not os.path.exists(write_dir):
     os.mkdir(write_dir)
 
@@ -290,7 +290,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                      anat_affine=anat_img.get_affine())
         plt.savefig(os.path.join(write_dir, '%s_z_map.png' % contrast_id))
 
-    reg_type = 'BOLD'
+    reg_type = 'perfusion'
     if reg_type in contrast_id and contrast_id != 'perfusion baseline':
         # Get motor and primary auditory regions from the literature
         auditory_names, auditory_coords = meta_auditory()
@@ -319,8 +319,8 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                                                            min_distance=20.)
                 print '   cluster of size {0}: {1}'.format(cluster['size'],
                                                            maxima_regions)
-                to_write.append(' cluster of size {0}: {1}\n'.format(
-                    cluster['size'], maxima_regions))
+                to_write.append(' cluster of size {0}: {1}, coord {2}\n'.format(
+                    cluster['size'], maxima_regions, maxima_coords))
                 if n < 6 or 'Heschl' in maxima_regions:
                     n_regions = min(3, len(maxima_regions))
                     regions += maxima_regions[:n_regions]
@@ -358,7 +358,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
                                          '{0}_z_map.png'.format(contrast_id)))
         plt.show()
 # Write clusters sizes and regions to file
-output_txt = os.path.join(write_dir, 'clusters.txt')
+output_txt = os.path.join(write_dir, 'perfusion_clusters.txt')
 with open(output_txt, "w") as text_file:
     for line in to_write:
         text_file.writelines(line)
