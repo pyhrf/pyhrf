@@ -204,7 +204,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             Sigma_brls, Sigma_prls = """
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-            Sigma_brls, Sigma_prls, rerror = Main_vbjde_physio(graph, 
+            alpha, Sigma_brls, Sigma_prls, rerror = Main_vbjde_physio(graph, 
                                        data, Onsets, durations,
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
@@ -288,6 +288,11 @@ class JDEVEMAnalyser(JDEAnalyser):
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
+        logger.info("perfusion baseline prepared ")
+        outputs['alpha'] = xndarray(alpha, value_label="alpha",
+                                         axes_names=['condition', 'voxel'])#,
+                                         #axes_domains=domCondition)
+        
         logger.info("Sigma_a prepared ")
         outputs['Sigma_prls'] = xndarray(Sigma_prls, value_label="Sigma_PRLs",
                                          axes_names=['condition', 'condition2',

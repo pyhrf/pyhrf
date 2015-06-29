@@ -457,7 +457,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         rec_error = np.mean(rec_error_j) / np.mean(Y2)
         rerror = np.append(rerror, rec_error)
 
-    if not normg1:
+    if not normg1 and 0:
         Gnorm = np.linalg.norm(G)
         G /= Gnorm
         C*= Gnorm
@@ -552,7 +552,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     return ni, m_A, H, m_C, G, Z_tilde, sigma_eps, \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-           Sigma_A, Sigma_C, rerror
+           alpha, Sigma_A, Sigma_C, rerror
 
 
 # cA[2:], cH[2:], cZ[2:], cAH[2:], cCG[2:], cTime[2:], cTimeMean[2:],"""

@@ -66,7 +66,8 @@ def make_parcellation(subject, dest_dir='parcellation', roi_mask_file=None):
 
 if __name__ == '__main__':
     
-    subjects = ['RG130377', 'CD110147']
+    #subjects = ['RG130377', 'CD110147']
+    subjects = ['AINSI_001_GC', 'AINSI_005_SB', 'AINSI_010_TV']
 
     for subject in subjects:
         
