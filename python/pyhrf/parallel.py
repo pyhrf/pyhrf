@@ -22,6 +22,7 @@ import pyhrf
 
 from pyhrf.tools._io import remote_copy
 from pyhrf import xmliobak
+from pyhrf.tools.cpus import available_cpu_count
 
 
 logger = logging.getLogger(__name__)
@@ -490,7 +491,10 @@ def remote_map(func, largs=None, lkwargs=None, mode='serial'):
             parallel_verb = 10
         else:
             parallel_verb = 0
-        n_jobs = pyhrf.cfg['parallel-local']['nb_procs']
+        if pyhrf.cfg['parallel-local']['nb_procs']:
+            n_jobs = pyhrf.cfg['parallel-local']['nb_procs']
+        else:
+            n_jobs = available_cpu_count()
         p = Parallel(n_jobs=n_jobs, verbose=parallel_verb)
         return p(delayed(func)(*args, **kwargs)
                  for args, kwargs in all_args)
