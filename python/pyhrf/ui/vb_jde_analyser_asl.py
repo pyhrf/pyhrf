@@ -81,7 +81,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                         'sigmaH', 'sigmaG']
 
     def __init__(self, hrfDuration=25., dt=.6, fast=True, constrained=False,
-                 nbClasses=2, PLOT=False, nItMax=1, nItMin=1, scale=False,
+                 nbClasses=2, PLOT=False, nItMax=100, nItMin=1, scale=False,
                  beta=1.0, simulation=None, fmri_data=None,
                  estimateH=True, estimateG=True, estimateSigmaH=True,
                  estimateSigmaG=True, sigmaH=0.0001, sigmaG=0.0001,

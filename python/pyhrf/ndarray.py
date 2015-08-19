@@ -1539,8 +1539,8 @@ class xndarray:
 
             extra_info = c_to_save.get_extra_info()
 
-            logger.info('Extra info:')
-            logger.info(extra_info)
+            logger.debug('Extra info:')
+            logger.debug(extra_info)
 
             from nibabel.nifti1 import Nifti1Extension, Nifti1Header, \
                 Nifti1Image, extension_codes

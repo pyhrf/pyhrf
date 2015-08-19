@@ -82,7 +82,7 @@ def maximum(iterable):
 
     Parameter
     ---------
-    iterable : iterable
+    iterable : iterable or numpy array
 
     Returns
     tuple :
@@ -92,7 +92,14 @@ def maximum(iterable):
 
     iter_max = max(iterable)
 
-    return iter_max, iterable.index(iter_max)
+    try:
+        # this is an iterable (tuple or list)
+        iter_max_indice = iterable.index(iter_max)
+    except AttributeError:
+        # this is an numpy array
+        iter_max_indice = iterable.argmax()
+
+    return iter_max, iter_max_indice
 
 
 def normpdf(x, mu, sigma):
@@ -135,7 +142,7 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
 
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
-    lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    lgt = int((nbscans + 2) * osf)  # nb of scans if tr=dt
     paradigm_bins = restarize_events(onsets, np.zeros_like(onsets), dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -147,11 +154,39 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     return x
 
 
-def buildFiniteDiffMatrix(order, size):
+def buildFiniteDiffMatrix(order, size, regularization=None):
+    """Build the finite difference matrix used for the hrf regularization prior.
+
+    Parameters
+    ----------
+    order : int
+        difference order (see numpy.diff function)
+    size : int
+        size of the matrix
+    regularization : array like, optional
+        one dimensional vector of factors used for regularizing the hrf
+
+    Returns
+    -------
+    diffMat : ndarray, shape (size, size)
+        the finite difference matrix"""
+
     a = np.diff(np.concatenate((np.zeros(order), [1], np.zeros(order))),
                 n=order)
-    b = a[len(a) / 2:]
+    b = a[len(a)//2:]
     diffMat = toeplitz(np.concatenate((b, np.zeros(size - len(b)))))
+    if regularization is not None:
+        regularization = np.array(regularization)
+        if regularization.shape != (size,):
+            raise Exception("regularization shape ({}) must be (size,) ({},)".format(regularization.shape, size))
+        if not all(regularization > 0):
+            raise Exception("All values of regularization must be stricly positive")
+        diffMat = (np.triu(diffMat, 1) * regularization +
+                   np.tril(diffMat, -1) * regularization[:, np.newaxis] +
+                   np.diag(diffMat.diagonal() * regularization))
+        # diffMat = (np.triu(diffMat, 1) + np.tril(diffMat, -1) +
+                   # np.diag(diffMat.diagonal() * regularization))
+        # diffMat = diffMat * regularization
     return diffMat
 
 

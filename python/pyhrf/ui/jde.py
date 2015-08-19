@@ -185,7 +185,7 @@ def runEstimationBetaEstim(params):
     gridlnz = params.get('gridLnZ', None)
     sampleHRF = params.get('sampleHRF', True)
     # pyhrf.verbose.set_verbosity(params.get('verbose', 1))
-    pyhrf.logger.setLevel(params.get('verbose', logging.WARNING))
+    # pyhrf.logger.setLevel(params.get('verbose', logging.WARNING))
 
     betaSampler = BetaSampler({
         BetaSampler.P_VAL_INI: [0.5],
@@ -227,7 +227,7 @@ def runEstimationSupervised(params):
     sampleHRF = params.get('sampleHRF', True)
 
     # pyhrf.verbose.set_verbosity(params.get('verbose', 1))
-    pyhrf.logger.setLevel(params.get('verbose', logging.WARNING))
+    # pyhrf.logger.setLevel(params.get('verbose', logging.WARNING))
 
     prmCAm = params.get('prmCAm', 10.)
     prmCAv = params.get('prmCAv', 10.)

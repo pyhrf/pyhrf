@@ -179,10 +179,8 @@ class FMRITreatment(xmlio.XmlInitable):
             op.exists(self.result_dump_file)
 
     def execute(self):
-        logger.info('Input data description:')
-        logger.info(self.data.getSummary(long=True))
         logger.debug('Input data description:')
-        logger.debug(self.data.getSummary(long=False))
+        logger.debug(self.data.getSummary(long=True))
         logger.info('All data loaded !')
         logger.info('running estimation ...')
         # TODO : print summary of analyser setup.
