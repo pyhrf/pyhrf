@@ -10,10 +10,19 @@ Different implementations (1) with C extensions, (2) all in python,
 WARNING: NOT WORKING!!
 """
 
+import os
 import time
 import logging
 
 import numpy as np
+
+try:
+    os.environ["DISPLAY"]
+except KeyError:
+    import matplotlib
+    matplotlib.use("Agg")
+import matplotlib
+import matplotlib.pyplot as plt
 
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
@@ -195,6 +204,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
         val[np.where((val >= -1e-50) & (val < 0.0))] = 0.0
 
         if estimateHRF:
+            logger.info("E H step ...")
             UtilsC.expectation_H(XGamma, Q_barnCond, sigma_epsilone, Gamma, R, Sigma_H, Y,
                                  y_tilde, m_A, m_H, Sigma_A, XX.astype(np.int32), J, D, M, N, scale, sigmaH)
             m_H[0] = 0
@@ -212,7 +222,6 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
                     Sigma_A *= Norm ** 2
             # Plotting HRF
             if PLOT and ni >= 0:
-                import matplotlib.pyplot as plt
                 plt.figure(M + 1)
                 plt.plot(m_H)
                 plt.hold(True)
@@ -360,7 +369,6 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
                 Sigma_A *= Norm ** 2
         # Plotting HRF
         if PLOT and ni >= 0:
-            import matplotlib.pyplot as plt
             plt.figure(M + 1)
             plt.plot(m_H)
             plt.hold(True)
@@ -503,7 +511,6 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
                         Sigma_A *= Norm ** 2
                 # Plotting HRF
                 if PLOT and ni >= 0:
-                    import matplotlib.pyplot as plt
                     plt.figure(M + 1)
                     plt.plot(m_H)
                     plt.hold(True)
@@ -637,8 +644,6 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
             h_norm_array[i] = h_norm[i]
 
     if PLOT:
-        import matplotlib.pyplot as plt
-        import matplotlib
         font = {'size': 15}
         matplotlib.rc('font', **font)
         plt.savefig('./HRF_Iter_CompMod.png')
@@ -731,8 +736,8 @@ def Main_vbjde_Extension(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estim
         int(CompTime // 60)), str(int(CompTime % 60)))
     logger.info('mu_M: %f', mu_M)
     logger.info('sigma_M: %f', sigma_M)
-    logger.info("sigma_H = %s" + str(sigmaH))
-    logger.info("Beta = %s" + str(Beta))
+    logger.info("sigma_H = %s", str(sigmaH))
+    logger.info("Beta = %s", str(Beta))
 
     StimulusInducedSignal = vt.computeFit(m_H, m_A, X, J, N)
     SNR = 20 * \
@@ -1103,21 +1108,20 @@ def Main_vbjde(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1, estimateSigmaH=
             Y, X, m_A, m_H, Sigma_H, Sigma_A, PL, sigma_epsilone, M, zerosMM)
         # if ( (ni+1)% 1) == 0:
         if PLOT:
-            from matplotlib import pyplot
             m_Htmp = m_H / np.linalg.norm(m_H)
             hrftmp = hrf / np.linalg.norm(hrf)
             snrH = 20 * np.log(1 / np.linalg.norm(m_Htmp - hrftmp))
             # print snrH
-            pyplot.clf()
-            pyplot.figure(1)
-            pyplot.plot(m_H / np.linalg.norm(m_H), 'r')
-            pyplot.hold(True)
-            pyplot.plot(hrf / np.linalg.norm(hrf), 'b')
-            pyplot.legend(('Est', 'Ref'))
-            pyplot.title(str(snrH))
-            pyplot.hold(False)
-            pyplot.draw()
-            pyplot.show()
+            plt.clf()
+            plt.figure(1)
+            plt.plot(m_H / np.linalg.norm(m_H), 'r')
+            plt.hold(True)
+            plt.plot(hrf / np.linalg.norm(hrf), 'b')
+            plt.legend(('Est', 'Ref'))
+            plt.title(str(snrH))
+            plt.hold(False)
+            plt.draw()
+            plt.show()
         ni += 1
     t2 = time.time()
     CompTime = t2 - t1
@@ -1314,8 +1318,11 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
         if estimateBeta:
             logger.info("estimating beta")
             for m in xrange(0, M):
-                Beta[m] = UtilsC.maximization_beta(beta, q_Z[m, :, :].astype(np.float64), Z_tilde[m, :, :].astype(
-                    np.float64), J, K, neighboursIndexes.astype(np.int32), gamma, maxNeighbours, MaxItGrad, gradientStep)
+                Beta[m] = UtilsC.maximization_beta(
+                    beta, q_Z[m, :, :].astype(np.float64),
+                    Z_tilde[m, :, :].astype( np.float64), J, K,
+                    neighboursIndexes.astype(np.int32), gamma, maxNeighbours,
+                    MaxItGrad, gradientStep)
             logger.info("End estimating beta")
             logger.info(Beta)
         logger.info("M sigma noise step ...")
@@ -1343,6 +1350,8 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
     Crit_H = (np.linalg.norm(m_H - m_H1) / (np.linalg.norm(m_H1) + eps)) ** 2
     cH += [Crit_H]
     m_H1[:] = m_H[:]
+    for d in xrange(0, D):
+        AH[:, :, d] = m_A[:, :] * m_H[d]
     DIFF = np.reshape(AH - AH1, (M * J * D))
     Crit_AH = (np.linalg.norm(DIFF) /
                (np.linalg.norm(np.reshape(AH1, (M * J * D))) + eps)) ** 2
@@ -1364,7 +1373,7 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
             sigmaH = vt.maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h)
         else:
             sigmaH = vt.maximization_sigmaH(D, Sigma_H, R, m_H)
-        logger.info('sigmaH = ' + str(sigmaH))
+        logger.info('sigmaH = %s', str(sigmaH))
 
     mu_M, sigma_M = vt.maximization_mu_sigma(
         mu_M, sigma_M, q_Z, m_A, K, M, Sigma_A)
@@ -1386,6 +1395,7 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
     t02 = time.time()
     cTime += [t02 - t1]
     ni += 2
+    logger.info("Crit_AH before while loop: %f", Crit_AH)
     if (Crit_AH > Thresh):
         while ((Crit_AH > Thresh) and (ni < NitMax)):
             logger.info("------------------------------ Iteration n° " +
@@ -1407,9 +1417,12 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
                 np.linalg.norm(m_H - m_H1) / (np.linalg.norm(m_H1) + eps)) ** 2
             cH += [Crit_H]
             m_H1[:] = m_H[:]
+            for d in xrange(0, D):
+                AH[:, :, d] = m_A[:, :] * m_H[d]
             DIFF = np.reshape(AH - AH1, (M * J * D))
             Crit_AH = (np.linalg.norm(
                 DIFF) / (np.linalg.norm(np.reshape(AH1, (M * J * D))) + eps)) ** 2
+            logger.info("Crit_AH inside while loop: %f", Crit_AH)
             cAH += [Crit_AH]
             AH1[:, :, :] = AH[:, :, :]
 
@@ -1428,7 +1441,7 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
                         D, Sigma_H, R, m_H, gamma_h)
                 else:
                     sigmaH = vt.maximization_sigmaH(D, Sigma_H, R, m_H)
-                logger.info('sigmaH = ' + str(sigmaH))
+                logger.info('sigmaH = %s', str(sigmaH))
 
             mu_M, sigma_M = vt.maximization_mu_sigma(
                 mu_M, sigma_M, q_Z, m_A, K, M, Sigma_A)
@@ -1455,41 +1468,41 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
     if PLOT:
         font = {'size': 15}
         matplotlib.rc('font', **font)
-        savefig('./HRF_Iter_CompMod.png')
-        hold(False)
-        figure(2)
-        plot(cAH[1:-1], 'lightblue')
-        hold(True)
-        plot(cFE[1:-1], 'm')
-        hold(False)
-        legend(('CAH', 'CFE'))
-        grid(True)
-        savefig('./Crit_CompMod.png')
-        figure(3)
-        plot(FreeEnergyArray)
-        grid(True)
-        savefig('./FreeEnergy_CompMod.png')
+        #plt.savefig('./HRF_Iter_CompMod.png')
+        #plt.hold(False)
+        plt.figure(1)
+        plt.plot(cAH, 'lightblue')
+        plt.hold(True)
+        # plt.plot(cFE[1:-1], 'm')
+        #plt.hold(False)
+        plt.legend(('CAH'))
+        plt.grid(True)
+        plt.savefig('./Crit_CompMod.png')
+        # plt.figure(3)
+        # plt.plot(FreeEnergyArray)
+        # plt.grid(True)
+        # plt.savefig('./FreeEnergy_CompMod.png')
 
-        figure(4)
-        for m in xrange(M):
-            plot(SUM_q_Z_array[m])
-            hold(True)
-        hold(False)
-        savefig('./Sum_q_Z_Iter_CompMod.png')
+        # plt.figure(4)
+        # for m in xrange(M):
+        #     plt.plot(SUM_q_Z_array[m])
+        #     plt.hold(True)
+        # plt.hold(False)
+        # plt.savefig('./Sum_q_Z_Iter_CompMod.png')
 
-        figure(5)
-        for m in xrange(M):
-            plot(mu1_array[m])
-            hold(True)
-        hold(False)
-        savefig('./mu1_Iter_CompMod.png')
+        # plt.figure(5)
+        # for m in xrange(M):
+        #     plt.plot(mu1_array[m])
+        #     plt.hold(True)
+        # plt.hold(False)
+        # plt.savefig('./mu1_Iter_CompMod.png')
 
-        figure(6)
-        plot(h_norm_array)
-        savefig('./HRF_Norm_CompMod.png')
+        # plt.figure(6)
+        # plt.plot(h_norm_array)
+        # plt.savefig('./HRF_Norm_CompMod.png')
 
-        Data_save = xndarray(h_norm_array, ['Iteration'])
-        Data_save.save('./HRF_Norm_Comp.nii')
+        #Data_save = xndarray(h_norm_array, ['Iteration'])
+        #Data_save.save('./HRF_Norm_Comp.nii')
 
     CompTime = t2 - t1
     cTimeMean = CompTime / ni
@@ -1545,8 +1558,8 @@ def Main_vbjde_Extension_stable(graph, Y, Onsets, Thrf, K, TR, beta, dt,
         np.int(CompTime // 60)), str(np.int(CompTime % 60)))
     logger.info('mu_M: %s', mu_M)
     logger.info('sigma_M: %s', sigma_M)
-    logger.info("sigma_H = %s" + str(sigmaH))
-    logger.info("Beta = %s" + str(Beta))
+    logger.info("sigma_H = %s", str(sigmaH))
+    logger.info("Beta = %s", str(Beta))
 
     StimulusInducedSignal = vt.computeFit(m_H, m_A, X, J, N)
     SNR = 20 * \
