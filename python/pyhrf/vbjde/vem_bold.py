@@ -157,6 +157,29 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         # TODO
     StimulusInducedSignal : ndarray, shape (nb_scans, nb_voxels)
         # TODO
+    density_ratio : float
+        # TODO
+    density_ratio_cano : float
+        # TODO
+    density_ratio_diff : float
+        # TODO
+    density_ratio_prod : float
+        # TODO
+    ppm_a_nrl : ndarray, shape (nb_voxels,)
+        # TODO
+    ppm_g_nrl : ndarray, shape (nb_voxels,)
+        # TODO
+    ppm_a_contrasts : ndarray, shape (nb_voxels,)
+        # TODO
+    ppm_g_contrasts : ndarray, shape (nb_voxels,)
+        # TODO
+    variation_coeff : float
+        coefficient of variation of the HRF
+
+    Notes
+    -----
+        See `A novel definition of the multivariate coefficient of variation <http://onlinelibrary.wiley.com/doi/10.1002/bimj.201000030/abstract>`_
+        article for more information about the coefficient of variation.
     """
 
     logger.info("Fast EM with C extension started.")
@@ -496,6 +519,10 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     compute_time_mean = compute_time[-1] / loop
 
     density_ratio = np.nan
+    density_ratio_cano = np.nan
+    density_ratio_diff = np.nan
+    density_ratio_prod = np.nan
+    variation_coeff = np.nan
 
     if not constrained and not NormFlag:
         Norm = np.linalg.norm(m_H)
@@ -507,6 +534,10 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         mu_M *= Norm
         sigma_M *= Norm ** 2
         density_ratio = -(m_H.T.dot(np.linalg.inv(hrf_covariance)).dot(m_H)/2.)
+        density_ratio_cano = -((m_H-m_h).T.dot(np.linalg.inv(hrf_covariance)).dot(m_H-m_h)/2.)
+        density_ratio_diff = density_ratio_cano - density_ratio
+        density_ratio_prod = density_ratio_cano * density_ratio
+        variation_coeff = np.sqrt((m_H.T.dot(hrf_covariance).dot(m_H))/(m_H.T.dot(m_H))**2)
     sigma_M = np.sqrt(np.sqrt(sigma_M))
 
     ppm_a_nrl = np.zeros((nb_voxels, nb_conditions))
@@ -575,5 +606,6 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     return (loop, m_A, m_H, hrf_covariance, q_Z, sigma_epsilone, mu_M, sigma_M,
             Beta, drift_coeffs, drift, CONTRAST, CONTRASTVAR, cA[2:], cH[2:],
             cZ[2:], cAH[2:], compute_time[2:], compute_time_mean, Sigma_A,
-            StimulusInducedSignal, density_ratio, ppm_a_nrl, ppm_g_nrl,
-            ppm_a_contrasts, ppm_g_contrasts)
+            StimulusInducedSignal, density_ratio, density_ratio_cano,
+            density_ratio_diff, density_ratio_prod, ppm_a_nrl, ppm_g_nrl,
+            ppm_a_contrasts, ppm_g_contrasts, variation_coeff)

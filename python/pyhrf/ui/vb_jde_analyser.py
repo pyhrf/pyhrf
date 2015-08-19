@@ -177,8 +177,10 @@ class JDEVEMAnalyser(JDEAnalyser):
                         ("and a constraint"*self.constrained))
             (NbIter, nrls, estimated_hrf, hrf_covariance, labels, noiseVar, mu_k,
              sigma_k, Beta, L, PL, CONTRAST, CONTRASTVAR, cA, cH, cZ, cAH, cTime,
-             cTimeMean, Sigma_nrls, StimuIndSignal, density_ratio, ppm_a_nrl,
-             ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts) = jde_vem_bold(
+             cTimeMean, Sigma_nrls, StimuIndSignal, density_ratio,
+             density_ratio_cano, density_ratio_diff, density_ratio_prod,
+             ppm_a_nrl, ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts,
+             variation_coeff) = jde_vem_bold(
                  graph, data, Onsets, self.hrfDuration, self.nbClasses, TR,
                  beta, self.dt, scale, self.estimateSigmaH, self.sigmaH,
                  self.nItMax, self.nItMin, self.estimateBeta, self.PLOT,
@@ -261,7 +263,19 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         axes_names=['voxel'])
 
             outputs["density_ratio"] = xndarray(np.zeros(nbv)+density_ratio,
-                                                value_label="Density Ratio",
+                                                value_label="Density Ratio to zero",
+                                                axes_names=["voxel"])
+
+            outputs["density_ratio_cano"] = xndarray(np.zeros(nbv)+density_ratio_cano,
+                                                value_label="Density Ratio to canonical",
+                                                axes_names=["voxel"])
+
+            outputs["density_ratio_diff"] = xndarray(np.zeros(nbv)+density_ratio_diff,
+                                                value_label="Density Ratio to canonical",
+                                                axes_names=["voxel"])
+
+            outputs["density_ratio_prod"] = xndarray(np.zeros(nbv)+density_ratio_prod,
+                                                value_label="Density Ratio to canonical",
                                                 axes_names=["voxel"])
 
             outputs["ppm_a_nrl"] = xndarray(ppm_a_nrl, value_label="PPM NRL alpha fixed",
@@ -271,6 +285,10 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs["ppm_g_nrl"] = xndarray(ppm_g_nrl, value_label="PPM NRL gamma fixed",
                                             axes_names=["voxel", "condition"],
                                             axes_domains=domCondition)
+
+            outputs["variation_coeff"] = xndarray(np.zeros(nbv)+variation_coeff,
+                                                  value_label="Coefficient of variation of the HRF",
+                                                  axes_names=["voxel"])
 
             h = estimated_hrf
             nrls = nrls.transpose()
