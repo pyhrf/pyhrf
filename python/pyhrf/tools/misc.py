@@ -142,8 +142,9 @@ def add_prefix(fn, prefix):
 def assert_path_not_in_src(p):
     p = op.realpath(p)
     src_path = op.realpath(op.join(op.dirname(pyhrf.__file__), '../../'))
-    if op.commonprefix([p, src_path]) == src_path:
-        raise Exception('Directory %s is in source path' % p)
+    for root, _, _ in os.walk(src_path):
+        if root == p:
+            raise Exception('Directory %s is in source path' % p)
 
 
 def assert_file_exists(fn):
@@ -775,6 +776,9 @@ class Pipeline:
         for level in levels:
             for lab in level:
                 self.update_quantity(lab, updated)
+
+    def update_all(self):
+        self.update_subgraph(self.THE_ROOT)
 
     def setDepths(self, label, depths, curDepth):
         for deper in self.dependers[label]:
