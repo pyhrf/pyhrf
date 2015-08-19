@@ -7,7 +7,8 @@ from time import time
 from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.vem_tools import roc_curve
-from pyhrf.vbjde.vem_bold import Main_vbjde_Extension, Main_vbjde_Extension_stable, Main_vbjde_Python
+from pyhrf.vbjde.vem_bold_old import Main_vbjde_Extension, Main_vbjde_Extension_stable, Main_vbjde_Python
+from pyhrf.vbjde.vem_bold import jde_vem_bold
 from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained, Main_vbjde_Python_constrained
 from scipy.linalg import norm
 from pyhrf.tools._io import read_volume
@@ -172,21 +173,16 @@ class JDEVEMAnalyser(JDEAnalyser):
             if not self.constrained:
                 logger.info("fast VEM with drift estimation")
 
-                NbIter, nrls, estimated_hrf, \
-                labels, noiseVar, mu_k, sigma_k, \
-                Beta, L, PL, CONTRAST, CONTRASTVAR, \
-                cA,cH,cZ,cAH,cTime,cTimeMean, Sigma_nrls, \
-                StimuIndSignal = Main_vbjde_Extension_stable(graph,data,Onsets, \
-                                        self.hrfDuration, self.nbClasses,TR,
-                                        beta,self.dt,scale,self.estimateSigmaH,
-                                        self.sigmaH,self.nItMax, self.nItMin,
-                                        self.estimateBeta,self.PLOT,
-                                        self.contrasts,self.computeContrast) #,
-                                        # self.hyper_prior_sigma_H,self.estimateHRF,
-                                        # self.TrueHrfFlag, self.HrfFilename,
-                                        # self.estimateLabels,self.LabelsFilename,
-                                        # self.MFapprox,self.InitVar,self.InitMean,
-                                        # self.MiniVemFlag,self.NbItMiniVem)
+                (NbIter, nrls, estimated_hrf, labels, noiseVar, mu_k, sigma_k,
+                 Beta, L, PL, CONTRAST, CONTRASTVAR, cA, cH, cZ, cAH, cTime,
+                 cTimeMean, Sigma_nrls, StimuIndSignal) = jde_vem_bold(
+                     graph, data, Onsets, self.hrfDuration, self.nbClasses, TR,
+                     beta, self.dt, scale, self.estimateSigmaH, self.sigmaH,
+                     self.nItMax, self.nItMin, self.estimateBeta, self.PLOT,
+                     self.contrasts, self.computeContrast,
+                     self.hyper_prior_sigma_H, self.estimateHRF,
+                     self.TrueHrfFlag, self.HrfFilename, self.estimateLabels,
+                     self.LabelsFilename)
             else:
                 logger.info("fast VEM with drift estimation and a constraint")
 
