@@ -2,12 +2,16 @@
 
 import logging
 
-import numpy as np
 from time import time
+from collections import OrderedDict
+
+import numpy as np
+
 from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.vem_tools import roc_curve
-from pyhrf.vbjde.vem_bold import Main_vbjde_Extension, Main_vbjde_Extension_stable, Main_vbjde_Python
+from pyhrf.vbjde.vem_bold_old import Main_vbjde_Extension, Main_vbjde_Extension_stable, Main_vbjde_Python
+from pyhrf.vbjde.vem_bold import jde_vem_bold
 from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Extension_constrained, Main_vbjde_Python_constrained
 from scipy.linalg import norm
 from pyhrf.tools._io import read_volume
@@ -89,11 +93,11 @@ class JDEVEMAnalyser(JDEAnalyser):
                         'simulation','MiniVemFlag','NbItMiniVem']
 
     def __init__(self, hrfDuration=25., sigmaH=0.1, fast=True,
-                 computeContrast=True, nbClasses=2, PLOT=False, nItMax=1,
+                 computeContrast=True, nbClasses=2, PLOT=False, nItMax=100,
                  nItMin=1, scale=False, beta=1.0, estimateSigmaH=True,
                  estimateHRF=True, TrueHrfFlag=False,HrfFilename='hrf.nii',
                  estimateDrifts=True, hyper_prior_sigma_H=1000, dt=.6,
-                 estimateBeta=True, contrasts={'1':'rel1'}, simulation=False,
+                 estimateBeta=True, contrasts=None, simulation=False,
                  estimateLabels=True, LabelsFilename='labels.nii',
                  MFapprox=False, estimateMixtParam=True, constrained = False,
                  InitVar=0.5,InitMean=2.0,MiniVemFlag=False,NbItMiniVem=5):
@@ -130,7 +134,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.MiniVemFlag = MiniVemFlag
         self.NbItMiniVem = NbItMiniVem
         if contrasts is None:
-            contrasts = {}
+            contrasts = OrderedDict()
         self.contrasts = contrasts
         self.computeContrast = computeContrast
         self.hyper_prior_sigma_H = hyper_prior_sigma_H
@@ -169,43 +173,21 @@ class JDEVEMAnalyser(JDEAnalyser):
         t_start = time()
 
         if self.fast:
-            if not self.constrained:
-                logger.info("fast VEM with drift estimation")
-
-                NbIter, nrls, estimated_hrf, \
-                labels, noiseVar, mu_k, sigma_k, \
-                Beta, L, PL, CONTRAST, CONTRASTVAR, \
-                cA,cH,cZ,cAH,cTime,cTimeMean, Sigma_nrls, \
-                StimuIndSignal = Main_vbjde_Extension_stable(graph,data,Onsets, \
-                                        self.hrfDuration, self.nbClasses,TR,
-                                        beta,self.dt,scale,self.estimateSigmaH,
-                                        self.sigmaH,self.nItMax, self.nItMin,
-                                        self.estimateBeta,self.PLOT,
-                                        self.contrasts,self.computeContrast) #,
-                                        # self.hyper_prior_sigma_H,self.estimateHRF,
-                                        # self.TrueHrfFlag, self.HrfFilename,
-                                        # self.estimateLabels,self.LabelsFilename,
-                                        # self.MFapprox,self.InitVar,self.InitMean,
-                                        # self.MiniVemFlag,self.NbItMiniVem)
-            else:
-                logger.info("fast VEM with drift estimation and a constraint")
-
-                NbIter, nrls, estimated_hrf, \
-                labels, noiseVar, mu_k, sigma_k, \
-                Beta, L, PL, CONTRAST, CONTRASTVAR, \
-                cA,cH,cZ,cAH,cTime,cTimeMean, \
-                Sigma_nrls, StimuIndSignal,\
-                FreeEnergy = Main_vbjde_Extension_constrained(graph,data,Onsets, \
-                                        self.hrfDuration, self.nbClasses,TR,
-                                        beta,self.dt,scale,self.estimateSigmaH,
-                                        self.sigmaH,self.nItMax, self.nItMin,
-                                        self.estimateBeta,self.PLOT,
-                                        self.contrasts,self.computeContrast,
-                                        self.hyper_prior_sigma_H,self.estimateHRF,
-                                        self.TrueHrfFlag, self.HrfFilename,
-                                        self.estimateLabels,self.LabelsFilename,
-                                        self.MFapprox,self.InitVar,self.InitMean,
-                                        self.MiniVemFlag,self.NbItMiniVem)
+            logger.info("fast VEM with drift estimation"+
+                        ("and a constraint"*self.constrained))
+            (NbIter, nrls, estimated_hrf, hrf_covariance, labels, noiseVar, mu_k,
+             sigma_k, Beta, L, PL, CONTRAST, CONTRASTVAR, cA, cH, cZ, cAH, cTime,
+             cTimeMean, Sigma_nrls, StimuIndSignal, density_ratio,
+             density_ratio_cano, density_ratio_diff, density_ratio_prod,
+             ppm_a_nrl, ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts,
+             variation_coeff) = jde_vem_bold(
+                 graph, data, Onsets, self.hrfDuration, self.nbClasses, TR,
+                 beta, self.dt, scale, self.estimateSigmaH, self.sigmaH,
+                 self.nItMax, self.nItMin, self.estimateBeta, self.PLOT,
+                 self.contrasts, self.computeContrast,
+                 self.hyper_prior_sigma_H, self.estimateHRF,
+                 self.TrueHrfFlag, self.HrfFilename, self.estimateLabels,
+                 self.LabelsFilename, self.constrained)
         else:
             # if not self.fast
             if self.estimateDrifts:
@@ -265,9 +247,48 @@ class JDEVEMAnalyser(JDEAnalyser):
                                             axes_names=['condition','voxel'],
                                             axes_domains=domCondition)
 
+            repeated_hrf = np.repeat(estimated_hrf, nbv).reshape(-1, nbv)
+            outputs["hrf_mapped"] = xndarray(repeated_hrf, value_label="HRFs",
+                                             axes_names=["time", "voxel"],
+                                             axes_domains={"time": hrf_time})
+
+            repeated_hrf_covar = np.repeat(np.diag(hrf_covariance), nbv).reshape(-1, nbv)
+            outputs["hrf_variance_mapped"] = xndarray(repeated_hrf_covar,
+                                                        value_label="HRFs covariance",
+                                                        axes_names=["time", "voxel"],
+                                                        axes_domains={"time": hrf_time})
+
             outputs['roi_mask'] = xndarray(np.zeros(nbv)+roiData.get_roi_id(),
                                         value_label="ROI",
                                         axes_names=['voxel'])
+
+            outputs["density_ratio"] = xndarray(np.zeros(nbv)+density_ratio,
+                                                value_label="Density Ratio to zero",
+                                                axes_names=["voxel"])
+
+            outputs["density_ratio_cano"] = xndarray(np.zeros(nbv)+density_ratio_cano,
+                                                value_label="Density Ratio to canonical",
+                                                axes_names=["voxel"])
+
+            outputs["density_ratio_diff"] = xndarray(np.zeros(nbv)+density_ratio_diff,
+                                                value_label="Density Ratio to canonical",
+                                                axes_names=["voxel"])
+
+            outputs["density_ratio_prod"] = xndarray(np.zeros(nbv)+density_ratio_prod,
+                                                value_label="Density Ratio to canonical",
+                                                axes_names=["voxel"])
+
+            outputs["ppm_a_nrl"] = xndarray(ppm_a_nrl, value_label="PPM NRL alpha fixed",
+                                            axes_names=["voxel", "condition"],
+                                            axes_domains=domCondition)
+
+            outputs["ppm_g_nrl"] = xndarray(ppm_g_nrl, value_label="PPM NRL gamma fixed",
+                                            axes_names=["voxel", "condition"],
+                                            axes_domains=domCondition)
+
+            outputs["variation_coeff"] = xndarray(np.zeros(nbv)+variation_coeff,
+                                                  value_label="Coefficient of variation of the HRF",
+                                                  axes_names=["voxel"])
 
             h = estimated_hrf
             nrls = nrls.transpose()
@@ -318,13 +339,24 @@ class JDEVEMAnalyser(JDEAnalyser):
                                             axes_names=['voxel','contrast'],
                                             axes_domains=domContrast)
 
+                outputs["ppm_a_contrasts"] = xndarray(ppm_a_contrasts,
+                                                     value_label="PPM Contrasts alpha fixed",
+                                                     axes_names=["voxel", "contrast"],
+                                                     axes_domains=domContrast)
+
+                outputs["ppm_g_contrasts"] = xndarray(ppm_g_contrasts,
+                                                     value_label="PPM Contrasts alpha fixed",
+                                                     axes_names=["voxel", "contrast"],
+                                                     axes_domains=domContrast)
+
+
             ################################################################################
             # CONVERGENCE
 
             axes_names = ['duration']
             outName = 'Convergence_Labels'
             ax = np.arange(self.nItMax)*cTimeMean
-            ax[:len(cTime)] = cTime
+            ax[:len(cTime)-1] = cTime[:-1]
             ad = {'duration':ax}
             c = np.zeros(self.nItMax) #-.001 #
             c[:len(cZ)] = cZ

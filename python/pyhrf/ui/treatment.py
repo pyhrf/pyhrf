@@ -15,6 +15,7 @@ from os.path import splitext
 from copy import deepcopy
 from optparse import OptionParser
 from pprint import pformat
+from collections import OrderedDict
 
 import numpy as np
 
@@ -34,6 +35,7 @@ from pyhrf import (xmlio, DEFAULT_BOLD_VOL_FILE, DEFAULT_MASK_VOL_FILE,
                    REALISTIC_REAL_DATA_MASK_VOL_FILE, DEFAULT_PARADIGM_CSV)
 from pyhrf.tools import unstack_trees  # stack_trees
 from pyhrf.ui.jde import JDEMCMCAnalyser
+from pyhrf.tools.cpus import available_cpu_count
 
 
 logger = logging.getLogger(__name__)
@@ -177,10 +179,8 @@ class FMRITreatment(xmlio.XmlInitable):
             op.exists(self.result_dump_file)
 
     def execute(self):
-        logger.info('Input data description:')
-        logger.info(self.data.getSummary(long=True))
         logger.debug('Input data description:')
-        logger.debug(self.data.getSummary(long=False))
+        logger.debug(self.data.getSummary(long=True))
         logger.info('All data loaded !')
         logger.info('running estimation ...')
         # TODO : print summary of analyser setup.
@@ -211,7 +211,10 @@ class FMRITreatment(xmlio.XmlInitable):
                 parallel_verb = 10
 
             if n_jobs is None:
-                n_jobs = cfg_parallel['nb_procs']
+                if cfg_parallel["nb_procs"]:
+                    n_jobs = cfg_parallel["nb_procs"]
+                else:
+                    n_jobs = available_cpu_count()
 
             p = Parallel(n_jobs=n_jobs, verbose=parallel_verb)
             result = p(delayed(exec_t)(t) for t in self.split(output_dir=None))
@@ -703,8 +706,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
                 % (options.cfgFile, cfg_cmd)
             sys.exit(1)
         else:
-            logger.info(
-                'Loading configuration from: "%s" ...', options.cfgFile)
+            logger.info('Loading configuration from: "%s" ...', options.cfgFile)
             f = open(options.cfgFile, 'r')
             sXml = string.join(f.readlines())
             f.close()
@@ -812,10 +814,10 @@ def create_treatment(boldFiles, parcelFile, dt, tr, paradigmFile,
         fmri_data.simulation = simulation
 
     if contrasts is not None:
-        cons = dict(("con_%d" % i, ce)
+        cons = OrderedDict(("con_%d" % i, ce)
                     for i, ce in enumerate(";".split(contrasts)))
     else:
-        cons = {}
+        cons = OrderedDict()
 
     if(vbjde):
         analyser = VBJDE(dt=dt)

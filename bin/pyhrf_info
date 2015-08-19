@@ -12,7 +12,7 @@ import numpy as np
 
 import pyhrf
 from pyhrf.tools._io.tio import Texture
-from pyhrf.tools._io.spmio import load_paradigm_from_mat, load_contrasts
+from pyhrf.tools._io.spmio import load_paradigm_from_mat, load_contrasts_from_mat
 
 from pyhrf.parcellation import parcellation_report
 
@@ -31,12 +31,9 @@ def describe_mat_file(filename):
     print 'TR =', tr
     print '*** Constrasts ***'
 
-    conts = load_contrasts(filename)
+    conts = load_contrasts_from_mat(filename)
     for i, c in enumerate(conts):
-        print '%d (%s): %s ' % (i + 1, str(c[2][0]), str(c[0][0]))
-    for i, c in enumerate(conts):
-        print str(c[0][0])
-        print np.array2string(c[1], precision=2)
+        print '%d (%s): %s ' % (i + 1, str(c), str(conts[c]))
 
 
 def describeArray(a):
@@ -75,15 +72,16 @@ def describe_nii_file(filename):
     d = i.get_data()
     nb_nans = np.isnan(d).sum()
     if nb_nans > 0:
-        s += '* Found %d NaNs' % nb_nans
+        s += '* Found %d NaNs\n' % nb_nans
 
-    if ('parcellation' in h['descrip'] or np.allclose(d.astype(int), d)) and \
+    if ('parcellation' in h['descrip'] or np.allclose(np.round(d), d)) and \
             len(np.unique(d)) < 5000 and d.ndim < 4:
         s += parcellation_report(d)
 
     else:
         s += '* Values, mean(std)[min...max]: %1.4f(%1.4f)[%1.2f...%1.2f]\n' \
-            % (d.mean(), d.std(), d.min(), d.max()) + '\n'
+            % (d[~np.isnan(d)].mean(), d[~np.isnan(d)].std(),
+               d[~np.isnan(d)].min(), d[~np.isnan(d)].max()) + '\n'
     return s
 
 

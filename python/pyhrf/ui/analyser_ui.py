@@ -350,12 +350,12 @@ class FMRIAnalyser(xmlio.XmlInitable):
         for i, r in enumerate(results[:]):
             roi_id, result, report = r
             if report != 'ok':
-                logger.info('-> Sampling crashed, roi %d!', roi_id)
-                logger.info(report)
+                logger.error('-> Sampling crashed, roi %d!', roi_id)
+                logger.error(report)
                 to_pop.insert(0, i)
 
             elif result is None:
-                logger.info('-> Sampling crashed (result is None), roi %d!',
+                logger.error('-> Sampling crashed (result is None), roi %d!',
                             roi_id)
                 to_pop.insert(0, i)
 

@@ -266,7 +266,7 @@ def load_vol_bold_and_mask(bold_files, mask_file):
 
     if not np.allclose(np.round(mask), mask):
         raise Exception("Mask is not n-ary (%s)" % mask_file)
-    mask = mask.astype(np.int32)
+    mask = np.round(mask).astype(np.int32)
 
     logger.info('Mask has shape %s\nMask min value: %d\n'
                 'Mask max value: %d\nMask has %d parcels',
@@ -540,22 +540,22 @@ def get_roi_simulation(simu_sessions, mask, roi_id):
 class FmriData(XmlInitable):
     """
     Attributes:
-    onsets -- a dictionary mapping a stimulus name to a list of session onsets.
-              Each item of this list is a 1D numpy float array of onsets
-              for a given session.
-    stimDurations -- same as 'onsets' but stores durations of stimuli
-    roiMask -- numpy int array of roi labels (0 stands for the background).
-               shape depends on the data form (3D volumic or 1D surfacic)
-    bold -- either a 4D numpy float array with axes [sag,cor,ax,scan] and then
-            spatial axes must have the same shape as roiMask,
-            Or a 2D numpy float array with axes [scan, position] and position
-            axis must have the same length as the number of positions within
-            roiMask (without background).
-            Sessions are stacked in the scan axis
-    sessionsScans -- a list of session indexes along scan axis.
-    tr -- Time of repetition of the BOLD signal
-    simulation -- if not None then it should be a list of simulation instance.
-    meta_obj -- extra information associated to data
+        onsets -- a dictionary mapping a stimulus name to a list of session onsets.
+                  Each item of this list is a 1D numpy float array of onsets
+                  for a given session.
+        stimDurations -- same as 'onsets' but stores durations of stimuli
+        roiMask -- numpy int array of roi labels (0 stands for the background).
+                   shape depends on the data form (3D volumic or 1D surfacic)
+        bold -- either a 4D numpy float array with axes [sag,cor,ax,scan] and then
+                spatial axes must have the same shape as roiMask,
+                Or a 2D numpy float array with axes [scan, position] and position
+                axis must have the same length as the number of positions within
+                roiMask (without background).
+                Sessions are stacked in the scan axis
+        sessionsScans -- a list of session indexes along scan axis.
+        tr -- Time of repetition of the BOLD signal
+        simulation -- if not None then it should be a list of simulation instance.
+        meta_obj -- extra information associated to data
     """
 
     parametersComments = {

@@ -5,6 +5,7 @@ import string
 import logging
 
 from optparse import OptionParser
+from collections import OrderedDict
 
 import pyhrf
 import pyhrf.ui.treatment as ptr
@@ -13,6 +14,7 @@ from pyhrf import xmlio
 from pyhrf.jde.models import availableModels, defaultModel
 from pyhrf.ui.jde import JDEMCMCAnalyser, DEFAULT_CFG_FILE
 from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
+from pyhrf.tools._io.spmio import load_contrasts_from_mat
 
 
 logger = logging.getLogger(__name__)
@@ -80,8 +82,10 @@ pyhrf.logger.setLevel(options.verbose)
 
 if options.contrasts:
     contrasts = eval('pyhrf.paradigm.default_contrasts_%s' %options.paradigm)
+elif options.spmFile:
+    contrasts = load_contrasts_from_mat(options.spmFile)
 else:
-    contrasts = {'dummy_contrast_example' : '3*audio - video/3'}
+    contrasts = OrderedDict({'dummy_contrast_example' : '3*audio - video/3'})
 
 if options.jpde:
     options.variational_em = True
@@ -98,8 +102,8 @@ if not options.variational_em:
         analyser.sampler.set_init_param('nb_iterations', options.nbIterations)
     try:
         analyser.sampler.getVariable('nrl').set_init_param('contrasts',
-                                                           constrasts)
-    except:
+                                                           contrasts)
+    except Exception as e:
         pass
 else:
     if options.nbIterations is not None:

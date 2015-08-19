@@ -18,7 +18,7 @@ import pyhrf
 from pyhrf.tools import (treeBranches, rescale_values, has_ext, tree_items,
                          html_cell, html_list_to_row, html_row, html_table,
                          html_img, html_div)
-from pyhrf.tools.backports import OrderedDict
+from collections import OrderedDict
 
 
 logger = logging.getLogger(__name__)
@@ -1529,7 +1529,7 @@ class xndarray:
 
         from pyhrf.xmlio import from_xml, to_xml, DeprecatedXMLFormatException
 
-        logger.debug('xndarray.save(%s)', file_name)
+        logger.info('xndarray.save(%s)', file_name)
         ext = op.splitext(file_name)[1]
         c_to_save = self
 
@@ -1539,8 +1539,8 @@ class xndarray:
 
             extra_info = c_to_save.get_extra_info()
 
-            logger.info('Extra info:')
-            logger.info(extra_info)
+            logger.debug('Extra info:')
+            logger.debug(extra_info)
 
             from nibabel.nifti1 import Nifti1Extension, Nifti1Header, \
                 Nifti1Image, extension_codes

@@ -7,6 +7,7 @@ import logging
 from inspect import (currentframe, getargvalues, getouterframes, getargspec,
                      ismethod, isfunction, isclass)
 from copy import copy
+from collections import OrderedDict
 
 import numpy as np
 
@@ -569,9 +570,9 @@ class UiNode(object):
             return None
         a = node.attributes
         if a is not None:
-            attributes = dict((str(a.item(i).nodeName),
-                               str(a.item(i).nodeValue))
-                              for i in range(a.length))
+            attributes = OrderedDict((str(a.item(i).nodeName),
+                                      str(a.item(i).nodeValue))
+                                     for i in range(a.length))
             attributes = self.unserialize_attributes(attributes)
         else:
             attributes = None

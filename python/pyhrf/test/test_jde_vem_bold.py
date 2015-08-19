@@ -16,9 +16,9 @@ from pyhrf.jde.models import simulate_bold
 from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
 from pyhrf.vbjde.vem_bold_constrained import (Main_vbjde_Extension_constrained,
                                               Main_vbjde_Python_constrained)
-from pyhrf.vbjde.vem_bold import (Main_vbjde_Extension,
-                                  Main_vbjde_Extension_stable,
-                                  Main_vbjde_Python, Main_vbjde)
+from pyhrf.vbjde.vem_bold_old import (Main_vbjde_Extension,
+                                      Main_vbjde_Extension_stable,
+                                      Main_vbjde_Python, Main_vbjde)
 
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class VEMBOLDTest(unittest.TestCase):
         tjde_vem.run()
 
     @unittest.skipIf(not tools.is_importable('cvxpy'),
-                     'joblib (optional dep) is N/A')
+                     'cvxpy (optional dep) is N/A')
     def test_vem_bold_constrained(self):
         """ Test BOLD VEM constraint function.
         Estimation accuracy is not tested.
@@ -119,7 +119,7 @@ class VEMBOLDTest(unittest.TestCase):
                                                                          NitMax=2, NitMin=2)
 
     @unittest.skipIf(not tools.is_importable('cvxpy'),
-                     'joblib (optional dep) is N/A')
+                     'cvxpy (optional dep) is N/A')
     def test_vem_bold_constrained_python(self):
         """ Test BOLD VEM constraint function.
         Estimation accuracy is not tested.

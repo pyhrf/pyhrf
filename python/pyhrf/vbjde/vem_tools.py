@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 eps = 1e-6
 
 
-def mult(v1, v2):
+def mult_old(v1, v2):
     matrix = np.zeros((len(v1), len(v2)), dtype=float)
     for i in xrange(len(v1)):
         for j in xrange(len(v2)):
@@ -43,7 +43,30 @@ def mult(v1, v2):
     return matrix
 
 
-def maximum(a):
+def mult(v1, v2):
+    """Multiply two vectors.
+
+    The first vector is made vertical and the second one horizontal. The result
+    will be a matrix of size len(v1), len(v2).
+
+    Parameters
+    ----------
+    v1 : ndarray
+        unidimensional
+    v2 : ndarray
+        unidimensional
+
+    Returns
+    -------
+    x : ndarray, shape (len(v1), len(v2))
+    """
+
+    v1 = v1.reshape(len(v1), 1)
+    v2 = v2.reshape(1, len(v2))
+    return v1.dot(v2)
+
+
+def maximum_old(a):
     maxx = a[0]
     maxx_ind = 0
     for i in xrange(len(a)):
@@ -52,6 +75,31 @@ def maximum(a):
             maxx_ind = i
 
     return maxx, maxx_ind
+
+
+def maximum(iterable):
+    """Return the maximum and the indice of the maximum of an iterable.
+
+    Parameter
+    ---------
+    iterable : iterable or numpy array
+
+    Returns
+    tuple :
+        iter_max : the maximum
+        iter_max_indice : the indice of the maximum
+    """
+
+    iter_max = max(iterable)
+
+    try:
+        # this is an iterable (tuple or list)
+        iter_max_indice = iterable.index(iter_max)
+    except AttributeError:
+        # this is an numpy array
+        iter_max_indice = iterable.argmax()
+
+    return iter_max, iter_max_indice
 
 
 def normpdf(x, mu, sigma):
@@ -94,7 +142,7 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
 
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
-    lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    lgt = int((nbscans + 2) * osf)  # nb of scans if tr=dt
     paradigm_bins = restarize_events(onsets, np.zeros_like(onsets), dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -106,11 +154,39 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     return x
 
 
-def buildFiniteDiffMatrix(order, size):
-    o = order
-    a = np.diff(np.concatenate((np.zeros(o), [1], np.zeros(o))), n=o)
-    b = a[len(a) / 2:]
+def buildFiniteDiffMatrix(order, size, regularization=None):
+    """Build the finite difference matrix used for the hrf regularization prior.
+
+    Parameters
+    ----------
+    order : int
+        difference order (see numpy.diff function)
+    size : int
+        size of the matrix
+    regularization : array like, optional
+        one dimensional vector of factors used for regularizing the hrf
+
+    Returns
+    -------
+    diffMat : ndarray, shape (size, size)
+        the finite difference matrix"""
+
+    a = np.diff(np.concatenate((np.zeros(order), [1], np.zeros(order))),
+                n=order)
+    b = a[len(a)//2:]
     diffMat = toeplitz(np.concatenate((b, np.zeros(size - len(b)))))
+    if regularization is not None:
+        regularization = np.array(regularization)
+        if regularization.shape != (size,):
+            raise Exception("regularization shape ({}) must be (size,) ({},)".format(regularization.shape, size))
+        if not all(regularization > 0):
+            raise Exception("All values of regularization must be stricly positive")
+        diffMat = (np.triu(diffMat, 1) * regularization +
+                   np.tril(diffMat, -1) * regularization[:, np.newaxis] +
+                   np.diag(diffMat.diagonal() * regularization))
+        # diffMat = (np.triu(diffMat, 1) + np.tril(diffMat, -1) +
+                   # np.diag(diffMat.diagonal() * regularization))
+        # diffMat = diffMat * regularization
     return diffMat
 
 
@@ -396,45 +472,132 @@ def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour, maxN
 ##############################################################
 
 eps_FreeEnergy = 0.00000001
+eps_freeenergy = 0.00000001
 
+
+# def A_Entropy(Sigma_A, M, J):
+
+    # logger.info('Computing NRLs Entropy ...')
+    # Det_Sigma_A_j = np.zeros(J, dtype=np.float64)
+    # Entropy = 0.0
+    # for j in xrange(0, J):
+        # Det_Sigma_A_j = np.linalg.det(Sigma_A[:, :, j])
+        # Const = (2 * np.pi * np.exp(1)) ** M
+        # Entropy_j = np.sqrt(Const * Det_Sigma_A_j)
+        # Entropy += np.log(Entropy_j + eps_FreeEnergy)
+    # Entropy = - Entropy
+
+    # return Entropy
+
+
+def nrls_entropy(nrls_sigma, nb_conditions, nb_voxels):
+    """Compute the entropy of neural response levels.
+
+    Parameters
+    ----------
+    nrls_sigma : ndarray
+        TODO
+    nb_conditions : int
+    nb_voxels : int
+
+    Returns
+    -------
+    entropy : float
+    """
+
+    logger.info("Computing neural response levels entropy")
+    entropy = 0.
+    const = (2*np.pi)**nb_conditions * np.exp(nb_conditions)
+
+    det_sigma_nrls = np.linalg.det(nrls_sigma.transpose((2, 0, 1)))
+    entropy = -np.sum(np.log(np.sqrt(const*det_sigma_nrls) + eps_freeenergy))
+
+    return entropy
 
 def A_Entropy(Sigma_A, M, J):
+    import warnings
+    warnings.warn("The A_Entropy function is deprecated, use nrls_entropy instead",
+                  DeprecationWarning)
+    return nrls_entropy(Sigma_A, M, J)
 
-    logger.info('Computing NRLs Entropy ...')
-    Det_Sigma_A_j = np.zeros(J, dtype=np.float64)
-    Entropy = 0.0
-    for j in xrange(0, J):
-        Det_Sigma_A_j = np.linalg.det(Sigma_A[:, :, j])
-        Const = (2 * np.pi * np.exp(1)) ** M
-        Entropy_j = np.sqrt(Const * Det_Sigma_A_j)
-        Entropy += np.log(Entropy_j + eps_FreeEnergy)
-    Entropy = - Entropy
 
-    return Entropy
+# def H_Entropy(Sigma_H, D):
 
+    # logger.info('Computing HRF Entropy ...')
+    # Det_Sigma_H = np.linalg.det(Sigma_H)
+    # Const = (2 * np.pi * np.exp(1)) ** D
+    # Entropy = np.sqrt(Const * Det_Sigma_H)
+    # Entropy = - np.log(Entropy + eps_FreeEnergy)
+
+    # return Entropy
+
+
+def hrf_entropy(hrf_sigma, hrf_len):
+    """Compute the entropy of the heamodynamic response function.
+
+    Parameters
+    ----------
+    hrf_sigma : ndarray
+        TODO
+    hrf_len : int
+
+    Returns
+    -------
+    entropy : float
+    """
+
+    logger.info("Computing heamodynamic response function entropy")
+    const = (2*np.pi)**hrf_len * np.exp(hrf_len)
+    hrf_sigma_det = np.linalg.det(hrf_sigma)
+
+    return -np.log(np.sqrt(const*hrf_sigma_det) + eps_freeenergy)
 
 def H_Entropy(Sigma_H, D):
+    import warnings
+    warnings.warn("The H_Entropy function is deprecated, use hrf_entropy instead",
+                  DeprecationWarning)
+    return hrf_entropy(Sigma_H, D)
 
-    logger.info('Computing HRF Entropy ...')
-    Det_Sigma_H = np.linalg.det(Sigma_H)
-    Const = (2 * np.pi * np.exp(1)) ** D
-    Entropy = np.sqrt(Const * Det_Sigma_H)
-    Entropy = - np.log(Entropy + eps_FreeEnergy)
 
-    return Entropy
+# def Z_Entropy(q_Z, M, J):
 
+    # logger.info('Computing Z Entropy ...')
+    # Entropy = 0.0
+    # for j in xrange(0, J):
+        # for m in xrange(0, M):
+            # Entropy += q_Z[m, 1, j] * np.log(q_Z[m, 1, j] + eps_FreeEnergy) + q_Z[
+                # m, 0, j] * np.log(q_Z[m, 0, j] + eps_FreeEnergy)
+
+    # return Entropy
+
+
+def labels_entropy(labels):
+    """Compute the labels entropy.
+
+    Parameters
+    ----------
+    labels : ndarray
+        TODO
+    nb_conditions : int
+    nb_voxels : int
+
+    Returns
+    -------
+    entropy : float
+    """
+
+    logger.info("Computing labels entropy")
+    entropy = np.sum(
+        labels[:, 1, :] * np.log(labels[:, 1, :] + eps_freeenergy)
+        + labels[:, 0, :] * np.log(labels[:, 0, :] + eps_freeenergy))
+
+    return entropy
 
 def Z_Entropy(q_Z, M, J):
-
-    logger.info('Computing Z Entropy ...')
-    Entropy = 0.0
-    for j in xrange(0, J):
-        for m in xrange(0, M):
-            Entropy += q_Z[m, 1, j] * np.log(q_Z[m, 1, j] + eps_FreeEnergy) + q_Z[
-                m, 0, j] * np.log(q_Z[m, 0, j] + eps_FreeEnergy)
-
-    return Entropy
-
+    import warnings
+    warnings.warn("The Z_Entropy function is deprecated, use labels_entropy instead",
+                  DeprecationWarning)
+    return labels_entropy(q_Z)
 
 # Other functions
 ##############################################################
@@ -482,7 +645,7 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_M, sigma_M, m_H, Sigma_H,
 
     return FreeEnergy
 
-"""
+
 def Compute_FreeEnergy2(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,
                        R,Det_invR,sigmaH,p_Wtilde,q_Z,neighboursIndexes,
                        maxNeighbours,Beta,sigma_epsilone,XX,Gamma,
@@ -509,7 +672,26 @@ def Compute_FreeEnergy2(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,
     FreeEnergy = E - Total_Entropy
 
     return FreeEnergy
-"""
+
+def free_energy_computation(nrls_sigma, hrf_sigma, labels, nb_voxels, hrf_len,
+                            nb_conditions, expectation_nrls, expectation_hrf,
+                            expectation_labels):
+    """Compute the free energy.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    free_energy : float
+    """
+
+    total_entropy = (nrls_entropy(nrls_sigma, nb_conditions, nb_voxels) +
+                     hrf_entropy(hrf_sigma, hrf_len) +
+                     labels_entropy(labels))
+    total_expectation = expectation_nrls + expectation_hrf + expectation_labels
+
+    return total_expectation - total_entropy
 
 
 # MiniVEM
@@ -655,7 +837,6 @@ def MiniVEM_CompMod(Thrf, TR, dt, beta, Y, K, gamma, gradientStep, MaxItGrad, D,
     return InitVar, InitMean, Initgamma_h
 
 
-"""
 def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
                     D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,
                     Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,
@@ -777,4 +958,3 @@ def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
     logger.info("Choosed initialisation is : var = %s,  mean = %s,  gamma_h = %s" %(InitVar,InitMean,Initgamma_h))
 
     return InitVar, InitMean, Initgamma_h
-"""

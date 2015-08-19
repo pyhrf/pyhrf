@@ -194,7 +194,7 @@ builtin_paradigms.extend('language_sess%d' % i for i in range(1, 5))
 
 durations_loc = apply_to_leaves(onsets_loc, lambda x: 2. + np.zeros_like(x))
 
-default_contrasts_loc = {
+default_contrasts_loc = OrderedDict({
     "left_click": "clicGaudio + clicGvideo",
     "right_click": "clicDaudio + clicDvideo",
     "checkerboard_H-V": "damier_H - damier_V",
@@ -213,7 +213,7 @@ default_contrasts_loc = {
                     " calculvideo - phrasevideo - clicGvideo - clicDvideo"),
     "video-audio": ("calculvideo + phrasevideo + clicGvideo + clicDvideo -"
                     " calculaudio - phraseaudio - clicGaudio - clicDaudio"),
-}
+})
 
 
 def contrasts_to_spm_vec(condition_list, contrasts):
@@ -252,10 +252,10 @@ o, d = onsets_loc, durations_loc
 for c in ['audio', 'video']:
     o, d = merge_onsets(o, c, durations=d, discard=to_discard)
 onsets_loc_av, durations_loc_av = o, d
-default_contrasts_loc_av = {
+default_contrasts_loc_av = OrderedDict({
     'audio-video': 'audio-video',
     'video-audio': 'video-audio',
-}
+})
 
 # audio, video full (video comprises damier)
 o, d = onsets_loc, durations_loc
@@ -263,10 +263,10 @@ o, d = merge_onsets(o, 'audio', durations=d)
 o, d = merge_onsets(o, 'video', criterion=lambda x: 'video' in x or 'damier' in x,
                     durations=d)
 onsets_loc_avd, durations_loc_avd = o, d
-default_contrasts_loc_avd = {
+default_contrasts_loc_avd = OrderedDict({
     'audio-video': 'audio-video',
     'video-audio': 'video-audio',
-}
+})
 
 
 # audio, video, damier
@@ -275,10 +275,10 @@ o, d = merge_onsets(o, 'audio', durations=d)
 o, d = merge_onsets(o, 'video', durations=d)
 o, d = merge_onsets(o, 'damier', durations=d)
 onsets_loc_av_d, durations_loc_av_d = o, d
-default_contrasts_loc_av_d = {
+default_contrasts_loc_av_d = OrderedDict({
     'audio-video': 'audio-video',
     'video-audio': 'video-audio',
-}
+})
 builtin_paradigms.append('loc_av_d')
 
 # only one condition (audio)
@@ -300,16 +300,16 @@ o, d = onsets_loc, durations_loc
 for c in ['calcul', 'phrase']:
     o, d = merge_onsets(o, c, durations=d, discard=to_discard)
 onsets_loc_cp_only, durations_loc_cp_only = o, d
-default_contrasts_loc_cp_only = {
+default_contrasts_loc_cp_only = OrderedDict({
     "computation-sentences": "calcul - phrase",
     "sentences-computation": "phrase - calcul",
-}
+})
 builtin_paradigms.append('loc_cp_only')
 
 # calcul only
 onsets_loc_c_only = {'calcul': onsets_loc_cp_only['calcul']}
 durations_loc_c_only = {'calcul': durations_loc_cp_only['calcul']}
-default_contrasts_loc_c_only = {}
+default_contrasts_loc_c_only = OrderedDict()
 builtin_paradigms.append('loc_c_only')
 
 # calcul, phrase, clic, damier
@@ -317,12 +317,12 @@ o, d = onsets_loc, durations_loc
 for c in ['calcul', 'phrase', 'clic', 'damier']:
     o, d = merge_onsets(o, c, durations=d)
 onsets_loc_cpcd, durations_loc_cpcd = o, d
-default_contrasts_loc_cpcd = {
+default_contrasts_loc_cpcd = OrderedDict({
     "computation-sentences": "calcul - phrase",
     "sentences-computation": "phrase - calcul",
     "motor-cognitive": "calcul + phrase - clic",
     "cognitive-motor": "clic - calcul - phrase",
-}
+})
 builtin_paradigms.append('loc_cpcd')
 
 onsets_loc_ainsi = OrderedDict([
