@@ -5,6 +5,7 @@ import string
 import logging
 
 from optparse import OptionParser
+from collections import OrderedDict
 
 import pyhrf
 import pyhrf.ui.treatment as ptr
@@ -84,7 +85,7 @@ if options.contrasts:
 elif options.spmFile:
     contrasts = load_contrasts_from_mat(options.spmFile)
 else:
-    contrasts = {'dummy_contrast_example' : '3*audio - video/3'}
+    contrasts = OrderedDict({'dummy_contrast_example' : '3*audio - video/3'})
 
 if options.jpde:
     options.variational_em = True

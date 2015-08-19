@@ -15,6 +15,7 @@ from os.path import splitext
 from copy import deepcopy
 from optparse import OptionParser
 from pprint import pformat
+from collections import OrderedDict
 
 import numpy as np
 
@@ -707,8 +708,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
                 % (options.cfgFile, cfg_cmd)
             sys.exit(1)
         else:
-            logger.info(
-                'Loading configuration from: "%s" ...', options.cfgFile)
+            logger.info('Loading configuration from: "%s" ...', options.cfgFile)
             f = open(options.cfgFile, 'r')
             sXml = string.join(f.readlines())
             f.close()
@@ -816,10 +816,10 @@ def create_treatment(boldFiles, parcelFile, dt, tr, paradigmFile,
         fmri_data.simulation = simulation
 
     if contrasts is not None:
-        cons = dict(("con_%d" % i, ce)
+        cons = OrderedDict(("con_%d" % i, ce)
                     for i, ce in enumerate(";".split(contrasts)))
     else:
-        cons = {}
+        cons = OrderedDict()
 
     if(vbjde):
         analyser = VBJDE(dt=dt)

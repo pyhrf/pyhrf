@@ -2,8 +2,11 @@
 
 import logging
 
-import numpy as np
 from time import time
+from collections import OrderedDict
+
+import numpy as np
+
 from pyhrf.ui.analyser_ui import FMRIAnalyser
 from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.vem_tools import roc_curve
