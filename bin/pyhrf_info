@@ -74,7 +74,7 @@ def describe_nii_file(filename):
     if nb_nans > 0:
         s += '* Found %d NaNs\n' % nb_nans
 
-    if ('parcellation' in h['descrip'] or np.allclose(d.astype(int), d)) and \
+    if ('parcellation' in h['descrip'] or np.allclose(np.round(d), d)) and \
             len(np.unique(d)) < 5000 and d.ndim < 4:
         s += parcellation_report(d)
 
