@@ -7,32 +7,33 @@
 Scientific issues
 #################
 
-PyHRF aims at providing advanced tools for within-subject analysis in
-event-related functional Magnetic Resonance Imaging (fMRI). Actually, our goal
-is to detect and localize brain activations while estimating the HRF time course
-in a spatially adaptive (ie parcel-based) GLM.
+PyHRF aims to provide advanced tools for within-subject analysis of functional Magnetic Resonance Imaging (fMRI) data acquired
+during an experimental paradigm (i.e. not resting-state). The core idea of PyHRF is to estimate the dynamics of brain activation by recovering the so-called Hemodynamic Response Function (HRF) in a spatially varying manner. To this end, PyHRF implements two
+different approaches: 
+ (1) a voxel-wise and condition-wise HRF estimation [1];
+ (2) a parcel-wise spatially adaptive joint detection-estimation (JDE) algorithm [2,3]. 
 
-More precisely, this software addresses the two main tasks involved in fMRI analysis: 
-(i) detect and localize
-which cerebral regions are activated by a given experimental paradigm 
-(ii) estimate the underlying dynamics of activation by recovering the so-called Hemodynamic Response Function (HRF). 
+The second approach is more powerful since it jointly addresses (i) the localization of evoked brain activity in response to external stimulation and (ii) 
+(ii) the estimation of the parcelwise hemodynamic filters. To this end, a parcellation (either functional or anatomical) has to be provided as input parameter.
 
-The main outputs are then a set of 3D statistical maps of cerebral activations along with the time-series describing the HRFs for the set of all brain
-regions (4D volume). The analysis can also be performed on the cortical surface from projected BOLD signals and
-then produces functional textures to be displayed on the input cortical mesh. To this end, pyhrf implements two
-different approaches: a voxel-wise and condition-wise HRF estimation [1] and a parcel-wise spatially adaptive joint
-detection-estimation algorithm [2,3]. This tool provides interesting perspectives so as to understand the differences
-in the HRFs of different populations (infants, children, adults, patients ...). Within the treatment pipeline of an
-fMRI analysis, pyhrf steps in after data preprocessings (slice-timing, realignment, normalization).
+
+This tool hence provides interesting perspectives for understanding the HRF differences between different populations (infants, children, adults, patients ...). Within the classical workflow of fMRI data analysis (preprocessings, estimation, statistical inference), PyHRF takes place at the estimation stage. However, we
+have also implemented posterior probability maps (PPMs) to allow the user performing statistical inference at the subject-level.
+
+For the sake of computational efficiency, the variational expectation-maximization (VEM) [3] is used as default algorithm for computing the solution. The results
+that are generated in the context are the following:
+ -- the 3D effect size maps associated with each experimental condition;
+ -- the 3D contrast maps specified by the user;
+ -- the time-series describing the HRFs for the set of all brain regions (4D volume). The analysis can also be performed on the cortical surface from projected BOLD signals and
+then produces functional textures to be displayed on the input cortical mesh. 
 
 [1] P. Ciuciu, J.-B. Poline, G. Marrelec, J. Idier, Ch. Pallier, and H. Benali, "Unsupervised robust non-parametric estimation of the
-hemodynamic response function for any fMRI experiment," IEEE Trans. Med. Imag., vol. 22, no. 10, pp. 1235-1251, oct. 2003.
+hemodynamic response function for any fMRI experiment", IEEE Trans. Medical Imaging; 22(10):1235-1251, Oct 2003.
 
-[2] T. Vincent, L. Risser, J. Idier, and P. Ciuciu, "Spatially adaptive mixture modelling for analysis of fMRI time series," in Proc.
-15th HBM, San Francisco, CA, USA, juin 2009.
+[2] T. Vincent, L. Risser and P. Ciuciu, "Spatially adaptive mixture modeling for analysis of within-subject
+	fMRI time series", IEEE Trans. Medical Imaging; 29(4):1059-1074, Apr 2010.
 
-[3] L. Chari, F. Forbes, P. Ciuciu, T. Vincent, and M. Dojat, "Bayesian variational approximation for the joint detection-estimation
-of brain activity in fMRI," in IEEE Workshop on Statistical Signal Processing (SSP 2011), Nice, France, juin 2011.
+[3] L. Chari, T. Vincent, F. Forbes, M. Dojat and P. Ciuciu, "Fast joint detection-estimation of evoked brain activity in event-related fMRI using a variational approach", IEEE Trans. Medical Imaging; 32(5):821-837, May 2013.
 
 
 Package overview
