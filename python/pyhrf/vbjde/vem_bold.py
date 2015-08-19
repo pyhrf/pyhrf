@@ -45,10 +45,10 @@ import pyhrf.vbjde.vem_tools as vt
 from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
 from pyhrf.boldsynth.hrf import getCanoHRF
 from pyhrf.tools._io import read_volume
-
+from pyhrf.stats.misc import cpt_ppm_a_norm, cpt_ppm_g_norm
 
 logger = logging.getLogger(__name__)
-eps = 1e-4
+eps = np.spacing(1)
 
 
 def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
@@ -57,29 +57,29 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
                  compute_contrasts=False, gamma_h=0, estimate_hrf=True,
                  true_hrf_flag=False, hrf_filename='hrf.nii',
                  estimate_labels=True, labels_filename='labels.nii',
-                 seed=6537546):
+                 constrained=False, seed=6537546):
     """This is the main function that compute the VEM analysis on BOLD data.
 
     Parameters
     ----------
-    graph : TODO
-        TODO
+    graph : # TODO
+        # TODO
     bold_data : ndarray, shape (nb_scans, nb_voxels)
-        TODO
+        # TODO
     onsets : dict
         dictionnary of onsets
     hrf_duration : float
         hrf total time duration
-    nb_classes : TODO
-        TODO
+    nb_classes : # TODO
+        # TODO
     tr : float
         time of repetition
-    beta : TODO
-        TODO
+    beta : # TODO
+        # TODO
     dt : float
         hrf temporal precision
     scale : float, optional
-        scale factor for datas ? TODO: check
+        scale factor for datas ? # TODO: check
     estimate_sigma_h : bool, optional
         toggle estimation of sigma H
     sigma_h : float, optional
@@ -91,20 +91,20 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     estimate_beta : bool, optional
         toggle the estimation of Beta
     plot : bool, optional
-        if True, plot some images of some variables (TODO: describe, or better,
+        if True, plot some images of some variables (# TODO: describe, or better,
         remove)
     contrasts : OrderedDict, optional
         dict of contrasts to compute
     compute_contrasts : bool, optional
         if True, compute the contrasts defined in contrasts
-    gamma_h : float (TODO: check)
-        TODO
+    gamma_h : float (# TODO: check)
+        # TODO
     estimate_hrf : bool, optional
         if True, estimate the HRF for each parcel, if False use the canonical
         HRF
     true_hrf_flag : bool, optional
         if True, use the hrf_filename to provide the true HRF that will be used
-        (imply estimate_hrf=False) TODO: check
+        (imply estimate_hrf=False) # TODO: check
     hrf_filename : string, optional
         specify the file name for the true HRF (used only if true_hrf_flag is
         set to True)
@@ -115,28 +115,48 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
 
     Returns
     -------
-    tuple
-        tuple of several variables (TODO: describe)
-            - loop : TODO
-            - m_A : TODO
-            - m_H : TODO
-            - q_Z : TODO
-            - sigma_epsilone : TODO
-            - mu_M : TODO
-            - sigma_M : TODO
-            - Beta : TODO
-            - drift_coeffs : TODO
-            - drift : TODO
-            - CONTRAST : TODO
-            - CONTRASTVAR : TODO
-            - cA : TODO
-            - cH : TODO
-            - cZ : TODO
-            - cAH : TODO
-            - compute_time : TODO
-            - compute_time_mean : TODO
-            - Sigma_A : TODO
-            - StimulusInducedSignal : TODO
+    loop : int
+        number of iterations before convergence
+    m_A : ndarray, shape (nb_voxels, nb_conditions)
+        Neural response level mean value
+    m_H : ndarray, shape (hrf_len,)
+        Hemodynamic response function mean value
+    hrf_covariance : ndarray, shape (hrf_len, hrf_len)
+        Covariance matrix of the HRF
+    q_Z : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+        # TODO
+    sigma_epsilone : ndarray, shape (nb_voxels,)
+        # TODO
+    mu_M : ndarray, shape (nb_conditions, nb_classes)
+        # TODO
+    sigma_M : ndarray, shape (nb_conditions, nb_classes)
+        # TODO
+    Beta : ndarray, shape (nb_conditions,)
+        # TODO
+    drift_coeffs : ndarray, shape (# TODO)
+        # TODO
+    drift : ndarray, shape (# TODO)
+        # TODO
+    CONTRAST : ndarray, shape (nb_voxels, len(contrasts))
+        Contrasts computed from NRLs
+    CONTRASTVAR : ndarray, shape (nb_voxels, len(contrasts))
+        Variance of the contrasts
+    cA : list
+        NRL criteria (# TODO: explain)
+    cH : list
+        HRF criteria (# TODO: explain)
+    cZ : list
+        Z criteria (# TODO: explain)
+    cAH : list
+        NRLs HRF product criteria
+    compute_time : list
+        computation time of each iteration
+    compute_time_mean : float
+        computation mean time over iterations
+    Sigma_A : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+        # TODO
+    StimulusInducedSignal : ndarray, shape (nb_scans, nb_voxels)
+        # TODO
     """
 
     logger.info("Fast EM with C extension started.")
@@ -148,6 +168,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
 
     Nb2Norm = 1
     NormFlag = False
+    regularizing = False
     estimate_free_energy = False
 
     if it_max < 0:
@@ -170,7 +191,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     for i in xrange(nb_voxels):
         neighbours_indexes[i, :len(graph[i])] = graph[i]
 
-    X = OrderedDict([])
+    X = OrderedDict()
     for condition, onset in onsets.iteritems():
         X[condition] = vt.compute_mat_X_2(nb_scans, tr, hrf_len, dt, onset)
         condition_names.append(condition)
@@ -179,10 +200,17 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         XX[nc, :, :] = X[condition]
 
     order = 2
-    D2 = vt.buildFiniteDiffMatrix(order, hrf_len)
-    R = np.dot(D2, D2) / pow(dt, 2 * order)
-    invR = np.linalg.inv(R)
-    Det_invR = np.linalg.det(invR)
+    if regularizing:
+        regularization = np.ones(hrf_len)
+        regularization[hrf_len//3:hrf_len//2] = 2
+        regularization[hrf_len//2:2*hrf_len//3] = 5
+        regularization[2*hrf_len//3:3*hrf_len//4] = 7
+        regularization[3*hrf_len//4:] = 10
+        # regularization[hrf_len//2:] = 10
+    else:
+        regularization = None
+    D2 = vt.buildFiniteDiffMatrix(order, hrf_len, regularization)
+    hrf_regularization_prior = np.dot(D2, D2) / pow(dt, 2 * order)
 
     Gamma = np.identity(nb_scans)
     Det_Gamma = np.linalg.det(Gamma)
@@ -228,16 +256,14 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     q_Z1 = np.zeros((nb_conditions, nb_classes, nb_voxels), dtype=np.float64)
     Z_tilde = q_Z.copy()
 
-    _, m_h = getCanoHRF(hrf_duration, dt)  # TODO: check
-    m_h = m_h[:hrf_len]
+    m_h = getCanoHRF(hrf_duration, dt)[1][:hrf_len]
     m_H = np.array(m_h).astype(np.float64)
     m_H1 = np.array(m_h)
     sigmaH1 = sigma_h
     if estimate_hrf:
-        Sigma_H = np.ones((hrf_len, hrf_len), dtype=np.float64)
+        hrf_covariance = np.ones((hrf_len, hrf_len), dtype=np.float64)
     else:
-        Sigma_H = np.zeros((hrf_len, hrf_len), dtype=np.float64)
-
+        hrf_covariance = np.zeros((hrf_len, hrf_len), dtype=np.float64)
 
     Beta = beta * np.ones((nb_conditions), dtype=np.float64)
     drift_basis = vt.PolyMat(nb_scans, 4, tr)
@@ -252,8 +278,8 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     mu_M = np.zeros((nb_conditions, nb_classes), dtype=np.float64)
     for k in xrange(1, nb_classes):
         mu_M[:, k] = 1  # init_mean
-    Sigma_A = 0.01 * (np.identity(nb_conditions).reshape((nb_conditions, nb_conditions, 1))
-                      + np.zeros((1, 1, nb_voxels)))
+        Sigma_A = 0.01 * (np.identity(nb_conditions)[:, :, np.newaxis]
+                          + np.zeros((1, 1, nb_voxels)))
     m_A = np.zeros((nb_voxels, nb_conditions), dtype=np.float64)
     m_A1 = np.zeros((nb_voxels, nb_conditions), dtype=np.float64)
     for j in xrange(0, nb_voxels):
@@ -274,7 +300,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         logger.info("Expectation A step...")
         logger.debug("Before: m_A = %s, Sigma_A = %s", m_A, Sigma_A)
         nrls_expectation = UtilsC.expectation_A(q_Z, mu_M, sigma_M, drift,
-                                                sigma_epsilone, Gamma, Sigma_H,
+                                                sigma_epsilone, Gamma, hrf_covariance,
                                                 bold_data, y_tilde, m_A, m_H,
                                                 Sigma_A, XX.astype(np.int32),
                                                 nb_voxels, hrf_len, nb_conditions,
@@ -282,27 +308,31 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         logger.debug("After: m_A = %s, Sigma_A = %s", m_A, Sigma_A)
         if estimate_hrf:
             logger.info("Expectation H step...")
-            logger.debug("Before: m_H = %s, Sigma_H = %s", m_H, Sigma_H)
+            logger.debug("Before: m_H = %s, hrf_covariance = %s", m_H, hrf_covariance)
             hrf_expectation = UtilsC.expectation_H(XGamma, Q_barnCond,
-                                                   sigma_epsilone, Gamma, R,
-                                                   Sigma_H, bold_data, y_tilde,
+                                                   sigma_epsilone, Gamma, hrf_regularization_prior,
+                                                   hrf_covariance, bold_data, y_tilde,
                                                    m_A, m_H, Sigma_A,
                                                    XX.astype(np.int32),
                                                    nb_voxels, hrf_len,
                                                    nb_conditions, nb_scans, scale,
                                                    sigma_h)
-            logger.debug("Before: m_H = %s, Sigma_H = %s", m_H, Sigma_H)
-            m_H[0] = 0
-            m_H[-1] = 0
+            if constrained:
+                m_H = vt.norm1_constraint(m_H, hrf_covariance)
+                hrf_covariance[:] = 0
+            else:
+                m_H[0] = 0
+                m_H[-1] = 0
+            logger.debug("After: m_H = %s, hrf_covariance = %s", m_H, hrf_covariance)
             h_norm.append(np.linalg.norm(m_H))
             # Normalizing H at each Nb2Norm iterations:
-            if NormFlag:
+            if not constrained and NormFlag:
                 # Normalizing is done before sigma_h, mu_M and sigma_M estimation
                 # we should not include them in the normalisation step
                 if (loop + 1) % Nb2Norm == 0:
                     Norm = np.linalg.norm(m_H)
                     m_H /= Norm
-                    Sigma_H /= Norm ** 2
+                    hrf_covariance /= Norm ** 2
                     m_A *= Norm
                     Sigma_A *= Norm ** 2
             # Plotting HRF
@@ -341,14 +371,13 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         DIFF[np.where((DIFF < 1e-50) & (DIFF > 0.0))] = 0.0
         # To avoid numerical problems
         DIFF[np.where((DIFF > -1e-50) & (DIFF < 0.0))] = 0.0
-        if np.linalg.norm(np.reshape(AH1, (nb_conditions * nb_voxels * hrf_len))) > 0:
-            Crit_AH = (
-                np.linalg.norm(DIFF) /
-                (np.linalg.norm(np.reshape(
-                    AH1, (nb_conditions * nb_voxels * hrf_len))) + eps)) ** 2
-        else:
+        Crit_AH = (np.linalg.norm(DIFF) /
+                   (np.linalg.norm(np.reshape(AH1, (nb_conditions * nb_voxels * hrf_len)))
+                    + eps)) ** 2
+        if np.linalg.norm(np.reshape(AH1, (nb_conditions * nb_voxels * hrf_len))) == 0:
             # TODO: norm shouldn't be 0
-            Crit_AH = None
+            logger.warning("AH norm should not be zero")
+
         logger.info("Convergence criteria: %f (Threshold = %f)",
                     Crit_AH, thresh)
         cAH += [Crit_AH]
@@ -385,13 +414,15 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
 
         if estimate_hrf and estimate_sigma_h:
             logger.info("Maximization sigma_H step...")
-            logger.debug("Before: Sigma_H = %s", Sigma_H)
+            logger.debug("Before: sigma_h = %s", sigma_h)
             if gamma_h > 0:
-                sigma_h = vt.maximization_sigmaH_prior(
-                    hrf_len, Sigma_H, R, m_H, gamma_h)
+                sigma_h = vt.maximization_sigmaH_prior(hrf_len, hrf_covariance,
+                                                       hrf_regularization_prior,
+                                                       m_H, gamma_h)
             else:
-                sigma_h = vt.maximization_sigmaH(hrf_len, Sigma_H, R, m_H)
-            logger.debug("After: Sigma_H = %s", Sigma_H)
+                sigma_h = vt.maximization_sigmaH(hrf_len, hrf_covariance,
+                                                 hrf_regularization_prior, m_H)
+            logger.debug("After: sigma_h = %s", sigma_h)
 
         logger.info("Maximization (mu,sigma) step...")
         logger.debug("Before: mu_M = %s, sigma_M = %s", mu_M, sigma_M)
@@ -423,7 +454,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
             logger.debug("Beta = %s", str(Beta))
 
         logger.info("Maximization sigma noise step...")
-        UtilsC.maximization_sigma_noise(Gamma, drift, sigma_epsilone, Sigma_H,
+        UtilsC.maximization_sigma_noise(Gamma, drift, sigma_epsilone, hrf_covariance,
                                         bold_data, m_A, m_H, Sigma_A,
                                         XX.astype(np.int32), nb_voxels, hrf_len,
                                         nb_conditions, nb_scans)
@@ -431,7 +462,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         #### Computing Free Energy ####
         if estimate_hrf and estimate_labels and estimate_free_energy:
             free_energy_prev = free_energy[-1]
-            free_energy.append(vt.free_energy_computation(Sigma_A, Sigma_H, q_Z,
+            free_energy.append(vt.free_energy_computation(Sigma_A, hrf_covariance, q_Z,
                                                           nb_voxels, hrf_len,
                                                           nb_conditions,
                                                           nrls_expectation,
@@ -450,7 +481,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
         for i in xrange(loop):
             SUM_q_Z_array[m, i] = SUM_q_Z[m][i]
             mu1_array[m, i] = mu1[m][i]
-            h_norm_array[i] = h_norm[i]
+    h_norm_array = np.array(h_norm)
 
     if plot:
         font = {'size': 15}
@@ -464,25 +495,38 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
 
     compute_time_mean = compute_time[-1] / loop
 
-    if not NormFlag:
+    density_ratio = np.nan
+
+    if not constrained and not NormFlag:
         Norm = np.linalg.norm(m_H)
         m_H /= Norm
-        Sigma_H /= Norm ** 2
+        hrf_covariance /= Norm ** 2
         sigma_h /= Norm ** 2
         m_A *= Norm
         Sigma_A *= Norm ** 2
         mu_M *= Norm
         sigma_M *= Norm ** 2
+        density_ratio = -(m_H.T.dot(np.linalg.inv(hrf_covariance)).dot(m_H)/2.)
     sigma_M = np.sqrt(np.sqrt(sigma_M))
 
+    ppm_a_nrl = np.zeros((nb_voxels, nb_conditions))
+    ppm_g_nrl = np.zeros((nb_voxels, nb_conditions))
+    for condition in range(nb_conditions):
+        ppm_a_nrl[:, condition] = cpt_ppm_a_norm(m_A[:, condition], Sigma_A[condition, condition, :], 0)
+        ppm_g_nrl[:, condition] = cpt_ppm_g_norm(m_A[:, condition], Sigma_A[condition, condition, :], 0.95)
+
     #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
+
+    ppm_a_contrasts = np.zeros((nb_voxels, len(contrasts)))
+    ppm_g_contrasts = np.zeros((nb_voxels, len(contrasts)))
+
     if compute_contrasts:
         if len(contrasts) > 0:
             logger.info('Compute contrasts ...')
             nrls_conds = dict([(str(cn), m_A[:, ic])
                                for ic, cn in enumerate(condition_names)])
-            n = 0
-            for cname in contrasts:
+
+            for n, cname in enumerate(contrasts):
                 #------------ contrasts ------------#
                 contrast_expr = AExpr(contrasts[cname], **nrls_conds)
                 contrast_expr.check()
@@ -507,17 +551,20 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
                     S_tmp = Sigma_A[:, :, j]
                     CONTRASTVAR[j, n] = np.dot(np.dot(AC, S_tmp), AC)
                 #------------ variance -------------#
-                n += 1
                 logger.info('Done contrasts computing.')
+
+                ppm_a_contrasts[:, n] = cpt_ppm_a_norm(contrast, CONTRASTVAR[:, n], 0)
+                ppm_g_contrasts[:, n] = cpt_ppm_g_norm(contrast, CONTRASTVAR[:, n], 0.95)
+
         #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
 
     logger.info("Nb iterations to reach criterion: %d", loop)
     logger.info("Computational time = %s min %s s",
                 *(str(int(x)) for x in divmod(compute_time[-1], 60)))
-    logger.info('mu_M: %s', mu_M)
-    logger.info('sigma_M: %s', sigma_M)
-    logger.info("sigma_H = %s", str(sigma_h))
-    logger.info("Beta = %s", str(Beta))
+    logger.debug('mu_M: %s', mu_M)
+    logger.debug('sigma_M: %s', sigma_M)
+    logger.debug("sigma_H = %s", str(sigma_h))
+    logger.debug("Beta = %s", str(Beta))
 
     StimulusInducedSignal = vt.computeFit(m_H, m_A, X, nb_voxels, nb_scans)
     SNR = 20 * np.log(
@@ -525,6 +572,8 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     SNR /= np.log(10.)
     logger.info('SNR comp = %f', SNR)
     # ,FreeEnergyArray
-    return (loop, m_A, m_H, q_Z, sigma_epsilone, mu_M, sigma_M, Beta, drift_coeffs, drift,
-            CONTRAST, CONTRASTVAR, cA[2:], cH[2:], cZ[2:], cAH[2:], compute_time[2:],
-            compute_time_mean, Sigma_A, StimulusInducedSignal)
+    return (loop, m_A, m_H, hrf_covariance, q_Z, sigma_epsilone, mu_M, sigma_M,
+            Beta, drift_coeffs, drift, CONTRAST, CONTRASTVAR, cA[2:], cH[2:],
+            cZ[2:], cAH[2:], compute_time[2:], compute_time_mean, Sigma_A,
+            StimulusInducedSignal, density_ratio, ppm_a_nrl, ppm_g_nrl,
+            ppm_a_contrasts, ppm_g_contrasts)

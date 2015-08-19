@@ -8,57 +8,57 @@ from pyhrf.tools import resampleToGrid
 
 def compute_T_Pvalue(betas, stds_beta, mask_file, null_hyp=True):
     '''
-    Compute Tvalues statistic and Pvalue based upon estimates 
+    Compute Tvalues statistic and Pvalue based upon estimates
     and their standard deviation
     beta and std_beta for all voxels
     beta: shape (nb_vox, 1)
-    std: shape (1) 
+    std: shape (1)
     Assume null hypothesis if null_hyp is True
     '''
     from pyhrf.ndarray import xndarray
-    
+
     import sys
     sys.path.append("/home/i2bm/BrainVisa/source/pyhrf/pyhrf-free/trunk/script/WIP/Scripts_IRMf_Adultes_Solv/Scripts_divers_utiles/Scripts_utiles/")
     from Functions_fit import Permutation_test, stat_mean, stat_Tvalue, stat_Wilcoxon
-    
+
     mask = xndarray.load(mask_file).data #to save P and Tval on a map
-    
+
     BvalC = xndarray(betas, axes_names=['sagittal', 'coronal', 'axial'])
     Betasval = BvalC.flatten(mask, axes=['sagittal', 'coronal', 'axial'], new_axis='position').data
-    
+
     Stdsval = stds_beta
-    
+
     Tval = xndarray(Betasval/Stdsval, axes_names=['position']).data
-    
+
     nb_vox = Betasval.shape[0]
     nb_reg = betas.shape[1]
     dof = nb_vox - nb_reg #degrees of freedom for STudent distribution
-    assert dof>0 
-   
+    assert dof>0
+
     Probas=np.zeros(Betasval.shape)
     for i in xrange(nb_vox):
         if null_hyp:
-            #STudent distribution 
+            #STudent distribution
             from scipy.stats import t
             fmix = lambda x: t.pdf(x, dof)
         else:
             fmix = lambda t:  1/np.sqrt(2*np.pi*Stdsval[i]**2)*np.exp(- (t - Betasval[i])**2 / (2*Stdsval[i]**2) )
         Probas[i] = quad(fmix, Tval[i], float('inf'))[0]
-        
+
     Tvalues_ = xndarray(Tval, axes_names=['position'])
     Pvalues_ = xndarray(Probas, axes_names=['position'])
     Tvalues = Tvalues_.expand(mask, 'position', ['sagittal','coronal','axial'])
     Pvalues = Pvalues_.expand(mask, 'position', ['sagittal','coronal','axial'])
-    
+
     #Computation of Pvalue using permutations
     #not possible to do this actually...it was used for group level stats
     #Pvalue_t = np.zeros(Betasval.shape)
     #for i in xrange(nb_vox):
         #Pvalue_t[i] = Permutation_test(Betasval[i], n_permutations=10000, \
                     #stat = stat_Tvalue, two_tailed=False, plot_histo=False)
-    
+
     return Tvalues.data, Pvalues.data
-    
+
 def compute_roc_labels_scikit(e_labels, true_labels):
     from scikits.learn.metrics import roc_curve
     from scikits.learn.metrics import auc as compute_auc
@@ -89,7 +89,7 @@ def compute_roc_labels_scikit(e_labels, true_labels):
         # print 'sensData:'
         # print sensData[-1]
         # print 'specData:'
-        # print specData[-1]                        
+        # print specData[-1]
     sensData = np.array(sensData)
     specData = np.array(specData)
     auc = np.array(auc)
@@ -132,7 +132,7 @@ def mark_wrong_labels(labels, true_labels, lab_ca=1, lab_ci=0,false_pos=2,
         new_labels[j, np.bitwise_and(nel,tl)] = false_neg
         #print '-> marked :'
         #print labels[j,:]
-    
+
     return new_labels
 
 def compute_roc_labels(mlabels, true_labels, dthres=0.005, lab_ca=1, lab_ci=0,
@@ -161,20 +161,20 @@ def compute_roc_labels(mlabels, true_labels, dthres=0.005, lab_ca=1, lab_ci=0,
             counts = np.bincount(labs[cond,:])
             nbTrueNeg = counts[0]
             nbTruePos = counts[1] if len(counts)>1 else 0
-            
+
             fp = false_pos
             nbFalsePos = counts[fp] if len(counts)>fp else 0
-            
+
             fn = false_neg
             nbFalseNeg = counts[fn] if len(counts)>fn else 0
-            
+
             #if cond == 1 or cond == 2:
 	      #print 'cond ', cond
 	      #print 'nbTrueNeg=',nbTrueNeg
 	      #print 'nbTruePos=',nbTruePos
 	      #print 'nbFalsePos=',nbFalsePos
 	      #print 'nbFalseNeg=',nbFalseNeg
-	      
+
             if 0 and cond == 1:
                 print 'TN :', nbTrueNeg
                 print 'TP :', nbTruePos
@@ -203,11 +203,11 @@ def compute_roc_labels(mlabels, true_labels, dthres=0.005, lab_ca=1, lab_ci=0,
             else:
                 osp = oneMinusSpecificity[cond,order]
                 se = sensitivity[cond,order]
-                
+
             if osp[-1] != 1.:
                 osp = np.concatenate((osp,[1.]))
                 se = np.concatenate((se,[1.]))
-                
+
             sens[cond,:] = resampleToGrid(osp, se, spGrid)
             omspec[cond, :] = spGrid
             if 0 and cond == 1:
@@ -234,7 +234,7 @@ def compute_roc_labels(mlabels, true_labels, dthres=0.005, lab_ca=1, lab_ci=0,
 	  #area_under_ROC_curve[cond] += ((sens[cond,i+1] + sens[cond,i])/2.) * (omspec[cond,i+1] - omspec[cond,i])
 	#else:
 	  #area_under_ROC_curve[cond] += ((sens[cond,i+1]**2 + sens[cond,i]**2)/((sens[cond,i+1] - sens[cond,i])/2.)) * (omspec[cond,i+1] - omspec[cond,i])
-    
+
     return sens, omspec, auc #, area_under_ROC_curve
 
 
@@ -247,7 +247,7 @@ def cumFreq(data, thres=None):
     ccBins = (b[:-1]+b[1:])/2. # class center approximation
 ##    print 'ccBins :'
 ##    print ccBins
-    
+
     if thres != None:
         # Find bin where contrast <= thres :
         infT = (ccBins <= thres)+0
@@ -269,7 +269,7 @@ def cumFreq(data, thres=None):
 ##    print 'ccBins :'
 ##    print ccBins
 
-    
+
     # Append zeros at begining and end to finalize approximation:
     h = np.concatenate(([0],h,[0]))
     ccBins = np.concatenate(([b[0]-(b[1]-b[0])/2.0],
@@ -295,7 +295,7 @@ def gm_cdf(x, means, variances, props):
 def gm_mean(means, variances, props):
     if isinstance(means,list):
         means = np.array(means)
-    
+
     if isinstance(props,list):
         props = np.array(props)
 
@@ -307,7 +307,7 @@ def gm_var(means, variances, props):
 
     if isinstance(variances,list):
         variances = np.array(variances)
-    
+
     if isinstance(props,list):
         props = np.array(props)
 
@@ -338,29 +338,60 @@ def cpt_ppm_a_apost(means, variances, props, alpha=0.05):
     raise NotImplementedError('PPM with fixed alpha from posterior mixture '\
                                   'components is not implemented')
 
-def cpt_ppm_a_norm(mean, variance, alpha=0.05):
+def cpt_ppm_a_norm(mean, variance, alpha=0.):
     """ Compute a Posterior Probability Map (fixed alpha) by assuming a Gaussian
     distribution.
-    Expected shape of 'mean', 'variance': (voxel)
+
+    Parameters
+    ----------
+    mean : array_like
+        mean value(s) of the Gaussian distribution(s)
+    variance : array_like
+        variance(s) of the Gaussian distribution(s)
+    alpha : array_like, optional
+        quantile value(s) (default=0)
+
+    Returns
+    -------
+    ppm : array_like
+        Posterior Probability Map evaluated at alpha
     """
 
-    return norm.isf(alpha, mean, variance**.5)
+    return norm.sf(alpha, mean, variance**.5)
 
-def cpt_ppm_g_norm(mean, variance, gamma=0.):
-    return norm.sf(gamma, mean, variance**.5)
+def cpt_ppm_g_norm(mean, variance, gamma=0.95):
+    """ Compute a Posterior Probability Map (fixed gamma) by assuming a Gaussian
+    distribution.
+
+    Parameters
+    ----------
+    mean : array_like
+        mean value(s) of the Gaussian distribution(s)
+    variance : array_like
+        variance(s) of the Gaussian distribution(s)
+    gamma : array_like, optional
+        upper tail probability (default=0.95)
+
+    Returns
+    -------
+    ppm : ndarray or scalar
+        Posterior Probability Map corresponding to the upper tail probability gamma
+    """
+
+    return norm.isf(gamma, mean, variance**.5)
 
 
-# def compute_bigaussian_ppm(threshold, mean_c1, var_c1, prop_c1, 
+# def compute_bigaussian_ppm(threshold, mean_c1, var_c1, prop_c1,
 #                            mean_c2, var_c2, prop_c2, thresh_type='value'):
 #     """
-#     Calculate a posterior probability map p(A>gamma)=alpha where A follows a 
+#     Calculate a posterior probability map p(A>gamma)=alpha where A follows a
 #     bigaussian mixture defined by the input parameters:
 #     *prop_c1* Normal(*mean_c1*,*var_c1*) +
 #     *prop_c2* Normal(*mean_c2*,*var_c2*).
-    
-#     *thesh_type* can be either 'value' or 'proba'. 
+
+#     *thesh_type* can be either 'value' or 'proba'.
 #     If *thesh_type*='value' then the returned PPM is p(X>threshold).
-#     If *thesh_type*='proba' then the returned PPM is gamma so that 
+#     If *thesh_type*='proba' then the returned PPM is gamma so that
 #        p(X>gamma)=threshold
 #     """
 #     ppm = np.zeros_like(mean_c1)
@@ -373,7 +404,7 @@ def cpt_ppm_g_norm(mean, variance, gamma=0.):
 #                 np.exp(- (t - m2)**2 / (2*v2) )
 #             return val
 #         for pos in xrange(len(ppm)):
-#             ppm[pos] = quad(fmix, threshold, float('inf'), 
+#             ppm[pos] = quad(fmix, threshold, float('inf'),
 #                             (mean_c1[pos], var_c1[pos], prop_c1[pos],
 #                              mean_c2[pos], var_c2[pos], prop_c2[pos],)
 #                             )[0]
@@ -422,7 +453,7 @@ def acorr(x, maxlags=10, scale='var'):
     # x = detrend_mean(np.asarray(x))
     # c = np.correlate(x, x, mode=2)
     # c /= np.sqrt(np.dot(x,x)**2)
-    
+
 
     # if maxlags is None: maxlags = Nx - 1
 

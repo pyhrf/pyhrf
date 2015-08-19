@@ -174,7 +174,8 @@ class JDEVEMAnalyser(JDEAnalyser):
                         ("and a constraint"*self.constrained))
             (NbIter, nrls, estimated_hrf, hrf_covariance, labels, noiseVar, mu_k,
              sigma_k, Beta, L, PL, CONTRAST, CONTRASTVAR, cA, cH, cZ, cAH, cTime,
-             cTimeMean, Sigma_nrls, StimuIndSignal) = jde_vem_bold(
+             cTimeMean, Sigma_nrls, StimuIndSignal, density_ratio, ppm_a_nrl,
+             ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts) = jde_vem_bold(
                  graph, data, Onsets, self.hrfDuration, self.nbClasses, TR,
                  beta, self.dt, scale, self.estimateSigmaH, self.sigmaH,
                  self.nItMax, self.nItMin, self.estimateBeta, self.PLOT,
@@ -247,7 +248,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                              axes_domains={"time": hrf_time})
 
             repeated_hrf_covar = np.repeat(np.diag(hrf_covariance), nbv).reshape(-1, nbv)
-            outputs["hrf_covariance_mapped"] = xndarray(repeated_hrf_covar,
+            outputs["hrf_variance_mapped"] = xndarray(repeated_hrf_covar,
                                                         value_label="HRFs covariance",
                                                         axes_names=["time", "voxel"],
                                                         axes_domains={"time": hrf_time})
@@ -255,6 +256,18 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs['roi_mask'] = xndarray(np.zeros(nbv)+roiData.get_roi_id(),
                                         value_label="ROI",
                                         axes_names=['voxel'])
+
+            outputs["density_ratio"] = xndarray(np.zeros(nbv)+density_ratio,
+                                                value_label="Density Ratio",
+                                                axes_names=["voxel"])
+
+            outputs["ppm_a_nrl"] = xndarray(ppm_a_nrl, value_label="PPM NRL alpha fixed",
+                                            axes_names=["voxel", "condition"],
+                                            axes_domains=domCondition)
+
+            outputs["ppm_g_nrl"] = xndarray(ppm_g_nrl, value_label="PPM NRL gamma fixed",
+                                            axes_names=["voxel", "condition"],
+                                            axes_domains=domCondition)
 
             h = estimated_hrf
             nrls = nrls.transpose()
@@ -304,6 +317,17 @@ class JDEVEMAnalyser(JDEAnalyser):
                                             value_label="Normalized Contrast",
                                             axes_names=['voxel','contrast'],
                                             axes_domains=domContrast)
+
+                outputs["ppm_a_contrasts"] = xndarray(ppm_a_contrasts,
+                                                     value_label="PPM Contrasts alpha fixed",
+                                                     axes_names=["voxel", "contrast"],
+                                                     axes_domains=domContrast)
+
+                outputs["ppm_g_contrasts"] = xndarray(ppm_g_contrasts,
+                                                     value_label="PPM Contrasts alpha fixed",
+                                                     axes_names=["voxel", "contrast"],
+                                                     axes_domains=domContrast)
+
 
             ################################################################################
             # CONVERGENCE
