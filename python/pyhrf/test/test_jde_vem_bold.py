@@ -16,9 +16,9 @@ from pyhrf.jde.models import simulate_bold
 from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
 from pyhrf.vbjde.vem_bold_constrained import (Main_vbjde_Extension_constrained,
                                               Main_vbjde_Python_constrained)
-from pyhrf.vbjde.vem_bold import (Main_vbjde_Extension,
-                                  Main_vbjde_Extension_stable,
-                                  Main_vbjde_Python, Main_vbjde)
+from pyhrf.vbjde.vem_bold_old import (Main_vbjde_Extension,
+                                      Main_vbjde_Extension_stable,
+                                      Main_vbjde_Python, Main_vbjde)
 
 
 logger = logging.getLogger(__name__)
