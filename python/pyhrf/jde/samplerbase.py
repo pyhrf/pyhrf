@@ -290,20 +290,20 @@ class GibbsSampler:
                 #rec_error = np.mean(rec_error_j/bold2)   # Univariate analysis
                 rec_error = np.mean(rec_error_j) / np.mean(bold2)
                 rerror = np.append(rerror, rec_error)
-    
+
                 # Loglikelihood
                 var_noise = self.get_variable('noise_var').currentValue
                 loglh = 0
                 N = r.shape[0]
                 J = r.shape[1]
-                for j in np.arange(0., J):
+                for j in np.arange(0, J):
                     loglh -= (np.log(np.abs(2*np.pi*var_noise[j]*N)) + \
                         np.dot(r[:,j].T,r[:,j])/var_noise[j] / 2)
                 loglkhd = np.append(loglkhd, loglh)
 
             except AttributeError:
                 pass
-                
+
 
             # Some verbose about online profiling :
             now = time.time()
@@ -493,12 +493,12 @@ class GibbsSampler:
                                 axes_domains=axes_domains,
                                 value_label='BOLD')
                 # if self.dataInput.simulData is not None:
-    
+
                     # s = xndarray(self.dataInput.simulData.stimInduced,
                                # axes_names=axes_names,
                                # axes_domains=axes_domains,
                                # value_label='BOLD')
-    
+
                     # outputs['fit'] = stack_cuboids([s,cfit], 'type',
                                                    # ['simu', 'fit'])
                 # else:
