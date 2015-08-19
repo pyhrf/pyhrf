@@ -51,7 +51,7 @@ cExtensions = [
 
 setup(
     name = "pyhrf",
-    version = "0.4",
+    version = "0.4.1",
     description = ("PyHRF is a set of tools to analyze fMRI data and "
                    "specifically study hemodynamics."),
     long_description = open("README.rst").read(),
