@@ -93,8 +93,8 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     plot : bool, optional
         if True, plot some images of some variables (TODO: describe, or better,
         remove)
-    contrasts : list, optional
-        list of contrasts to compute
+    contrasts : OrderedDict, optional
+        dict of contrasts to compute
     compute_contrasts : bool, optional
         if True, compute the contrasts defined in contrasts
     gamma_h : float (TODO: check)
@@ -142,7 +142,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     logger.info("Fast EM with C extension started.")
 
     if not contrasts:
-        contrasts = []
+        contrasts = OrderedDict()
 
     np.random.seed(seed)
 
@@ -156,8 +156,7 @@ def jde_vem_bold(graph, bold_data, onsets, hrf_duration, nb_classes, tr, beta,
     gradient_step = 0.003
     it_max_grad = 200
     thresh = 1e-5
-    thresh_free_energy = 1e-5 if estimate_free_energy else 10  # TODO: debug remove
-
+    thresh_free_energy = 1e-5
     # Initialize sizes vectors
     hrf_len = np.int(np.ceil(hrf_duration / dt)) + 1
     nb_conditions = len(onsets)

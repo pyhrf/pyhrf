@@ -266,7 +266,7 @@ def load_vol_bold_and_mask(bold_files, mask_file):
 
     if not np.allclose(np.round(mask), mask):
         raise Exception("Mask is not n-ary (%s)" % mask_file)
-    mask = mask.astype(np.int32)
+    mask = np.round(mask).astype(np.int32)
 
     logger.info('Mask has shape %s\nMask min value: %d\n'
                 'Mask max value: %d\nMask has %d parcels',

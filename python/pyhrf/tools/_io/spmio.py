@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+import string
+
+from collections import OrderedDict
+
 import numpy
 try:
     from scipy.io.mio import loadmat
@@ -24,10 +29,86 @@ def load_paradigm_from_mat(spmMatFile):
     return (get_onsets_from_spm_dict(spm), get_tr_from_spm_dict(spm))
 
 
-def load_contrasts(spmMatFile):
-    d = loadmat(spmMatFile)
-    spm = d['SPM']
-    return get_contrasts(spm)
+def load_contrasts_from_mat(spm_mat_file):
+    """Returns a dictionary from an SPM.mat file of contrasts and the string
+    linear combination of conditions for the corresponding contrast.
+
+    Parameter
+    ---------
+    spm_mat_file : string
+        path to the SPM.mat file to load contrasts from
+
+    Returns
+    -------
+    contrasts : dict
+        dictionary of {contrast_name: linear_condition_combination}
+    """
+
+    spm = loadmat(spm_mat_file)
+    spm = spm["SPM"]
+
+    conditions = get_conditions_list_from_mat(spm)
+    contrasts_vect = get_contrasts(spm)
+
+    return OrderedDict((clean_string_for_xml(str(contrast[0][0])),
+                        contrast_vec_to_name(contrast[1][:len(conditions)], conditions))
+                       for contrast in contrasts_vect if str(contrast[2][0]) == "T")
+
+
+def get_conditions_list_from_mat(spm):
+    """Returns a list of conditions names from an SPM.mat file with the same
+    order.
+
+    Parameter
+    ---------
+    spm : the SPM field of SPM structure from loadmat
+
+    Returns
+    -------
+    conditions : list
+        list of SPM.mat ordered conditions names
+    """
+
+    return [str(condition[0][0][0]) for condition in
+                  get_field(get_field(get_field(spm, 'Sess').item()[0][0], "U"),
+                            "name")[0]]
+
+
+def contrast_vec_to_name(contrast_vector, conditions):
+    """Returns a string of linear combination of `conditions` strings in respect
+    of `contrast_vector` factors.
+
+    Parameters
+    ----------
+    contrast_vector : array like
+        this is a vector of factors of size `len(conditions)`
+    conditions : list
+        list of conditions names
+
+    Returns
+    -------
+    linear_combination : string
+    """
+
+    return "".join([((str(numpy.sign(factor))[0:-1]+ "+" * bool(factor>0) + conditions[i])
+                     * abs(factor)) for i, factor in
+                    enumerate(contrast_vector)])
+
+
+def clean_string_for_xml(name):
+    """Return an equivalent of name without any other characters than
+    alphanumerics ones, underscores and dashes.
+
+    Parameter
+    --------
+    name : str
+
+    Returns
+    -------
+    cleaned_name : str
+    """
+
+    return "".join(c for c in "_".join(name.split()) if c in string.letters + string.digits +"-_")
 
 
 def load_scalefactor_from_mat(spmMatFile):

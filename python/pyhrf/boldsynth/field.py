@@ -16,11 +16,11 @@ def genPepperSaltField(size, nbLabels, initProps=None):
 
     data = _np.array([], dtype=int)
     for ic in xrange(nbLabels-1):
-        cs = _np.round(size * initProps[ic])
+        cs = int(_np.round(size * initProps[ic]))
         data = _np.hstack((data, _np.zeros(cs) + ic))
     # Calculate last class size from the sum of the others :
     cs = size - len(data)
-    data = _np.hstack((data, _np.zeros(cs) + nbLabels - 1))    
+    data = _np.hstack((data, _np.zeros(cs) + nbLabels - 1))
     return _np.random.permutation(data).astype(int)
 
 class random_field_generator:
@@ -35,13 +35,13 @@ class random_field_generator:
 def genPotts(graph, beta, nbLabels=2, labelsIni=None, method='SW',
              weights=None):
     """
-    Simulate a realisation of a Potts Field with spatial correlation amount 
+    Simulate a realisation of a Potts Field with spatial correlation amount
     'beta'.
     'graph' is list of lists, ie a neighbors for each node index.
     'nbLabels' is the number of labels
     'method' can be either 'SW' (swensdsen-wang) or 'gibbs'
     """
-    
+
     if method == 'SW':
         nbIt = 30
         if labelsIni is None:
@@ -77,7 +77,7 @@ def genPottsMap(mask, beta, nbLabels, method='SW'):
     ## generate a Potts realisation:
     labels = genPotts(g, beta, nbLabels)
     labelVolume = _np.zeros(mask.shape, dtype=int)
-    labelVolume[_np.where(mask)] = labels    
+    labelVolume[_np.where(mask)] = labels
 
     return labelVolume
 
