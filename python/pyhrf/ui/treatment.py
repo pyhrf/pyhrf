@@ -34,6 +34,7 @@ from pyhrf import (xmlio, DEFAULT_BOLD_VOL_FILE, DEFAULT_MASK_VOL_FILE,
                    REALISTIC_REAL_DATA_MASK_VOL_FILE, DEFAULT_PARADIGM_CSV)
 from pyhrf.tools import unstack_trees  # stack_trees
 from pyhrf.ui.jde import JDEMCMCAnalyser
+from pyhrf.tools.cpus import available_cpu_count
 
 
 logger = logging.getLogger(__name__)
@@ -211,7 +212,10 @@ class FMRITreatment(xmlio.XmlInitable):
                 parallel_verb = 10
 
             if n_jobs is None:
-                n_jobs = cfg_parallel['nb_procs']
+                if cfg_parallel["nb_procs"]:
+                    n_jobs = cfg_parallel["nb_procs"]
+                else:
+                    n_jobs = available_cpu_count()
 
             p = Parallel(n_jobs=n_jobs, verbose=parallel_verb)
             result = p(delayed(exec_t)(t) for t in self.split(output_dir=None))
