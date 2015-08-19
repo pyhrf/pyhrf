@@ -58,7 +58,7 @@ class VEMBOLDTest(unittest.TestCase):
         tjde_vem.run()
 
     @unittest.skipIf(not tools.is_importable('cvxpy'),
-                     'joblib (optional dep) is N/A')
+                     'cvxpy (optional dep) is N/A')
     def test_vem_bold_constrained(self):
         """ Test BOLD VEM constraint function.
         Estimation accuracy is not tested.
@@ -119,7 +119,7 @@ class VEMBOLDTest(unittest.TestCase):
                                                                          NitMax=2, NitMin=2)
 
     @unittest.skipIf(not tools.is_importable('cvxpy'),
-                     'joblib (optional dep) is N/A')
+                     'cvxpy (optional dep) is N/A')
     def test_vem_bold_constrained_python(self):
         """ Test BOLD VEM constraint function.
         Estimation accuracy is not tested.
