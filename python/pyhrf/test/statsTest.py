@@ -24,14 +24,14 @@ class RPNormTest(unittest.TestCase):
         #plt.show()
 
 class PPMTest(unittest.TestCase):
-    
+
     def setUp(self):
         def mixt(m,v,p):
             assert len(m) == len(v)
             assert len(m) == len(p)
             return {'means':np.array(m), 'variances':np.array(v),
                     'props':np.array(p)}
-        
+
         self.mixture_inactive = mixt([0.,0.], [1., 1.], [1., 0.])
 
         self.mixture_active = mixt([0.,100.], [1., 1.], [0., 1.])
@@ -44,23 +44,23 @@ class PPMTest(unittest.TestCase):
         self.mixt_stack = (self.mixture_inactive, self.mixture_active,
                            self.mixture_half)
         self.mixt_map = stack_trees(self.mixt_stack, join_func=stack_comp)
-        
+
         self.n_pos = len(self.mixt_stack)
 
         if 0:
             print 'self.mixture_inactive:'
             print self.mixture_inactive
-    
+
             print 'self.mixture_active:'
             print self.mixture_active
-    
+
             print 'self.mixture_half:'
             print self.mixture_half
-    
-    
+
+
             print 'self.mixt_map:'
             pprint(self.mixt_map)
-    
+
 
     def _test_gm(self, means, variances, props, n):
         samples = gm_sample(means, variances, props, n)
@@ -78,7 +78,7 @@ class PPMTest(unittest.TestCase):
 
     def test_gm_sample_half(self):
         self._test_gm(n=500000, **self.mixture_half)
-                
+
     def test_gm_cdf(self):
         vthresh = 0.
         if 0:
@@ -91,55 +91,55 @@ class PPMTest(unittest.TestCase):
         gamma = 0.
         assert_array_equal(cpt_ppm_g_apost(gamma=gamma, **self.mixt_map),
                            [0.5,1.,0.5])
-        
+
     def test_ppm_a_mcmc(self):
         nsamples = 500000
         mixt_map_samples = np.zeros((nsamples,self.n_pos))
         for i,mixt in enumerate(self.mixt_stack):
             mixt_map_samples[:,i] = gm_sample(n=nsamples, **mixt)
-        
+
         alpha = .05
         ppm = cpt_ppm_a_mcmc(mixt_map_samples, alpha)
         #print 'ppm_a_mcmc:', ppm
-        #assert_allclose(ppm[0], [1.645], rtol=1e-2) 
-        assert_almost_equal(ppm[0], [1.645], decimal=2) 
+        #assert_allclose(ppm[0], [1.645], rtol=1e-2)
+        assert_almost_equal(ppm[0], [1.645], decimal=2)
         #todo theoretical calculus for mixt_active and mixt_half
 
     def test_ppm_g_mcmc(self):
-        
+
         nsamples = 500000
         mixt_map_samples = np.zeros((nsamples,self.n_pos))
         for i,mixt in enumerate(self.mixt_stack):
             mixt_map_samples[:,i] = gm_sample(n=nsamples, **mixt)
-        
+
         gamma = 0.
         ppm = cpt_ppm_g_mcmc(mixt_map_samples, gamma)
         #print 'ppm_g_mcmc:', ppm
         #assert_allclose(ppm, [0.5,1.,0.5], rtol=1e-2)
         assert_almost_equal(ppm, [0.5,1.,0.5], decimal=2)
-        
+
     #def test_ppm_a_apost()
 
     def test_ppm_a_norm(self):
-        
+
         means = np.array([0., 1., 10.])
         variances = np.array([1., 1., 1.])
 
-        alpha = .05
+        alpha = 0.
 
         # assert_allclose(cpt_ppm_a_norm(means, variances, alpha),
         #                 means + 1.645, rtol=1e-2)
         assert_almost_equal(cpt_ppm_a_norm(means, variances, alpha),
-                        means + 1.645, decimal=2)
+                        [0.5, .841, 1.], decimal=2)
 
     def test_ppm_g_norm(self):
-        
+
         means = np.array([0., 1., 10.])
         variances = np.array([1., 1., 1.])
 
-        gamma = 0.
+        gamma = 0.95
 
         # assert_allclose(cpt_ppm_g_norm(means, variances, gamma),
         #                 [0.5, .841, 1.], rtol=1e-2)
         assert_almost_equal(cpt_ppm_g_norm(means, variances, gamma),
-                        [0.5, .841, 1.], decimal=2)
+                        means - 1.645, decimal=2)
