@@ -28,8 +28,8 @@ We officially support Ubuntu 12.04, Ubuntu 14.04 Debian stable (jessie) and Fedo
 
 For **windows users**, a linux distribution can be installed easely inside a virtual machine such as Virtual Box. This wiki page explains `how to install ubuntu from scratch in Virtual Box <http://www.wikihow.com/Install-Ubuntu-on-VirtualBox>`_ or you can get some `free VirtualBox images <http://virtualboxes.org/images/ubuntu/>`_.
 
-**Requirements / Dependencies**
-###############################
+Requirements / Dependencies
+###########################
 
 Dependencies are:
     - `python <http://www.python.org>`_ 2.5, 2.6 or 2.7 **with development headers**
@@ -91,8 +91,8 @@ If you have another distribution or are an advanced user, consider `installing p
 
 .. _Pyhrf download:
 
-**PyHRF download**
-##################
+PyHRF download
+##############
 
 Release tarball
 ***************
@@ -120,8 +120,8 @@ Then, to get the latest changes afterwards::
 
 .. _Pyhrf installation:
 
-**PyHRF Installation**
-######################
+PyHRF Installation
+##################
 
 In the directory where the pyhrf tarball has been decompressed or in the pyhrf git repository, you can install it globally or locally:
 
@@ -149,8 +149,8 @@ On Ubuntu and Debian, you need to add the commands folder to your ``PATH`` envir
 
     $ pyhrf_maketests
 
-**Configuration**
-#################
+Configuration
+#############
 
 Package options are stored in ``$HOME/.pyhrf/config.cfg``, which is created after the installation. It handles global package options and the setup of parallel processing. Here is the default content of this file (section order may change)::
 

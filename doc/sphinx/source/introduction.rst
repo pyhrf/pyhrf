@@ -42,8 +42,7 @@ pyhrf is mainly written in Python, with some C-extension that handle computation
 algorithms. The package relies on classical scientific libraries: numpy, scipy, matplotlib as well as Nibabel to
 handle input/outputs and NiPy which provides tools for functional data analysis. 
 
-pyhrf can be used in a stand-
-alone fashion and provides a set of simple commands in a modular fashion. The setup process is handled through
+pyhrf can be used in a stand-alone fashion and provides a set of simple commands in a modular fashion. The setup process is handled through
 XML files which can be adapted by the user from a set of templates. This format was chosen for its hierarchical
 organisation which suits the nested nature of the algorithm parametrisations. A dedicated XML editor is provided
 with a PyQt graphical interface for a quicker edition and also a better review of the treatment parameters. When
