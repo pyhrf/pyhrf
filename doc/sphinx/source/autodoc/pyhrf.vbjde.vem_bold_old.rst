@@ -1,7 +1,7 @@
-pyhrf.vbjde.vem_bold_new module
+pyhrf.vbjde.vem_bold_old module
 ===============================
 
-.. automodule:: pyhrf.vbjde.vem_bold_new
+.. automodule:: pyhrf.vbjde.vem_bold_old
     :members:
     :undoc-members:
     :show-inheritance:
