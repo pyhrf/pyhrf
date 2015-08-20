@@ -14,7 +14,7 @@ Overview
 
 PyHRF is a set of tools for within-subject fMRI data analysis, focused on the characterization of the hemodynamics. 
 
-Within the chain of fMRI data processing, these tools provide alternatives to the classical within-subject GLM estimation step. The inputs are preprocessed within-subject data and the outputs are statistical maps and/or fitted HRFs.
+Within the chain of fMRI data processing, these tools provide alternatives to the classical within-subject GLM fitting procedure. The inputs are preprocessed images (except spatial smoothing) and the outputs are the contrast maps and the HRF estimates.
 
 The package is mainly written in Python and provides the implementation of the two following methods:
 
@@ -48,15 +48,16 @@ Site content:
 Licence and authors
 -------------------
 
-PyHRF is currently under the `CeCILL licence version 2 <http://www.cecill.info>`_. It is mainly developed at the `LNAO <http://www.lnao.fr>`_ (Neurospin, CEA) and the `MISTIS team <http://mistis.inrialpes.fr/>`_ (INRIA Rhones-Alpes).
+PyHRF is currently under the `CeCILL licence version 2 <http://www.cecill.info>`_. Originally developed by the former `LNAO <http://www.lnao.fr>`_ (Neurospin, CEA), pyHRF is now entering (since Sep 2014) in a new era under the joint collaboration of the the `Parietal team <http://parietal.inria.fr/>`_ (INRIA Saclay) and the `MISTIS team <http://mistis.inrialpes.fr/>`_ (INRIA Rhones-Alpes).
 
-Authors are:
-         Thomas Vincent\ :sup:`(2)`, Philippe Ciuciu\ :sup:`(1)`, Lotfi Chaari\ :sup:`(2)`, Solveig Badillo\ :sup:`(1)`, Christine Bakhous\ :sup:`(2)`
+People who have significantly contributed to the development are (by chronological order):
+         Thomas Vincent\ :sup:`(1,3)`, Philippe Ciuciu\ :sup:`(1,2)`, Lotfi Chaari\ :sup:`(3)`, Solveig Badillo\ :sup:`(1,2)`, Christine Bakhous\ :sup:`(3)`, Aina Frau-Pascual\ :sup:`(2,3)` and Thomas Perret\ :sup:`(3)`
 
          1. CEA/DSV/I2BM/Neurospin, LNAO, Gif-Sur-Yvette, France
+         1. INRIA/CEA Parietal, Gif-Sur-Yvette, France
          2. INRIA, MISTIS, Grenoble, France
 
 Contacts
 ++++++++
 
-thomas.tv.vincent@gmail.com, philippe.ciuciu@cea.fr        
+philippe.ciuciu@cea.fr, thomas.perret@inria.fr, thomas.tv.vincent@gmail.com        
