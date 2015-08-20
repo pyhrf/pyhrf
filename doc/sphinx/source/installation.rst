@@ -24,7 +24,7 @@
 ==============
 
 Instructions are given for linux and python2.7. The package is mainly developed and tested under Ubuntu 14.04, we then recommend this distribution.
-We officially support Ubuntu 12.04, Ubuntu 14.04 and Fedora 20.
+We officially support Ubuntu 12.04, Ubuntu 14.04 Debian stable (jessie) and Fedora 21 and 22.
 
 For **windows users**, a linux distribution can be installed easely inside a virtual machine such as Virtual Box. This wiki page explains `how to install ubuntu from scratch in Virtual Box <http://www.wikihow.com/Install-Ubuntu-on-VirtualBox>`_ or you can get some `free VirtualBox images <http://virtualboxes.org/images/ubuntu/>`_.
 
@@ -53,56 +53,19 @@ Optional dependencies:
 Linux-based
 ***********
 
-Ubuntu 12.04
-============
+Please refer to the page corresponding to your distribution.
 
-The following has been tested on a new installed Ubuntu 12.04.5 LTS version.
+`Ubuntu 12.04 <installation_ubuntu1204>`
+========================================
 
-Install the following packages::
+`Ubuntu 14.04 <installation_ubuntu1404>`
+========================================
 
-    $ sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-pip python-sympy gcc
+`Debian stable (jessie) <installation_debianstable>`
+====================================================
 
-The version of nibabel and nipy packages available in the Ubuntu 12.04 repositories are too old, install newer version with::
-
-    $ pip install --user nibabel
-    $ pip install --user nipy
-
-Optional dependencies::
-
-    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-pygraphviz python-PIL python-munkres
-
-Ubuntu 14.04
-============
-
-The following has been tested on a new installed Ubuntu 14.04.1 LTS version.
-
-Required packages::
-
-    $ sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-nibabel python-nipy
-
-Optional dependencies::
-
-    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-pygraphviz python-PIL python-munkres
-
-Debian 7 (wheezy)
-=================
-
-The following has been tested on a new installed Debian 7.7.
-
-Required packages::
-
-    $ sudo apt-get install python-dev python-numpy python-scipy python-matplotlib python-pip python-sympy python-nibabel gcc
-
-Not available on system repositories::
-
-    $ pip install --user nipy
-
-Optional dependencies::
-
-    $ sudo apt-get install python-qt4 python-scikits-learn python-joblib python-sphinx python-pygraph python-pygraphviz python-PIL python-munkres
-
-Fedora 20
-=========
+`Fedora 21 <installation_fedora21>`
+===================================
 
 The following has been tested on a new installed Fedora 20.
 
@@ -120,6 +83,11 @@ Optional dependencies::
 
     $ sudo yum install PyQt4 python-matplotlib-qt4 graphviz-python python-sphinx python-scikit-learn python-pillow python-joblib
     $ pip install --user munkres
+
+`Fedora 22 <installation_fedora22>`
+===================================
+
+If you have another distribution or are an advanced user, consider `installing pyhrf in a virtual environment <installation_venv>`
 
 .. _Pyhrf download:
 
