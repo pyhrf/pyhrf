@@ -14,7 +14,7 @@ Overview
 
 PyHRF is a set of tools for within-subject fMRI data analysis, focused on the characterization of the hemodynamics. 
 
-Within the chain of fMRI data processing, these tools provide alternatives to the classical within-subject GLM estimation step. The inputs are preprocessed within-subject data and the outputs are statistical maps and/or fitted HRFs.
+Within the chain of fMRI data processing, these tools provide alternatives to the classical within-subject GLM fitting procedure. The inputs are preprocessed images (except spatial smoothing) and the outputs are the contrast maps and the HRF estimates.
 
 The package is mainly written in Python and provides the implementation of the two following methods:
 
