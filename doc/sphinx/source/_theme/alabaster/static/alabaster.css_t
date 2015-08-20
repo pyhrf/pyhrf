@@ -152,6 +152,7 @@ div.sphinxsidebar h3 a:hover {
 }
 
 div.sphinxsidebar p {
+    display: inline-block;
     color: {{ theme_sidebar_text }};
     margin: 10px 0;
 }

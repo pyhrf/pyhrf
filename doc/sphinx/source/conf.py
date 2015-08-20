@@ -110,6 +110,7 @@ html_theme_options = {
     "github_button": "true",
     "github_banner": "github_banner.png",
     "travis_button": "true",
+    "coveralls_button": "true",
     "show_related": "true",
     "sidebar_link": "#F0F0F0",
     "sidebar_text": "#444",
