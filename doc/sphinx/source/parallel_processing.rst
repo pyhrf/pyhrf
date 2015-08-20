@@ -104,7 +104,7 @@ Connexion with the server
 To enable the connexion from the client to the server, the public key of the local user must be saved in the authorized keys of the server.
 To enable the connexion from the server to the client, the public key of the server must be saved in the authorized keys of the local user.
 
-.. image:: /figs/client_server.png.png
+.. image:: /figs/client_server.png
 
 Configure the connexion with the server, file: ~/.pyhrf/config.cfg
 

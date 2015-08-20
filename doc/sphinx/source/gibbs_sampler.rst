@@ -158,7 +158,7 @@ Several initialization scenarios are available and are specified by the argument
 
 .. literalinclude:: code_examples/gibbs_init.py
    :language: python
-   :emphasize-lines: 28-42,65,73
+   :emphasize-lines: 30-44,65,73
    :linenos:
 
 

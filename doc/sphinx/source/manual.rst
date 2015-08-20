@@ -7,9 +7,9 @@ Manual
     .. toctree::
        :maxdepth: 1
 
-       volume_treatment.rst
+       volume_processing.rst
        paradigm.rst
-       surface_treatment.rst
+       surface_processing.rst
        parallel_processing.rst
        commands.rst
        data_management.rst

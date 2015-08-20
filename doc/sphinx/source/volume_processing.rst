@@ -1,4 +1,4 @@
-.. _volume_treatment:
+.. _volume_processing:
 
 Volume processing
 *****************

@@ -72,6 +72,7 @@ The input parcellation ``parcellation.nii`` looks like:
 
     .. image:: figs/pyhrf_parcellation_extract_input.png
        :width: 100pt
+
 ::
         
         pyhrf_parcellation_extract parcellation.nii 36 136 -o parcellation_sub.nii
@@ -166,8 +167,8 @@ Options
        -v VERBOSELEVEL, --verbose=VERBOSELEVEL
                            { 0 :    'no verbose' 1 :    'minimal verbose' 2 :
                              'main steps' 3 :    'main function calls' 4 :    'main
-                           variable values' 5 :    'detailled variable values' 6
-                           :    'debug (everything)' }
+                             variable values' 5 :    'detailled variable values' 6
+                            :    'debug (everything)' }
        -s, --shell           Make a shell script rather than a python script
 
         
