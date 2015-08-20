@@ -1,5 +1,4 @@
-
-.. _surface_treatment:
+.. _surface_processing:
 
 ======================================================= 
 Analysis of fMRI data projected on the cortical surface
@@ -43,6 +42,6 @@ The default setup of the morphologist treatment produces meshes in a Brainvisa-s
 
 .. _data_projection:
 
-.. _pyhrf_surface_treatment:
+.. _pyhrf_surface_processing:
 
 
