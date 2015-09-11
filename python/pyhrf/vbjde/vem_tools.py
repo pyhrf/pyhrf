@@ -12,6 +12,7 @@ import scipy as sp
 
 from numpy.matlib import *
 from scipy.linalg import toeplitz
+from scipy.optimize import fmin_slsqp
 
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 # Tools
 ##############################################################
 
-eps = 1e-6
+eps = np.spacing(1)
 
 
 def mult_old(v1, v2):
@@ -268,6 +269,61 @@ def roc_curve(dvals, labels, rocN=None, normalize=True):
             area /= (TP * FP)
 
     return fpc, tpc, area
+
+
+def norm1_constraint(function, variance):
+    """Returns the function constrained with optimization strategy.
+
+    Parameters
+    ----------
+    function : array_like
+        function to optimize under norm1 constraint
+    variance : array_like
+        variance of the `function`, must be the same size
+
+    Returns
+    -------
+    optimized_function : numpy array
+
+    Raises
+    ------
+    ValueError
+        If `len(variance) != len(function)`
+
+    """
+
+    variance_inv = np.linalg.inv(variance)
+
+    current_level = logger.getEffectiveLevel()
+    if current_level >= logging.WARNING:
+        disp = 0
+    elif current_level >= logging.INFO:
+        disp = 1
+    else:
+        disp = 2
+
+    def minimized_function(fct):
+        """Function to minimize"""
+        return np.dot(np.dot((fct - function).T, variance_inv), (fct - function))
+
+    def norm1_constraint_equation(fct):
+        """Norm2(fct) == 1"""
+        return np.linalg.norm(fct, 2) - 1
+
+    def first_element_constraint(fct):
+        """fct[0] == 0"""
+        return fct[0]
+
+    def last_element_constraint(fct):
+        """fct[-1] == 0"""
+        return fct[-1]
+
+    return fmin_slsqp(minimized_function, function,
+                      eqcons=[norm1_constraint_equation,
+                              first_element_constraint,
+                              last_element_constraint],
+                      bounds=[(None, None)] * (len(function)), disp=disp)
+
 
 # Expectation functions
 ##############################################################
