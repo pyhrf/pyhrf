@@ -21,6 +21,31 @@ Current development
 
 -----------------------------------
 
+Release 0.4.1.post1
++++++++++++++++++++
+
+Fixes:
+------
+
+- missing function (#135)
+- nipy version required for installation (#134)
+
+Release 0.4.1
++++++++++++++
+
+Fixes:
+------
+
+- logging level not set by command line (#113)
+- error with VEM algorithm (#115)
+
+Enhancements:
+-------------
+
+- clean and update setup.py (#84)
+- update travis configuration file (#123)
+
+
 Release 0.4
 +++++++++++
 

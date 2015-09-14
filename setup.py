@@ -51,7 +51,7 @@ cExtensions = [
 
 setup(
     name = "pyhrf",
-    version = "0.4.1",
+    version = "0.4.1.post1",
     description = ("PyHRF is a set of tools to analyze fMRI data and "
                    "specifically study hemodynamics."),
     long_description = open("README.rst").read(),
@@ -73,7 +73,7 @@ setup(
                         "matplotlib>=1.1,<1.4",
                         "nibabel>=1.1",
                         "sympy>=0.7",
-                        "nipy==0.3.0"],
+                        "nipy>=0.3.0"],
     extras_require = {"Ward": ["scikit-learn>=0.10"],
                       "parallel": ["joblib>=0.5"],
                       "cluster": ["soma-workflow"],
