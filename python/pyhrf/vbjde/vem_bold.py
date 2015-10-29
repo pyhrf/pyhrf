@@ -97,7 +97,7 @@ def Main_vbjde_Extension(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt, sca
             XX[nc, :, :] = X[condition]
             nc += 1
     else:
-        X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
+        X, XX, condition_names = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
     logger.info("Design matrix created ...")
 
     order = 2

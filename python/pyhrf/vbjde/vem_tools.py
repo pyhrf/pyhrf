@@ -128,10 +128,7 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
         ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
     x_tmp2 = np.zeros_like(x_tmp)
-    print x_tmp.shape
-    print firstrow.shape
-    print np.arange(0, firstrow.shape[0], tr / dt)
-    for ix in np.arange(0, firstrow.shape[0], tr / dt):
+    for ix in np.arange(tr / dt, firstrow.shape[0], tr / dt):
         x_tmp2[:, ix] = x_tmp[:, ix]       
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp2[os_indexes]
@@ -378,7 +375,6 @@ def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
     #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
     #sigmaH = (-D + sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
     sigmaH = (-(D-1) + sqrt((D-1) * (D-1) + 8 * gamma_h * alpha)) / (4*gamma_h)
-
     return sigmaH
 
 
@@ -394,8 +390,7 @@ def maximization_sigma_noise(Y, X, m_A, m_H, Sigma_H, Sigma_A, PL, sigma_epsilon
             for k2 in X:
                 Htilde[m, m2] = np.dot(
                     np.dot(np.dot(m_H.transpose(), X[k].transpose()), X[k2]), m_H)
-                Htilde[
-                    m, m2] += (np.dot(np.dot(Sigma_H, X[k].transpose()), X[k2])).trace()
+                Htilde[m, m2] += (np.dot(np.dot(Sigma_H, X[k].transpose()), X[k2])).trace()
                 m2 += 1
             S += m_A[i, m] * np.dot(X[k], m_H)
             m += 1
@@ -497,7 +492,7 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_M, sigma_M, m_H, Sigma_H,
                        neighboursIndexes, maxNeighbours, Beta, sigma_epsilone,
                        XX, Gamma, Det_Gamma, XGamma, J, D, M, N, K, S, Model):
 
-        # First part (Entropy):
+    # First part (Entropy):
     EntropyA = A_Entropy(Sigma_A, M, J)
     EntropyH = H_Entropy(Sigma_H, D)
     EntropyZ = Z_Entropy(q_Z, M, J)
