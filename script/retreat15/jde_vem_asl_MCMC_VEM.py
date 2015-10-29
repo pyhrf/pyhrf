@@ -29,7 +29,7 @@ import pyhrf.sandbox.physio as phym
 from pyhrf import FmriData
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.ui.jde import JDEMCMCAnalyser
-from pyhrf.ui.vb_jde_analyser_asl import JDEVEMAnalyser
+from pyhrf.ui.vb_jde_analyser_asl_fast import JDEVEMAnalyser
 from pyhrf.ndarray import xndarray
 from pyhrf.sandbox.physio_params import PHY_PARAMS_FRISTON00, PHY_PARAMS_KHALIDOV11
 
@@ -47,142 +47,162 @@ rc('font', family='sans serif', size=23)
 
 def main():
 
-    # Folder names
-    fig_prefix = 'vem_asl_MCMC_VEM_dur0_'
-    simulation_dir = fig_prefix + 'simulated'
-    fig_dir = fig_prefix + 'figs'
-
     np.random.seed(48258)
 
+    prior_types = np.array(['omega', 'balloon', 'no'])
+    #prior_types = np.array(['omega', 'no'])
+    #prior = prior_types[1]
+    noise_scenarios = np.array(['low_snr', 'high_snr'])
+    #noise_scenarios = np.array(['high_snr'])
+
+   
+    
     # Initialisation values
-    # Tags
     simulate = True
     do_jde_asl = True
-    mcmc = True
+    mcmc = False
     vem = True
-    dt = 1.25
-    s = 1.
-
-    # create output folder
-    np.random.seed(48258)
-    if not op.exists(fig_dir):
-        os.makedirs(fig_dir)
-    if not op.exists(simulation_dir):
-        os.makedirs(simulation_dir)
+    tr = 2.5
+    dt = tr / 2.
+    s = 2.
 
     v_noise_range = np.arange(2.0, 2.3, 1.)
     snr_range = np.zeros_like(v_noise_range)
-    hyp_opt = np.array([False])
-    pos_opt = np.array([False])#, True])
+    hyp_opt = np.array([True])#, False])
+    pos_opt = np.array([False])
+    cons = True
+    
     n_method = len(hyp_opt) * len(pos_opt)
     print v_noise_range
     error = np.zeros((len(v_noise_range), n_method, 4))
     error2 = np.zeros((len(v_noise_range), n_method, 4))
 
-    for hyp in hyp_opt:
-        for pos in pos_opt:
-            for ivn, v_noise in enumerate(v_noise_range):
-                print 'Generating BOLD data ...'
-                print 'index v_noise = ', ivn
-                print 'v_noise = ', v_noise
-                if simulate:
+    for noise_scen in noise_scenarios:
+
+        for prior in prior_types:
+
+            fig_prefix = 'vem_asl_d15_prior' + prior + '2_' + noise_scen
+
+            for hyp in hyp_opt:
+
+                simulation_dir = fig_prefix + '_hyp' + str(hyp*1) + '_simulated'
+                fig_dir = fig_prefix + '_hyp' + str(hyp*1) + '_figs'
+                if not op.exists(fig_dir):
+                    os.makedirs(fig_dir)
+                if not op.exists(simulation_dir):
+                    os.makedirs(simulation_dir)
+
+                for pos in pos_opt:
+                    for ivn, v_noise in enumerate(v_noise_range):
+                        print 'Generating BOLD data ...'
+                        print 'index v_noise = ', ivn
+                        print 'v_noise = ', v_noise
+                        if simulate:
+                            
+                            # HEROES
+                            asl_items, conds = simulate_asl(output_dir=simulation_dir,
+                                                          noise_scenario=noise_scen,
+                                                          v_noise=v_noise, dt=dt, scale=s)
+                            """
+                            # AINSI
+                            asl_items = jdem.simulate_asl(output_dir=simulation_dir,
+                                                          noise_scenario='low_snr',
+                                                          v_noise=v_noise, 
+                                                          dt=dt)
+                            """
+                            Y = asl_items['bold']
+                            n = asl_items['noise']
+                            snr_range[ivn] = 20 * (np.log(np.linalg.norm(Y) / \
+                                np.linalg.norm(n))) / np.log(10.)
+                        norm = plot_jde_inputs(simulation_dir, fig_dir,
+                                               'simu_vn' + str(np.round(v_noise*10).astype(np.int32)) + '_', conds)
+                        print 'Finished generation of ASL data.'
+
+                        old_output_dir = op.join(simulation_dir, 'jde_analysis_mcmc')
+                        if do_jde_asl and mcmc:
+                            print 'JDE MCMC analysis'
+                            np.random.seed(48258)
+                            if not op.exists(old_output_dir):
+                                os.makedirs(old_output_dir)
+                            print '1 step ...'
+                            prf_var = 0.00000001
+                            brf_var = 0.01
+                            nbit = 1000
+                            
+                            print 'JDE analysis MCMC on simulation ...'
+                            phy_params = PHY_PARAMS_KHALIDOV11
+                            t1 = time.time()
+                            jde_mcmc_sampler = jde_analyse(old_output_dir,
+                                                asl_items, dt*s, nb_iterations=nbit,
+                                                rf_prior='physio_stochastic_regularized',
+                                                brf_var=brf_var, prf_var=prf_var, 
+                                                phy_params = phy_params,
+                                                do_sampling_brf_var=False,
+                                                do_sampling_prf_var=False)
+                            print time.time() - t1
+                        old_output_dir2 = op.join(simulation_dir, 'jde_analysis_vem')
+                        if do_jde_asl and vem:
+                            print 'JDE VEM analysis'
+                            np.random.seed(48258)
+                            if not op.exists(old_output_dir2):
+                                os.makedirs(old_output_dir2)
+
+                            print 'JDE analysis VEM on simulation ...'
+                            t2 = time.time()
+                            jde_vem_sampler = jde_analyse_vem(simulation_dir, old_output_dir2, asl_items,
+                                                                          do_physio=True, positivity=pos,
+                                                                          use_hyperprior=hyp, dt=(dt), nItMin=2,
+                                                                          constrained=cons, prior=prior)
+                            print time.time() - t2
+
+                        print 1-hyp*1 + pos*2
+                        print ivn
+                        print error.shape
+                        #plot_jde_outputs(old_output_dir, fig_dir, 'mcmc_', norm, conds, asl_items=asl_items)
+                        plot_jde_outputs(old_output_dir2, fig_dir, 'vem_', norm, conds, asl_items=asl_items)#, dt_est=dt)
+                        print 'printing HRF results together...'
+                        output_dir_tag = 'jde_analysis_'
+                        plot_jde_rfs(simulation_dir, old_output_dir2, fig_dir,
+                                     'vn' + str(v_noise) + '_', asl_items)
                     
-                    # HEROES
-                    asl_items, conds = simulate_asl(output_dir=simulation_dir,
-                                                  noise_scenario='low_snr',
-                                                  v_noise=v_noise, 
-                                                  dt=dt)
-                    """
-                    # ANSI
-                    asl_items = jdem.simulate_asl(output_dir=simulation_dir,
-                                                  noise_scenario='low_snr',
-                                                  v_noise=v_noise, 
-                                                  dt=dt)
-                    """
-                    Y = asl_items['bold']
-                    n = asl_items['noise']
-                    snr_range[ivn] = 20 * (np.log(np.linalg.norm(Y) / \
-                        np.linalg.norm(n))) / np.log(10.)
-                norm = plot_jde_inputs(simulation_dir, fig_dir,
-                                       'simu_vn' + str(np.round(v_noise*10).astype(np.int32)) + '_', conds)
-                print 'Finished generation of ASL data.'
 
-                old_output_dir = op.join(simulation_dir, 'jde_analysis_mcmc')
-                if do_jde_asl and mcmc:
-                    print 'JDE MCMC analysis'
-                    np.random.seed(48258)
-                    if not op.exists(old_output_dir):
-                        os.makedirs(old_output_dir)
-                    print '1 step ...'
-                    prf_var = 0.00000001
-                    brf_var = 0.01
-                    nbit = 1000
-                    
-                    print 'JDE analysis MCMC on simulation ...'
-                    phy_params = PHY_PARAMS_KHALIDOV11
-                    t1 = time.time()
-                    jde_mcmc_sampler = jde_analyse(old_output_dir,
-                                        asl_items, dt*s, nb_iterations=nbit,
-                                        rf_prior='physio_stochastic_regularized',
-                                        brf_var=brf_var, prf_var=prf_var, 
-                                        phy_params = phy_params,
-                                        do_sampling_brf_var=False,
-                                        do_sampling_prf_var=False)
-                    print time.time() - t1
-                old_output_dir2 = op.join(simulation_dir, 'jde_analysis_vem')
-                if do_jde_asl and vem:
-                    print 'JDE VEM analysis'
-                    np.random.seed(48258)
-                    if not op.exists(old_output_dir2):
-                        os.makedirs(old_output_dir2)
-
-                    print 'JDE analysis VEM on simulation ...'
-                    t2 = time.time()
-                    jde_vem_sampler = jde_analyse_vem(simulation_dir,
-                                               old_output_dir2, asl_items,
-                                               do_physio=True, positivity=pos,
-                                               use_hyperprior=hyp, dt=(dt*s))
-                    print time.time() - t2
-
-                print 1-hyp*1 + pos*2
-                print ivn
-                print error.shape
-                """plot_jde_outputs(old_output_dir, fig_dir, 'mcmc_', norm, conds,
-                                asl_items=asl_items)
-                plot_jde_outputs(old_output_dir2, fig_dir, 'vem_', norm, conds,
-                                asl_items=asl_items)"""
-                print 'printing HRF results together...'
-                output_dir_tag = 'jde_analysis_'
-                plot_jde_rfs(simulation_dir, output_dir_tag, fig_dir,
-                             'vn' + str(v_noise) + '_', asl_items)
-            
-    
 
 def jde_analyse_vem(simulation_dir, output_dir, simulation, constrained=False,
                 fast=False, do_physio=True, positivity = False,
-                use_hyperprior=True, dt=0.5):
+                use_hyperprior=False, prior='omega', dt=0.5, nItMin=10):
+
     # Create an FmriData object directly from the simulation dictionary:
     fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
     pyhrf.verbose.set_verbosity(4)
     do = True
+    do2 = False
 
     vmu = 100.
-    vh = 0.0001
-    vg = 0.0001  
+    vh = 0.00001 #0.0001
+    vg = 0.00001 #0.0001
+    gamma_h = 1000000000  # 10000000000  # 7.5 #100000
+    gamma_g = 1000000000                  #10000000
+    """
+    vh = 0.000001 #0.0001
+    vg = 0.000001 #0.0001
+    gamma_h = 100000  # 10000000000  # 7.5 #100000
+    gamma_g = 1000000  
+    """
+
     jde_vem_analyser = JDEVEMAnalyser(beta=0.8, dt=dt, hrfDuration=25.,
-                                      nItMax=100, nItMin=10, PLOT=True,
-                                      estimateA=True, estimateH=True,
-                                      estimateC=True, estimateG=True,
-                                      estimateSigmaH=True, sigmaH=vh,
-                                      estimateSigmaG=True, sigmaG=vg,
+                                      nItMax=50, nItMin=nItMin, PLOT=True,
+                                      estimateA=do, estimateH=do,
+                                      estimateC=do, estimateG=do,
+                                      estimateSigmaH=do, sigmaH=vh, gammaH=gamma_h,
+                                      estimateSigmaG=do, sigmaG=vg, gammaG=gamma_g,
+                                      estimateLabels=do,
                                       physio=do_physio, sigmaMu=vmu,
-                                      estimateBeta=True, estimateLA=True,
-                                      estimateMixtParam=True,
-                                      estimateNoise=True, fast=fast,
-                                      constrained=constrained,
-                                      fmri_data=simulation,
-                                      positivity=positivity,
-                                      use_hyperprior=use_hyperprior)
+                                      estimateBeta=do, estimateMixtParam=do,
+                                      estimateLA=do, estimateNoise=do,
+                                      fast=fast, constrained=constrained,
+                                      fmri_data=simulation, positivity=positivity,
+                                      use_hyperprior=use_hyperprior, prior=prior)
+
     tjde_vem = FMRITreatment(fmri_data=fmri_data,
                              analyser=jde_vem_analyser,
                              output_dir=output_dir)
@@ -318,7 +338,7 @@ def physio_build_jde_mcmc_sampler(nb_iterations, rf_prior, phy_params,
 from pyhrf.boldsynth.scenarios import *
 
 def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
-                 dt=2.5):
+                 dt=2.5, scale=1.):
     from pyhrf import Condition
     from pyhrf.tools import Pipeline
 
@@ -363,25 +383,25 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
                       bold_m_act=14., bold_v_act=.11, bold_v_inact=.21,
                       label_map=lmap4),
         ]
-    elif noise_scenario == 'low_snr_low_prl':
+    elif noise_scenario == 'low_snr_scale':
         v_noise = v_noise or 7.
-        scale = .3
+        #scale = .3
         conditions = [
             Condition(name=condition_names[0], perf_m_act=1.6*scale, perf_v_act=.1,
                       perf_v_inact=.1,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      bold_m_act=2.2*scale, bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap1),
             Condition(name=condition_names[1], perf_m_act=1.6*scale, perf_v_act=.1,
                       perf_v_inact=.1,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      bold_m_act=2.2*scale, bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap2),
             Condition(name=condition_names[2], perf_m_act=1.6*scale, perf_v_act=.1,
                       perf_v_inact=.1,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      bold_m_act=2.2*scale, bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap3),
             Condition(name=condition_names[3], perf_m_act=1.6*scale, perf_v_act=.1,
                       perf_v_inact=.1,
-                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      bold_m_act=2.2*scale, bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap4),
                       ]
     else:  # low_snr
@@ -402,9 +422,15 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
         ]
 
     print 'creating simulation steps...'
-    from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11
+    from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11, \
+                                            create_physio_brf, create_physio_prf
 
     brf = create_canonical_hrf(dt=dt)
+    prf = create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11)
+    Thrf = 25.
+    brf = create_physio_brf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
+    prf = create_physio_prf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
+
     simulation_steps = {
         'dt': dt,
         'dsf': dsf,
@@ -426,7 +452,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
         'brf': duplicate_brf,
         # PRF
         #'primary_prf': create_prf,  # canonical HRF for testing
-        'primary_prf': create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11),
+        'primary_prf': prf,
         'prf': duplicate_prf,
         # Perf baseline
         'perf_baseline': create_perf_baseline,
@@ -509,6 +535,8 @@ def plot_cub_as_curve(c, orientation=None, colors=None, plot_kwargs=None,
     plot_kwargs = plot_kwargs or {}
     if c.get_ndims() == 1:
         #c.data[-5:] = 0
+        print c.axes_domains[ori[0]]
+        print c.axes_domains
         plt.plot(c.axes_domains[ori[0]], c.data, **plot_kwargs)
         #plt.plot(c.data, **plot_kwargs)
         #plt.plot(np.arange(0, len(c.data)/2, .5), c.data, **plot_kwargs)

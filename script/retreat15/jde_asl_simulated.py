@@ -55,11 +55,14 @@ def main():
     simulate = True
     analyse_jde = True
     do_jde_asl = True
+    tr = 2.5
+    noise_scen = 'low_snr'
 
-    for dt in np.array([1.25]):   # 2.5, 1.25, 0.5
+    for dt in np.array([tr/2.]):   # 2.5, 1.25, 0.5
 
         # Folder names
-        fig_prefix = 'vem_asl_block_TR25_dt'+str(np.round(dt*10).astype(np.int32))+'_dur15_lowSNR_dtsim125_'
+        #fig_prefix = 'vem_asl_block15_TR'+str(tr)+'_dt'+str(dt)+'_'+noise_scen+'_'
+        fig_prefix = 'vem_asl_TR'+str(tr)+'_dt'+str(dt)+'_'+noise_scen+'_'
         simulation_dir = fig_prefix + 'simulated'
         fig_dir = fig_prefix + 'figs'
     
@@ -72,79 +75,88 @@ def main():
     
         v_noise_range = np.arange(2.0, 2.3, 1.)
         #snr_range = np.zeros_like(v_noise_range)
-        hyp_opt = np.array([False])
+        hyp_opt = np.array([True, False])
+        cons_opt = np.array([False, True])
         pos_opt = np.array([False])
-        n_method = len(hyp_opt) * len(pos_opt)
+        n_method = len(hyp_opt) * len(cons_opt) + 1
         print v_noise_range
         error = np.zeros((len(v_noise_range), n_method, 4))
         m = 0
-        for hyp in hyp_opt:
-            for pos in pos_opt:
+
+        for ivn, v_noise in enumerate(v_noise_range):
+            print 'Generating BOLD data ...'
+            #print 'index v_noise = ', ivn
+            print 'v_noise = ', v_noise
+            if simulate:
+                asl_items, conds = simulate_asl(output_dir=simulation_dir,
+                                                noise_scenario=noise_scen,
+                                                v_noise=v_noise,
+                                                dt=dt, tr=tr)
+                #print asl_items
+                #print conds
+                #Y = asl_items['bold']
+                #n = asl_items['noise']
+                #snr_range[ivn] = 20 * (np.log(np.linalg.norm(Y) / \
+                #                       np.linalg.norm(n))) / np.log(10.)
+            norm = plot_jde_inputs(simulation_dir, fig_dir,
+                                   'simu_vn' + str(np.round(v_noise*10).astype(np.int32)) + '_', conds)
+            print 'Finished generation of BOLD data.'
+
+            for hyp in hyp_opt:
+                for pos in pos_opt:
+                    for cons in cons_opt:
                 
-                for ivn, v_noise in enumerate(v_noise_range):
-                    print 'Generating BOLD data ...'
-                    print 'index v_noise = ', ivn
-                    print 'v_noise = ', v_noise
-                    if simulate:
-                        asl_items, conds = simulate_asl(output_dir=simulation_dir,
-                                                        noise_scenario='low_snr',
-                                                        v_noise=v_noise,
-                                                        dt=dt)
-                        print asl_items
-                        print conds
-                        #Y = asl_items['bold']
-                        #n = asl_items['noise']
-                        #snr_range[ivn] = 20 * (np.log(np.linalg.norm(Y) / \
-                        #                       np.linalg.norm(n))) / np.log(10.)
-                    norm = plot_jde_inputs(simulation_dir, fig_dir,
-                                           'simu_vn' + str(np.round(v_noise*10).astype(np.int32)) + '_', conds)
-                    print 'Finished generation of BOLD data.'
-    
-                    if do_jde_asl:
-                        np.random.seed(48258)
-                        old_output_dir = op.join(simulation_dir, \
-                                            'jde_analysis_vn' + \
-                                            str(np.round(v_noise*10).astype(np.int32))\
-                                            + '_' + str(1-hyp*1 + pos*2))
-                        if not op.exists(old_output_dir):
-                            os.makedirs(old_output_dir)
-    
-                        print 'JDE analysis (old) on simulation ...'
-                        if analyse_jde:
-                            analysis_tag = jde_analyse(simulation_dir,
-                                                       old_output_dir, asl_items,
-                                                       do_physio=True, positivity=pos,
-                                                       use_hyperprior=hyp, dt=1.25)
-                        print 'JDE analysis (old) on simulation done!'
-                        error[ivn, m, :] = plot_jde_outputs(old_output_dir, fig_dir,
-                                            'vn' + str(np.round(v_noise*10).astype(np.int32)) \
-                                            + '_' + str(1-hyp*1 + pos*2) + '_',
-                                            norm, conds, asl_items)
-                        plot_jde_rfs(simulation_dir, old_output_dir, fig_dir,
-                                     'vn' + str(np.round(v_noise*10).astype(np.int32))\
-                                     + '_' + str(1-hyp*1 + pos*2) + '_', asl_items)
-                m += 1 
+                        if do_jde_asl:
+                            np.random.seed(48258)
+                            old_output_dir = op.join(simulation_dir, \
+                                                'jde_analysis_vn' + \
+                                                str(np.round(v_noise*10).astype(np.int32))\
+                                                + '_c' + str(cons*1) + '_hyp' + str(hyp*1) + '_pos' + str(pos*1))
+                            if not op.exists(old_output_dir):
+                                os.makedirs(old_output_dir)
+        
+                            print 'JDE analysis (old) on simulation ...'
+                            if analyse_jde:
+                                analysis_tag = jde_analyse(simulation_dir,
+                                                           old_output_dir, asl_items,
+                                                           constrained=cons,
+                                                           do_physio=True, positivity=pos,
+                                                           use_hyperprior=hyp, dt=dt, 
+                                                           prior_balloon=False,
+                                                           prior_omega=False)
+                            print 'JDE analysis (old) on simulation done!'
+                            error[ivn, m, :] = plot_jde_outputs(old_output_dir, fig_dir,
+                                                'vn' + str(np.round(v_noise*10).astype(np.int32)) \
+                                                + '_c' + str(cons*1) + '_hyp' + str(hyp*1) + '_pos' + str(pos*1) + '_',
+                                                norm, conds, asl_items)
+                            plot_jde_rfs(simulation_dir, old_output_dir, fig_dir,
+                                         'vn' + str(np.round(v_noise*10).astype(np.int32))\
+                                         + '_c' + str(cons*1) + '_hyp' + str(hyp*1) + '_pos' + str(pos*1) + '_', asl_items)
+                            m += 1 
         #plot_error(fig_dir, v_noise_range, error)
         
 
 def jde_analyse(simulation_dir, output_dir, simulation, constrained=False,
-                fast=False, do_physio=True, positivity = False,
-                use_hyperprior=True, dt=2.5):
+                fast=False, do_physio=True, positivity=False,
+                use_hyperprior=True, dt=2.5, prior_balloon=False,
+                prior_omega=False, prior_hierarchical=False):
     # Create an FmriData object directly from the simulation dictionary:
     fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
     pyhrf.verbose.set_verbosity(4)
     # JDE analysis
     
-    do = False
+    do = True
     do2 = True
     #do_physio = True
     #positivity = False
     #use_hyperprior = True
     vmu = 100.
-    vh = 0.1
-    vg = 0.001  # 10000.  # vh * 10.
+    #vh = 0.0001
+    #vg = 0.0001  # 10000.  # vh * 10.
+    vh = 0.0001 #0.0001
+    vg = 0.0001
     jde_vem_analyser = JDEVEMAnalyser(beta=0.8, dt=dt, hrfDuration=25.,
-                                      nItMax=100, nItMin=10, PLOT=True,
+                                      nItMax=100, nItMin=1, PLOT=True,
                                       estimateA=do, estimateH=do2,
                                       estimateC=do, estimateG=do,
                                       estimateSigmaH=do2, sigmaH=vh,
@@ -157,7 +169,10 @@ def jde_analyse(simulation_dir, output_dir, simulation, constrained=False,
                                       fast=fast, constrained=constrained,
                                       fmri_data=simulation,
                                       positivity=positivity,
-                                      use_hyperprior=use_hyperprior)
+                                      use_hyperprior=use_hyperprior,
+                                      prior_balloon=prior_balloon,
+                                      prior_omega=prior_omega, 
+                                      prior_hierarchical=prior_hierarchical)
     tjde_vem = FMRITreatment(fmri_data=fmri_data,
                              analyser=jde_vem_analyser,
                              output_dir=output_dir)
@@ -173,16 +188,15 @@ from pyhrf.boldsynth.scenarios import *
 
 
 def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
-                 dt=2.5):
+                 dt=2.5, tr=2.5):
     from pyhrf import Condition
     from pyhrf.tools import Pipeline
 
     #dt = 2.5
     drift_var = 10.
-    tr = 2.5
+    #tr = 2.5
     dsf = 2.5/dt
-    print 'simulated dt'
-    print dt
+    print 'simulated dt = ', dt
     #dt = 2.5
     #dsf = 1  # down sampling factor
 
@@ -198,11 +212,11 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
     
     paradigm = mpar.Paradigm.from_csv(paradigm_csv_file,
                                       delim=paradigm_csv_delim)
-    print 'Paradigm information: '
-    print paradigm.get_info()
+    #print 'Paradigm information: '
+    #print paradigm.get_info()
     condition_names = paradigm.get_stimulus_names()
     #stop
-    lmap1, lmap2, lmap3, lmap4 = 'ghost', 'icassp13', 'stretched_1', 'pacman'
+    lmap1, lmap2, lmap3, lmap4 = 'ghost', 'icassp13', 'house_sun', 'pacman' #'stretched_1'
 
     print 'creating condition response levels...'
     if noise_scenario == 'high_snr':
@@ -259,7 +273,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
                       label_map=lmap4),
         ]
 
-    print 'creating simulation steps...'
+    #print 'creating simulation steps...'
     from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11
     brf = create_canonical_hrf(dt=dt)
     simulation_steps = {
@@ -305,16 +319,16 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
         'asl_shape': calc_asl_shape,
         'bold': create_asl_from_stim_induced,
     }
-    print 'simu_graph'
+    #print 'simu_graph'
     simu_graph = Pipeline(simulation_steps)
 
     # Compute everything
-    print 'resolve'
+    #print 'resolve'
     simu_graph.resolve()
-    print 'graph'
+    #print 'graph'
     simulation = simu_graph.get_values()
 
-    print output_dir
+    #print output_dir
     if output_dir is not None:
         simulation_save_vol_outputs(simulation, output_dir)
     return simulation, condition_names[0:3]
@@ -480,7 +494,7 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
                      asl_items=None):
     fs = 23            # fontsize
     lw = 2             # linewtidth -> better bigger since image is often small
-    enorm = plt.normalize(0., 1.)
+    enorm = plt.Normalize(0., 1.)
 
     #BRF
     plt.figure()
@@ -604,7 +618,7 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
 def plot_jde_rfs(simu_dir, jde_dir, fig_dir, fig_prefix, asl_items=None):
     fs = 23            # fontsize
     lw = 2             # linewtidth -> better bigger since image is often small
-    enorm = plt.normalize(0., 1.)
+    enorm = plt.Normalize(0., 1.)
 
     #BRF
     plt.figure()
@@ -661,7 +675,7 @@ def plot_jde_inputs(jde_dir, fig_dir, fig_prefix, conds):
         plt.gca().set_axis_off()
         plt.title('brls')
         save_and_crop(op.join(fig_dir, fig_prefix + cond + '_brl.png'))
-        norm0 = plt.normalize(b_nrls.data.min(), b_nrls.data.max())
+        norm0 = plt.Normalize(b_nrls.data.min(), b_nrls.data.max())
         plot_palette(plt.cm.jet, norm=norm0, fontsize=fs * 2)
         save_and_crop(op.join(fig_dir, fig_prefix + cond + '_brls_palette.png'))
 
@@ -687,7 +701,7 @@ def plot_jde_inputs(jde_dir, fig_dir, fig_prefix, conds):
         plt.gca().set_axis_off()
         plt.title('prls')
         save_and_crop(op.join(fig_dir, fig_prefix + cond + '_prl.png'))
-        norm1 = plt.normalize(p_nrls.data.min(), p_nrls.data.max())
+        norm1 = plt.Normalize(p_nrls.data.min(), p_nrls.data.max())
         plot_palette(plt.cm.jet, norm=norm0, fontsize=fs * 2)
         save_and_crop(op.join(fig_dir, fig_prefix + cond + '_prls_palette.png'))
 
@@ -714,7 +728,7 @@ def plot_jde_inputs(jde_dir, fig_dir, fig_prefix, conds):
     plt.gca().set_axis_off()
     plt.title('noise variance')
     save_and_crop(op.join(fig_dir, fig_prefix + 'noise_var_pm.png'))
-    plot_palette(plt.cm.jet, norm=plt.normalize(noise_var.data.min(),
+    plot_palette(plt.cm.jet, norm=plt.Normalize(noise_var.data.min(),
                                                 noise_var.data.max()),
                                                 fontsize=fs * 2)
     save_and_crop(op.join(fig_dir, fig_prefix + 'noise_var_palette.png'))
@@ -728,7 +742,7 @@ def plot_jde_inputs(jde_dir, fig_dir, fig_prefix, conds):
         plt.gca().set_axis_off()
         plt.title('audio')
         save_and_crop(op.join(fig_dir, fig_prefix + cond + '_labels.png'))
-        norm4 = plt.normalize(labels.data.min(), labels.data.max())
+        norm4 = plt.Normalize(labels.data.min(), labels.data.max())
         plot_palette(plt.cm.jet, norm=norm4, fontsize=fs * 2)
         save_and_crop(op.join(fig_dir, fig_prefix + cond + '_labels_palette.png'))
 
