@@ -6,17 +6,22 @@ from time import time
 
 import numpy as np
 
+from collections import OrderedDict
+
 import pyhrf
 
 from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.vem_asl_constrained import (Main_vbjde_c_constrained,
                                              Main_vbjde_constrained)
 #from pyhrf.vbjde.vem_asl_physio_mu import Main_vbjde_physio
-from pyhrf.vbjde.vem_asl_physio import Main_vbjde_physio
+from pyhrf.vbjde.vem_asl_physio_fast import Main_vbjde_physio
+#from pyhrf.vbjde.vem_asl_balloon_sigma import Main_vbjde_physio
+#from pyhrf.vbjde.vem_asl_models_fast import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools_asl import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 from pyhrf.ui.jde import JDEAnalyser
+from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11
 
 
 logger = logging.getLogger(__name__)
@@ -83,15 +88,17 @@ class JDEVEMAnalyser(JDEAnalyser):
                         'scale', 'nbClasses', 'fast', 'PLOT',
                         'sigmaH', 'sigmaG']
 
-    def __init__(self, hrfDuration=25., dt=.6, fast=True, constrained=False,
+    def __init__(self, hrfDuration=25., dt=.5, fast=True, constrained=False,
                  nbClasses=2, PLOT=False, nItMax=1, nItMin=1, scale=False,
-                 beta=1.0, simulation=None, fmri_data=None,
+                 beta=1.0, simulation=None, fmri_data=None, computeContrast=True,
                  estimateH=True, estimateG=True, use_hyperprior=False,
                  estimateSigmaH=True, estimateSigmaG=True, positivity=False,
-                 sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=False,
-                 estimateLabels=True, estimateMixtParam=True,
+                 sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=True,
+                 estimateLabels=True, estimateMixtParam=True, contrasts=None, 
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
-                 estimateBeta=True, estimateNoise=True, estimateLA=True):
+                 estimateBeta=True, estimateNoise=True, estimateLA=True,
+                 phy_params=PHY_PARAMS_KHALIDOV11, 
+                 prior_balloon=False, prior_omega=False, prior_hierarchical=False):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_asl_')
@@ -116,7 +123,6 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.sigmaH = sigmaH
         self.sigmaG = sigmaG
         self.sigmaMu = sigmaMu
-        self.physio = physio
         self.estimateLabels = estimateLabels
         self.estimateMixtParam = estimateMixtParam
         self.InitVar = InitVar
@@ -128,6 +134,15 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.estimateLA = estimateLA
         self.use_hyperprior = use_hyperprior
         self.positivity = positivity
+        self.physio = physio
+        self.prior_omega = prior_omega
+        self.prior_balloon = prior_balloon
+        self.prior_hierarchical = prior_hierarchical
+        if contrasts is None:
+            contrasts = OrderedDict()
+        self.contrasts = contrasts
+        self.computeContrast = computeContrast
+        self.phy_params = phy_params
 
         logger.info("VEM analyzer:")
         logger.info(" - estimate sigma H: %s", str(self.estimateSigmaH))
@@ -172,7 +187,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                 simu = roiData.simulation
             except:
                 simu = None
-
+        """
         if 0 and self.fast:
             NbIter, nrls, estimated_hrf, \
             labels, noiseVar, mu_k, sigma_k, \
@@ -196,24 +211,20 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                   estimateZ=self.estimateLabels,
                                                   estimateNoise=self.estimateNoise,
                                                   estimateMP=self.estimateMixtParam,
-                                                  estimateLA=self.estimateLA)
+                                                  estimateLA=self.estimateLA)"""
         if self.physio:
-            """NbIter, brls, estimated_brf, prls, estimated_prf, labels,
-            noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean,
-            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL,
-            Sigma_brls, Sigma_prls = """
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
-            noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-            alpha, Sigma_brls, Sigma_prls, rerror = Main_vbjde_physio(graph, 
-                                       data, Onsets, durations,
+            noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, alpha,\
+            Sigma_brls, Sigma_prls, Sigma_brf, Sigma_prf, rerror = Main_vbjde_physio(
+                                       graph, data, Onsets, durations,
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
+                                       estimateSigmaH=self.estimateSigmaH,
                                        estimateSigmaG=self.estimateSigmaG,
                                        sigmaH=self.sigmaH, sigmaG=self.sigmaG,
                                        NitMax=self.nItMax, NitMin=self.nItMin,
-                                       estimateSigmaH=self.estimateSigmaH,
-                                       estimateBeta=self.estimateBeta,
-                                       PLOT=self.PLOT, idx_first_tag=idx_tag1,
+                                       estimateBeta=self.estimateBeta, PLOT=self.PLOT,
+                                       idx_first_tag=idx_tag1,
                                        simulation=simu, sigmaMu=self.sigmaMu,
                                        estimateH=self.estimateH,
                                        estimateG=self.estimateG,
@@ -225,11 +236,13 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        estimateLA=self.estimateLA,
                                        positivity=self.positivity,
                                        use_hyperprior=self.use_hyperprior)
-        else:
-            """NbIter, brls, estimated_brf, prls, estimated_prf, labels,
-            noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean,
-            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL,
-            Sigma_brls, Sigma_prls = """
+
+
+        """if 0:
+            #NbIter, brls, estimated_brf, prls, estimated_prf, labels,
+            #noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean,
+            #mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL,
+            #Sigma_brls, Sigma_prls = 
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
             Sigma_brls, Sigma_prls = Main_vbjde_constrained(graph, data, Onsets,
@@ -252,7 +265,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        estimateZ=self.estimateLabels,
                                        estimateLA=self.estimateLA,
                                        positivity=self.positivity,
-                                       use_hyperprior=self.use_hyperprior)
+                                       use_hyperprior=self.use_hyperprior)"""
         
         # Plot analysis duration
         self.analysis_duration = time() - t_start
@@ -278,21 +291,23 @@ class JDEVEMAnalyser(JDEAnalyser):
                                   axes_domains={'time': prf_time},
                                   value_label="PRF")
         logger.info("PRF prepared ")
-        print prls.T.shape
         outputs['prls'] = xndarray(prls.T, value_label="PRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
         logger.info("PRLs prepared ")
+        print Sigma_brf.shape
+        print Sigma_prf.shape
+        #print Sigma_brf.shape
+        outputs['Sigma_brf'] = xndarray(Sigma_brf, value_label="Sigma_BRF")
+        logger.info("Sigma_BRF prepared ")
+        outputs['Sigma_prf'] = xndarray(Sigma_prf, value_label="Sigma_PRF")
+        logger.info("Sigma_PRF prepared ")
+        
         ad = {'condition': cNames, 'condition2': Onsets.keys()}
         outputs['Sigma_brls'] = xndarray(Sigma_brls, value_label="Sigma_BRLs",
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
-        logger.info("perfusion baseline prepared ")
-        outputs['alpha'] = xndarray(alpha, value_label="alpha",
-                                         axes_names=['condition', 'voxel'])#,
-                                         #axes_domains=domCondition)
-        
         logger.info("Sigma_a prepared ")
         outputs['Sigma_prls'] = xndarray(Sigma_prls, value_label="Sigma_PRLs",
                                          axes_names=['condition', 'condition2',
@@ -304,12 +319,27 @@ class JDEVEMAnalyser(JDEAnalyser):
                                    axes_names=['condition'],
                                    axes_domains=domCondition)
 
+        logger.info("perfusion baseline prepared ")
+        outputs['alpha'] = xndarray(alpha, value_label="Perf_baseline",
+                                          axes_names=['voxel'])
+        
         logger.info("Beta prepared ")
         nbc, nbv = len(cNames), brls.shape[0]
         repeatedBeta = np.repeat(Beta, nbv).reshape(nbc, nbv)
         outputs['beta_mapped'] = xndarray(repeatedBeta, value_label="beta",
                                           axes_names=['condition', 'voxel'],
                                           axes_domains=domCondition)
+
+        repeated_brf = np.repeat(estimated_brf, nbv).reshape(-1, nbv)
+        outputs["brf_mapped"] = xndarray(repeated_brf, value_label="BRFs",
+                                         axes_names=["time", "voxel"],
+                                         axes_domains={"time": brf_time})
+
+        repeated_prf = np.repeat(estimated_prf, nbv).reshape(-1, nbv)
+        outputs["prf_mapped"] = xndarray(repeated_prf, value_label="PRFs",
+                                         axes_names=["time", "voxel"],
+                                         axes_domains={"time": prf_time})
+
         logger.info("beta mapped prepared ")
         outputs['roi_mask'] = xndarray(np.zeros(nbv) + roiData.get_roi_id(),
                                        value_label="ROI",
@@ -346,6 +376,32 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         axes_names=['time', 'voxel'])
             logger.info("drift prepared ")
         logger.info("outputs prepared ")
+
+        if (len(self.contrasts) >0) and self.computeContrast:
+            #keys = list((self.contrasts[nc]) for nc in self.contrasts)
+            domContrast = {'contrast':self.contrasts.keys()}
+            outputs['contrastsA'] = xndarray(CONTRAST_A, value_label="Contrast_A",
+                                            axes_names=['voxel','contrast'],
+                                            axes_domains=domContrast)
+            outputs['contrastsC'] = xndarray(CONTRAST_C, value_label="Contrast_C",
+                                            axes_names=['voxel','contrast'],
+                                            axes_domains=domContrast)
+            c = xndarray(CONTRASTVAR_A, value_label="Contrasts_Variance_A",
+                         axes_names=['voxel','contrast'],
+                         axes_domains=domContrast)
+            outputs['contrasts_variance_a'] = c
+            outputs['ncontrasts_a'] = xndarray(CONTRAST_A/CONTRASTVAR_A**.5,
+                                             value_label="Normalized Contrast A",
+                                             axes_names=['voxel','contrast'],
+                                             axes_domains=domContrast)
+            c = xndarray(CONTRASTVAR_C, value_label="Contrasts_Variance_C",
+                         axes_names=['voxel','contrast'],
+                         axes_domains=domContrast)
+            outputs['contrasts_variance_c'] = c
+            outputs['ncontrasts_c'] = xndarray(CONTRAST_C/CONTRASTVAR_C**.5,
+                                             value_label="Normalized Contrast C",
+                                             axes_names=['voxel','contrast'],
+                                             axes_domains=domContrast)
 
         #######################################################################
         # CONVERGENCE
@@ -562,7 +618,7 @@ def run_analysis(**params):
     # from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser
     # import pyhrf
     # pyhrf.verbose.set_verbosity(1)
-    pyhrf.logger.setLevel(logging.INFO)
+    # pyhrf.logger.setLevel(logging.INFO)
     fdata = params.pop('roi_data')
     # print 'doing params:'
     # print params
