@@ -37,7 +37,7 @@ from pyhrf.ui.jde import JDEMCMCAnalyser
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
 
 # Setup default parameters for a treatment:
 if cfg['treatment-default']['save_result_dump']:
