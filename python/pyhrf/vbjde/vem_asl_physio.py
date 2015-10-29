@@ -50,9 +50,13 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     logger.info(Y.shape)
         
     # Initialization
-    gamma_h = 1000000  # 10000000000  # 7.5
-    gamma_g = 1000000  # 7.5
+    gamma_h = 100000000000  # 10000000000  # 7.5
+    gamma_g = 100000000000  # 7.5
     
+    print 'v_h = ', sigmaH
+    print 'v_g = ', sigmaG    
+    print 'lambda_h = ', gamma_h
+    print 'lambda_g = ', gamma_g   
     #Parameters to get very smooth RFs
     #gamma_h = 100000000000
     #gamma_g = 7.5
@@ -95,15 +99,17 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     w = - w
     W = np.diag(w)
     # Conditions
-    #X, XX = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
-    X, XX = EM.create_conditions(Onsets, M, N, D, TR, dt)
+    X, XX, condition_names = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
+    #X, XX, condition_names = EM.create_conditions(Onsets, M, N, D, TR, dt)
     
     # Covariance matrix
     #R = EM.covariance_matrix(2, D, dt)
     _, R_inv = genGaussianSmoothHRF(False, D, dt, 1., 2)
     #_, R = genGaussianSmoothHRF_cust(False, D, dt, 1., 2)
     R = np.linalg.inv(R_inv)
-    # Noise matrix
+    Id = np.identity(R.shape[0])
+
+    # NoIdise matrix
     Gamma = np.identity(N)
     # Noise initialization
     sigma_eps = np.ones(J)
@@ -124,7 +130,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     Omega0 = linear_rf_operator(len(H), phy_params, dt, calculating_brf=False)
     OmegaH = np.dot(Omega0, H)
     Omega = Omega0 
-    normg1 = False
+    normg1 = True
     if normg1:
         Omega /= np.linalg.norm(OmegaH)
         OmegaH /=np.linalg.norm(OmegaH)
@@ -279,7 +285,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             Gt, Sigma_G = EM.expectation_G_physio(Sigma_C, m_C, m_A, H, X, W,
                                           Gamma, D, J, N, y_tilde, sigma_eps,
                                           scale, R_inv, sigmaG, OmegaH)
-            if normg1:
+            if 1:  #normg1:
                 logger.info("constraint l2-norm = 1")
                 G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
                 #G = Gt / np.linalg.norm(Gt)
@@ -351,11 +357,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         Crit_AH = (np.linalg.norm(np.reshape(AH - AH1, (M * J * D))) / \
                   (np.linalg.norm(np.reshape(AH1, (M * J * D))) + eps)) ** 2
         cAH += [Crit_AH]
-        AH1 = AH
+        AH1 = AH.copy()
         Crit_CG = (np.linalg.norm(np.reshape(CG - CG1, (M * J * D))) / \
                   (np.linalg.norm(np.reshape(CG1, (M * J * D))) + eps)) ** 2
         cCG += [Crit_CG]
-        CG1 = CG
+        CG1 = CG.copy()
         
 
         #####################
@@ -368,15 +374,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info("M sigma_H step ...")
             if not use_hyperprior:
                 logger.info("   ... without prior on sigma_H")
-                gamma_h = 0
+                sigmaH = EM.maximization_sigma(D, R_inv, H)
             else:
                 logger.info("   ... with prior on sigma_H")
-            #gamma_h = 0
-            Aux0 = np.dot(np.dot(Omega.T, R_inv), G)
-            #Aux = np.dot(np.dot(Aux0.T, R_inv), Aux0) / sigmaG + gamma_h
-            Aux = np.dot(np.dot(Aux0.T, R), Aux0) / (2 * sigmaG) + gamma_h
-            sigmaH = EM.maximization_sigma_prior(D, R_inv, H, Aux)
-            #sigmaH = EM.maximization_sigma(D, R_inv, H)
+                sigmaH = EM.maximization_sigma_prior(D, R_inv, H, gamma_h)
             logger.info('sigmaH = ' + str(sigmaH))
         # PRF: Sigma_g
         if estimateSigmaG:
@@ -457,7 +458,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         rec_error = np.mean(rec_error_j) / np.mean(Y2)
         rerror = np.append(rerror, rec_error)
 
-    if not normg1 and 0:
+    if not normg1:
         Gnorm = np.linalg.norm(G)
         G /= Gnorm
         C*= Gnorm
@@ -552,7 +553,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     return ni, m_A, H, m_C, G, Z_tilde, sigma_eps, \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
-           alpha, Sigma_A, Sigma_C, rerror
+           alpha, Sigma_A, Sigma_C, Sigma_H, Sigma_G, rerror
 
 
 # cA[2:], cH[2:], cZ[2:], cAH[2:], cCG[2:], cTime[2:], cTimeMean[2:],"""
