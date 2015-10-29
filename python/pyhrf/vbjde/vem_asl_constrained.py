@@ -265,7 +265,7 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         Crit_AH = (np.linalg.norm(DIFF) / \
                   (np.linalg.norm(np.reshape(AH1, (M * J * D))) + eps)) ** 2
         cAH += [Crit_AH]
-        AH1[:, :, :] = AH[:, :, :]
+        AH1[:, :, :] = AH[:, :, :].copy()
 
         # crit. CG
         for d in xrange(0, D):
@@ -274,7 +274,7 @@ def Main_vbjde_c_constrained(graph, Y, Onsets, Thrf, K, TR, beta, dt, scale=1,
         Crit_CG = (np.linalg.norm(DIFF) / \
                   (np.linalg.norm(np.reshape(CG1, (M * J * D))) + eps)) ** 2
         cCG += [Crit_CG]
-        CG1[:, :, :] = CG[:, :, :]
+        CG1[:, :, :] = CG[:, :, :].copy()
 
         # Z labels
         if estimateZ:
@@ -661,11 +661,11 @@ def Main_vbjde_constrained(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         Crit_AH = (np.linalg.norm(np.reshape(AH - AH1, (M * J * D))) / \
                   (np.linalg.norm(np.reshape(AH1, (M * J * D))) + eps)) ** 2
         cAH += [Crit_AH]
-        AH1 = AH
+        AH1 = AH.copy()
         Crit_CG = (np.linalg.norm(np.reshape(CG - CG1, (M * J * D))) / \
                   (np.linalg.norm(np.reshape(CG1, (M * J * D))) + eps)) ** 2
         cCG += [Crit_CG]
-        CG1 = CG
+        CG1 = CG.copy()
         
         if PLOT and ni >= 0:  # Plotting HRF and PRF
             import matplotlib.pyplot as plt
