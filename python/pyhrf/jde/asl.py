@@ -1809,7 +1809,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
                       ]
     else:  # low_snr
         v_noise = v_noise or 2.
-        conditions = [
+        """conditions = [
             Condition(name='audio', perf_m_act=1.7, perf_v_act=.31, perf_v_inact=.32,
                       bold_m_act=2.3, bold_v_act=.31, bold_v_inact=.32,
                       label_map=lmap1),
@@ -1817,10 +1817,30 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
                       bold_m_act=2., bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap2),
             # 2.2 .3  1.6 .3
+        ]"""
+        conditions = [
+            Condition(name='audio', perf_m_act=4.7, perf_v_act=.31, perf_v_inact=.32,
+                      bold_m_act=8., bold_v_act=.31, bold_v_inact=.32,
+                      label_map=lmap1),
+            Condition(name='video', perf_m_act=4.9, perf_v_act=.3, perf_v_inact=.3,
+                      bold_m_act=8.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap2),
+            # 2.2 .3  1.6 .3
         ]
 
-    from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11
+    from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11,\
+                                            create_physio_brf, create_physio_prf
     brf = create_canonical_hrf(dt=dt)
+    physiological_params = PHY_PARAMS_KHALIDOV11
+    #brf = create_physio_brf(physiological_params, response_dt=dt)
+    #print np.linalg.norm(brf)
+    #prf = create_physio_prf(physiological_params, response_dt=dt)
+    #print np.linalg.norm(prf)
+    if 0:
+        import matplotlib.pyplot as plt
+        plt.plot(brf)
+        plt.plot(prf)
+        plt.show()
     simulation_steps = {
         'dt': dt,
         'dsf': dsf,
@@ -1843,6 +1863,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         # PRF
         #'primary_prf': create_prf,  # canonical HRF for testing
         'primary_prf': create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11),
+        #'primary_prf': prf,
         'prf': duplicate_prf,
         # Perf baseline
         'perf_baseline': create_perf_baseline,
