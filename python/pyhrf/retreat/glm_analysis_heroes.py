@@ -21,7 +21,7 @@ from glm_tools import combine_masks, fix_paradigm, compute_prf_regressor
 subjects = ['RG130377', 'SC120530', 'CD110147']
 subjects = np.genfromtxt(
     '/volatile/new/salma/asl/data/HEROES_ASL1/subjects.txt' ,dtype=str)
-subject = subjects[1]
+subject = subjects[2]
 data_dir = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                         'gin_struct/archives', subject, 'standard')
 
@@ -69,7 +69,7 @@ frametimes = np.arange(0, n_scans * tr, tr)
 
 # HRF and PRF
 hrf_model = 'canonical'
-prf_model = 'hrf'
+prf_model = 'physio'
 hrf_length = 32.
 oversampling = 16  # default oversampling in nipy
 dt = tr / oversampling
@@ -116,10 +116,10 @@ for condition_name in np.unique(paradigm.con_id):
     exp_condition = (onsets, duration, values)
     bold_regs.append(compute_prf_regressor(exp_condition, hrf_model,
                                            frametimes, prf_model=prf_model,
-                                           prf_matrix=None,
+                                           prf_matrix=prf_matrix,
                                            con_id=condition_name,
                                            oversampling=16,
-                                           normalize=normalize)[0])
+                                           normalize=normalize, plot=False)[0])
     reg, reg_name = compute_prf_regressor(exp_condition, hrf_model,
                                           frametimes, prf_model=prf_model,
                                           prf_matrix=prf_matrix,
@@ -147,6 +147,8 @@ axes[1].plot(add_regs[:, 0])
 axes[1].set_ylabel('perfusion baseline')
 axes[2].plot(add_regs[:, 1:5])
 axes[2].set_ylabel('task-related perfusion')
+for i in range(3):
+    axes[i].set_xlim([0, bold_regs.shape[0]])
 plt.savefig(os.path.join(write_dir, 'asl_regressors.png'))
 
 f, axes = plt.subplots(2)
@@ -306,7 +308,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
         if reg_type == 'perfusion':
             cluster_th = 0
         else:
-            cluster_th = 0
+            cluster_th = 10
         clusters, info = cluster_stats(z_map, mask=mask_img, height_th=.05,
                                        height_control='bonferroni',
                                        cluster_th=cluster_th, nulls={})
