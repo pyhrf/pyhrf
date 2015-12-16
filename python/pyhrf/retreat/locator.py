@@ -8,7 +8,7 @@ Anatomical locations from literature
 import numpy as np
 
 import nibabel
-from nilearn import datasets
+from nilearn import datasets, plotting
 from nipy.labs.viz_tools.coord_tools import coord_transform
 from nipy.labs.viz_tools.maps_3d import mni_sform_inv
 from nipy.labs.viz_tools.slicers import _xyz_order
@@ -336,28 +336,49 @@ def func_working_memory(abbreviate=True, mni=True):
     return names, coords
 
 
-def locate_harvard_oxford(coords, atlas='cort-maxprob-thr25-1mm'):
-    """Locates coordinates in MNI space in Harvard-Oxford atlas"""
-    atlas_file, labels = datasets.fetch_harvard_oxford(atlas)
-#   TODO: check in demo_plot of nipy.labs.viz_tools
-    atlas_img = nibabel.load(atlas_file)
-    data = atlas_img.get_data()
-#    affine = atlas_img.get_affine()
-#    _, affine = _xyz_order(data, affine)
-#    x_map, y_map, z_map = [int(np.round(c)) for c in
-#                           coord_transform(coords[0],
-#                                           coords[1],
-#                                           coords[2],
-#                                           np.linalg.inv(affine))]
+def locate_harvard_oxford(coords, ho_atlas_name='cort-maxprob-thr25-1mm',
+                          symmetric_split=False):
+    """Labels given coordinates in MNI space from Harvard-Oxford atlas labels.
+
+    Parameters
+    ==========
+    coords : 1D numpy.ndarray of floats
+        Coordinates in MNI space.
+
+    ho_atlas_name : str, optional
+        The Harvard Oxford atlas to be used for naming the regions. This is
+        passed to nilearn.datasets.fetch_atlas_harvard_oxford function.
+
+    symmetric_split : bool, optional
+        If True, left and right regions will have different labels. This is
+        passed to nilearn.datasets.fetch_atlas_harvard_oxford function.
+
+    Returns
+    =======
+    label: str
+        Label of the region.
+    """
+    # Transform the coordinates from MNI to HO
+    #TODO: check in demo_plot of nipy.labs.viz_tools
     x_map, y_map, z_map = [int(np.round(c)) for c in
                            coord_transform(coords[0],
                                            coords[1],
                                            coords[2],
                                            mni_sform_inv)]
+    # Load the HO atlas
+    atlas = datasets.fetch_atlas_harvard_oxford(
+        ho_atlas_name, symmetric_split=symmetric_split)
+    # TODO: fix this once types are fixed in nilearn
+    if isinstance(atlas.maps, str):
+        atlas_img = nibabel.load(atlas.maps)
+    else:
+        atlas_img = atlas.maps
+    data = atlas_img.get_data()
     label_value = data[x_map, y_map, z_map]
 
     # Deal with missing label values
     label_values = np.unique(data.ravel())
+    labels = np.asarray(atlas.labels)
     label = labels[label_values == label_value][0]
     return label
 
@@ -375,6 +396,74 @@ def locate_pacellation(coords, file_path='cort-maxprob-thr25-1mm'):
                                            np.linalg.inv(affine))]
     label_value = data[x_map, y_map, z_map]
     return label_value
+
+
+def locate_labels_image(parcellation_path,
+                        background_intensity_value=0,
+                        ho_atlas_name='cort-maxprob-thr25-1mm',
+                        symmetric_split=False):
+    """Locates parcellations in a chosen Harvard Oxford atlas.
+
+    Parameters
+    ==========
+    parcellation_path : str
+        Filename of the parcellation 3D int image.
+
+    background_intensity_value : int, optional
+        The background intensity value.
+
+    ho_atlas_name : str, optional
+        The Harvard Oxford atlas to be used for naming the regions. This is
+        passed to nilearn.datasets.fetch_atlas_harvard_oxford function.
+
+    symmetric_split : bool, optional
+        If True, left and right regions will have different labels. This is
+        passed to nilearn.datasets.fetch_atlas_harvard_oxford function.
+
+    Returns
+    =======
+    regions_labels: list of str
+        Labels of the regions.
+
+    regions_coords: list of 1D numpy.ndarrays of floats
+        Coordinates of the regions, in MNI space.
+    """
+    # Read parcellation image
+    parcellation_image = nibabel.load(parcellation_path)
+    parcellation_data = parcellation_image.get_data()
+    if not issubclass(parcellation_data.dtype.type, np.integer):
+        raise TypeError('{} is not an integer value image'.format(
+            parcellation_path))
+
+    parcellation_affine = parcellation_image.get_affine()
+    parcellation_intensity_values = np.unique(parcellation_data)
+
+    # Remove background from values
+    parcellation_intensity_values = parcellation_intensity_values.tolist()
+    parcellation_intensity_values.remove(background_intensity_value)
+    regions_labels = []
+    regions_coords = []
+
+    # Iterate over the intensities
+    for intensity_value in parcellation_intensity_values:
+        # Mask all regions, except with the current intensity
+        tmp_data = parcellation_data.copy()
+        tmp_data[parcellation_data != intensity_value] = \
+            background_intensity_value
+        tmp_image = nibabel.Nifti1Image(tmp_data, parcellation_affine)
+        try:
+            # Find the center of the region
+            coords = plotting.find_xyz_cut_coords(tmp_image,
+                                                  activation_threshold=0)
+            regions_coords.append(coords)
+            # Get the region names from the atlas
+            regions_labels.append(locate_harvard_oxford(
+                coords, ho_atlas_name=ho_atlas_name,
+                symmetric_split=symmetric_split))
+        except(IOError, IndexError):  # TODO: debug
+            pass
+
+    return regions_labels, regions_coords
 
 
 def mask_from_harvard_oxford(regions, file_name,
@@ -406,7 +495,7 @@ def get_maxima(cluster, remove_background=True, min_distance=0):
     """
     Parameters
     ==========
-    clusters : dict {'size': float, 'maxima': array, 'depth': array}
+    cluster : dict {'size': float, 'maxima': array, 'depth': array}
         Cluster, first output of nipy.labs.statistical_mapping.cluster_stats.
         Local maxima are sorted by descending depth order.
 
