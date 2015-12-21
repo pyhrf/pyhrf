@@ -380,6 +380,13 @@ def locate_harvard_oxford(coords, ho_atlas_name='cort-maxprob-thr25-1mm',
     label_values = np.unique(data.ravel())
     labels = np.asarray(atlas.labels)
     label = labels[label_values == label_value][0]
+
+    # TODO: remove when nilearn bug is fixed
+    if 'right part' in label:
+        label = label.replace('right part', 'left part')
+    elif 'left part' in label:
+        label = label.replace('left part', 'right part')
+
     return label
 
 
@@ -485,7 +492,6 @@ def mask_from_harvard_oxford(regions, file_name,
             mask_data += data == index
     img = nibabel.Nifti1Image(mask_data, atlas_img.get_affine(),
                               atlas_img.get_header())
-    print type(img)
     nibabel.save(img, file_name)
     return img
 
