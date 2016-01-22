@@ -1836,9 +1836,9 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
     physiological_params = PHY_PARAMS_KHALIDOV11
     Thrf = 25.
     prf = create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11)
-    brf = create_physio_brf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
+    #brf = create_physio_brf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
     brf /= np.linalg.norm(brf)
-    prf = create_physio_prf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
+    #prf = create_physio_prf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
     prf /= np.linalg.norm(prf)
     if 0:
         import matplotlib.pyplot as plt
