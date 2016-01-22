@@ -18,7 +18,6 @@ import numpy as np
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
-import pyhrf.vbjde.vem_tools_asl as EM
 import pyhrf.vbjde.vem_tools_asl_fast as EMf
 
 from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
@@ -76,18 +75,18 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     MaxItGrad = 200
     gradientStep = 0.005
     gamma = 7.5
-    maxNeighbours, neighboursIndexes = EM.create_neighbours(graph, J)
+    maxNeighbours, neighboursIndexes = vt.create_neighbours(graph, J)
 
     # Control-tag
     w = np.ones((N))
     w[idx_first_tag + 1::2] = -1
     W = np.diag(w)
     # Conditions
-    X, XX, condition_names = EM.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
-    #X, XX, condition_names = EM.create_conditions(Onsets, M, N, D, TR, dt)
+    X, XX, condition_names = vt.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
+    #X, XX, condition_names = vt.create_conditions(Onsets, M, N, D, TR, dt)
     
     # Covariance matrix
-    #R = EM.covariance_matrix(2, D, dt)
+    #R = vt.covariance_matrix(2, D, dt)
     _, R_inv = genGaussianSmoothHRF(False, D, dt, 1., 2)
     R = np.linalg.inv(R_inv)
     # Noise matrix
@@ -185,7 +184,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
         if PLOT and ni >= 0:  # Plotting HRF and PRF
             logger.info("Plotting HRF and PRF for current iteration")
-            EM.plot_response_functions_it(ni, NitMin, M, H, G, Mu, prior)
+            vt.plot_response_functions_it(ni, NitMin, M, H, G, Mu, prior)
 
 
         # Managing types of prior
@@ -233,7 +232,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             if constraint: 
                 if not np.linalg.norm(Ht)==1:
                     logger.info("   constraint l2-norm = 1")
-                    H = EM.constraint_norm1_b(Ht, Sigma_H)
+                    H = vt.constraint_norm1_b(Ht, Sigma_H)
                     #H = Ht / np.linalg.norm(Ht)
                 else:
                     logger.info("   l2-norm already 1!!!!!")
@@ -295,7 +294,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             if constraint and normg:
                 if not np.linalg.norm(Gt)==1:
                     logger.info("   constraint l2-norm = 1")
-                    G = EM.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
+                    G = vt.constraint_norm1_b(Gt, Sigma_G, positivity=positivity)
                     #G = Gt / np.linalg.norm(Gt)
                 else:
                     logger.info("   l2-norm already 1!!!!!")
@@ -603,7 +602,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     if computeContrast and len(contrasts) > 0:
         logger.info("Computing contrasts ... ")
         CONTRAST_A, CONTRASTVAR_A, \
-        CONTRAST_C, CONTRASTVAR_C = EM.compute_contrasts(condition_names, 
+        CONTRAST_C, CONTRASTVAR_C = vt.compute_contrasts(condition_names, 
                                                          contrasts, m_A, m_C, 
                                                          Sigma_A, Sigma_C, M, J)
     else:
@@ -616,7 +615,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     if PLOT:
         logger.info("plotting...")
         print 'FE = ', FE
-        EM.plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG, SUM_q_Z, mua1, muc1, FE)
+        vt.plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG, SUM_q_Z, mua1, muc1, FE)
 
     logger.info("Nb iterations to reach criterion: %d",  ni)
     logger.info("Computational time = %s min %s s",

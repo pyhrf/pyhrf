@@ -17,7 +17,7 @@ from pyhrf.vbjde.vem_asl_constrained import (Main_vbjde_c_constrained,
 #from pyhrf.vbjde.vem_asl_physio_fast import Main_vbjde_physio
 #from pyhrf.vbjde.vem_asl_balloon_sigma import Main_vbjde_physio
 from pyhrf.vbjde.vem_bold_models_fast import Main_vbjde_physio
-from pyhrf.vbjde.vem_tools_asl import roc_curve
+from pyhrf.vbjde.vem_tools import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 from pyhrf.ui.jde import JDEAnalyser

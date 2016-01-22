@@ -149,6 +149,80 @@ def PolyMat(Nscans, paramLFD, tr):
     return lfdMat
 
 
+def covariance_matrix(order, D, dt):
+    D2 = vt.buildFiniteDiffMatrix_s(order, D)
+    R = np.dot(D2, D2) / pow(dt, 2 * order)
+    return R
+
+
+def roc_curve(dvals, labels, rocN=None, normalize=True):
+    """
+    Compute ROC curve coordinates and area
+
+    - `dvals`  - a list with the decision values of the classifier
+    - `labels` - list with class labels, \in {0, 1}
+
+    returns (FP coordinates, TP coordinates, AUC )
+    """
+    if rocN is not None and rocN < 1:
+        rocN = int(rocN * np.sum(np.not_equal(labels, 1)))
+
+    TP = 0.0  # current number of true positives
+    FP = 0.0  # current number of false positives
+
+    fpc = [0.0]  # fp coordinates
+    tpc = [0.0]  # tp coordinates
+    dv_prev = - np.inf  # previous decision value
+    TP_prev = 0.0
+    FP_prev = 0.0
+    area = 0.0
+
+    #num_pos = labels.count(1)  # num pos labels np.sum(labels)
+    #num_neg = labels.count(0)  # num neg labels np.prod(labels.shape)-num_pos
+
+    #if num_pos == 0 or num_pos == len(labels):
+    #    raise ValueError, "There must be at least one example from each class"
+
+    # sort decision values from highest to lowest
+    indices = np.argsort(dvals)[::-1]
+
+    for idx in indices:
+        # increment associated TP/FP count
+        if labels[idx] == 1:
+            TP += 1.
+        else:
+            FP += 1.
+            if rocN is not None and FP == rocN:
+                break
+        # Average points with common decision values
+        # by not adding a coordinate until all
+        # have been processed
+        if dvals[idx] != dv_prev:
+            if len(fpc) > 0 and FP == fpc[-1]:
+                tpc[-1] = TP
+            else:
+                fpc.append(FP)
+                tpc.append(TP)
+            dv_prev = dvals[idx]
+            area += _trap_area((FP_prev, TP_prev), (FP, TP))
+            FP_prev = FP
+            TP_prev = TP
+
+    #area += _trap_area( ( FP, TP ), ( FP_prev, TP_prev ) )
+    #fpc.append( FP  )
+    #tpc.append( TP )
+    if normalize:
+        fpc = [np.float64(x) / FP for x in fpc]
+        if TP > 0:
+            tpc = [np.float64(x) / TP for x in tpc]
+        if area > 0:
+            area /= (TP * FP)
+
+    return fpc, tpc, area
+
+
+
+
 def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     if durations is None:  # assume spiked stimuli
         durations = np.zeros_like(onsets)
@@ -244,6 +318,66 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
                    # np.diag(diffMat.diagonal() * regularization))
         # diffMat = diffMat * regularization
     return diffMat
+
+
+def create_conditions(Onsets, M, N, D, TR, dt):
+    condition_names = []
+    X = OrderedDict([])
+    for condition, Ons in Onsets.iteritems():
+        X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
+        condition_names += [condition]
+        
+        if 0:
+            import matplotlib.pyplot as plt
+            print 'printing matrices... '
+            plt.matshow(np.array(X[condition]))        
+            #print condition+', TR = '+str(TR)+', dt = '+str(dt)
+            #plt.title('cond '+str(i)+', dt = '+str(dt))
+            #print 'title fait'
+            plt.savefig('./'+condition+'_dt'+str(dt)+'_old_block.png')
+            plt.close()
+            #plt.show()
+    XX = np.zeros((M, N, D), dtype=np.int32)
+    nc = 0
+    for condition, Ons in Onsets.iteritems():
+        XX[nc, :, :] = X[condition]
+        nc += 1
+    return X, XX, condition_names
+
+
+def create_conditions_block(Onsets, durations, M, N, D, TR, dt):
+    condition_names = []
+    X = OrderedDict([])
+    i = 0
+    for condition, Ons in Onsets.iteritems():
+        Dur = durations[condition]
+        X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt,
+                                                Ons, durations=Dur)
+        if 0:
+            import matplotlib.pyplot as plt
+            from matplotlib.pylab import *
+            plt.matshow(np.array(X[condition]))
+            plt.title('cond '+str(i)+', dt = '+str(dt))
+            plt.savefig('./'+condition+'_dt'+str(dt)+'_old.png')
+            plt.close()
+            #plt.show()
+            i = i + 1
+        condition_names += [condition]
+    XX = np.zeros((M, N, D), dtype=np.int32)
+    nc = 0
+    for condition, Ons in Onsets.iteritems():
+        XX[nc, :, :] = X[condition]
+        nc += 1
+    return X, XX, condition_names
+
+
+def create_neighbours(graph, J):
+    maxNeighbours = max([len(nl) for nl in graph])
+    neighboursIndexes = np.zeros((J, maxNeighbours), dtype=np.int32)
+    neighboursIndexes -= 1
+    for i in xrange(J):
+        neighboursIndexes[i, :len(graph[i])] = graph[i]
+    return maxNeighbours, neighboursIndexes
 
 
 def _trap_area(p1, p2):
@@ -996,6 +1130,58 @@ def beta_maximization(beta, labels_proba, neighbours_indexes, gamma, nb_classes,
     return beta
 
 
+def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
+    """ Constrain with optimization strategy """
+    from scipy.optimize import fmin_l_bfgs_b, fmin_slsqp
+    Sigma_F_inv = np.linalg.inv(Sigma_F)
+    zeros_F = np.zeros_like(Ftilde)
+    
+    def fun(F):
+        'function to minimize'
+        return np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde))
+
+    def grad_fun(F):
+        'gradient of the function to minimize'
+        return np.dot(Sigma_F_inv, (F - Ftilde))
+
+    def fung(F):
+        'function to minimize'
+        mean = np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde)) #* 0.5
+        Sigma = np.dot(Sigma_F_inv, (F - Ftilde))
+        return mean #, Sigma
+
+    def ec1(F):
+        'Norm2(F)==1'
+        return - 1 + np.linalg.norm(F, 2)
+    
+    def ec2(F):
+        'F(0)==0'
+        return F[0]
+    
+    def ec3(F):
+        'F(end)==0'
+        return F[-1]
+    
+    if positivity:
+        def ec0(F):
+            'F>=0 ?? or F>=-baseline??'
+            return F
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3], ieqcons=[ec0],
+                       bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_slsqp(fun, zeros_F, eqcons=[ec1], ieqcons=[ec2],
+        #               bounds=[(None, None)] * (len(zeros_F)))
+        #y = fmin_l_bfgs_b(fung, zeros_F, bounds=[(-1, 1)] * (len(zeros_F)))
+    else:
+        #y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],
+        #               bounds=[(None, None)] * (len(zeros_F)))
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],#, ec2], #, ec3], 
+                       bounds=[(None, None)] * (len(zeros_F)))
+        #print fmin_l_bfgs_b(fung, Ftilde, bounds=[(-1, 1)] * (len(zeros_F)), approx_grad=True)
+        #y = fmin_l_bfgs_b(fun, Ftilde, fprime=grad_fun, 
+        #                  bounds=[(-1, 1)] * (len(zeros_F)))[0] #, approx_grad=True)[0]
+    return y
+    
+
 #  def beta_maximization_scipy(beta, labels_proba, neighbours_indexes, gamma):
 
     #  def beta_func(beta, )
@@ -1581,3 +1767,155 @@ def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
     logger.info("Choosed initialisation is : var = %s,  mean = %s,  gamma_h = %s" %(InitVar,InitMean,Initgamma_h))
 
     return InitVar, InitMean, Initgamma_h
+
+
+
+# Other functions
+##############################################################
+
+def computeFit(m_H, m_A, m_G, m_C, W, X, J, N):
+    # print 'Computing Fit ...'
+    stimIndSignal = np.zeros((N, J), dtype=np.float64)
+    for i in xrange(0, J):
+        m = 0
+        for k in X:
+            stimIndSignal[:, i] += m_A[i, m] * np.dot(X[k], m_H) \
+                                 + m_C[i, m] * np.dot(np.dot(W, X[k]), m_G)
+            m += 1
+    return stimIndSignal
+
+
+# Contrasts
+##########################
+from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
+
+def compute_contrasts(condition_names, contrasts, m_A, m_C, 
+                      Sigma_A, Sigma_C, M, J):
+    brls_conds = dict([(str(cn), m_A[:, ic])
+                      for ic, cn in enumerate(condition_names)])
+    prls_conds = dict([(str(cn), m_C[:, ic])
+                      for ic, cn in enumerate(condition_names)])
+    n = 0
+    CONTRAST_A = np.zeros_like(m_A)
+    CONTRASTVAR_A = np.zeros_like(m_A)
+    CONTRAST_C = np.zeros_like(m_C)
+    CONTRASTVAR_C = np.zeros_like(m_C)
+    for cname in contrasts:
+        print cname
+        #------------ contrasts ------------#
+        contrast_expr = AExpr(contrasts[cname], **brls_conds)
+        contrast_expr.check()
+        contrast = contrast_expr.evaluate()
+        CONTRAST_A[:, n] = contrast
+        contrast_expr = AExpr(contrasts[cname], **prls_conds)
+        contrast_expr.check()
+        contrast = contrast_expr.evaluate()
+        CONTRAST_C[:, n] = contrast
+
+        #------------ variance -------------#
+        ContrastCoef = np.zeros(M, dtype=float)
+        ind_conds0 = {}
+        for m in xrange(0, M):
+            ind_conds0[condition_names[m]] = 0.0
+        for m in xrange(0, M):
+            ind_conds = ind_conds0.copy()
+            ind_conds[condition_names[m]] = 1.0
+            ContrastCoef[m] = eval(contrasts[cname], ind_conds)
+        print 'active contrasts'
+        ActiveContrasts = (ContrastCoef != 0) * np.ones(M, dtype=float)
+        AC = ActiveContrasts * ContrastCoef
+        for j in xrange(0, J):
+            Sa_tmp = Sigma_A[:, :, j]
+            CONTRASTVAR_A[j, n] = np.dot(np.dot(AC, Sa_tmp), AC)
+            Sc_tmp = Sigma_C[:, :, j]
+            CONTRASTVAR_C[j, n] = np.dot(np.dot(AC, Sc_tmp), AC)
+
+        n += 1
+    return CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C
+
+
+# Plots
+####################################
+
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+import os.path as op
+import os
+
+def plot_response_functions_it(ni, NitMin, M, H, G, Mu=None, prior=None):
+    if not op.exists('./plots'):
+        os.makedirs('./plots')
+    jet = plt.get_cmap('jet')
+    cNorm = colors.Normalize(vmin=0, vmax=NitMin + 1)
+    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
+    font = {'size': 15}
+    matplotlib.rc('font', **font)
+    if ni == 0:
+        plt.close('all')
+    colorVal = scalarMap.to_rgba(ni)
+    plt.figure(M + 1)
+    plt.plot(H, color=colorVal)
+    plt.hold(True)
+    plt.savefig('./plots/BRF_Iter_ASL.png')
+    plt.figure(M + 2)
+    plt.plot(G, color=colorVal)
+    plt.hold(True)
+    plt.savefig('./plots/PRF_Iter_ASL.png')
+    if prior=='hierarchical':
+        plt.figure(M + 3)
+        plt.plot(Mu, color=colorVal)
+        plt.hold(True)
+        plt.savefig('./plots/Mu_Iter_ASL.png')
+    return
+
+
+def plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG,
+                     SUM_q_Z, mua1, muc1, FE):
+    SUM_p_Q_array = np.zeros((M, ni), dtype=np.float64)
+    mua1_array = np.zeros((M, ni), dtype=np.float64)
+    muc1_array = np.zeros((M, ni), dtype=np.float64)
+    for m in xrange(M):
+        for i in xrange(ni):
+            SUM_p_Q_array[m, i] = SUM_q_Z[m][i]
+            mua1_array[m, i] = mua1[m][i]
+            muc1_array[m, i] = muc1[m][i]
+    
+    import matplotlib
+    import matplotlib.pyplot as plt
+    font = {'size': 15}
+    matplotlib.rc('font', **font)
+    if not op.exists('./plots'):
+        os.makedirs('./plots')
+    plt.figure(M + 4)
+    plt.plot(cAH[1:-1], 'lightblue')
+    plt.hold(True)
+    plt.plot(cCG[1:-1], 'm')
+    plt.hold(False)
+    plt.legend(('CAH', 'CCG'))
+    plt.grid(True)
+    plt.savefig('./plots/Crit_ASL.png')
+    plt.figure(M + 5)
+    plt.plot(cA[1:-1], 'lightblue')
+    plt.hold(True)
+    plt.plot(cC[1:-1], 'm')
+    plt.plot(cH[1:-1], 'green')
+    plt.plot(cG[1:-1], 'red')
+    plt.hold(False)
+    plt.legend(('CA', 'CC', 'CH', 'CG'))
+    plt.grid(True)
+    plt.savefig('./plots/Crit_all.png')
+    plt.figure(M + 6)
+    for m in xrange(M):
+        plt.plot(SUM_p_Q_array[m])
+        plt.hold(True)
+    plt.hold(False)
+    plt.savefig('./plots/Sum_p_Q_Iter_ASL.png')
+    plt.figure(M + 7)
+    plt.plot(FE, label='Free energy')
+    plt.legend(loc=4)
+    import time
+    plt.savefig('./plots/free_energy.png')
+    #plt.savefig('./plots/free_energy' + str(time.time()) + '.png')
+    return

@@ -932,9 +932,6 @@ def computeFit(m_H, m_A, m_G, m_C, W, X, J, N):
     return stimIndSignal
 
 
-
-
-
 # Contrasts
 ##########################
 from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
