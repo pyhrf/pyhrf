@@ -16,7 +16,7 @@ from pyhrf.vbjde.vem_asl_constrained import (Main_vbjde_c_constrained,
 #from pyhrf.vbjde.vem_asl_physio_mu import Main_vbjde_physio
 #from pyhrf.vbjde.vem_asl_physio_fast import Main_vbjde_physio
 #from pyhrf.vbjde.vem_asl_balloon_sigma import Main_vbjde_physio
-from pyhrf.vbjde.vem_asl_models_fast import Main_vbjde_physio
+from pyhrf.vbjde.vem_bold_models_fast import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools_asl import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
@@ -401,9 +401,12 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         axes_domains=ad,
                                         value_label='Conv_Criterion_C')
             outName = 'convergence_FE'
-            outputs[outName] = xndarray(FE, axes_names=axes_names,
+            c = np.zeros(self.nItMax)  # -.001 #
+            c[:len(FE)] = FE
+            outputs[outName] = xndarray(c, axes_names=axes_names,
+                                        axes_domains=ad,
                                         value_label='Conv_Criterion_FE')            
-            outName = 'convergence_EP'
+            """outName = 'convergence_EP'
             outputs[outName] = xndarray(EP, axes_names=axes_names,
                                         value_label='Conv_Criterion_EP')            
             outName = 'convergence_EPlh'
@@ -412,12 +415,12 @@ class JDEVEMAnalyser(JDEAnalyser):
             outName = 'convergence_Ent'
             outputs[outName] = xndarray(Ent, axes_names=axes_names,
                                         value_label='Conv_Criterion_Ent')            
-
+            """
             logger.info("Convergence saved ")
 
         #######################################################################
         # SIMULATION
-        if self.simulation is not None:
+        if self.simulation is not None and 0:
             logger.info("Prepare parameters to compare if simulation")
             M = labels.shape[0]
             K = labels.shape[1]
@@ -474,9 +477,9 @@ class JDEVEMAnalyser(JDEAnalyser):
             plt.axis([0., 1., m, 1.02])
 
             true_labels = roiData.simulation[0]['labels']
-            true_brls = roiData.simulation[0]['brls']
+            true_brls = roiData.simulation[0]['nrls']
             true_prls = roiData.simulation[0]['prls']
-            true_brf = roiData.simulation[0]['brf'][:, 0]
+            true_brf = roiData.simulation[0]['hrf'][:, 0]
             true_prf = roiData.simulation[0]['prf'][:, 0]
             true_drift = roiData.simulation[0]['drift']
             true_noise = roiData.simulation[0]['noise']

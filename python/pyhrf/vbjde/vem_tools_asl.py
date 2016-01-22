@@ -664,7 +664,7 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     else:
         #y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],
         #               bounds=[(None, None)] * (len(zeros_F)))
-        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1, ec2, ec3], 
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],#, ec2], #, ec3], 
                        bounds=[(None, None)] * (len(zeros_F)))
         #print fmin_l_bfgs_b(fung, Ftilde, bounds=[(-1, 1)] * (len(zeros_F)), approx_grad=True)
         #y = fmin_l_bfgs_b(fun, Ftilde, fprime=grad_fun, 
@@ -937,15 +937,21 @@ def computeFit(m_H, m_A, m_G, m_C, W, X, J, N):
 
 # Contrasts
 ##########################
+from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
 
-def compute_contrasts(condition_names, contrasts, m_A, m_C):
-    logger.info('Compute contrasts ...')
+def compute_contrasts(condition_names, contrasts, m_A, m_C, 
+                      Sigma_A, Sigma_C, M, J):
     brls_conds = dict([(str(cn), m_A[:, ic])
                       for ic, cn in enumerate(condition_names)])
     prls_conds = dict([(str(cn), m_C[:, ic])
                       for ic, cn in enumerate(condition_names)])
     n = 0
+    CONTRAST_A = np.zeros_like(m_A)
+    CONTRASTVAR_A = np.zeros_like(m_A)
+    CONTRAST_C = np.zeros_like(m_C)
+    CONTRASTVAR_C = np.zeros_like(m_C)
     for cname in contrasts:
+        print cname
         #------------ contrasts ------------#
         contrast_expr = AExpr(contrasts[cname], **brls_conds)
         contrast_expr.check()
@@ -965,6 +971,7 @@ def compute_contrasts(condition_names, contrasts, m_A, m_C):
             ind_conds = ind_conds0.copy()
             ind_conds[condition_names[m]] = 1.0
             ContrastCoef[m] = eval(contrasts[cname], ind_conds)
+        print 'active contrasts'
         ActiveContrasts = (ContrastCoef != 0) * np.ones(M, dtype=float)
         AC = ActiveContrasts * ContrastCoef
         for j in xrange(0, J):
@@ -974,7 +981,6 @@ def compute_contrasts(condition_names, contrasts, m_A, m_C):
             CONTRASTVAR_C[j, n] = np.dot(np.dot(AC, Sc_tmp), AC)
 
         n += 1
-        logger.info('Done contrasts computing.')
     return CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C
 
 
@@ -988,7 +994,7 @@ import matplotlib.cm as cmx
 import os.path as op
 import os
 
-def plot_response_functions_it(ni, NitMin, M, H, G):
+def plot_response_functions_it(ni, NitMin, M, H, G, Mu=None, prior=None):
     if not op.exists('./plots'):
         os.makedirs('./plots')
     jet = plt.get_cmap('jet')
@@ -1007,6 +1013,11 @@ def plot_response_functions_it(ni, NitMin, M, H, G):
     plt.plot(G, color=colorVal)
     plt.hold(True)
     plt.savefig('./plots/PRF_Iter_ASL.png')
+    if prior=='hierarchical':
+        plt.figure(M + 3)
+        plt.plot(Mu, color=colorVal)
+        plt.hold(True)
+        plt.savefig('./plots/Mu_Iter_ASL.png')
     return
 
 
@@ -1053,7 +1064,9 @@ def plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG,
     plt.savefig('./plots/Sum_p_Q_Iter_ASL.png')
     plt.figure(M + 7)
     plt.plot(FE, label='Free energy')
-    plt.legend()
+    plt.legend(loc=4)
+    import time
     plt.savefig('./plots/free_energy.png')
+    #plt.savefig('./plots/free_energy' + str(time.time()) + '.png')
     return
 

@@ -8,7 +8,7 @@ import pyhrf.paradigm
 from pyhrf.core import FmriData
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.ui.jde import JDEMCMCAnalyser
-from pyhrf.ui.vb_jde_analyser_asl_fast import JDEVEMAnalyser
+from pyhrf.ui.vb_jde_analyser_bold_fast import JDEVEMAnalyser
 from pyhrf.ndarray import xndarray
 from pyhrf import logging
 
@@ -37,10 +37,9 @@ def main():
     phy_params['TE'] = te
     vem = True
 
-    archives = './gin_struct/archives'
-    subjects = ['CD110147', 'RG130377']
-    prior_types = ['balloon', 'omega', 'no']
-    prior = prior_types[0]
+    archives = './archives'
+    #subjects = ['CD110147', 'RG130377']
+    subjects = ['RG130377']
 
     for subject in subjects:
 
@@ -55,18 +54,12 @@ def main():
         if not op.exists(output_dir): os.makedirs(output_dir)
         
         if vem:
-            for prior in prior_types:
-                print 'Prior ', prior
-
-                
-
-                print 'JDE VEM analysis on real data ...'
-                vem_output_dir = op.join(output_dir, 'vem_complete_' + prior)
-                if not op.exists(vem_output_dir): os.makedirs(vem_output_dir)
-                jde_analyse_vem(vem_output_dir, fdata, dt=dt, nItMin=2,
-                                use_hyperprior=True, positivity=False,
-                                phy_params=phy_params, prior=prior)
-                print 'JDE VEM analysis on real data done!'
+            print 'JDE VEM analysis on real data ...'
+            vem_output_dir = op.join(output_dir, 'vem_complete_' + prior)
+            if not op.exists(vem_output_dir): os.makedirs(vem_output_dir)
+            jde_analyse_vem(vem_output_dir, fdata, dt=dt, nItMin=2,
+                            use_hyperprior=True)
+            print 'JDE VEM analysis on real data done!'
         else:
             prf_var = 0.00000001
             brf_var = 0.01     
@@ -105,15 +98,19 @@ def load_data(archives, data_dir, data_analysed_dir, subject, tr):
     Load data and create 
     """
     # Folder and file names
-    #data_fn = op.join(data_dir, 'ASLf', 'funct', 'smooth', 'swr' + subject + '_ASLf_correctionT1.nii')
-    #data_fn = op.join(data_dir, 'ASLf', 'funct', 'normalise', 'wr' + subject + '_ASLf_correctionT1.nii')
-    data_fn = op.join(data_analysed_dir, 'preprocessed_data', 'swr' + subject + '_ASLf_correctionT1.nii')
+    data_fn = op.join(data_dir, 'fMRI', 
+              'wrvismot2_BOLDepi1_' + subject.lower() + '_20141112_acq1_08.nii')
     gm_fn = op.join(data_dir, 'anat', 'c1' + subject + '_anat-0001.nii')
-    #parcel_dir = op.join(data_dir, 'ASLf', 'parcellation')
-    parcel_dir = op.join(data_analysed_dir, 'parcellation')
     paradigm_fn = op.join('./paradigm_data', 'paradigm_bilateral_v2_no_final_rest.csv')
+    parcel_dir = op.join(data_analysed_dir, 'parcellation')
     roi_mask_fn = op.join(parcel_dir, 'parcellation_func.nii')
     #roi_mask_fn = op.join(parcel_dir, 'parcels_to_analyse.nii')
+    mask = xndarray.load(roi_mask_fn).data
+    print 'Mask shape ', mask.shape
+    mask_mean = np.mean(mask) #[np.where(gm > 0)])
+    mask_range = (np.max(mask) - np.min(mask))
+    print 'Mask mean ', mask_mean
+    print 'Mask range ', mask_range
 
     # Loading and scaling data
     data_mean, data_range = bold_mean_and_range(data_fn, gm_fn)            
@@ -126,8 +123,7 @@ def load_data(archives, data_dir, data_analysed_dir, subject, tr):
 
 
 def jde_analyse_vem(output_dir, fmri_data, dt=0.5, physio=True, nItMin=2,
-                    use_hyperprior=False, positivity=False,
-                    phy_params=PHY_PARAMS_KHALIDOV11, prior='no'):
+                    use_hyperprior=False):
     """
     Runs JDE VEM sampler
     """
@@ -140,17 +136,11 @@ def jde_analyse_vem(output_dir, fmri_data, dt=0.5, physio=True, nItMin=2,
                   "checkerboard_motor_d2500_left-checkerboard_motor_d5000_left", 
                  "checkerboard_motor_d2500_right-checkerboard_motor_d5000_right": 
                   "checkerboard_motor_d2500_right-checkerboard_motor_d5000_right"}
-    vmu = 100.
     vh = 0.0001 #0.0001
-    vg = 0.0001 #0.0001
-    gamma_h = 1000000  # 10000000000  # 7.5 #100000
-    gamma_g = 1000000                  #10000000
+    gamma_h = 1000  # 10000000000  # 7.5 #100000
     jde_vem_analyser = JDEVEMAnalyser(beta=1., dt=dt, hrfDuration=25.,
-                            nItMax=10, nItMin=nItMin, PLOT=True,
-                            sigmaH=vh, gammaH=gamma_h, sigmaMu=vmu,
-                            sigmaG=vg, gammaG=gamma_g, physio=physio,
-                            positivity=positivity, use_hyperprior=use_hyperprior,
-                            prior=prior, constrained=True,
+                            nItMax=100, nItMin=nItMin, PLOT=True,
+                            sigmaH=vh, gammaH=gamma_h, constrained=True,
                             contrasts=contrasts, computeContrast=True)
     tjde_vem = FMRITreatment(fmri_data=fmri_data, analyser=jde_vem_analyser,
                              output_dir=output_dir)

@@ -12,6 +12,7 @@ import scipy as sp
 
 from numpy.matlib import *
 from scipy.linalg import toeplitz
+from scipy.optimize import fmin_slsqp
 
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
@@ -32,10 +33,10 @@ logger = logging.getLogger(__name__)
 # Tools
 ##############################################################
 
-eps = 1e-6
+eps = np.spacing(1)
 
 
-def mult(v1, v2):
+def mult_old(v1, v2):
     matrix = np.zeros((len(v1), len(v2)), dtype=float)
     for i in xrange(len(v1)):
         for j in xrange(len(v2)):
@@ -43,7 +44,30 @@ def mult(v1, v2):
     return matrix
 
 
-def maximum(a):
+def mult(v1, v2):
+    """Multiply two vectors.
+
+    The first vector is made vertical and the second one horizontal. The result
+    will be a matrix of size len(v1), len(v2).
+
+    Parameters
+    ----------
+    v1 : ndarray
+        unidimensional
+    v2 : ndarray
+        unidimensional
+
+    Returns
+    -------
+    x : ndarray, shape (len(v1), len(v2))
+    """
+
+    v1 = v1.reshape(len(v1), 1)
+    v2 = v2.reshape(1, len(v2))
+    return v1.dot(v2)
+
+
+def maximum_old(a):
     maxx = a[0]
     maxx_ind = 0
     for i in xrange(len(a)):
@@ -52,6 +76,31 @@ def maximum(a):
             maxx_ind = i
 
     return maxx, maxx_ind
+
+
+def maximum(iterable):
+    """Return the maximum and the indice of the maximum of an iterable.
+
+    Parameter
+    ---------
+    iterable : iterable or numpy array
+
+    Returns
+    tuple :
+        iter_max : the maximum
+        iter_max_indice : the indice of the maximum
+    """
+
+    iter_max = max(iterable)
+
+    try:
+        # this is an iterable (tuple or list)
+        iter_max_indice = iterable.index(iter_max)
+    except AttributeError:
+        # this is an numpy array
+        iter_max_indice = iterable.argmax()
+
+    return iter_max, iter_max_indice
 
 
 def normpdf(x, mu, sigma):
@@ -67,6 +116,22 @@ def polyFit(signal, tr, order, p):
     invptppt = np.dot(invptp, p.transpose())
     l = np.dot(invptppt, signal)
     return l
+
+
+def poly_fit(signal, drift_basis):
+    """# TODO
+
+    Parameters
+    ----------
+    signal : ndarray, shape (nb_scans, nb_voxels)
+    drift_basis : ndarray, shape (nb_scans, int)
+
+    Returns
+    -------
+    drift_coeffs : ndarray, shape
+    """
+
+    return np.linalg.inv(drift_basis.T.dot(drift_basis)).dot(drift_basis.T).dot(signal)
 
 
 def PolyMat(Nscans, paramLFD, tr):
@@ -91,10 +156,11 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     # construction will only work if dt is a multiple of tr
     if int(osf) != osf:
         raise Exception('OSF (%f) is not an integer' % osf)
+
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
-    lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
-    paradigm_bins = restarize_events(onsets, durations, dt, tmax)
+    lgt = int((nbscans + 2) * osf)  # nb of scans if tr=dt
+    paradigm_bins = restarize_events(onsets, np.zeros_like(onsets), dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
     firstrow = np.concatenate(
@@ -102,13 +168,8 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp[os_indexes]
-    if 0:
-        print x.shape
-        import matplotlib.pyplot as plt
-        plt.matshow(x[:200, :])
-        plt.show()
     return x
-    
+
 
 def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     if durations is None:  # assume spiked stimuli
@@ -121,6 +182,10 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    print 'onsets = ', onsets
+    print 'durations = ', durations
+    print 'dt = ', dt
+    print 'tmax = ', tmax
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -128,7 +193,8 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
         ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
     x_tmp2 = np.zeros_like(x_tmp)
-    for ix in np.arange(tr / dt, firstrow.shape[0], tr / dt):
+    #for ix in np.arange(0, firstrow.shape[0], 1): #tr / dt):
+    for ix in np.arange(0, firstrow.shape[0], tr / dt):
         x_tmp2[:, ix] = x_tmp[:, ix]       
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp2[os_indexes]
@@ -144,11 +210,39 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     return x
 
 
-def buildFiniteDiffMatrix(order, size):
-    o = order
-    a = np.diff(np.concatenate((np.zeros(o), [1], np.zeros(o))), n=o)
-    b = a[len(a) / 2:]
+def buildFiniteDiffMatrix(order, size, regularization=None):
+    """Build the finite difference matrix used for the hrf regularization prior.
+
+    Parameters
+    ----------
+    order : int
+        difference order (see numpy.diff function)
+    size : int
+        size of the matrix
+    regularization : array like, optional
+        one dimensional vector of factors used for regularizing the hrf
+
+    Returns
+    -------
+    diffMat : ndarray, shape (size, size)
+        the finite difference matrix"""
+
+    a = np.diff(np.concatenate((np.zeros(order), [1], np.zeros(order))),
+                n=order)
+    b = a[len(a)//2:]
     diffMat = toeplitz(np.concatenate((b, np.zeros(size - len(b)))))
+    if regularization is not None:
+        regularization = np.array(regularization)
+        if regularization.shape != (size,):
+            raise Exception("regularization shape ({}) must be (size,) ({},)".format(regularization.shape, size))
+        if not all(regularization > 0):
+            raise Exception("All values of regularization must be stricly positive")
+        diffMat = (np.triu(diffMat, 1) * regularization +
+                   np.tril(diffMat, -1) * regularization[:, np.newaxis] +
+                   np.diag(diffMat.diagonal() * regularization))
+        # diffMat = (np.triu(diffMat, 1) + np.tril(diffMat, -1) +
+                   # np.diag(diffMat.diagonal() * regularization))
+        # diffMat = diffMat * regularization
     return diffMat
 
 
@@ -231,6 +325,61 @@ def roc_curve(dvals, labels, rocN=None, normalize=True):
 
     return fpc, tpc, area
 
+
+def norm1_constraint(function, variance):
+    """Returns the function constrained with optimization strategy.
+
+    Parameters
+    ----------
+    function : array_like
+        function to optimize under norm1 constraint
+    variance : array_like
+        variance of the `function`, must be the same size
+
+    Returns
+    -------
+    optimized_function : numpy array
+
+    Raises
+    ------
+    ValueError
+        If `len(variance) != len(function)`
+
+    """
+
+    variance_inv = np.linalg.inv(variance)
+
+    current_level = logger.getEffectiveLevel()
+    if current_level >= logging.WARNING:
+        disp = 0
+    elif current_level >= logging.INFO:
+        disp = 1
+    else:
+        disp = 2
+
+    def minimized_function(fct):
+        """Function to minimize"""
+        return np.dot(np.dot((fct - function).T, variance_inv), (fct - function))
+
+    def norm1_constraint_equation(fct):
+        """Norm2(fct) == 1"""
+        return np.linalg.norm(fct, 2) - 1
+
+    def first_element_constraint(fct):
+        """fct[0] == 0"""
+        return fct[0]
+
+    def last_element_constraint(fct):
+        """fct[-1] == 0"""
+        return fct[-1]
+
+    return fmin_slsqp(minimized_function, function,
+                      eqcons=[norm1_constraint_equation,
+                              first_element_constraint,
+                              last_element_constraint],
+                      bounds=[(None, None)] * (len(function)), disp=disp)
+
+
 # Expectation functions
 ##############################################################
 
@@ -263,6 +412,71 @@ def expectation_A(Y, Sigma_H, m_H, m_A, X, Gamma, PL, sigma_MK, q_Z, mu_MK, D, N
     return Sigma_A, m_A
 
 
+def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
+                     labels_proba, nrls_class_mean, nrls_class_var,
+                     nb_conditions, y_tilde, nrls_covar,
+                     hrf_covar, noise_var):
+    """Computes the E-A step of the JDE-VEM algorithm.
+
+    p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
+        \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
+                  + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
+
+    # TODO: add formulas using reST
+
+    Parameters
+    ----------
+    hrf_mean : ndarray, shape (hrf_len,)
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    occurence_matrix : ndarray, shape (nb_conditions, nb_scans, hrf_len)
+    noise_struct : ndarray, shape (nb_scans, nb_scans)
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+    hrf_len : int
+    nb_voxels : int
+    nb_conditions : int
+    nb_classes : int
+    y_tilde : ndarray, shape (nb_scans, nb_voxels)
+        BOLD data minus drifts
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    hrf_covar : ndarray, shape (hrf_len, hrf_len)
+    noise_var : ndarray, shape (nb_voxels,)
+
+    Returns
+    -------
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    """
+
+    # Pre-compute some matrix products
+    om_hm_prod = occurence_matrix.dot(hrf_mean).T
+    hc_om_prod = occurence_matrix.dot(hrf_covar.T)
+    ns_om_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
+
+    ## nrls_covar computation
+    # first term of Sigma_A: XH.T*Gamma*XH / sigma_eps
+    nrls_covar = om_hm_prod.T.dot(noise_struct).dot(om_hm_prod)[..., np.newaxis]
+    # second term of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
+    nrls_covar += np.einsum('ijk, jlk', hc_om_prod, ns_om_prod)[..., np.newaxis]
+    nrls_covar = nrls_covar / noise_var
+
+    # third term of nrls_covar: part of p(a|q; theta_A)
+    delta_k = (labels_proba / nrls_class_var[:, :, np.newaxis])
+    delta = delta_k.sum(axis=1)         # sum across classes K
+    nrls_covar = nrls_covar.transpose(2, 0, 1) + delta.T[:, np.newaxis, :] * np.eye(nb_conditions)
+    nrls_covar = np.linalg.inv(nrls_covar).transpose(1, 2, 0)
+
+    ## m_A computation
+    ns_yt_prod = noise_struct.dot(y_tilde).T
+    x_tilde = ns_yt_prod.dot(om_hm_prod) / noise_var[:, np.newaxis] \
+            + (delta_k * nrls_class_mean[:, :, np.newaxis]).sum(axis=1).T
+    # dot product across voxels of nrls_covar and x_tilde
+    nrls_mean = np.einsum('ijk,kj->ki', nrls_covar, x_tilde)
+
+    return nrls_mean, nrls_covar
+
+
 def expectation_H(Y, Sigma_A, m_A, X, Gamma, PL, D, R, sigmaH, J, N, y_tilde, zerosND, sigma_epsilone, scale, zerosDD, zerosD):
     Y_bar_tilde = zerosD.copy()  # np.zeros((D),dtype=float)
     Q_bar = scale * R / sigmaH
@@ -293,6 +507,76 @@ def expectation_H(Y, Sigma_A, m_A, X, Gamma, PL, D, R, sigmaH, J, N, y_tilde, ze
     return Sigma_H, m_H
 
 
+def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
+                    hrf_regu_prior_inv, sigmaH, nb_voxels, y_tilde, noise_var,
+                    prior_mean_term=0., prior_cov_term=0.):
+
+    """Computes the E-H step of the JDE-VEM algorithm.
+
+    Expectation-H step:
+    p_H = argmax_h(E_pa[log p(h|y, a ; theta)])
+        \propto exp(E_pa[log p(y|h, a; theta) + log p(h; sigmaH)])
+
+    Parameters
+    ----------
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    occurence_matrix : ndarray, shape (nb_conditions, nb_scans, hrf_len)
+    noise_struct : ndarray, shape (nb_scans, nb_scans)
+    hrf_regu_prior_inv : ndarray, shape (hrf_len, hrf_len)
+        inverse of the hrf regularization prior matrix `R`
+    sigmaH : float
+    nb_voxels : int
+    y_tilde : ndarray, shape (nb_scans, nb_voxels)
+    noise_var : ndarray, shape (nb_voxels,)
+    prior_mean_term : float, optional
+    prior_cov_term : float, optional
+
+    Returns
+    -------
+    hrf_mean : ndarray, shape (hrf_len,)
+    hrf_covar : ndarray, shape (hrf_len, hrf_len)
+    """
+
+    # Pre-compute some matrix products
+    nm_om_prod = np.tensordot(nrls_mean, occurence_matrix, axes=(1, 0))
+    ns_om_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
+    om_ns_om_prod = np.tensordot(occurence_matrix.T, ns_om_prod, axes=(1, 0))
+    cov_noise = np.maximum(noise_var, eps)[:, np.newaxis, np.newaxis]
+    nm_om_ns_prod = np.tensordot(nm_om_prod, noise_struct, axes=(1, 0))/cov_noise
+
+    ## Sigma_H computation
+    # first term: part of the prior -> R^-1 / sigmaH
+    hrf_covar_inv = hrf_regu_prior_inv/sigmaH
+
+    # second term: E_pa[Saj.T*noise_struct*Saj] op1
+    # sum_{m, m'} Sigma_a(m,m') X_m.T noise_struct_i X_m'
+    hrf_covar_inv += (np.einsum('ijk,lijm->klm', nrls_covar, om_ns_om_prod)/cov_noise).sum(0)
+
+    # third term: E_pa[Saj.T*noise_struct*Saj] op2
+    # (sum_m m_a X_m).T noise_struct_i (sum_m m_a X_m)
+    for i in xrange(nb_voxels):
+        hrf_covar_inv += nm_om_ns_prod[i, :, :].dot(nm_om_prod[i, :, :])
+
+    # forth term (depends on prior type):
+    # we sum the term that corresponds to the prior
+    hrf_covar_inv += prior_cov_term
+
+    # Sigma_H = S_a^-1
+    hrf_covar = np.linalg.inv(hrf_covar_inv)
+
+    ## m_H
+    # (sum_m m_a X_m).T noise_struct_i y_tildeH
+    y_bar_tilde = np.einsum('ijk,ki->j', nm_om_ns_prod, y_tilde)
+    # we sum the term that corresponds to the prior
+    y_bar_tilde += prior_mean_term
+
+    # m_H = S_a^-1 y_bar_tilde
+    hrf_mean = hrf_covar.dot(y_bar_tilde)
+
+    return hrf_mean, hrf_covar
+
+
 def expectation_Z(Sigma_A, m_A, sigma_M, Beta, Z_tilde, mu_M, q_Z, graph, M, J, K, zerosK):
     energy = zerosK.copy()
     Gauss = zerosK.copy()
@@ -302,7 +586,8 @@ def expectation_Z(Sigma_A, m_A, sigma_M, Beta, Z_tilde, mu_M, q_Z, graph, M, J, 
             alpha /= np.mean(alpha) + eps
             tmp = sum(Z_tilde[m, :, graph[i]], 0)
             for k in xrange(0, K):
-                extern_field = alpha[k] + max(np.log(normpdf(m_A[i, m], mu_M[m, k], np.sqrt(sigma_M[m, k])) + eps), -100)
+                extern_field = alpha[
+                    k] + max(np.log(normpdf(m_A[i, m], mu_M[m, k], np.sqrt(sigma_M[m, k])) + eps), -100)
                 local_energy = Beta[m] * tmp[k]
                 energy[k] = extern_field + local_energy
             Emax = max(energy)
@@ -329,6 +614,186 @@ def expectation_Z(Sigma_A, m_A, sigma_M, Beta, Z_tilde, mu_M, q_Z, graph, M, J, 
     return q_Z, Z_tilde
 
 
+def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
+                       beta, labels_proba, neighbours_indexes, nb_conditions, nb_classes):
+    """Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+
+    Parameters
+    ----------
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+    beta : ndarray, shape
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    neighbours_indexes : ndarray, shape (nb_voxels, max(len(a) for a in graph))
+        This is the version of graph array where arrays from graph smaller than
+        the maximum ones are filled with -1
+    nb_conditions : int
+    nb_classes : int
+
+    Returns
+    -------
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    """
+
+    ########################### DEBUG START#####################################
+    #  import matplotlib.pyplot as plt
+    ########################### DEBUG END#######################################
+
+    alpha = -0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / (nrls_class_var[np.newaxis, :, :])
+
+    ########################### DEBUG START#####################################
+    #  for i in xrange(4):
+        #  print "min diff alpha", i, (np.abs(alpha[:, i, 1] - alpha[:, i, 0])).max()
+        #  print "qdsf", i, alpha[:, i, :].flatten().min(), alpha[:, i, :].flatten().mean(), alpha[:, i, :].flatten().max()
+
+    #  f, ax = plt.subplots(2, 4, num=0)
+    #  #  ax[0, 0].imshow(nrls_covar[0, 0, :].reshape(20, 20))
+    #  ax[0, 0].imshow(nrls_covar[0, 0, :].reshape(20, 20))
+    #  ax[0, 1].imshow(nrls_covar[1, 1, :].reshape(20, 20))
+    #  ax[1, 0].imshow(nrls_covar[2, 2, :].reshape(20, 20))
+    #  ax[1, 1].imshow(nrls_covar[3, 3, :].reshape(20, 20))
+    #  ax[0, 2].imshow(nrls_mean[:, 0].reshape(20, 20))
+    #  ax[0, 3].imshow(nrls_mean[:, 1].reshape(20, 20))
+    #  ax[1, 2].imshow(nrls_mean[:, 2].reshape(20, 20))
+    #  ax[1, 3].imshow(nrls_mean[:, 3].reshape(20, 20))
+    #  #  plt.colorbar(plt1)
+    #  f.show()
+    #  plt.draw()
+    #  print nrls_covar[0, 0, :].min(), nrls_covar[0, 0, :].mean(), np.median(nrls_covar[0, 0, :]), nrls_covar[0, 0, :].max()
+    #  print nrls_covar[1, 1, :].min(), nrls_covar[1, 1, :].mean(), np.median(nrls_covar[1, 1, :]), nrls_covar[1, 1, :].max()
+    #  print nrls_covar[2, 2, :].min(), nrls_covar[2, 2, :].mean(), np.median(nrls_covar[2, 2, :]), nrls_covar[2, 2, :].max()
+    #  print nrls_covar[3, 3, :].min(), nrls_covar[3, 3, :].mean(), np.median(nrls_covar[3, 3, :]), nrls_covar[3, 3, :].max()
+    ########################### DEBUG END#######################################
+
+    alpha -= alpha.mean(axis=2)[:, :, np.newaxis]
+    gauss = normpdf(nrls_mean[...,np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var))
+
+    # Update Ztilde ie the quantity which is involved in the a priori
+    # Potts field [by solving for the mean-field fixed point Equation]
+    beta_lprob = beta[..., np.newaxis, np.newaxis] * labels_proba
+    beta_lprob = np.concatenate((beta_lprob,
+                                 np.zeros((nb_conditions, nb_classes, 1),
+                                          dtype=beta_lprob.dtype)), axis=2)
+    local_energy = beta_lprob[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
+    energy = alpha + local_energy
+    #  energy -= energy.max()
+    labels_proba = (np.exp(energy) * gauss).transpose(1, 2, 0)
+    labels_proba = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
+
+    return labels_proba
+
+def labels_expectation_soustraction(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
+                                    beta, labels_proba, neighbours_indexes, nb_conditions, nb_classes):
+    """Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+
+    Parameters
+    ----------
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+    beta : ndarray, shape
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    neighbours_indexes : ndarray, shape (nb_voxels, max(len(a) for a in graph))
+        This is the version of graph array where arrays from graph smaller than
+        the maximum ones are filled with -1
+    nb_conditions : int
+    nb_classes : int
+
+    Returns
+    -------
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    """
+
+    alpha = - 0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / (nrls_class_var[np.newaxis, :, :])
+    #alpha -= alpha.mean(axis=2)[:, :, np.newaxis]
+    gauss = normpdf(nrls_mean[...,np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var))
+
+    # Update Ztilde ie the quantity which is involved in the a priori
+    # Potts field [by solving for the mean-field fixed point Equation]
+    beta_lprob = beta[..., np.newaxis, np.newaxis] * labels_proba
+    beta_lprob = np.concatenate((beta_lprob,
+                                 np.zeros((nb_conditions, nb_classes, 1),
+                                          dtype=beta_lprob.dtype)), axis=2)
+    local_energy = beta_lprob[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
+    energy = alpha + local_energy
+    #energy -= energy.max()
+    labels_proba = (np.exp(energy) * gauss).transpose(1, 2, 0)
+    aux = labels_proba.sum(axis=1)[:, np.newaxis, :]
+    aux[np.where(aux==0)] = eps
+    labels_proba = labels_proba / aux 
+    #/ labels_proba.sum(axis=1)[:, np.newaxis, :]
+    return labels_proba
+
+"""def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+                  mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
+    # between ASL and BOLD just alpha and Gauss_mat change!!!
+    alpha = - 0.5 * np.diagonal(Sigma_A)[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :]) \
+            - 0.5 * np.diagonal(Sigma_C)[:, :, np.newaxis] / (sigma_Mc[np.newaxis, :, :])  # (J, M, K)
+    Gauss_mat = vt.normpdf(m_A[...,np.newaxis], mu_Ma, np.sqrt(sigma_Ma)) * \
+                vt.normpdf(m_C[...,np.newaxis], mu_Mc, np.sqrt(sigma_Mc))
+
+    # Update Ztilde ie the quantity which is involved in the a priori 
+    # Potts field [by solving for the mean-field fixed point Equation]
+    # TODO: decide if we take out the computation of p_q_t or Ztilde
+    B_pqt = Beta[:, np.newaxis, np.newaxis] * p_q_t.copy()
+    B_pqt = np.concatenate((B_pqt, np.zeros((M, K, 1), dtype=B_pqt.dtype)), axis=2)
+    local_energy = B_pqt[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
+    energy = (alpha + local_energy)
+    energy -= energy.max()
+    Probas = (np.exp(energy) * Gauss_mat).transpose(1, 2, 0)
+    aux = Probas.sum(axis=1)[:, np.newaxis, :]
+    aux[np.where(aux==0)] = eps
+    p_q_t = Probas / aux
+        
+    return p_q_t, p_q_t"""
+
+
+def labels_expectation_division(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
+                                beta, labels_proba, neighbours_indexes, nb_conditions, nb_classes):
+    """Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+
+    Parameters
+    ----------
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+    beta : ndarray, shape
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    neighbours_indexes : ndarray, shape (nb_voxels, max(len(a) for a in graph))
+        This is the version of graph array where arrays from graph smaller than
+        the maximum ones are filled with -1
+    nb_conditions : int
+    nb_classes : int
+
+    Returns
+    -------
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    """
+
+    alpha = -0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / (nrls_class_var[np.newaxis, :, :])
+
+    alpha /= alpha.mean(axis=2)[:, :, np.newaxis]
+    gauss = normpdf(nrls_mean[...,np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var))
+
+    # Update Ztilde ie the quantity which is involved in the a priori
+    # Potts field [by solving for the mean-field fixed point Equation]
+    beta_lprob = beta[..., np.newaxis, np.newaxis] * labels_proba
+    beta_lprob = np.concatenate((beta_lprob,
+                                 np.zeros((nb_conditions, nb_classes, 1),
+                                          dtype=beta_lprob.dtype)), axis=2)
+    local_energy = beta_lprob[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
+    energy = alpha + local_energy
+    #  energy -= energy.max()
+    labels_proba = (np.exp(energy) * gauss).transpose(1, 2, 0)
+    labels_proba = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
+
+    return labels_proba
+
+
 # Maximization functions
 ##############################################################
 
@@ -351,6 +816,23 @@ def maximization_mu_sigma(Mu, Sigma, q_Z, m_A, K, M, Sigma_A):
     return Mu, Sigma
 
 
+def maximization_class_proba(labels_proba, nrls_mean, nrls_covar):
+
+    labels_proba_sum = labels_proba.sum(axis=2)
+    nrls_class_mean = np.zeros_like(labels_proba_sum)
+    nrls_class_mean[:, 1] = ((labels_proba[:, 1, :] * nrls_mean.T).sum(axis=1)
+                             / labels_proba_sum[:, 1])
+    nm_minus_ncm = (nrls_mean[..., np.newaxis]
+                    - nrls_class_mean[np.newaxis, ...]).transpose(1, 2, 0)**2
+    nrls_covar_diag = np.diagonal(nrls_covar).T
+    nrls_class_var = (
+        (labels_proba* (nm_minus_ncm + nrls_covar_diag[:, np.newaxis, :])).sum(axis=2)
+        /labels_proba_sum
+    )
+
+    return nrls_class_mean, nrls_class_var
+
+
 def maximization_L(Y, m_A, X, m_H, L, P, zerosP):
     J = Y.shape[1]
     for i in xrange(0, J):
@@ -363,18 +845,26 @@ def maximization_L(Y, m_A, X, m_H, L, P, zerosP):
     return L
 
 
+def maximization_drift_coeffs(data, nrls_mean, occurence_matrix, hrf_mean,
+                              noise_struct, drift_basis):
+    # Precomputations
+    db_ns_db = drift_basis.T.dot(noise_struct).dot(drift_basis)
+
+    data_s = data - nrls_mean.dot(occurence_matrix.dot(hrf_mean)).T
+    return np.linalg.inv(db_ns_db).dot(drift_basis.T).dot(noise_struct).dot(data_s)
+
+
 def maximization_sigmaH(D, Sigma_H, R, m_H):
     sigmaH = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
-    #sigmaH /= D
-    sigmaH /= (D-1)
+    sigmaH /= D
     return sigmaH
 
 
 def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
     alpha = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
     #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
-    #sigmaH = (-D + sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
-    sigmaH = (-(D-1) + sqrt((D-1) * (D-1) + 8 * gamma_h * alpha)) / (4*gamma_h)
+    sigmaH = (-D + sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
+
     return sigmaH
 
 
@@ -396,12 +886,41 @@ def maximization_sigma_noise(Y, X, m_A, m_H, Sigma_H, Sigma_A, PL, sigma_epsilon
             m += 1
         sigma_epsilone[i] = np.dot(-2 * S, Y[:, i] - PL[:, i])
         sigma_epsilone[i] += (np.dot(Sigma_A[:, :, i], Htilde)).trace()
-        sigma_epsilone[
-            i] += np.dot(np.dot(m_A[i, :].transpose(), Htilde), m_A[i, :])
-        sigma_epsilone[
-            i] += np.dot((Y[:, i] - PL[:, i]).transpose(), Y[:, i] - PL[:, i])
+        sigma_epsilone[i] += np.dot(np.dot(m_A[i, :].transpose(), Htilde), m_A[i, :])
+        sigma_epsilone[i] += np.dot((Y[:, i] - PL[:, i]).transpose(), Y[:, i] - PL[:, i])
         sigma_epsilone[i] /= N
     return sigma_epsilone
+
+
+def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
+                           nrls_covar, noise_struct, data_drift, nb_scans):
+    """Computes the M-sigma_epsilone step of the JDE-VEM algorithm.
+
+    """
+
+    # Precomputations
+    om_hm = occurence_matrix.dot(hrf_mean)
+    ns_om = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
+    nm_om_hm = nrls_mean.dot(om_hm)
+
+    hm_om_ns_om_hm = ns_om.transpose(1, 0, 2).dot(hrf_mean).dot(om_hm.T)
+    hc_om_ns_om = np.einsum('ijk,ljk->il', occurence_matrix.dot(hrf_covar.T),
+                            ns_om.transpose(1, 0, 2))
+
+    hm_om_nm_ns_nm_om_hm = np.einsum('ij,ij->i', nrls_mean.dot(hm_om_ns_om_hm +
+                                                               hc_om_ns_om),
+                                     nrls_mean)
+
+    # trace(Sigma_A (X.T H.T H X + SH X.T X) ) in each voxel
+    tr_nc_om_ns_om = np.einsum('ijk,ji->k', nrls_covar, hm_om_ns_om_hm + hc_om_ns_om)
+
+    ns_df = noise_struct.dot(data_drift)
+    df_ns_df = np.einsum('ij,ij->j', data_drift, ns_df)
+
+    nm_om_hm_ns_df = np.einsum('ij,ji->i', nm_om_hm, ns_df)
+
+    return (hm_om_nm_ns_nm_om_hm + tr_nc_om_ns_om +
+            df_ns_df - 2 * nm_om_hm_ns_df) / nb_scans
 
 
 def gradient(q_Z, Z_tilde, J, m, K, graph, beta, gamma):
@@ -429,49 +948,186 @@ def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour, maxN
         ni += 1
     return max(beta, eps)
 
+
+def beta_maximization(beta, labels_proba, neighbours_indexes, gamma, nb_classes,
+                      it_max_grad=200, gradient_step=0.003):
+    """
+    update beta for one condition
+
+    Parameters
+    ----------
+    beta : float
+    labels_proba : ndarray, shape(nb_classes, nb_voxels)
+    neighbours_indexes : ndarray, # TODO
+    gamma : float
+    it_max_grad : int, optional
+    gradient_step : float, optional
+    """
+
+    #  if beta < 0:
+        #  import ipdb; ipdb.set_trace() #################### Breakpoint ####################
+
+    labels_neigh = np.concatenate((labels_proba, np.zeros((nb_classes, 1), dtype=labels_proba.dtype)), axis=1)
+    labels_neigh = labels_neigh[:, neighbours_indexes].sum(2)
+    gradient = 1
+    it = 1
+    while abs(gradient) > 10**-4 and it < it_max_grad:
+        beta_labels_neigh = beta * labels_neigh
+        energy = np.exp(beta_labels_neigh)
+        #  energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
+        energy /= energy.sum(axis=0)
+
+        energy_neigh = np.concatenate((energy, np.zeros((nb_classes, 1), dtype=energy.dtype)), axis=1)
+        energy_neigh = energy_neigh[:, neighbours_indexes].sum(axis=2)
+
+        #  try:
+        gradient = gamma + (energy*energy_neigh - labels_proba*labels_neigh).sum()/2.
+        #  gradient = gamma + ((energy-labels_proba)*labels_neigh).sum()
+        #  except FloatingPointError:
+            #  import ipdb; ipdb.set_trace() #################### Breakpoint ####################
+
+        #  if beta - gradient_step*gradient < 0:
+            #  import ipdb; ipdb.set_trace() #################### Breakpoint ####################
+
+        beta -= gradient_step * gradient
+
+        it += 1
+
+    return beta
+
+
+#  def beta_maximization_scipy(beta, labels_proba, neighbours_indexes, gamma):
+
+    #  def beta_func(beta, )
 # Entropy functions
 ##############################################################
 
 eps_FreeEnergy = 0.00000001
+eps_freeenergy = 0.00000001
 
+
+# def A_Entropy(Sigma_A, M, J):
+
+    # logger.info('Computing NRLs Entropy ...')
+    # Det_Sigma_A_j = np.zeros(J, dtype=np.float64)
+    # Entropy = 0.0
+    # for j in xrange(0, J):
+        # Det_Sigma_A_j = np.linalg.det(Sigma_A[:, :, j])
+        # Const = (2 * np.pi * np.exp(1)) ** M
+        # Entropy_j = np.sqrt(Const * Det_Sigma_A_j)
+        # Entropy += np.log(Entropy_j + eps_FreeEnergy)
+    # Entropy = - Entropy
+
+    # return Entropy
+
+
+def nrls_entropy(nrls_covar, nb_conditions):
+    """Compute the entropy of neural response levels.
+
+    Parameters
+    ----------
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+        Covariance of the NRLs
+    nb_conditions : int
+    nb_voxels : int
+
+    Returns
+    -------
+    entropy : float
+    """
+
+    logger.info("Computing neural response levels entropy")
+    const = (2*np.pi)**nb_conditions * np.exp(nb_conditions)
+
+    det_nrls_covar = np.linalg.det(nrls_covar.transpose((2, 0, 1)))
+
+    return np.sum(np.log(np.sqrt(const*det_nrls_covar)))
 
 def A_Entropy(Sigma_A, M, J):
+    import warnings
+    warnings.warn("The A_Entropy function is deprecated, use nrls_entropy instead",
+                  DeprecationWarning)
+    return -nrls_entropy(Sigma_A, M, J)
 
-    logger.info('Computing NRLs Entropy ...')
-    Det_Sigma_A_j = np.zeros(J, dtype=np.float64)
-    Entropy = 0.0
-    for j in xrange(0, J):
-        Det_Sigma_A_j = np.linalg.det(Sigma_A[:, :, j])
-        Const = (2 * np.pi * np.exp(1)) ** M
-        Entropy_j = np.sqrt(Const * Det_Sigma_A_j)
-        Entropy += np.log(Entropy_j + eps_FreeEnergy)
-    Entropy = - Entropy
 
-    return Entropy
+# def H_Entropy(Sigma_H, D):
 
+    # logger.info('Computing HRF Entropy ...')
+    # Det_Sigma_H = np.linalg.det(Sigma_H)
+    # Const = (2 * np.pi * np.exp(1)) ** D
+    # Entropy = np.sqrt(Const * Det_Sigma_H)
+    # Entropy = - np.log(Entropy + eps_FreeEnergy)
+
+    # return Entropy
+
+
+def hrf_entropy(hrf_covar, hrf_len):
+    """Compute the entropy of the heamodynamic response function.
+
+    Parameters
+    ----------
+    hrf_covar : ndarray, shape (hrf_len, hrf_len)
+        Covariance matrix of the HRF
+    hrf_len : int
+        size of the HRF
+
+    Returns
+    -------
+    entropy : float
+    """
+
+    logger.info("Computing heamodynamic response function entropy")
+    const = (2*np.pi)**hrf_len * np.exp(hrf_len)
+
+    return np.log(np.sqrt(const*np.linalg.det(hrf_covar)))
 
 def H_Entropy(Sigma_H, D):
+    import warnings
+    warnings.warn("The H_Entropy function is deprecated, use hrf_entropy instead",
+                  DeprecationWarning)
+    return -hrf_entropy(Sigma_H, D)
 
-    logger.info('Computing HRF Entropy ...')
-    Det_Sigma_H = np.linalg.det(Sigma_H)
-    Const = (2 * np.pi * np.exp(1)) ** D
-    Entropy = np.sqrt(Const * Det_Sigma_H)
-    Entropy = - np.log(Entropy + eps_FreeEnergy)
 
-    return Entropy
+# def Z_Entropy(q_Z, M, J):
+
+    # logger.info('Computing Z Entropy ...')
+    # Entropy = 0.0
+    # for j in xrange(0, J):
+        # for m in xrange(0, M):
+            # Entropy += q_Z[m, 1, j] * np.log(q_Z[m, 1, j] + eps_FreeEnergy) + q_Z[
+                # m, 0, j] * np.log(q_Z[m, 0, j] + eps_FreeEnergy)
+
+    # return Entropy
+
+
+def labels_entropy(labels_proba):
+    """Compute the labels entropy.
+
+    Parameters
+    ----------
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+        Probability of each voxel to be in one class
+    nb_conditions : int
+    nb_voxels : int
+
+    Returns
+    -------
+    entropy : float
+    """
+
+    logger.info("Computing labels entropy")
+
+    labels_proba_control_0 = labels_proba.copy()
+    labels_proba_control_0[np.where(labels_proba==0)] = eps_FreeEnergy
+
+    return -(labels_proba * np.log(labels_proba_control_0)).sum()
 
 
 def Z_Entropy(q_Z, M, J):
-
-    logger.info('Computing Z Entropy ...')
-    Entropy = 0.0
-    for j in xrange(0, J):
-        for m in xrange(0, M):
-            Entropy += q_Z[m, 1, j] * np.log(q_Z[m, 1, j] + eps_FreeEnergy) + q_Z[
-                m, 0, j] * np.log(q_Z[m, 0, j] + eps_FreeEnergy)
-
-    return Entropy
-
+    import warnings
+    warnings.warn("The Z_Entropy function is deprecated, use labels_entropy instead",
+                  DeprecationWarning)
+    return -labels_entropy(q_Z)
 
 # Other functions
 ##############################################################
@@ -492,7 +1148,7 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_M, sigma_M, m_H, Sigma_H,
                        neighboursIndexes, maxNeighbours, Beta, sigma_epsilone,
                        XX, Gamma, Det_Gamma, XGamma, J, D, M, N, K, S, Model):
 
-    # First part (Entropy):
+        # First part (Entropy):
     EntropyA = A_Entropy(Sigma_A, M, J)
     EntropyH = H_Entropy(Sigma_H, D)
     EntropyZ = Z_Entropy(q_Z, M, J)
@@ -519,7 +1175,7 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_M, sigma_M, m_H, Sigma_H,
 
     return FreeEnergy
 
-"""
+
 def Compute_FreeEnergy2(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,
                        R,Det_invR,sigmaH,p_Wtilde,q_Z,neighboursIndexes,
                        maxNeighbours,Beta,sigma_epsilone,XX,Gamma,
@@ -546,7 +1202,119 @@ def Compute_FreeEnergy2(y_tilde,m_A,Sigma_A,mu_M,sigma_M,m_H,Sigma_H,
     FreeEnergy = E - Total_Entropy
 
     return FreeEnergy
-"""
+
+
+def expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar, hrf_mean,
+                                  hrf_covar, occurence_matrix, noise_var,
+                                  noise_struct, nb_voxels, nb_scans):
+    """likelyhood
+    # TODO
+
+    Parameters
+    ----------
+    data_drift : ndarray, shape (nb_scans, nb_voxels)
+        This is the BOLD data minus the drifts (y_tilde in the paper)
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    hrf_mean : ndarray, shape (hrf_len,)
+    hrf_covar : ndarray, shape (hrf_len, hrf_len)
+    occurence_matrix : ndarray, shape (nb_conditions, nb_scans, hrf_len)
+    noise_var : ndarray, shape (nb_voxels,)
+    noise_struct : ndarray, shape (nb_scans, nb_scans)
+    nb_voxels : int
+    nb_scans : int
+
+    Returns
+    -------
+    ptilde_likelyhood : float
+    """
+
+    noise_var_tmp = maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
+                                           nrls_covar, noise_struct, data_drift, nb_scans)
+    return - (nb_scans*nb_voxels*np.log(2*np.pi) - nb_voxels*np.log(np.linalg.det(noise_struct))
+              + 2*nb_scans*np.log(np.absolute(noise_var)).sum()
+              + nb_scans*(noise_var_tmp / noise_var).sum()) / 2.
+
+
+def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
+                           hrf_regu_prior_inv, hrf_len):
+    #logger.info('Computing hrf_regu_priorF expectation Ptilde ...')
+    const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(2*sigma_h)
+             + np.log(np.linalg.det(hrf_regu_prior)))
+    s = -(np.dot(np.dot(hrf_mean.T, hrf_regu_prior_inv), hrf_mean)
+         + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
+
+    return (const + s) / 2.
+
+
+def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
+                              nb_conditions, nb_classes):
+    labels_neigh = np.concatenate((labels_proba, np.zeros((nb_conditions, nb_classes, 1), dtype=labels_proba.dtype)), axis=2)
+    labels_neigh = labels_neigh[:, :, neighbours_indexes].sum(axis=3)
+    beta_labels_neigh = beta[:, np.newaxis, np.newaxis] * labels_neigh
+
+    energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
+    energy /= energy.sum(axis=0)
+
+    energy_neigh = np.concatenate((energy, np.zeros((nb_conditions, nb_classes, 1), dtype=energy.dtype)), axis=2)
+    energy_neigh = energy[:, :, neighbours_indexes].sum(axis=3)
+
+    return (-np.log(np.exp(beta_labels_neigh).sum(axis=1)).sum()
+            + (beta*(labels_proba*labels_neigh/2.
+                     + energy*(labels_neigh-energy_neigh/2.)).sum(axis=(1, 2))).sum())
+
+
+def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
+                            nrls_mean, nrls_covar):
+    diag_nrls_covar = np.diagonal(nrls_covar)[:, :, np.newaxis]
+    s = -labels_proba.transpose(2, 0, 1)* (
+        np.log(2*np.pi*nrls_class_var)
+        + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
+           + diag_nrls_covar) / (2*nrls_class_var[np.newaxis, :, :])
+    )
+
+    return s.sum()
+
+
+def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
+                            labels_proba, data_drift, occurence_matrix, noise_var,
+                            noise_struct, nb_conditions, nb_voxels, nb_scans, nb_classes,
+                            nrls_class_mean, nrls_class_var, neighbours_indexes,
+                            beta, sigma_h, hrf_regu_prior, hrf_regu_prior_inv,
+                            gamma, gamma_h):
+    """Compute the free energy.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    free_energy : float
+    """
+
+    total_entropy = (nrls_entropy(nrls_covar, nb_conditions) +
+                     hrf_entropy(hrf_covar, hrf_len) +
+                     labels_entropy(labels_proba))
+    total_expectation = (
+        expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar,
+                                      hrf_mean, hrf_covar, occurence_matrix,
+                                      noise_var, noise_struct, nb_voxels, nb_scans)
+        + expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
+                                  nrls_mean, nrls_covar)
+        + expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
+                                    nb_conditions, nb_classes)
+        + expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
+                                 hrf_regu_prior_inv, hrf_len)
+    )
+
+    total_prior = 0
+    if gamma:
+        total_prior += (nb_conditions*np.log(gamma) - gamma*beta).sum()
+    if gamma_h:
+        total_prior += log(gamma_h) - gamma_h*sigma_h
+
+
+    return total_expectation + total_entropy + total_prior
 
 
 # MiniVEM
@@ -692,7 +1460,6 @@ def MiniVEM_CompMod(Thrf, TR, dt, beta, Y, K, gamma, gradientStep, MaxItGrad, D,
     return InitVar, InitMean, Initgamma_h
 
 
-"""
 def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
                     D,M,N,J,S,maxNeighbours,neighboursIndexes,XX,X,R,
                     Det_invR,Gamma,Det_Gamma,scale,Q_barnCond,XGamma,
@@ -814,4 +1581,3 @@ def MiniVEM_CompMod2(Thrf,TR,dt,beta,Y,K,gamma,gradientStep,MaxItGrad,
     logger.info("Choosed initialisation is : var = %s,  mean = %s,  gamma_h = %s" %(InitVar,InitMean,Initgamma_h))
 
     return InitVar, InitMean, Initgamma_h
-"""
