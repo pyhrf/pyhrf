@@ -15,7 +15,7 @@ eps = 1e-8
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-def expectation_H(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
+def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
                   cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term):
     """
     Expectation-H step: 
@@ -65,7 +65,7 @@ def expectation_H(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_t
     return m_H, Sigma_H
 
 
-def expectation_G(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
+def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
                   XW_Gamma_WX, J, y_tilde, cov_noise, R_inv, sigmaG,
                   prior_mean_term, prior_cov_term):
     """
@@ -118,7 +118,7 @@ def expectation_G(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
 
 
 
-def expectation_A(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
+def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
                   J, y_tilde, Sigma_H, sigma_eps_m):
     """
     Expectation-A step: 
@@ -163,7 +163,7 @@ def expectation_A(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
     return m_A, Sigma_A
 
 
-def expectation_C(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
+def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
                   J, y_tilde, Sigma_G, sigma_eps_m):
     """
     Expectation-C step: 
@@ -208,7 +208,7 @@ def expectation_C(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
     return m_C, Sigma_C
 
 
-def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
                   mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
     # between ASL and BOLD just alpha and Gauss_mat change!!!
     alpha = - 0.5 * np.diagonal(Sigma_A)[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :]) \
@@ -232,7 +232,7 @@ def expectation_Q(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     return p_q_t, p_q_t
 
 
-def expectation_Q_async(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+def expectation_Q_async_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
                   mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
     # between ASL and BOLD just alpha and Gauss_mat change!!!
     alpha = (- 0.5 * np.diagonal(Sigma_A)[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :]) \
@@ -261,7 +261,7 @@ def expectation_Q_async(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     return p_q_t, p_q_t
     
 
-def maximization_mu_sigma(q_Z, m_X, Sigma_X):
+def maximization_mu_sigma_asl(q_Z, m_X, Sigma_X):
 
     qZ_sumvox = q_Z.sum(axis=2)                              # (M, K)
     Mu = np.zeros_like(qZ_sumvox)
@@ -274,7 +274,7 @@ def maximization_mu_sigma(q_Z, m_X, Sigma_X):
     return Mu, Sigma
 
 
-def maximization_sigma(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
+def maximization_sigma_asl(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
     alpha = (np.dot(m_H[:, np.newaxis] * m_H[np.newaxis, :] + Sigma_H, R_inv)).trace()
     if use_hyp:
         sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4*gamma_h)
@@ -289,14 +289,14 @@ def maximization_sigma(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
     return sigma
 
 
-def maximization_Mu(H, G, matrix_covH, matrix_covG,
+def maximization_Mu_asl(H, G, matrix_covH, matrix_covG,
                     sigmaH, sigmaG, sigmaMu, Omega, R_inv):
     Aux = matrix_covH / sigmaH + np.dot(Omega.T, Omega) / sigmaG + R_inv / sigmaMu
     Mu = np.dot(sp.linalg.inv(Aux), (H / sigmaH + np.dot(Omega.T, G) / sigmaG))
     return Mu
 
 
-def maximization_beta_m4(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
+def maximization_beta_m4_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
                               maxNeighbours, gamma, MaxItGrad, gradientStep):
     # Method 4 in Christine's thesis:
     # - sum_j sum_k (sum_neighbors p_Q) (p_Q_MF - p_Q) - gamma
@@ -319,7 +319,7 @@ def maximization_beta_m4(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndex
     return beta
 
 
-def maximization_beta_m2(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
+def maximization_beta_m2_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
                               maxNeighbours, gamma, MaxItGrad, gradientStep):
     # Method 2 in Christine's thesis:
     # - 1/2 sum_j sum_k sum_neighbors (p_Q_MF p_Q_MF_sumneighbour - p_Q pQ_sumneighbour) - gamma
@@ -399,7 +399,7 @@ def grad_fun(Beta, p_Q, Qtilde_sumneighbour, neighboursIndexes, gamma):
     return np.asfortranarray([-gradient])
 
 
-def maximization_beta_m2_scipy(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
+def maximization_beta_m2_scipy_asl(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
                               maxNeighbours, gamma, MaxItGrad, gradientStep):
     """ Maximize beta """
     from scipy.optimize import fmin_l_bfgs_b, minimize, fmin_bfgs, fmin_cg, brentq
@@ -436,7 +436,7 @@ def maximization_beta_m2_scipy(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neighbour
     return beta_new[0]"""
 
 
-def maximization_LA(Y, m_A, m_C, XX, WP, W, WP_Gamma_WP, H, G, Gamma):
+def maximization_LA_asl(Y, m_A, m_C, XX, WP, W, WP_Gamma_WP, H, G, Gamma):
     # Precomputations
     #WP = np.append(w[:, np.newaxis], P, axis=1)
     #Gamma_WP = Gamma.dot(WP)
@@ -451,125 +451,7 @@ def maximization_LA(Y, m_A, m_C, XX, WP, W, WP_Gamma_WP, H, G, Gamma):
     return AL   ##AL[1:, :], AL[0, :], AL
 
 
-def maximization_sigma_noise_noS(XX, m_A, Sigma_A, H, m_C, Sigma_C, G, W, \
-                             y_tilde, N):
-    """
-    Maximization sigma_noise
-    """
-
-    # Precomputations
-    XH = XX.dot(H)                                         # shape (N, M)
-    XG = XX.dot(G)                                         # shape (N, M)
-    WXG = W.dot(XG.T)
-    mAXH = m_A.dot(XH)                                      # shape (J, N)
-    mCWXG = m_C.dot(WXG.T)                                  # shape (J, N)
-    HXXH = XH.dot(XH.T)          # (,D)*(D, N, M)*(M, N, D)*(D,) -> (M, M)
-    GXWWXG = WXG.T.dot(WXG)      # (,D)*(D, N, M)*(M, N, D)*(D,) -> (M, M)
-    GXWXH = WXG.T.dot(XH.T)      # (,D)*(D, N, M)*(M, N, D)*(D,) -> (M, M)
-    
-    # mA.T X.T H.T H X mA
-    AXHHXA = np.einsum('ij,ij->i', mAXH, mAXH)
-    
-    # mC.T W.T X.T G.T G X W mC
-    CWXGGXWC = np.einsum('ij,ij->i', mCWXG, mCWXG)
-    
-    # trace(Sigma_A H X X H)) in each voxel
-    tr_SA_HXXH = np.einsum('ijk,ji->k', Sigma_A, HXXH)
-
-    # trace(Sigma_C G.T X.T W.T W X G)) in each voxel
-    tr_SC_HXXH = np.einsum('ijk,ji->k', Sigma_C, GXWWXG)
-
-    # mC.T W.T X.T G.T H X mA
-    CWXGHXA = np.einsum('ij,ij->i', mCWXG, mAXH)
-    
-    # y_tilde y_tilde
-    ytilde_ytilde = np.einsum('ij,ij->j',y_tilde, y_tilde)
-    
-    # (mA X H + mC W X G) y_tilde
-    AXH_CWXG_ytilde = np.einsum('ij,ji->i', mAXH + mCWXG, y_tilde)
-
-    return (AXHHXA + CWXGGXWC + tr_SA_HXXH + tr_SC_HXXH \
-            - 2 * CWXGHXA + ytilde_ytilde - 2 * AXH_CWXG_ytilde) / N
-
-
-def maximization_sigma_noise_s(Y, X, m_A, Sigma_A, Ht, m_C, Sigma_C, Gt, W, \
-                             M, N, J, y_tilde, Sigma_H, Sigma_G, sigma_eps, Gamma):
-    hXXh = np.zeros((M, M), dtype=float)
-    gXXg = hXXh.copy()
-    gXXh = hXXh.copy()
-    for i in xrange(0, J):
-        S = np.zeros((N), dtype=float)
-        for m, k in enumerate(X):
-            for m2, k2 in enumerate(X):
-                hXXh[m, m2] = np.dot(np.dot(np.dot(np.dot(Ht.T, X[k].T), Gamma), X[k2]), Ht)
-                hXXh[m, m2] += (np.dot(np.dot(np.dot(Sigma_H, X[k].T), Gamma), X[k2])).trace()
-                gXXg[m, m2] = np.dot(np.dot(np.dot(np.dot(np.dot(np.dot(Gt.T, X[k].T),
-                                                          W.T), Gamma), W), X[k2]), Gt)
-                gXXg[m, m2] += (np.dot(np.dot(np.dot(np.dot(np.dot(Sigma_G, X[k].T), W.T), Gamma),
-                                                            W), X[k2])).trace()
-                gXXh[m, m2] = np.dot(np.dot(np.dot(np.dot(np.dot( \
-                                               Gt.T, X[k].T), W.T), Gamma), X[k2]), Ht)
-            S += m_A[i, m] * np.dot(X[k], Ht) + \
-                 m_C[i, m] * np.dot(np.dot(W, X[k]), Gt)
-        sigma_eps[i] = np.dot(np.dot(m_A[i, :].T, hXXh), m_A[i, :])
-        sigma_eps[i] += (np.dot(Sigma_A[:, :, i], hXXh)).trace()
-        sigma_eps[i] += np.dot(np.dot(m_C[i, :].T, gXXg), m_C[i, :])
-        sigma_eps[i] += (np.dot(Sigma_C[:, :, i], gXXg)).trace()
-        sigma_eps[i] += np.dot(np.dot(y_tilde[:, i].T, Gamma), y_tilde[:, i])
-        sigma_eps[i] += 2 * np.dot(np.dot(m_C[i, :].T, gXXh), m_A[i, :])
-        sigma_eps[i] -= 2 * np.dot(np.dot(S.T, Gamma), y_tilde[:, i])
-        sigma_eps[i] /= N
-    return sigma_eps
-
-def maximization_sigma_noise_old(XX, m_A, Sigma_A, H, m_C, Sigma_C, G, \
-                             Sigma_H, Sigma_G, W, y_tilde, Gamma, \
-                             Gamma_X, Gamma_WX, N):
-    """
-    Maximization sigma_noise
-    """
-    # Precomputations
-    XH = XX.dot(H)                                          # shape (N, M)
-    XG = XX.dot(G)                                          # shape (N, M)
-    WX = W.dot(XX).transpose(1, 0, 2)                       # shape (M, N, D)
-    WXG = W.dot(XG.T)
-    mAXH = m_A.dot(XH)                                      # shape (J, N)
-    mCWXG = m_C.dot(WXG.T)                                  # shape (J, N)
-    mCWXG_Gamma = mCWXG.dot(Gamma)                          # shape (J, N)
-    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1)).transpose(1, 0, 2)
-    #Gamma_WX = np.tensordot(Gamma, WX, axes=(1, 1)).transpose(1, 0, 2)
-    
-    HXXH = Gamma_X.transpose(1, 0, 2).dot(H).dot(XH.T)        # (,D)*(D, N, M)*(M, N, D)*(D,) -> (M, M)
-    Sigma_H_X_X = np.einsum('ijk,ljk->il', XX.dot(Sigma_H.T), Gamma_X.transpose(1, 0, 2))
-    GXWWXG = Gamma_WX.transpose(1, 0, 2).dot(G).dot(WXG)      # (,D)*(D, N, M)*(M, N, D)*(D,) -> (M, M)
-    Sigma_G_XW_WX = np.einsum('ijk,ljk->il', WX.dot(Sigma_G.T), Gamma_WX.transpose(1, 0, 2))
-    
-    # mA.T (X.T H.T H X + SH X.T X) mA
-    HXAAXH = np.einsum('ij,ij->i', m_A.dot((HXXH + Sigma_H_X_X)), m_A)
-    
-    # mC.T (W.T X.T G.T G X W + SH W.T X.T X W) mC
-    GXWCCWXG = np.einsum('ij,ij->i', m_C.dot(GXWWXG + Sigma_G_XW_WX), m_C)
-
-    # trace(Sigma_A (X.T H.T H X + SH X.T X) ) in each voxel
-    tr_SA_HXXH = np.einsum('ijk,ji->k', Sigma_A, (HXXH + Sigma_H_X_X))
-
-    # trace(Sigma_A (W.T X.T G.T G X W + SH W.T X.T X W) ) in each voxel
-    tr_SC_HXXH = np.einsum('ijk,ji->k', Sigma_C, (GXWWXG + Sigma_G_XW_WX))
-
-    # mC.T W.T X.T G.T H X mA
-    CWXGHXA = np.einsum('ij,ij->i', mCWXG_Gamma, mAXH)
-    
-    # y_tilde.T y_tilde
-    Gamma_ytilde = Gamma.dot(y_tilde)
-    ytilde_ytilde = np.einsum('ij,ij->j', y_tilde, Gamma_ytilde)
-    
-    # (mA X H + mC W X G) y_tilde
-    AXH_CWXG_ytilde = np.einsum('ij,ji->i', (mAXH + mCWXG), Gamma_ytilde)
-    
-    return (HXAAXH + GXWCCWXG + tr_SA_HXXH + tr_SC_HXXH \
-            - 2 * CWXGHXA + ytilde_ytilde - 2 * AXH_CWXG_ytilde) / N
-
-
-def maximization_sigma_noise(XX, m_A, Sigma_A, H, m_C, Sigma_C, G, \
+def maximization_sigma_noise_asl(XX, m_A, Sigma_A, H, m_C, Sigma_C, G, \
                              Sigma_H, Sigma_G, W, y_tilde, Gamma, \
                              Gamma_X, Gamma_WX, N):
     """
@@ -619,7 +501,7 @@ def maximization_sigma_noise(XX, m_A, Sigma_A, H, m_C, Sigma_C, G, \
 
 
 
-def computeFit(H, m_A, G, m_C, W, XX):
+def computeFit_asl(H, m_A, G, m_C, W, XX):
     """ Compute Fit """
     # Precomputations
     XH = XX.dot(H)                                          # shape (N, M)
@@ -718,7 +600,7 @@ def expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, H, Sigma_H, m_C,
             + N * np.log(sigma_eps).sum() + N * (sigma_eps_1 / sigma_eps).sum()) / 2.
 
 
-def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, AuxH,
+def Compute_FreeEnergy_asl(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, AuxH,
                        R, R_inv, sigmaH, sigmaG, m_C, Sigma_C, mu_Mc, sigma_Mc,
                        m_G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma,
                        gamma, gamma_h, gamma_g, sigma_eps, XX, W, 

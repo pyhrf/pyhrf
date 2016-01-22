@@ -18,7 +18,6 @@ import numpy as np
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
-import pyhrf.vbjde.vem_tools_asl_fast as EMf
 
 from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
                                 genGaussianSmoothHRF_cust
@@ -197,7 +196,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # HRF H
         if estimateH:
             logger.info("E H step ...")
-            Ht, Sigma_H = EMf.expectation_H(Sigma_A, m_A, m_C, G, XX, W, Gamma,
+            Ht, Sigma_H = vt.expectation_H(Sigma_A, m_A, m_C, G, XX, W, Gamma,
                                             Gamma_X, X_Gamma_X, J, y_tilde,
                                             cov_noise, matrix_covH, sigmaH, 
                                             priorH_mean_term, priorH_cov_term)
@@ -228,7 +227,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # A
         if estimateA:
             logger.info("E A step ...")
-            m_A, Sigma_A = EMf.expectation_A(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z,
+            m_A, Sigma_A = vt.expectation_A(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z,
                                              mu_Ma, sigma_Ma, J, y_tilde,
                                              Sigma_H, sigma_eps_m)
 
@@ -238,7 +237,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Q labels
         if estimateZ:
             logger.info("E Q step ...")
-            q_Z, Z_tilde = EMf.expectation_Q(Sigma_A, m_A, Sigma_C, m_C,
+            q_Z, Z_tilde = vt.expectation_Q(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
                                             Beta, Z_tilde, q_Z, neighboursIndexes, graph, M, J, K)    
 
@@ -247,7 +246,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
 
         if ni > 0:
-            _, _, _, free_energyE = EMf.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
+            _, _, _, free_energyE = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
                                              H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
                                              m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
                                              AuxG, q_Z, neighboursIndexes, Beta, Gamma,
@@ -283,11 +282,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Variance HRF: sigmaH
         if estimateSigmaH:
             logger.info("M sigma_H step ...")
-            sigmaH = EMf.maximization_sigma(D, Sigma_H, matrix_covH, AuxH, use_hyperprior, gamma_h)
+            sigmaH = vt.maximization_sigma(D, Sigma_H, matrix_covH, AuxH, use_hyperprior, gamma_h)
             logger.info('sigmaH = ' + str(sigmaH))
 
         if ni > 0:
-            _, _, _, free_energyVh = EMf.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
+            _, _, _, free_energyVh = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
                                              H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
                                              m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
                                              AuxG, q_Z, neighboursIndexes, Beta, Gamma,
@@ -301,10 +300,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # (mu,sigma)
         if estimateMP:
             logger.info("M (mu,sigma) a and c step ...")
-            mu_Ma, sigma_Ma = EMf.maximization_mu_sigma(q_Z, m_A, Sigma_A)
+            mu_Ma, sigma_Ma = vt.maximization_mu_sigma(q_Z, m_A, Sigma_A)
 
         if ni > 0:
-            _, _, _, free_energyMP = EMf.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
+            _, _, _, free_energyMP = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
                                              H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
                                              m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
                                              AuxG, q_Z, neighboursIndexes, Beta, Gamma,
@@ -317,11 +316,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Drift L, alpha
         if estimateLA:
             logger.info("M L, alpha step ...")
-            AL = EMf.maximization_LA(Y, m_A, m_C, XX, WP, W, WP_Gamma_WP, H, G, Gamma)
+            AL = vt.maximization_LA(Y, m_A, m_C, XX, WP, W, WP_Gamma_WP, H, G, Gamma)
             y_tilde = Y - WP.dot(AL)
 
         if ni > 0:
-            _, _, _, free_energyLA = EMf.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
+            _, _, _, free_energyLA = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
                                                  H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
                                                  m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
                                                  AuxG, q_Z, neighboursIndexes, Beta, Gamma,
@@ -336,7 +335,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info("M beta step ...")
             """Qtilde = np.concatenate((Z_tilde, np.zeros((M, K, 1), dtype=Z_tilde.dtype)), axis=2)
             Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
-            Beta = EMf.maximization_beta_m2(Beta.copy(), q_Z, Qtilde_sumneighbour,
+            Beta = vt.maximization_beta_m2(Beta.copy(), q_Z, Qtilde_sumneighbour,
                                              Qtilde, neighboursIndexes, maxNeighbours,
                                              gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
@@ -345,12 +344,12 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             Qtilde = np.concatenate((Z_tilde, np.zeros((M, K, 1), dtype=Z_tilde.dtype)), axis=2)
             Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             for m in xrange(0, M):
-                Beta[m] = EMf.maximization_beta_m2_scipy(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
+                Beta[m] = vt.maximization_beta_m2_scipy(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
                                                    Qtilde[m, :, :], neighboursIndexes, maxNeighbours, 
                                                    gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
         if ni > 0:
-            _, _, _, free_energyB = EMf.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
+            _, _, _, free_energyB = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
                                              H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
                                              m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
                                              AuxG, q_Z, neighboursIndexes, Beta, Gamma,
@@ -366,9 +365,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 beta_plotting = np.zeros_like(range_b)
                 grad_plotting = np.zeros_like(range_b)
                 for ib, b in enumerate(range_b):
-                    beta_plotting[ib] = EMf.fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
+                    beta_plotting[ib] = vt.fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
                                                           neighboursIndexes, gamma)  
-                    grad_plotting[ib] = EMf.grad_fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
+                    grad_plotting[ib] = vt.grad_fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
                                                      neighboursIndexes, gamma)                                      
                 #print beta_plotting
                 plt.figure(1)
@@ -383,7 +382,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Sigma noise
         if estimateNoise:
             logger.info("M sigma noise step ...")
-            sigma_eps = EMf.maximization_sigma_noise(XX, m_A, Sigma_A, H, m_C, Sigma_C, \
+            sigma_eps = vt.maximization_sigma_noise(XX, m_A, Sigma_A, H, m_C, Sigma_C, \
                                                     G, Sigma_H, Sigma_G, W, y_tilde, Gamma, \
                                                     Gamma_X, Gamma_WX, N)            
 
@@ -393,7 +392,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 mua1[m] += [mu_Ma[m, 1]]
         
         
-        EPt, EPt_lh, Entropy, free_energy = EMf.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
+        EPt, EPt_lh, Entropy, free_energy = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
                                              H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
                                              m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
                                              AuxG, q_Z, neighboursIndexes, Beta, Gamma,
@@ -426,7 +425,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         cTime += [time.time() - t1]
         
         logger.info("Computing reconstruction error")
-        StimulusInducedSignal = EMf.computeFit(H, m_A, G, m_C, W, XX)
+        StimulusInducedSignal = vt.computeFit(H, m_A, G, m_C, W, XX)
         rerror = np.append(rerror, \
                            np.mean(((Y - StimulusInducedSignal) ** 2).sum(axis=0)) \
                            / np.mean((Y ** 2).sum(axis=0)))
