@@ -16,7 +16,6 @@ import os.path as op
 import numpy as np
 
 import pyhrf
-import pyhrf.vbjde.UtilsC as UtilsC
 import pyhrf.vbjde.vem_tools as vt
 
 from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
