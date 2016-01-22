@@ -17,7 +17,7 @@ import pyhrf
 
 from pyhrf.core import FmriData
 from pyhrf.ui.treatment import FMRITreatment
-from pyhrf.ui.vb_jde_analyser_asl import JDEVEMAnalyser
+from pyhrf.ui.vb_jde_analyser_asl_fast import JDEVEMAnalyser
 
 
 cache_dir = tempfile.mkdtemp(prefix='pyhrf_validate',

@@ -200,8 +200,14 @@ class FMRIAnalyser(xmlio.XmlInitable):
             output_fns.append(output_fn)
             logger.debug('Save output %s to %s', output_name, output_fn)
             try:
-                dest_c.save(output_fn, meta_data=meta_data,
-                            set_MRI_orientation=True)
+                if dest_c.meta_data:
+                    tmp_meta_data = (meta_data[0], meta_data[1].copy())
+                    tmp_meta_data[1]["descrip"] = dest_c.meta_data[1]["descrip"]
+                    dest_c.meta_data = tmp_meta_data
+                    dest_c.save(output_fn, set_MRI_orientation=True)
+                else:
+                    dest_c.save(output_fn, meta_data=meta_data,
+                                set_MRI_orientation=True)
             except Exception:
                 print 'Could not save output "%s", error stack was:' \
                     % output_name
@@ -296,7 +302,7 @@ class FMRIAnalyser(xmlio.XmlInitable):
         results = self.filter_crashed_results(results)
 
         if len(results) == 0:
-            logger.warning('No more result to treat. Did everything crash ?')
+            logger.error('No result to treat. Did everything crash ?')
             return {}, []
 
         # Merge all the analysis outputs

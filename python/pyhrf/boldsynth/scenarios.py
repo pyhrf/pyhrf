@@ -618,7 +618,8 @@ def create_perf_baseline(asl_shape, perf_baseline_var, perf_baseline_mean=0.):
     n = asl_shape[0]
     nvox = asl_shape[1]
     rnd = np.random.randn(nvox) * perf_baseline_var ** .5 + perf_baseline_mean
-    return np.abs(np.tile(rnd, (n, 1)))
+    #return np.abs(np.tile(rnd, (n, 1)))
+    return np.tile(rnd, (n, 1))
 
 
 def create_perf_stim_induced_signal(prls, rastered_paradigm, prf, condition_defs,

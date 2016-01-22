@@ -6,6 +6,7 @@ Current development
 
 - Fix VEM algorithm
     + fix convergence criteria computation
+    + rewrite and optimize all VEM steps
 - Continue to clean setup.py
 - Updating documentation
     + updating theme
