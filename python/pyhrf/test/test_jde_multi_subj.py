@@ -105,7 +105,6 @@ class MultiSubjTest(unittest.TestCase):
     def setUp(self):
 
         # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         np.random.seed(8652761)
 

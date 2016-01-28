@@ -46,8 +46,6 @@ class SpatialTest(unittest.TestCase):
         Test if balanced partitioning returns parcels with almost equal
         sizes (tolerance=1) on a 3D rectangular mask
         """
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         np.random.seed(56437)
         shape = (5, 5, 5)
         mask = np.zeros(shape, dtype=int)
@@ -61,8 +59,6 @@ class SpatialTest(unittest.TestCase):
             npt.assert_allclose((p == iparcel).sum(), expected_psize, atol=1)
 
     def test_voronoi_parcellation(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         shape = (5, 5, 5)
         mask = np.zeros(shape, dtype=int)

@@ -266,7 +266,7 @@ class ResponseSampler(GibbsSamplerVariable):
         self.resp_norm = sqrt((np.dot(fv, fv)).sum())
         #self.resp_norm = sum(fv**2)**0.5
         fv /= self.resp_norm
-        print 'norm response = ', self.resp_norm
+        logger.info('norm response = %f', self.resp_norm)
 
         if self.zc:
             # Append and prepend zeros
@@ -694,7 +694,7 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
         beta = np.dot(np.dot(resp.T, R), resp) / 2.
 
         self.currentValue[0] = 1 / np.random.gamma(alpha, 1 / beta)
-        print 'response variance = ', self.currentValue[0]
+        logger.info('response variance = %f', self.currentValue[0])
 
 
 class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
@@ -739,7 +739,7 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             assert isinstance(self.dataInput.simulData[0], dict)
             sd = dataInput.simulData[0]
             #sd = dataInput.simulData
-            print sd
+            logger.info(sd)
             if sd.has_key('noise'):
                 self.trueValue = sd['noise'].var(0)
 
@@ -1100,10 +1100,10 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         respnorm = self.response_sampler.resp_norm
 
         # print fv
-        print fv.shape
-        print fv[0, :].sum()
-        print 'respnorm', respnorm
-        print '------------------------------------------'
+        logger.info(fv.shape)
+        logger.info(fv[0, :].sum())
+        logger.info('respnorm %f', respnorm)
+        logger.info('------------------------------------------')
 
         self.finalValue = fv * respnorm
 
@@ -1508,13 +1508,13 @@ class MixtureParamsSampler(GibbsSamplerVariable):
             #varCAj = 1.0 / np.random.gamma(0.5 * (cardCAj - 1), 2. / nu1j)
             logger.info('varCAj (j=%d) : %f', j, varCAj)
             if varCAj <= 0.:
-                print 'variance for class activ and condition %s '\
-                    'is negative or null: %f' % (
-                        self.dataInput.cNames[j], varCAj)
-                print 'nu1j:', nu1j, '2. / nu1j', 2. / nu1j
-                print 'cardCAj:', cardCAj, '0.5 * (cardCAj + 1) - 1:', \
-                    0.5 * (cardCAj + 1) - 1
-                print '-> setting it to almost 0.'
+                logger.info('variance for class activ and condition %s '
+                            'is negative or null: %f',
+                            self.dataInput.cNames[j], varCAj)
+                logger.info('nu1j: %f, 2. / nu1j: %f', nu1j, 2. / nu1j)
+                logger.info('cardCAj: %f, 0.5 * (cardCAj + 1) - 1: %f',
+                            cardCAj, 0.5 * (cardCAj + 1) - 1)
+                logger.info('-> setting it to almost 0.')
                 varCAj = 0.0001
             # print '(varC1j/cardC1[j])**0.5 :', (varCAj/cardCAj)**0.5
             eta1j = np.mean(self.rlCA[j])
@@ -1873,7 +1873,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
         check_ftval = check_final_value
         self.output_fit = output_fit
-        print 'output_fit = ', output_fit
+        logger.info('output_fit = %s', output_fit)
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1, int(round(nbIt * obsHistPace)))
@@ -1902,7 +1902,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
             for v in self.variables:
 
                 if v.trueValue is None:
-                    print 'Warning; no true val for %s' % v.name
+                    logger.warning('Warning; no true val for %s', v.name)
                 else:
                     fv = v.finalValue
                     tv = v.trueValue
@@ -1950,7 +1950,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                 if 0:
                     raise Exception("\n".join(msg))
                 else:
-                    print "\n".join(msg)
+                    logger.info("\n".join(msg))
 
     def computeFit(self):
         brf_sampler = self.get_variable('brf')

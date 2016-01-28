@@ -20,6 +20,7 @@ Current development
 - optimize some functions in vem_tools
 - fix detection of parcellation files
 - fix for scikit-learn version >= 0.17
+- remove old calls to verbose module and replaced them by logging standard library module
 
 -----------------------------------
 

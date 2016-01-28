@@ -211,8 +211,7 @@ def do_if_nonexistent_file(*dargs, **kwargs):
                 return func(*args, **kwargs)
             logger.log(vlevel, 'func %s not executed because file(s) '
                        'exist(s)', func.func_name)
-            logger.log(
-                vlevel + 10, '\n'.join(['-> ' + f for f in checked_fns]))
+            logger.log(vlevel, '\n'.join(['-> ' + f for f in checked_fns]))
             return None
         return wrapper
     return wrapper

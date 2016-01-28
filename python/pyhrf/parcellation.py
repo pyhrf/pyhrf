@@ -28,6 +28,15 @@ from pyhrf.glm import glm_nipy
 
 logger = logging.getLogger(__name__)
 
+old_to_new_log_dict = {
+    0: logging.WARNING,
+    1: logging.INFO,
+    2: logging.INFO,
+    3: logging.INFO,
+    4: logging.INFO,
+    5: logging.DEBUG,
+    6: logging.DEBUG,
+}
 
 def round_nb_parcels(n):
     if n >= 100:
@@ -288,9 +297,7 @@ class Talker:
             self.t_id = ''
 
     def verbose(self, level, msg):
-        if self.verbosity >= level:
-            stars = '*' * level
-            print stars, self.t_id, msg
+        logger.log(old_to_new_log_dict[level], msg)
 
     def verbose_array(self, level, array):
         if self.verbosity >= level:

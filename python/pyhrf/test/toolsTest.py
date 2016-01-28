@@ -514,7 +514,7 @@ class PipelineTest(unittest.TestCase):
     def test_cached(self):
         try:
             from joblib import Memory
-            mem = Memory(self.cache_dir)
+            mem = Memory(self.cache_dir, verbose=0)
             dep_tree = {
                 'a': 5,
                 'b': 6,
@@ -534,8 +534,6 @@ class PipelineTest(unittest.TestCase):
 
     def test_multiple_output_values(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         data = Pipeline({'e': foo_a,
                          'b': foo_default_arg,
                          ('a', 'd'): foo_multiple_returns})

@@ -494,8 +494,6 @@ class xndarrayTest(unittest.TestCase):
         assert c == c_flat
 
     def test_sub_cuboid(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         c = xndarray(self.arr_flat, self.arr_flat_names, self.arr_flat_domains)
 
@@ -607,8 +605,6 @@ class xndarrayTest(unittest.TestCase):
 
     def test_save_as_nii(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         c = xndarray(self.arr3d, ['x', 'y', 'z'],
                      {'x': np.arange(self.sh3d[0]) * 3,
                       'y': np.arange(self.sh3d[1]) * 3,
@@ -663,8 +659,6 @@ class xndarrayTest(unittest.TestCase):
 
     def test_split(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         sh = (2, 4, 4, 4)
         c = xndarray(np.arange(np.prod(sh)).reshape(sh), ['condition'] + MRI3Daxes,
                      {'condition': ['audio', 'video']})

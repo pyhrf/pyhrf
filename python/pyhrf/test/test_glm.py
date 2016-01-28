@@ -76,8 +76,6 @@ class NipyGLMTest(unittest.TestCase):
         f.close()
 
     def test_command_line(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         cfg_file = op.join(self.tmp_dir, 'glm.xml')
         cmd = 'pyhrf_glm_buildcfg -o %s -v %d' % (cfg_file,
                                                   logger.getEffectiveLevel())

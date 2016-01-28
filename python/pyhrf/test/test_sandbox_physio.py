@@ -36,9 +36,6 @@ class SimulationTest(unittest.TestCase):
     @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_full_physio(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
-
         r = phy.simulate_asl_full_physio()
         # let's just test the shapes of objects and the presence of some
         # physio-specific simulation items
@@ -54,9 +51,6 @@ class SimulationTest(unittest.TestCase):
     @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_full_physio_outputs(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
-
         phy.simulate_asl_full_physio(self.tmp_path)
 
         def makefn(fn):
@@ -67,9 +61,6 @@ class SimulationTest(unittest.TestCase):
 
     @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_physio_rfs(self):
-
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         r = phy.simulate_asl_physio_rfs()
         # let's just test the shapes of objects and the presence of some

@@ -674,7 +674,7 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
         beta = np.dot(np.dot(resp.T, R), resp) / 2.
 
         self.currentValue[0] = 1 / np.random.gamma(alpha, 1 / beta)
-        print 'response variance = ', self.currentValue[0]
+        logger.info('response variance = %f', self.currentValue[0])
 
 
 class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler,
@@ -721,7 +721,7 @@ class NoiseVarianceSampler(GibbsSamplerVariable, xmlio.XmlInitable):
             assert isinstance(self.dataInput.simulData[0], dict)
             sd = dataInput.simulData[0]
             #sd = dataInput.simulData
-            print sd
+            logger.info(sd)
             if sd.has_key('noise'):
                 self.trueValue = sd['noise'].var(0)
 
@@ -932,7 +932,7 @@ class DriftCoeffSampler(GibbsSamplerVariable, xmlio.XmlInitable):
 
         if self.trueValue is not None:
             logger.debug('cur drift norm: %f', self.norm)
-            logger.debug('true drift norm:',
+            logger.debug('true drift norm: %f',
                          (self.trueValue * self.trueValue).sum())
 
     def getOutputs(self):
@@ -1789,7 +1789,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
         default_nb_its = 3
     elif pyhrf.__usemode__ == pyhrf.ENDUSER:
         default_nb_its = 3000
-        parametersToShow = ['nb_its', 'response_levels', 
+        parametersToShow = ['nb_its', 'response_levels',
                             'hrf', 'hrf_var']
 
     def __init__(self, nb_iterations=default_nb_its,
@@ -1798,7 +1798,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  callback=GSDefaultCallbackHandler(),
                  bold_response_levels=BOLDResponseLevelSampler(),
                  perf_response_levels=PerfResponseLevelSampler(),
-                 labels=LabelSampler(), 
+                 labels=LabelSampler(),
                  noise_var=NoiseVarianceSampler(),
                  brf=PhysioBOLDResponseSampler(),
                  brf_var=PhysioBOLDResponseVarianceSampler(),
@@ -1806,7 +1806,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                  prf_var=PhysioPerfResponseVarianceSampler(),
                  bold_mixt_params=BOLDMixtureSampler(),
                  perf_mixt_params=PerfMixtureSampler(),
-                 drift=DriftCoeffSampler(), 
+                 drift=DriftCoeffSampler(),
                  drift_var=DriftVarianceSampler(),
                  perf_baseline=PerfBaselineSampler(),
                  perf_baseline_var=PerfBaselineVarianceSampler(),
@@ -1826,7 +1826,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
         check_ftval = check_final_value
         self.output_fit = output_fit
-        print 'output_fit = ', output_fit
+        logger.info('output_fit = %s', output_fit)
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1, int(round(nbIt * obsHistPace)))
@@ -1857,7 +1857,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
             for v in self.variables:
 
                 if v.trueValue is None:
-                    print 'Warning; no true val for %s' % v.name
+                    logger.warning('Warning; no true val for %s', v.name)
                 else:
                     fv = v.finalValue
                     tv = v.trueValue
@@ -1893,7 +1893,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                 if 0:
                     raise Exception("\n".join(msg))
                 else:
-                    print "\n".join(msg)
+                    logger.info("\n".join(msg))
 
     def computeFit(self):
         brf_sampler = self.get_variable('brf')

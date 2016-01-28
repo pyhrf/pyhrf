@@ -61,8 +61,6 @@ class TreatmentCommandTest(unittest.TestCase):
         self.assertTrue(isinstance(t.analyser, JDEMCMCAnalyser))
 
     def test_buildcfg_jde_locav_vol_default(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         cfg_file = self._test_buildcfg(cmd='pyhrf_jde_buildcfg',
                                        paradigm='loc_av',
                                        data_type='volume',
@@ -178,8 +176,6 @@ class TreatmentCommandTest(unittest.TestCase):
             raise Exception('"' + cmd + '" did not execute correctly')
 
     def test_WNSGGMS_surf_cmd(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         self._testJDEModelCmd('WNSGGMS', datatype='surface')
 
     def test_WNSGGMS(self):
@@ -240,8 +236,6 @@ class TreatmentCommandTest(unittest.TestCase):
                             % (modelLabel, datatype, cmd))
 
     def testHrfEstim(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         from pyhrf.ui.rfir_ui import DEFAULT_CFG_FILE
         cfg_file = op.join(self.tmp_dir, DEFAULT_CFG_FILE)
         cmd = 'pyhrf_rfir_buildcfg -o %s -n 3' % cfg_file

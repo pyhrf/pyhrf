@@ -161,7 +161,6 @@ class JDETest(unittest.TestCase):
             print parcellation_report(parcellation)
 
     def test_surface_treatment(self):
-        # pyhrf.verbose.set_verbosity(2)
         treatment, xml_file, result = jde_surf_from_files(nbIterations=2,
                                                           outputDir=self.tmp_dir)
 
@@ -325,8 +324,6 @@ class ASLTest(unittest.TestCase):
 
     def setUp(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         np.random.seed(8652761)
 
@@ -337,16 +334,12 @@ class ASLTest(unittest.TestCase):
 
     def test_simulation(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         simulate_asl(spatial_size='random_small')
 
     def test_default_jde_small_simulation(self):
         """ Test ASL sampler on small simulation with small nb of iterations.
         Estimation accuracy is not tested.
         """
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         simu = simulate_asl(spatial_size='random_small')
         fdata = FmriData.from_simulation_dict(simu)
@@ -367,9 +360,6 @@ class ASLPhysioTest(unittest.TestCase):
 
     def setUp(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
-
         np.random.seed(8652761)
 
         self.tmp_dir = pyhrf.get_tmp_path()
@@ -382,8 +372,6 @@ class ASLPhysioTest(unittest.TestCase):
         """ Test ASL Physio sampler on small simulation with small nb of
         iterations. Estimation accuracy is not tested.
         """
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         sampler_params = {
             'nb_iterations': 3,
@@ -455,8 +443,6 @@ class MultiSessTest(unittest.TestCase):
         simulation with small nb of iterations.
         Estimation accuracy is not tested.
         """
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         sampler = BMSS()
 

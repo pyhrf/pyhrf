@@ -71,13 +71,13 @@ def buildDiagGaussianMat(size, width):
 
 def sampleHRF_voxelwise_iid(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
-    logger.info('stLambdaS:')
-    logger.info(stLambdaS)
-    logger.info('varR:')
-    logger.info(varR)
-    logger.info('rh: %f', rh)
-    logger.info('varR/rh:')
-    logger.info(varR / rh)
+    logger.debug('stLambdaS:')
+    logger.debug(stLambdaS)
+    logger.debug('varR:')
+    logger.debug(varR)
+    logger.debug('rh: %f', rh)
+    logger.debug('varR/rh:')
+    logger.debug(varR / rh)
 
     varInvSigma_h = stLambdaS + nbVox * varR / rh
 
@@ -96,13 +96,13 @@ def sampleHRF_voxelwise_iid(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 def sampleHRF_single_hrf_hack(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
     varInvSigma_h = stLambdaS / nbVox
 
-    logger.info('stLambdaS:')
-    logger.info(stLambdaS)
-    logger.info('varR:')
-    logger.info(varR)
-    logger.info('rh: %f', rh)
-    logger.info('varR/rh:')
-    logger.info(varR / rh)
+    logger.debug('stLambdaS:')
+    logger.debug(stLambdaS)
+    logger.debug('varR:')
+    logger.debug(varR)
+    logger.debug('rh: %f', rh)
+    logger.debug('varR/rh:')
+    logger.debug(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -121,13 +121,13 @@ def sampleHRF_single_hrf_hack(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
     varInvSigma_h = stLambdaS
-    logger.info('stLambdaS:')
-    logger.info(stLambdaS)
-    logger.info('varR:')
-    logger.info(varR)
-    logger.info('rh: %f', rh)
-    logger.info('varR/rh:')
-    logger.info(varR / rh)
+    logger.debug('stLambdaS:')
+    logger.debug(stLambdaS)
+    logger.debug('varR:')
+    logger.debug(varR)
+    logger.debug('rh: %f', rh)
+    logger.debug('varR/rh:')
+    logger.debug(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -532,10 +532,10 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         self.finalValue_sign_corr = self.finalValue * \
             (1 - 2 * sign_error)  # sign_error at 0 or 1
         if sign_error:
-            logger.info('Warning : sign error on HRF')
+            logger.warning('Warning : sign error on HRF')
 
-        logger.info('HRF finalValue :\n')
-        logger.info(self.finalValue)
+        logger.debug('HRF finalValue :\n')
+        logger.debug(self.finalValue)
 
     def get_final_value(self):
         """ Used to compare with simulated value """
@@ -1627,7 +1627,7 @@ class HRF_two_parts_Sampler(HRFSampler):
         self.finalValue_sign_corr = self.finalValue * \
             (1 - 2 * sign_error)  # sign_error at 0 or 1
         if sign_error:
-            logger.info('Warning : sign error on HRF')
+            logger.warning('Warning : sign error on HRF')
 
         logger.info('HRF finalValue :\n')
         logger.info(self.finalValue)

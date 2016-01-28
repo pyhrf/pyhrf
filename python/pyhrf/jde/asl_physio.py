@@ -252,7 +252,7 @@ class ResponseSampler(GibbsSamplerVariable):
         self.resp_norm = sqrt((np.dot(fv, fv)).sum())
         #self.resp_norm = sum(fv**2)**0.5
         fv /= self.resp_norm
-        print 'norm response = ', self.resp_norm
+        logger.info('norm response = %f', self.resp_norm)
 
         if self.zc:
             # Append and prepend zeros
@@ -660,7 +660,7 @@ class ResponseVarianceSampler(GibbsSamplerVariable):
         beta = np.dot(np.dot(resp.T, R), resp) / 2.
 
         self.currentValue[0] = 1 / np.random.gamma(alpha, 1 / beta)
-        print 'response variance = ', self.currentValue[0]
+        logger.info('response variance = %f', self.currentValue[0])
 
 
 class PhysioBOLDResponseVarianceSampler(ResponseVarianceSampler, xmlio.XmlInitable):
@@ -1054,10 +1054,10 @@ class ResponseLevelSampler(GibbsSamplerVariable):
         respnorm = self.response_sampler.resp_norm
 
         # print fv
-        print fv.shape
-        print fv[0, :].sum()
-        print 'respnorm', respnorm
-        print '------------------------------------------'
+        logger.info(fv.shape)
+        logger.info(fv[0, :].sum())
+        logger.info('respnorm %f', respnorm)
+        logger.info('------------------------------------------')
 
         self.finalValue = fv * respnorm
 
@@ -1799,7 +1799,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
 
         check_ftval = check_final_value
         self.output_fit = output_fit
-        print 'output_fit = ', output_fit
+        logger.info('output_fit = %s', output_fit)
 
         if obsHistPace > 0. and obsHistPace < 1:
             obsHistPace = max(1, int(round(nbIt * obsHistPace)))
@@ -1868,7 +1868,7 @@ class ASLPhysioSampler(xmlio.XmlInitable, GibbsSampler):
                 if 0:
                     raise Exception("\n".join(msg))
                 else:
-                    print "\n".join(msg)
+                    logger.info("\n".join(msg))
 
     def computeFit(self):
         brf_sampler = self.get_variable('brf')

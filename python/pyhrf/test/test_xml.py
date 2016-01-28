@@ -69,8 +69,6 @@ class BaseTest(unittest.TestCase):
         self._test_xml_bijection(['a', 'bb', 'ccc', ''])
 
     def test_bool(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         self._test_xml_bijection(False)
 
     def test_list_of_int(self):
@@ -204,8 +202,6 @@ class InitableTest(unittest.TestCase):
         # print 'b2.obj:', b2.obj
 
     def test_xml_from_init(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         b = B()
         xml = b.to_ui_node('bobj').to_xml(pretty=True)
         import re
@@ -228,32 +224,24 @@ class InitableTest(unittest.TestCase):
             raise Exception('Wrong XML :\n%s' % xml)
 
     def test_bijection_from_init(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         b = B()
         xml = b.to_ui_node('bobj').to_xml(pretty=True)
         b2 = xmlio.from_xml(xml)
         self.assertEqual(b, b2)
 
     def test_bijection_from_init_no_arg(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         o = C()
         xml = o.to_ui_node('bobj').to_xml(pretty=True)
         o2 = xmlio.from_xml(xml)
         self.assertEqual(o, o2)
 
     def test_bijection_from_classmethod_init(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         b = B.from_stuff(a=4, b=3)
         xml = b.to_ui_node('bobj').to_xml(pretty=True)
         b2 = xmlio.from_xml(xml)
         self.assertEqual(b, b2)
 
     def test_JDEMCMCAnalyzer_Uinode_bijection(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         from pyhrf.ui.jde import JDEMCMCAnalyser
         from pyhrf.jde.models import BOLDGibbsSampler
         a = JDEMCMCAnalyser(sampler=BOLDGibbsSampler(nb_iterations=42))
@@ -265,8 +253,6 @@ class InitableTest(unittest.TestCase):
         self.assertEqual(a2.sampler.nbIterations, 42)
 
     def test_JDEMCMCAnalyzerXML(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         from pyhrf.ui.jde import JDEMCMCAnalyser
         from pyhrf.jde.models import BOLDGibbsSampler
         a = JDEMCMCAnalyser(sampler=BOLDGibbsSampler(nb_iterations=42))
@@ -275,8 +261,6 @@ class InitableTest(unittest.TestCase):
         self.assertEqual(a2.sampler.nbIterations, 42)
 
     def test_TreatmentXML(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         from pyhrf.ui.jde import JDEMCMCAnalyser
         from pyhrf.jde.models import BOLDGibbsSampler
         from pyhrf.ui.treatment import FMRITreatment
