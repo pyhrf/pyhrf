@@ -2321,7 +2321,7 @@ class BOLDSampler_Multi_SessInput:
         lgt = (self.ny + 2) * osf
         allMatH = []
         for iSess in xrange(self.nbSessions):
-            matH = np.zeros((lgt, self.nbConditions), dtype=int)
+            matH = np.zeros((int(lgt), self.nbConditions), dtype=int)
             for j in xrange(self.nbConditions):
                 matH[:len(parData[j][iSess]), j] = parData[j][iSess][:]
             logger.debug('matH for Sess %d :', iSess)

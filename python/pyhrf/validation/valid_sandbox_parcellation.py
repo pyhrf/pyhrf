@@ -1017,7 +1017,7 @@ class ParcellationTest(unittest.TestCase):
         """
         # pyhrf.verbose.set_verbosity(0)
         pyhrf.logger.setLevel(logging.WARNING)
-        np.seterr('raise')
+        old_settings = np.seterr('raise')
         true_parcellation = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3])
         act_labels = np.array([0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1])
         #                      non-act  act
@@ -1059,6 +1059,8 @@ class ParcellationTest(unittest.TestCase):
             pm.render_ward_tree(ww, fn, leave_colors=lab_colors)
             self.clean_tmp = False
 
+        np.seterr(**old_settings)
+
         # tolerate 2 differing positions, correspond to 2 non-active
         # positions in between two different clusters
         pm.assert_parcellation_equal(p, true_parcellation, tol=2)
@@ -1069,7 +1071,7 @@ class ParcellationTest(unittest.TestCase):
         """
         # pyhrf.verbose.set_verbosity(0)
         pyhrf.logger.setLevel(logging.WARNING)
-        np.seterr('raise')
+        old_settings = np.seterr('raise')
 
         true_parcellation, features, graph, var, act, act_labels, mask = \
             create_features("1D", "high", 0.)
@@ -1084,6 +1086,8 @@ class ParcellationTest(unittest.TestCase):
             lab_colors = [('black', 'red')[l] for l in act_labels]
             pm.render_ward_tree(ww, fn, leave_colors=lab_colors)
             self.clean_tmp = False  # hack
+
+        np.seterr(**old_settings)
 
         # tolerate 2 differing positions, correspond to 2 non-active
         # positions in between two different clusters
@@ -1163,7 +1167,7 @@ class ParcellationTest(unittest.TestCase):
         """
         # pyhrf.verbose.set_verbosity(0)
         pyhrf.logger.setLevel(logging.WARNING)
-        np.seterr('raise')
+        old_settings = np.seterr('raise')
         true_parcellation = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3])
         act_labels = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
@@ -1188,6 +1192,8 @@ class ParcellationTest(unittest.TestCase):
         ww = pm.spatial_ward_with_uncertainty(features, graph, var, act,
                                               nb_clusters=2)
         p = ww.labels_
+
+        np.seterr(**old_settings)
 
         # tolerate 2 differing positions, correspond to 2 non-active
         # positions in between two different clusters
