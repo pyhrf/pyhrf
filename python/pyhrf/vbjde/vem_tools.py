@@ -218,7 +218,6 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
         x_tmp2[:, ix] = x_tmp[:, ix]
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp2[os_indexes]
-
     return x
 
 
@@ -1015,6 +1014,119 @@ def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J,
     y_tildeH = y_tilde - WXG.dot(m_C.T)
     #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
     Y_bar_tilde = np.einsum('ijk,ki->j', mAX_Gamma, y_tildeH)
+
+    # we sum the term that corresponds to the prior
+    Y_bar_tilde += prior_mean_term
+
+    # m_H = S_a^-1 y_bar_tilde
+    m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
+
+    return m_H, Sigma_H
+
+
+def expectation_H_ms_concat(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
+                  cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, S):
+    """
+    Expectation-H step:
+    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
+        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
+
+    Returns:
+    m_H, Sigma_H of probability distribution p_H of the current iteration
+    """
+
+    ## Precomputations
+    WXG = W.dot(XX.dot(G).T)
+    mAX = np.tensordot(m_A, XX, axes=(1, 0))                # shape (J, N, D)
+    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
+    #X_Gamma_X = np.tensordot(XX.T, Gamma_X, axes=(1, 0))   # shape (D, M, M, D)
+    #cov_noise = np.maximum(sigma_eps, eps)[:, np.newaxis, np.newaxis]
+    mAX_Gamma = (np.tensordot(mAX, Gamma, axes=(1, 0)) / cov_noise) # shape (J, D, N)
+
+    ## Sigma_H computation
+    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
+    S_a = R_inv / sigmaH + prior_cov_term
+    # second summand: E_pa[Saj.T*Gamma*Saj]
+    # sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
+    print Sigma_A.shape
+    for s in xrange(0, S):
+        S_a += (np.einsum('ijk,lijm->klm', Sigma_A, X_Gamma_X) / cov_noise).sum(0)
+    # third summand: E_pa[Saj.T*Gamma*Saj]
+    # (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
+    for i in xrange(0, J):
+        for s in xrange(0, S):
+            i2 = (s-1)*J + i
+            S_a += mAX_Gamma[i2, :, :].dot(mAX[i2, :, :])  #option 1 faster 13.4
+    #S_a += np.einsum('ijk,ikl->ijl', mAX_Gamma, mAX).sum(0) # option 2 second 8.8
+    #S_a += np.einsum('ijk,ikl->jl', mAX_Gamma, mAX) # option 3 slower 7.5
+
+    # Sigma_H = S_a^-1
+    Sigma_H = np.linalg.inv(S_a)
+
+    ## m_H
+    # Y_bar_tilde computation: (sum_m m_a X_m).T Gamma_i y_tildeH
+    # y_tildeH = yj - sum_m m_C WXG - w alphaj - P lj
+    y_tildeH = y_tilde - WXG.dot(m_C.T)
+    #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
+    Y_bar_tilde = np.einsum('ijk,ki->j', mAX_Gamma, y_tildeH)
+
+    # we sum the term that corresponds to the prior
+    Y_bar_tilde += prior_mean_term
+
+    # m_H = S_a^-1 y_bar_tilde
+    m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
+
+    return m_H, Sigma_H
+
+
+def expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
+                  cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, N, M, D, S):
+    """
+    Expectation-H step:
+    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
+        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
+
+    Returns:
+    m_H, Sigma_H of probability distribution p_H of the current iteration
+    """
+
+    ## Precomputations
+    #WXG = np.zeros((S, N, M), dtype=np.float64)
+    mAX = np.zeros((S, J, N, D), dtype=np.float64)
+    mAX_Gamma = np.zeros((S, J, D, N), dtype=np.float64)
+    for s in xrange(0, S):
+        #WXG[s, :, :] = W.dot(XX[s, :, :, :].dot(G).T)                                   # shape (N, M)
+        mAX[s, :, :, :] = np.tensordot(m_A[s, :, :], XX[s, :, :, :], axes=(1, 0))       # shape (J, N, D)
+        mAX_Gamma[s, :, :, :] = (np.tensordot(mAX[s, :, :, :], Gamma, axes=(1, 0)) / cov_noise[s, :, :, :]) # shape (J, D, N)
+
+    ## Sigma_H computation
+    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
+    S_a = R_inv / sigmaH + prior_cov_term
+    # second summand: E_pa[Saj.T*Gamma*Saj]
+    # sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
+    for s in xrange(0, S):
+        S_a += (np.einsum('ijk,lijm->klm', Sigma_A[:, :, :, s], X_Gamma_X[:, :, s, :, :]) / cov_noise[s, :, :, :]).sum(0)
+    # third summand: E_pa[Saj.T*Gamma*Saj]
+    # (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            S_a += mAX_Gamma[s, i, :, :].dot(mAX[s, i, :, :])  #option 1 faster 13.4
+    #S_a += np.einsum('ijk,ikl->ijl', mAX_Gamma, mAX).sum(0) # option 2 second 8.8
+    #S_a += np.einsum('ijk,ikl->jl', mAX_Gamma, mAX) # option 3 slower 7.5
+
+    # Sigma_H = S_a^-1
+    Sigma_H = np.linalg.inv(S_a)
+
+    ## m_H
+    # Y_bar_tilde computation: (sum_m m_a X_m).T Gamma_i y_tildeH
+    # y_tildeH = yj - sum_m m_C WXG - w alphaj - P lj
+    y_tildeH = np.zeros_like(y_tilde)
+    Y_bar_tilde = np.zeros_like(prior_mean_term)
+    for s in xrange(0, S):
+        y_tildeH[s, :, :] = y_tilde[s, :, :] #- WXG[s, :, :].dot(m_C[s, :, :].T)
+        #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
+        Y_bar_tilde += np.einsum('ijk,ki->j', mAX_Gamma[s, :, :, :], y_tildeH[s, :, :])
+
     # we sum the term that corresponds to the prior
     Y_bar_tilde += prior_mean_term
 
@@ -1122,6 +1234,56 @@ def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
     return m_A, Sigma_A
 
 
+def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
+                  J, y_tilde, Sigma_H, sigma_eps_m, N, M, D, S):
+    """
+    Expectation-A step:
+    p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
+        \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
+                  + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
+
+    Returns:
+    m_A, Sigma_A of probability distribution p_A of the current iteration
+    """
+
+    ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
+    XH = np.zeros((S, N, M), dtype=np.float64)
+    #XG = np.zeros((S, N, M), dtype=np.float64)
+    Sigma_H_X = np.zeros((D, N, M, S), dtype=np.float64)
+    #WXG = np.zeros((S, N, M), dtype=np.float64)
+    for s in xrange(0, S):
+        XH[s, :, :] = XX[s, :, :, :].dot(H).T                       # (S, N, M)
+        Sigma_H_X[:, :, :, s] = XX[s, :, :, :].dot(Sigma_H.T).T     # (D, N, M, S)
+        #XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
+        #WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
+
+    ## Sigma_A computation
+    # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
+    for s in xrange(0, S):
+        Sigma_A[:, :, :, s] = XH[s, :, :].T.dot(Gamma).dot(XH[s, :, :])[..., np.newaxis] / sigma_eps_m[s, :]
+    # second summand of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
+    second_summand = np.einsum('ijk, jli', Sigma_H_X[:, :, :, s], Gamma_X[:, s, :, :])
+    Sigma_A[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
+    # third summand of Sigma_A: part of p(a|q; theta_A)
+    Delta_k = (q_Z / np.maximum(sigma_Ma[:, :, np.newaxis], eps))
+    Delta = Delta_k.sum(axis=1)         # sum across classes K
+    for i in xrange(0, J):
+        Sigma_A[:, :, i, s] = np.linalg.inv(Sigma_A[:, :, i, s] + \
+                                         np.diag(Delta[:, i]))
+
+    ## m_A computation
+    # adding m_C*WXG to y_tilde
+    for s in xrange(0, S):
+        y_tildeH = y_tilde[s, :, :] #- WXG[s, :, :].dot(m_C[s, :, :].T)
+        Gamma_y_tildeH = Gamma.dot(y_tildeH).T
+        X_tildeH = Gamma_y_tildeH.dot(XH[s, :, :]) / sigma_eps_m[s, :, np.newaxis] \
+                   + (Delta_k * mu_Ma[:, :, np.newaxis]).sum(axis=1).T
+        # dot product across voxels of Sigma_A and X_tildeH
+        m_A[s, :, :] = np.einsum('ijk,kj->ki', Sigma_A[:, :, :, s], X_tildeH)
+
+    return m_A, Sigma_A
+
+
 def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
                       J, y_tilde, Sigma_G, sigma_eps_m):
     """
@@ -1191,8 +1353,8 @@ def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc,
     return p_q_t, p_q_t
 
 
-def expectation_Q_async_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc,
-                            mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
+def expectation_Q_async_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+                  mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
     # between ASL and BOLD just alpha and Gauss_mat change!!!
     alpha = (- 0.5 * np.diagonal(Sigma_A)[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :]) \
              - 0.5 * np.diagonal(Sigma_C)[:, :, np.newaxis] / (sigma_Mc[np.newaxis, :, :])).transpose(1, 2, 0)  # (J, M, K)
@@ -1233,18 +1395,27 @@ def maximization_mu_sigma_asl(q_Z, m_X, Sigma_X):
     return Mu, Sigma
 
 
+def maximization_mu_sigma_ms(q_Z, m_X, Sigma_X, M, J, S):
+    qZ_sumvox = q_Z.sum(axis=2)                              # (M, K)
+    Mu = np.zeros_like(qZ_sumvox)
+    Mu[:, 1] = (q_Z[:, 1, :] * m_X.sum(0).T).sum(axis=1) / (qZ_sumvox[:, 1] * S)
+
+    sess_term = np.zeros((M, M, J), dtype=np.float64)
+    for s in xrange(S):
+        mX_minus_Mu_2 = (m_X[s, :, :, np.newaxis] - Mu[np.newaxis, :, :]).transpose(1, 2, 0)**2
+        SigmaX_diag = np.diagonal(Sigma_X[:, :, :, s]).T
+        sess_term += mX_minus_Mu_2 + SigmaX_diag[:, np.newaxis, :]
+    Sigma = (q_Z * sess_term).sum(axis=2) / (qZ_sumvox * S)
+
+    return Mu, Sigma
+
+
 def maximization_sigma_asl(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
     alpha = (np.dot(m_H[:, np.newaxis] * m_H[np.newaxis, :] + Sigma_H, R_inv)).trace()
     if use_hyp:
         sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4*gamma_h)
     else:
         sigma = alpha / (D)
-    if np.isnan(sigma) or sigma==0:
-        print 'WARNING!!!'
-        print 'gamma_h = ', gamma_h
-        print 'D = ', D
-        print 'alpha = ', alpha
-        print m_H
     return sigma
 
 
@@ -1679,7 +1850,7 @@ def expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, H, Sigma_H, m_C,
                                   Sigma_C, G, Sigma_G, XX, W, sigma_eps,
                                   Gamma, J, D, M, N, Gamma_X, Gamma_WX):
     #print sigma_eps[np.where(np.isnan(np.log(sigma_eps)))]
-    sigma_eps_1 = maximization_sigma_noise(XX, m_A, Sigma_A, H, m_C, Sigma_C, \
+    sigma_eps_1 = maximization_sigma_noise_asl(XX, m_A, Sigma_A, H, m_C, Sigma_C, \
                                            G, Sigma_H, Sigma_G, W, y_tilde, Gamma, \
                                            Gamma_X, Gamma_WX, N)
     return  - (N * J * np.log(2 * np.pi) - J * np.log(np.linalg.det(Gamma)) \
