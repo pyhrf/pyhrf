@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 import pyhrf
 from pyhrf.ndarray import xndarray
-from pyhrf.vbjde.vem_bold_models_fast import Main_vbjde_physio
+from pyhrf.vbjde.vem_bold_models_fast_ms import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
