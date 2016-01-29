@@ -8,13 +8,14 @@ import shutil
 import pyhrf
 from pyhrf.plot import plot_cub_as_curve, plot_cub_as_image
 
+import matplotlib
+import matplotlib.pyplot as plt
 try:
     os.environ["DISPLAY"]
 except KeyError:
-    import matplotlib
     matplotlib.use("Agg")
+    plt.switch_backend("Agg")
 
-import matplotlib.pyplot as plt
 
 from pyhrf.ndarray import xndarray
 

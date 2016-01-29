@@ -25,9 +25,15 @@ from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
                                         create_physio_prf
 
 import matplotlib
-matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
-plt.switch_backend('Qt4Agg')
+try:
+    os.environ["DISPLAY"]
+except KeyError:
+    matplotlib.use("Agg")
+    plt.switch_backend("Agg")
+else:
+    matplotlib.use("Qt4Agg")
+    plt.switch_backend("Qt4Agg")
 
 
 logger = logging.getLogger(__name__)
