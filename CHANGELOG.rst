@@ -19,6 +19,7 @@ Current development
 - compute and save PPMs
 - optimize some functions in vem_tools
 - fix detection of parcellation files
+- fix for scikit-learn version >= 0.17
 
 -----------------------------------
 

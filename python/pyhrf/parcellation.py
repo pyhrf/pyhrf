@@ -92,7 +92,12 @@ def parcellation_ward_spatial(func_data, n_clusters, graph=None):
             independent)
     Output: parcellation labels
     """
-    from sklearn.cluster import Ward
+    try:
+        # sklearn version < 0.17
+        from sklearn.cluster import Ward as AgglomerativeClustering
+    except ImportError:
+        from sklearn.cluster import AgglomerativeClustering
+
     from pyhrf.graph import graph_to_sparse_matrix, sub_graph
     if graph is not None:
         labels = np.zeros(len(graph), dtype=np.int32)
@@ -130,12 +135,14 @@ def parcellation_ward_spatial(func_data, n_clusters, graph=None):
             cc_data = func_data[cc]
             logger.info('Launch spatial Ward (nclusters=%d)  on data of shape %s',
                         nc, str(cc_data.shape))
-            ward_object = Ward(
-                n_clusters=nc, connectivity=cc_connectivity).fit(cc_data)
+            ward_object = AgglomerativeClustering(
+                n_clusters=nc, connectivity=cc_connectivity
+            ).fit(cc_data)
             labels[cc] += ward_object.labels_ + 1 + labels.max()
     else:
-        ward_object = Ward(n_clusters=n_clusters).fit(
-            func_data)  # connectivity=None
+        ward_object = AgglomerativeClustering(
+            n_clusters=n_clusters
+        ).fit(func_data)  # connectivity=None
         labels = ward_object.labels_ + 1
 
     return labels
