@@ -1106,6 +1106,9 @@ class FmriData(XmlInitable):
     def get_joined_onsets(self):
         return self.paradigm.get_joined_onsets()
 
+    def get_joined_durations(self):
+        return self.paradigm.get_joined_durations()
+
     # TODO : fix average computing -> handle sparse representation of mask
     def compute_average(self):
         # raise NotImplementedError("TODO : fix average computing -> "\
