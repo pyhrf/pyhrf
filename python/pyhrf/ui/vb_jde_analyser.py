@@ -291,12 +291,6 @@ class JDEVEMAnalyser(JDEAnalyser):
                                               value_label="free energy",
                                               axes_names=["time", "voxel"])
 
-            free_energy_crit = np.concatenate((np.asarray(free_energy_crit), np.zeros((self.nItMax - len(free_energy_crit)))))
-            free_energy_crit[free_energy_crit == 0.] = np.nan
-            free_energy_crit = np.repeat(free_energy_crit, nbv).reshape(-1, nbv)
-            outputs["free_energy_criteria"] = xndarray(free_energy_crit,
-                                              value_label="free energy criteria",
-                                              axes_names=["time", "voxel"])
             #  beta_list = np.concatenate((np.asarray(beta_list), np.zeros((self.nItMax - len(beta_list), nbc))), axis=1)
             #  outputs["beta_list"] = xndarray(beta_list,
                                             #  value_label="free energy criteria",
@@ -373,14 +367,12 @@ class JDEVEMAnalyser(JDEAnalyser):
 
             ################################################################################
             # CONVERGENCE
-            outName = 'convergence_FE'
-            free_energy_crit = np.concatenate(
-                (np.asarray(free_energy_crit),
-                 np.zeros((self.nItMax - len(free_energy_crit))))
-            )
+            free_energy_crit = np.concatenate((np.asarray(free_energy_crit), np.zeros((self.nItMax - len(free_energy_crit)))))
             free_energy_crit[free_energy_crit == 0.] = np.nan
-            outputs[outName] = xndarray(free_energy_crit, axes_names=axes_names,
-                                        value_label='Conv_Criterion_FE')
+            free_energy_crit = np.repeat(free_energy_crit, nbv).reshape(-1, nbv)
+            outputs["free_energy_criteria"] = xndarray(free_energy_crit,
+                                              value_label="free energy criteria",
+                                              axes_names=["time", "voxel"])
 
         ################################################################################
         # SIMULATION
