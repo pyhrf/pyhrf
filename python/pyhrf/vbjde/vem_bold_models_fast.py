@@ -33,8 +33,11 @@ except KeyError:
     matplotlib.use("Agg")
     plt.switch_backend("Agg")
 else:
-    matplotlib.use("Qt4Agg")
-    plt.switch_backend("Qt4Agg")
+    try:
+        matplotlib.use("Qt4Agg")
+        plt.switch_backend("Qt4Agg")
+    except ImportError:
+        pass
 
 
 logger = logging.getLogger(__name__)
