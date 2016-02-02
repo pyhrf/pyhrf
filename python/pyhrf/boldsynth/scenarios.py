@@ -165,7 +165,9 @@ def load_drawn_labels(name):
 
     from scipy.misc import fromimage
     from PIL import Image
-    labels = fromimage(Image.open(fn))
+    labels_image = Image.open(fn)
+    labels_image = labels_image.convert("L")
+    labels = fromimage(labels_image)
     return labels[np.newaxis, :, :]
 
 
