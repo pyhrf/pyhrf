@@ -213,8 +213,7 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
         ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
     x_tmp2 = np.zeros_like(x_tmp)
-    #for ix in np.arange(0, firstrow.shape[0], 1): #tr / dt):
-    for ix in xrange(0, firstrow.shape[0], int(osf)):
+    for ix in xrange(0, firstrow.shape[0], 1):
         x_tmp2[:, ix] = x_tmp[:, ix]
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp2[os_indexes]
