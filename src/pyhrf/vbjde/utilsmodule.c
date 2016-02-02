@@ -1,7 +1,7 @@
 #include "Python.h"
 #include "math.h"
 #include <time.h>
-#include <numpy/arrayobject.h>
+#include "numpy/arrayobject.h"
 
 #define eps_FreeEnergy 0.0001
 #define eps 0.0001
