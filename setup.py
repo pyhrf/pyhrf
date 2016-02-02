@@ -70,7 +70,7 @@ setup(
     scripts = glob('./bin/*'),
     install_requires = ["numpy>=1.6",
                         "scipy>=0.9",
-                        "matplotlib>=1.1,<1.4",
+                        "matplotlib>=1.1",
                         "nibabel>=1.1",
                         "sympy>=0.7",
                         "nipy>=0.3.0"],
