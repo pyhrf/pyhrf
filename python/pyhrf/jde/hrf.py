@@ -323,7 +323,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         return varR / rh
 
     def samplingWarmUp(self, variables):
-        if self.varR == None:
+        if self.varR is None:
             smplRH = self.get_variable('hrf_var')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
@@ -555,7 +555,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         return ['crit_norm'], crit_norm
 
     def getScaleFactor(self):
-        if self.finalValue == None:
+        if self.finalValue is None:
             self.setFinalValue()
         # Use amplitude :
         #scaleF = self.finalValue.max()-self.finalValue.min()
@@ -1414,7 +1414,7 @@ class HRF_two_parts_Sampler(HRFSampler):
         return varR / rh
 
     def samplingWarmUp(self, variables):
-        if self.varR == None:
+        if self.varR is None:
             smplRH = self.get_variable('hrf_var')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
@@ -1633,7 +1633,7 @@ class HRF_two_parts_Sampler(HRFSampler):
         logger.info(self.finalValue)
 
     def getScaleFactor(self):
-        if self.finalValue == None:
+        if self.finalValue is None:
             self.setFinalValue()
         # Use amplitude :
         #scaleF = self.finalValue.max()-self.finalValue.min()
@@ -1881,7 +1881,7 @@ class RHSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 raise Exception('True HRF variance have to be used but '
                                 'none defined.')
 
-        if self.currentValue == None:
+        if self.currentValue is None:
             self.currentValue = np.array([0.0001])
 
     def sampleNextInternal(self, variables):
@@ -1993,7 +1993,7 @@ if 0:  # not maintained
             self.nbVox = self.dataInput.nbVoxels
 
         def checkAndSetInitValue(self, variables):
-            if self.currentValue == None:
+            if self.currentValue is None:
                 if not self.sampleFlag and self.dataInput.simulData != None \
                         and self.dataInput.simulData.hrf.hrfParams.has_key('rh'):
                     simulRh = self.dataInput.simulData.hrf.hrfParams['rh']
