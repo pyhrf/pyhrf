@@ -72,7 +72,8 @@ class JDEVEMAnalyser(JDEAnalyser):
         'InitVar': 'Initiale value of active and inactive gaussian variances',
         'InitMean': 'Initiale value of active gaussian means',
         'constrained': 'adding constrains: positivity and norm = 1 ',
-    }
+        'zero_constrained': 'putting first and last point of the HRF to zero '
+        }
 
     parametersToShow = ['dt', 'hrfDuration', 'nItMax', 'nItMin',
                         'estimateSigmaH', 'estimateSigmaG', 'estimateH',
@@ -88,11 +89,11 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateH=True, estimateG=True, use_hyperprior=False,
                  estimateSigmaH=True, estimateSigmaG=True, positivity=False,
                  sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=True,
-                 gammaH=1000, gammaG=1000,
+                 gammaH=1000, gammaG=1000, zero_constrained=True,
                  estimateLabels=True, estimateMixtParam=True, contrasts=None,
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True,
-                 phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', n_session=1):
+                 phy_params=PHY_PARAMS_KHALIDOV11, prior='no', n_session=1):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_asl_')
@@ -138,6 +139,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.computeContrast = computeContrast
         self.phy_params = phy_params
         self.n_session = n_session
+        self.zc = zero_constrained
 
         logger.info("VEM analyzer:")
         logger.info(" - estimate sigma H: %s", str(self.estimateSigmaH))
@@ -224,7 +226,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        positivity=self.positivity,
                                        use_hyperprior=self.use_hyperprior,
                                        phy_params=self.phy_params,
-                                       prior = self.prior)
+                                       prior=self.prior, zc=self.zc)
 
         # Plot analysis duration
         self.analysis_duration = time() - t_start
