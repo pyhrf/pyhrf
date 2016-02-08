@@ -47,7 +47,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                       estimateC=True, estimateZ=True, estimateNoise=True,
                       estimateMP=True, estimateLA=True, use_hyperprior=False,
                       positivity=False, constraint=False, 
-                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega'):
+                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=True):
 
     logger.info("EM for ASL!")
     np.random.seed(6537540)
@@ -68,7 +68,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     SUM_q_Z = [[] for m in xrange(M)]
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
-    AH1, CG1 = np.zeros((J, M, D)), np.zeros((J, M, D))
     sigmaH = sigmaH * J / 100
     print sigmaH
     gamma_h = gamma_h * 100 / J
@@ -89,9 +88,18 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     print 'creating conditions...'
     X, XX, condition_names = vt.create_conditions_block_ms(Onsets, durations,
                                                     M, N, D, n_sess, TR, dt)
-    #X, XX, condition_names = vt.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
-    #X, XX, condition_names = vt.create_conditions(Onsets, M, N, D, TR, dt)
 
+    # Covariance matrix
+    #R = vt.covariance_matrix(2, D, dt)
+    _, R_inv = genGaussianSmoothHRF(zc, D, dt, 1., 2)        
+    R = np.linalg.inv(R_inv)
+
+    if zc: 
+        XX = XX[:, :, :, 1:-1]    # XX shape (S, M, N, D)
+        D = D - 2
+
+    AH1, CG1 = np.zeros((J, M, D)), np.zeros((J, M, D))
+    
     print 'HRF length = ', D
     print 'Condition number = ', M
     print 'Number of scans = ', N
@@ -99,10 +107,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     print 'Number of sessions = ', n_sess
     print 'XX.shape = ', XX.shape
 
-    # Covariance matrix
-    #R = vt.covariance_matrix(2, D, dt)
-    _, R_inv = genGaussianSmoothHRF(False, D, dt, 1., 2)
-    R = np.linalg.inv(R_inv)
     # Noise matrix
     Gamma = np.identity(N)
     # Noise initialization
@@ -236,13 +240,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 else:
                     logger.info("   l2-norm already 1!!!!!")
                     H = Ht.copy()
-                    #H[0] = 0
-                    #H[-1] = 0 
                 Sigma_H = np.zeros_like(Sigma_H)
             else:
                 H = Ht.copy()
-                #H[0] = 0
-                #H[-1] = 0
                 h_norm = np.append(h_norm, np.linalg.norm(H))
                 print 'h_norm = ', h_norm
             
@@ -506,7 +506,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         H /= Hnorm
         Sigma_H /= Hnorm**2
         m_A *= Hnorm
-
+    
+    if zc:
+        H = np.concatenate(([0], H, [0]))
 
     ## Compute contrast maps and variance
     if computeContrast and len(contrasts) > 0:
