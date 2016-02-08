@@ -7,11 +7,13 @@ Current development
 - Fix VEM algorithm
     + fix convergence criteria computation
     + rewrite and optimize all VEM steps
+    + fix underflow and overflow in labels expectation (set labels to previous
+      value if necessary)
 - Continue to clean setup.py
 - Updating documentation
     + updating theme
     + fixing some reST and display errors
-- autodetect cpus number (mainly to use on cluster)
+- autodetect cpus number (mainly to use on cluster and not yet documented)
 - fix some DeprecationWarning that will become Exceptions in the future
 - add covariance regularization matrix
 - load contrasts from SPM.mat
@@ -21,6 +23,9 @@ Current development
 - fix detection of parcellation files
 - fix for scikit-learn version >= 0.17
 - remove old calls to verbose module and replaced them by logging standard library module
+- fix bugs with matplotlib versions >1.4
+- fix bug with Pillow latest version (see #146)
+- fix bug with numpy when installing in virtual environment (see commit a971656)
 
 -----------------------------------
 

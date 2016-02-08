@@ -705,13 +705,16 @@ def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
             neighbours_indexes, beta[..., np.newaxis, np.newaxis] * labels_proba
         )
         energy = alpha + local_energy
+        labels_proba_prev = labels_proba.copy()
         labels_proba = (np.exp(energy) * gauss)
 
         # Remove NaNs and Infs (# TODO: check for sequential mode)
         if (labels_proba.sum(axis=1)==0).any():
-            labels_proba[labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0] = 0.5
+            mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
+            labels_proba[mask] = labels_proba_prev[mask]
         if np.isinf(labels_proba.sum(axis=1)).any():
-            labels_proba[np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)] = 0.5
+            mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
+            labels_proba[mask] = labels_proba_prev[mask]
 
         labels_proba = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
 
@@ -850,12 +853,12 @@ def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
             beta_gradient, 0., 10, args=(labels_proba, labels_neigh, neighbours_indexes, gamma),
             full_output=True
         )
+        converged = res.converged
     except ValueError:
         beta_new = beta
-        class res(): pass
-        res.converged = False
+        converged = False
 
-    return beta_new, res.converged
+    return beta_new, converged
 
 
 def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
