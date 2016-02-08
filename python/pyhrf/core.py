@@ -417,6 +417,7 @@ def merge_fmri_sessions(fmri_data_sets):
                     mask_loaded_from_file=fmri_data_sets[0].mask_loaded_from_file)
 
 
+
 # FIXME: remove the following class and rewrite the next function
 class Object(object):
     pass
@@ -925,6 +926,7 @@ class FmriData(XmlInitable):
         from pyhrf.tools._io import read_volume
 
         bold = simulation['bold']
+    
         if isinstance(bold, xndarray):
             bold = bold.reorient(['time', 'voxel'])
             nvox = bold.data.shape[1]
@@ -944,10 +946,10 @@ class FmriData(XmlInitable):
         # print onsets
         # print ''
         tr = simulation['tr']
-
+        
         s = simulation
         labelsVol = s.get('labels_vol', np.ones((1, nvox,)))
-
+        
         if mask is None:
             if isinstance(labelsVol, xndarray):
                 default_mshape = labelsVol.data.shape[1:]

@@ -263,12 +263,8 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     firstrow = np.concatenate(
         ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
-    x_tmp2 = np.zeros_like(x_tmp)
-    #for ix in np.arange(0, firstrow.shape[0], 1): #tr / dt):
-    for ix in np.arange(0, firstrow.shape[0], tr / dt):
-        x_tmp2[:, ix] = x_tmp[:, ix]       
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
-    x = x_tmp2[os_indexes]
+    x = x_tmp[os_indexes]
     return x
 
 
@@ -314,17 +310,6 @@ def create_conditions(Onsets, M, N, D, TR, dt):
     for condition, Ons in Onsets.iteritems():
         X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-        
-        if 0:
-            import matplotlib.pyplot as plt
-            print 'printing matrices... '
-            plt.matshow(np.array(X[condition]))        
-            #print condition+', TR = '+str(TR)+', dt = '+str(dt)
-            #plt.title('cond '+str(i)+', dt = '+str(dt))
-            #print 'title fait'
-            plt.savefig('./'+condition+'_dt'+str(dt)+'_old_block.png')
-            plt.close()
-            #plt.show()
     XX = np.zeros((M, N, D), dtype=np.int32)
     nc = 0
     for condition, Ons in Onsets.iteritems():
@@ -337,14 +322,32 @@ def create_conditions_block(Onsets, durations, M, N, D, TR, dt):
     condition_names = []
     X = OrderedDict([])
     for condition, Ons in Onsets.iteritems():
-            Dur = durations[condition]
-            X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons,
-                                                    durations=Dur)
-            condition_names += [condition]
+        Dur = durations[condition]
+        X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons,
+                                                durations=Dur)
+        condition_names += [condition]
     XX = np.zeros((M, N, D), dtype=np.int32)
     nc = 0
     for condition, Ons in Onsets.iteritems():
         XX[nc, :, :] = X[condition]
+        nc += 1
+    return X, XX, condition_names
+
+
+def create_conditions_block_ms(Onsets, durations, M, N, D, S, TR, dt):
+    condition_names = []
+    X = OrderedDict([])
+    XX = np.zeros((S, M, N, D), dtype=np.int32)
+    nc = 0
+    for condition, Ons in Onsets.iteritems():
+        condition_names += [condition]
+        Dur = durations[condition]
+        print 'Onsets: ', Ons
+        print 'Durations: ', Dur
+        for s in xrange(S):
+            X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons[s, :],
+                                                    durations=Dur[s, :])
+            XX[s, nc, :, :] = X[condition]
         nc += 1
     return X, XX, condition_names
 
@@ -1439,25 +1442,26 @@ def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma,
     #XG = np.zeros((S, N, M), dtype=np.float64)
     Sigma_H_X = np.zeros((D, N, M, S), dtype=np.float64)
     #WXG = np.zeros((S, N, M), dtype=np.float64)
+    
     for s in xrange(0, S):
         XH[s, :, :] = XX[s, :, :, :].dot(H).T                       # (S, N, M)
         Sigma_H_X[:, :, :, s] = XX[s, :, :, :].dot(Sigma_H.T).T     # (D, N, M, S)
         #XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
         #WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
 
-    ## Sigma_A computation
-    # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
-    for s in xrange(0, S):
+        ## Sigma_A computation
+        # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
         Sigma_A[:, :, :, s] = XH[s, :, :].T.dot(Gamma).dot(XH[s, :, :])[..., np.newaxis] / sigma_eps_m[s, :]
-    # second summand of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
-    second_summand = np.einsum('ijk, jli', Sigma_H_X[:, :, :, s], Gamma_X[:, s, :, :])
-    Sigma_A[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
+        # second summand of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
+        second_summand = np.einsum('ijk, jli', Sigma_H_X[:, :, :, s], Gamma_X[:, s, :, :])
+        Sigma_A[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
     # third summand of Sigma_A: part of p(a|q; theta_A)
     Delta_k = (q_Z / np.maximum(sigma_Ma[:, :, np.newaxis], eps))
     Delta = Delta_k.sum(axis=1)         # sum across classes K
-    for i in xrange(0, J):
-        Sigma_A[:, :, i, s] = np.linalg.inv(Sigma_A[:, :, i, s] + \
-                                         np.diag(Delta[:, i]))
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            Sigma_A[:, :, i, s] = np.linalg.inv(Sigma_A[:, :, i, s] + \
+                                             np.diag(Delta[:, i]))
     
     ## m_A computation
     # adding m_C*WXG to y_tilde
@@ -1545,12 +1549,11 @@ def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
                   mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K, S):
     # between ASL and BOLD just alpha and Gauss_mat change!!!
     alpha = np.zeros((J, M, K), dtype=np.float64)
-    Gauss_mat = np.ones_like(alpha)
+    Gauss_mat = np.zeros_like(alpha)
     for s in xrange(S):
-        alpha -= 0.5 * np.diagonal(Sigma_A[:, :, :, s])[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :]) #\
-                 #- 0.5 * np.diagonal(Sigma_C[:, :, :, s])[:, :, np.newaxis] / (sigma_Mc[np.newaxis, :, :])  # (J, M, K)
-        Gauss_mat *= vt.normpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma)) #* \
-                     #vt.normpdf(m_C[s, :, :, np.newaxis], mu_Mc, np.sqrt(sigma_Mc))
+        alpha -= 0.5 * np.diagonal(Sigma_A[:, :, :, s])[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :])
+        #Gauss_mat += np.log(vt.normpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma)))
+        Gauss_mat += sp.stats.norm.logpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma))
         
     # Update Ztilde ie the quantity which is involved in the a priori 
     # Potts field [by solving for the mean-field fixed point Equation]
@@ -1558,9 +1561,9 @@ def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     B_pqt = Beta[:, np.newaxis, np.newaxis] * p_q_t.copy()
     B_pqt = np.concatenate((B_pqt, np.zeros((M, K, 1), dtype=B_pqt.dtype)), axis=2)
     local_energy = B_pqt[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
-    energy = (alpha + local_energy)
-    energy -= energy.max()
-    Probas = (np.exp(energy) * Gauss_mat).transpose(1, 2, 0)
+    energy = (local_energy + alpha + Gauss_mat )
+    #energy -= energy.max()
+    Probas = (np.exp(energy)).transpose(1, 2, 0)
     aux = Probas.sum(axis=1)[:, np.newaxis, :]
     aux[np.where(aux==0)] = eps
     p_q_t = Probas / aux
@@ -1610,17 +1613,18 @@ def maximization_mu_sigma_asl(q_Z, m_X, Sigma_X):
     return Mu, Sigma
     
 
-def maximization_mu_sigma_ms(q_Z, m_X, Sigma_X, M, J, S):
-    qZ_sumvox = q_Z.sum(axis=2)                              # (M, K)
+def maximization_mu_sigma_ms(q_Z, m_X, Sigma_X, M, J, S, K):
+    qZ_sumvox = q_Z.sum(axis=2) * S                          # (M, K)
     Mu = np.zeros_like(qZ_sumvox)
-    Mu[:, 1] = (q_Z[:, 1, :] * m_X.sum(0).T).sum(axis=1) / (qZ_sumvox[:, 1] * S)
+    Mu[:, 1] = (q_Z[:, 1, :] * m_X.sum(0).T).sum(axis=1) / qZ_sumvox[:, 1]
 
-    sess_term = np.zeros((M, M, J), dtype=np.float64)
+    sess_term = np.zeros((M, K, J), dtype=np.float64)
     for s in xrange(S):
         mX_minus_Mu_2 = (m_X[s, :, :, np.newaxis] - Mu[np.newaxis, :, :]).transpose(1, 2, 0)**2
         SigmaX_diag = np.diagonal(Sigma_X[:, :, :, s]).T
-        sess_term += mX_minus_Mu_2 + SigmaX_diag[:, np.newaxis, :]
-    Sigma = (q_Z * sess_term).sum(axis=2) / (qZ_sumvox * S)
+        sess_term += mX_minus_Mu_2 + np.concatenate((SigmaX_diag[:, np.newaxis, :],
+                                                     SigmaX_diag[:, np.newaxis, :]), axis=1)
+    Sigma = (q_Z * sess_term).sum(axis=2) / qZ_sumvox
 
     return Mu, Sigma
 
@@ -2081,17 +2085,13 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
                        m_G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma,
                        gamma, gamma_h, gamma_g, sigma_eps, XX, W, 
                        J, D, M, N, K, hyp, Gamma_X, Gamma_WX, plot=False, 
-                       bold=False):
+                       bold=False, S=1):
     # Entropy
     EntropyA = RL_Entropy(Sigma_A, M, J)
     EntropyC = RL_Entropy(Sigma_C, M, J)
     EntropyH = RF_Entropy(Sigma_H, D)
     EntropyG = RF_Entropy(Sigma_G, D)
-    EntropyQ = Q_Entropy(q_Z, M, J)
-    if bold:
-        Total_Entropy = EntropyA + EntropyH + EntropyQ        
-    else:
-        Total_Entropy = EntropyA + EntropyH + EntropyC + EntropyG + EntropyQ        
+    EntropyQ = Q_Entropy(q_Z, M, J)     
     
     # Likelihood
     EPtildeLikelihood = expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, m_H, Sigma_H, m_C,
@@ -2099,32 +2099,39 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
                                                       Gamma, J, D, M, N, Gamma_X, Gamma_WX)
     EPtildeA = RL_expectation_Ptilde(m_A, Sigma_A, mu_Ma, sigma_Ma, q_Z)
     EPtildeC = RL_expectation_Ptilde(m_C, Sigma_C, mu_Mc, sigma_Mc, q_Z)
-    EPtildeH = RF_expectation_Ptilde(AuxH, Sigma_H, sigmaH, R, R_inv, D)
-    EPtildeG = RF_expectation_Ptilde(AuxG, Sigma_G, sigmaG, R, R_inv, D)
-    EPtildeQ = Q_expectation_Ptilde(q_Z, neighboursIndexes, Beta, gamma, K, M)
-    EPtildeBeta = M * np.log(gamma) - gamma * Beta.sum()
+    EPtildeH = RF_expectation_Ptilde(AuxH, Sigma_H, sigmaH, R, R_inv, D) 
+    EPtildeG = RF_expectation_Ptilde(AuxG, Sigma_G, sigmaG, R, R_inv, D) 
+    EPtildeQ = Q_expectation_Ptilde(q_Z, neighboursIndexes, Beta, gamma, K, M) 
+    EPtildeBeta = M * np.log(gamma) - gamma * Beta.sum() 
     if hyp:
         EPtildeVh = np.log(gamma_h) - gamma_h * sigmaH
         EPtildeVg = np.log(gamma_g) - gamma_g * sigmaG
     else:
         EPtildeVh = 0.
         EPtildeVg = 0.
+
     if bold:
-        EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeQ \
-                + EPtildeBeta + EPtildeVh
+        Total_Entropy = EntropyA + EntropyH / S + EntropyQ / S        
+        EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH / S + EPtildeQ / S \
+                + EPtildeBeta / S + EPtildeVh / S
     else:
+        Total_Entropy = EntropyA + EntropyH + EntropyC + EntropyG + EntropyQ       
         EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeC + EPtildeG + EPtildeQ \
                 + EPtildeBeta + EPtildeVh + EPtildeVg
+    
     if plot:
         print 'Total_Entropy = ', Total_Entropy
-        print 'EA = ', EntropyA, 'EH = ', EntropyH, 'EC = ', EntropyC, \
-                'EG = ', EntropyG, 'EQ = ', EntropyQ
+        print 'EA = ', EntropyA, 'EH = ', EntropyH, 'EQ = ', EntropyQ
+        if not bold:
+            print 'EC = ', EntropyC, 'EG = ', EntropyG, 
         print 'Total_EPtilde = ', EPtilde
-        print 'ELklh = ', EPtildeLikelihood, 'EPtA = ', EPtildeA, 'EPtC = ', EPtildeC, \
-                'EPtH = ', EPtildeH, 'EPtG = ', EPtildeG, 'EPtQ = ', EPtildeQ, \
-                'EPtBeta = ', EPtildeBeta, 'EPtVh = ', EPtildeVh, 'EPtVg = ', EPtildeVg
+        print 'ELklh = ', EPtildeLikelihood, 'EPtA = ', EPtildeA,  \
+                'EPtH = ', EPtildeH, 'EPtQ = ', EPtildeQ, \
+                'EPtBeta = ', EPtildeBeta, 'EPtVh = ', EPtildeVh
+        if not bold:
+            print 'EPtC = ', EPtildeC, 'EPtG = ', EPtildeG, 'EPtVg = ', EPtildeVg
 
-    return EPtilde, EPtildeLikelihood, Total_Entropy, EPtilde + Total_Entropy
+    return EPtilde + Total_Entropy
 
 
 

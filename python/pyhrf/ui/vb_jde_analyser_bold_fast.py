@@ -92,7 +92,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateLabels=True, estimateMixtParam=True, contrasts=None, 
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True,
-                 phy_params=PHY_PARAMS_KHALIDOV11, prior='omega'):
+                 phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', n_session=1):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_asl_')
@@ -137,6 +137,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.contrasts = contrasts
         self.computeContrast = computeContrast
         self.phy_params = phy_params
+        self.n_session = n_session
 
         logger.info("VEM analyzer:")
         logger.info(" - estimate sigma H: %s", str(self.estimateSigmaH))
@@ -150,16 +151,27 @@ class JDEVEMAnalyser(JDEAnalyser):
         # BOLD has shape (nscans, nvoxels)
 
         # roiData.graph #list of neighbours
-        data = roiData.bold
-        Onsets = roiData.get_joined_onsets()
+        #print 'roiData: ', roiData
+        #print 'bold: ', roiData.bold.shape
+        
+        n_scan_allsession, nvox = roiData.bold.shape
+        n_scan = n_scan_allsession / self.n_session
+        print 'BOLD shape = ', roiData.bold.shape
+        print 'n_session = ', self.n_session
+        data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
+        data = np.zeros_like(data0)
+        for s in xrange(self.n_session):
+            data_mean = np.mean(data0[s, :, :])
+            data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))    
+            data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range    
+        Onsets = roiData.paradigm.get_joined_onsets_dim()
         #print 'onsets = ', Onsets
-        durations = roiData.get_joined_durations()
+        durations = roiData.paradigm.get_joined_durations_dim()
         #print 'durations = ', durations
         TR = roiData.tr
-        # K = 2                      # number of classes
         beta = self.beta
         scale = 1                   # roiData.nbVoxels
-        nvox = roiData.get_nb_vox_in_mask()
+        #nvox = roiData.get_nb_vox_in_mask()
         if self.scale:
             scale = nvox
         rid = roiData.get_roi_id()
@@ -187,10 +199,9 @@ class JDEVEMAnalyser(JDEAnalyser):
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, alpha,\
             Sigma_brls, Sigma_prls, Sigma_brf, Sigma_prf, rerror, \
             CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
-            cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE, EP, EPlh, Ent = Main_vbjde_physio(
-                                       graph, data, Onsets, durations,
-                                       self.hrfDuration, self.nbClasses, TR,
-                                       beta, self.dt, scale=scale,
+            cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE = Main_vbjde_physio(
+                                       graph, data, Onsets, durations, self.hrfDuration,
+                                       self.nbClasses, TR, beta, self.dt, scale=scale,
                                        estimateSigmaG=self.estimateSigmaG,
                                        sigmaH=self.sigmaH, sigmaG=self.sigmaG,
                                        gamma_h=self.gammaH, gamma_g=self.gammaG,
@@ -214,7 +225,6 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        use_hyperprior=self.use_hyperprior,
                                        phy_params=self.phy_params, 
                                        prior = self.prior)
-
         
         # Plot analysis duration
         self.analysis_duration = time() - t_start
