@@ -56,7 +56,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                       estimateC=True, estimateZ=True, estimateNoise=True,
                       estimateMP=True, estimateLA=True, use_hyperprior=False,
                       positivity=False, constraint=False,
-                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=True):
+                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=False):
 
     logger.info("EM for ASL!")
     np.random.seed(6537540)
@@ -114,7 +114,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     # H and G
     TT, m_h = getCanoHRF(Thrf, dt)
-    H = np.array(m_h[:D]).astype(np.float64)
+    H = np.array(m_h[1:D+1]).astype(np.float64)
     H /= np.linalg.norm(H)
     G = copy.deepcopy(H)
     Hb = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)

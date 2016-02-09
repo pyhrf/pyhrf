@@ -89,7 +89,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateH=True, estimateG=True, use_hyperprior=False,
                  estimateSigmaH=True, estimateSigmaG=True, positivity=False,
                  sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=True,
-                 gammaH=1000, gammaG=1000, zero_constrained=True,
+                 gammaH=1000, gammaG=1000, zero_constrained=False,
                  estimateLabels=True, estimateMixtParam=True, contrasts=None,
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True,
@@ -155,21 +155,33 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData.graph #list of neighbours
         #print 'roiData: ', roiData
         #print 'bold: ', roiData.bold.shape
+        if self.n_session>1 or 1:
+            n_scan_allsession, nvox = roiData.bold.shape
+            n_scan = n_scan_allsession / self.n_session
+            print 'BOLD shape = ', roiData.bold.shape
+            print 'n_session = ', self.n_session
+            data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
+            data = np.zeros_like(data0)
+            for s in xrange(self.n_session):
+                data_mean = np.mean(data0[s, :, :])
+                data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))
+                data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range
+            Onsets = roiData.paradigm.get_joined_onsets_dim()
+            durations = roiData.paradigm.get_joined_durations_dim()
+        else:
+            n_scan, nvox = roiData.bold.shape
+            print 'BOLD shape = ', roiData.bold.shape
+            print 'n_session = ', self.n_session
+            data0 = roiData.bold #.reshape(self.n_session, n_scan, nvox)
+            data = np.zeros_like(data0)
+            data_mean = np.mean(data0)
+            data_range = (np.max(data0) - np.min(data0))
+            data = (data0 - data_mean) * 100. / data_range
 
-        n_scan_allsession, nvox = roiData.bold.shape
-        n_scan = n_scan_allsession / self.n_session
-        #  print 'BOLD shape = ', roiData.bold.shape
-        #  print 'n_session = ', self.n_session
-        data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
-        data = np.zeros_like(data0)
-        for s in xrange(self.n_session):
-            data_mean = np.mean(data0[s, :, :])
-            data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))
-            data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range
-        Onsets = roiData.paradigm.get_joined_onsets_dim()
-        #print 'onsets = ', Onsets
-        durations = roiData.paradigm.get_joined_durations_dim()
-        #print 'durations = ', durations
+            Onsets = roiData.paradigm.get_joined_onsets()
+            #print 'onsets = ', Onsets
+            durations = roiData.paradigm.get_joined_durations()
+            #print 'durations = ', durations
         TR = roiData.tr
         beta = self.beta
         scale = 1                   # roiData.nbVoxels

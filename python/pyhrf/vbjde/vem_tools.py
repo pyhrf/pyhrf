@@ -1359,7 +1359,7 @@ def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
     return m_C, Sigma_C
 
 
-def expectation_C_ms(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
+def expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
                   J, y_tilde, Sigma_G, sigma_eps_m, N, M, D, S):
     """
     Expectation-C step:
@@ -1405,7 +1405,7 @@ def expectation_C_ms(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
         X_tildeG = Gamma_y_tildeG_WXG / sigma_eps_m[s, :, np.newaxis] + \
                         (Delta_k * mu_Mc[:, :, np.newaxis]).sum(axis=1).T
         # dot product across voxels of Sigma_C and X_tildeG
-        m_C[s, :, :] = np.einsum('ijk,kj->ki', Sigma_C[:, :, :, s], X_tildeH)
+        m_C[s, :, :] = np.einsum('ijk,kj->ki', Sigma_C[:, :, :, s], X_tildeG)
 
     return m_C, Sigma_C
 

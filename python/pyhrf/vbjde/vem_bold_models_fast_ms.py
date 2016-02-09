@@ -46,13 +46,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                       estimateH=True, estimateG=True, estimateA=True,
                       estimateC=True, estimateZ=True, estimateNoise=True,
                       estimateMP=True, estimateLA=True, use_hyperprior=False,
-<<<<<<< HEAD
                       positivity=False, constraint=False,
-                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega'):
-=======
-                      positivity=False, constraint=False,
-                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=True):
->>>>>>> 2e7e9a9... zero_constrained option added and tested correctly
+                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=False):
 
     logger.info("EM for ASL!")
     np.random.seed(6537540)
