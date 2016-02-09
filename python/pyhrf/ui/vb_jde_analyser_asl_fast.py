@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 import pyhrf
 from pyhrf.ndarray import xndarray
-from pyhrf.vbjde.vem_asl_models_fast import Main_vbjde_physio
+from pyhrf.vbjde.vem_asl_models_fast_ms import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
@@ -89,7 +89,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateH=True, estimateG=True, use_hyperprior=False,
                  estimateSigmaH=True, estimateSigmaG=True, positivity=False,
                  sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=True,
-                 gammaH=1000, gammaG=1000, zero_constrained=True,
+                 gammaH=1000, gammaG=1000, zero_constrained=False,
                  estimateLabels=True, estimateMixtParam=True, contrasts=None, 
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True,
@@ -153,7 +153,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         # BOLD has shape (nscans, nvoxels)
 
         # roiData.graph #list of neighbours
-        if self.n_session>1:
+        if self.n_session>1 or 1:
             n_scan_allsession, nvox = roiData.bold.shape
             n_scan = n_scan_allsession / self.n_session
             print 'BOLD shape = ', roiData.bold.shape

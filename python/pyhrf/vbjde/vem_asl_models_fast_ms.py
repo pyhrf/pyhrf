@@ -47,7 +47,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                       estimateC=True, estimateZ=True, estimateNoise=True,
                       estimateMP=True, estimateLA=True, use_hyperprior=False,
                       positivity=False, constraint=False, 
-                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=True):
+                      phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=False):
 
     logger.info("EM for ASL!")
     np.random.seed(6537540)
@@ -328,38 +328,17 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 print 'g_norm = ', g_norm
             cG += [(np.linalg.norm(G - G1) / np.linalg.norm(G1)) ** 2]
             G1[:] = G[:]
-
-        if ni > 0:
-            _, _, _, free_energyG = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
-                                             H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps, XX, W,
-                                             J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
-            if free_energyG < free_energyA:
-                logger.info("free energy has decreased after E-G step from %f to %f", free_energyA, free_energyG)
-        
         
         # C
         if estimateC:
             logger.info("E C step ...")
-            m_C, Sigma_C = vt.expectation_C_ms(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z,
+            m_C, Sigma_C = vt.expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z,
                                              mu_Mc, sigma_Mc, J, y_tilde,
                                              Sigma_G, sigma_eps_m, N, M, D, n_sess)
 
             cC += [(np.linalg.norm(m_C - m_C1) / np.linalg.norm(m_C1)) ** 2]
             m_C1[:, :] = m_C[:, :]
 
-        if ni > 0:
-            _, _, _, free_energyC = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
-                                             H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps, XX, W,
-                                             J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
-            if free_energyC < free_energyG:
-                logger.info("free energy has decreased after E-C step from %f to %f", free_energyG, free_energyC)
-        
 
         # Q labels
         if estimateZ:
@@ -406,8 +385,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
         # crit. AH and CG
         logger.info("crit. AH and CG")
-        AH = m_A[:, :, np.newaxis] * H[np.newaxis, np.newaxis, :]
-        CG = m_C[:, :, np.newaxis] * G[np.newaxis, np.newaxis, :]
+        AH = m_A[:, :, :, np.newaxis] * H[np.newaxis, np.newaxis, :]
+        CG = m_C[:, :, :, np.newaxis] * G[np.newaxis, np.newaxis, :]
         
         Crit_AH = (np.linalg.norm(AH - AH1) / (np.linalg.norm(AH1) + eps)) ** 2
         cAH += [Crit_AH]
@@ -461,7 +440,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
          # Variance PRF: sigmaG
         if estimateSigmaG:
             logger.info("M sigma_G step ...")
-            sigmaG = vt.maximization_sigma(D, Sigma_G, matrix_covG, AuxG, use_hyperprior, gamma_g)
+            sigmaG = vt.maximization_sigma_asl(D, Sigma_G, matrix_covG, AuxG, use_hyperprior, gamma_g)
             logger.info('sigmaG = ' + str(sigmaG))
         
         # Mu: True HRF in the hierarchical prior case
