@@ -151,37 +151,17 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData is of type FmriRoiData, see pyhrf.core.FmriRoiData
         # roiData.bold : numpy array of shape
         # BOLD has shape (nscans, nvoxels)
-
         # roiData.graph #list of neighbours
-        #print 'roiData: ', roiData
-        #print 'bold: ', roiData.bold.shape
-        if self.n_session>1 or 1:
-            n_scan_allsession, nvox = roiData.bold.shape
-            n_scan = n_scan_allsession / self.n_session
-            print 'BOLD shape = ', roiData.bold.shape
-            print 'n_session = ', self.n_session
-            data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
-            data = np.zeros_like(data0)
-            for s in xrange(self.n_session):
-                data_mean = np.mean(data0[s, :, :])
-                data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))    
-                data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range    
-            Onsets = roiData.paradigm.get_joined_onsets_dim()
-            durations = roiData.paradigm.get_joined_durations_dim()
-        else:
-            n_scan, nvox = roiData.bold.shape
-            print 'BOLD shape = ', roiData.bold.shape
-            print 'n_session = ', self.n_session
-            data0 = roiData.bold #.reshape(self.n_session, n_scan, nvox)
-            data = np.zeros_like(data0)
-            data_mean = np.mean(data0)
-            data_range = (np.max(data0) - np.min(data0))    
-            data = (data0 - data_mean) * 100. / data_range    
-            
-            Onsets = roiData.paradigm.get_joined_onsets()
-            #print 'onsets = ', Onsets
-            durations = roiData.paradigm.get_joined_durations()
-            #print 'durations = ', durations
+        n_scan_allsession, nvox = roiData.bold.shape
+        n_scan = n_scan_allsession / self.n_session
+        data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
+        data = np.zeros_like(data0)
+        for s in xrange(self.n_session):
+            data_mean = np.mean(data0[s, :, :])
+            data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))    
+            data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range    
+        Onsets = roiData.paradigm.get_joined_onsets_dim()
+        durations = roiData.paradigm.get_joined_durations_dim()
         TR = roiData.tr
         beta = self.beta
         scale = 1                   # roiData.nbVoxels
