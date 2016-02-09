@@ -114,9 +114,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     # Labels
     logger.info("Labels are initialized by setting active probabilities "
                 "to ones ...")
-    #q_Z = np.ones((M, K, J), dtype=np.float64) / 2.
-    q_Z = np.zeros((M, K, J), dtype=np.float64)
-    q_Z[:, 1, :] = 1
+    q_Z = np.ones((M, K, J), dtype=np.float64) / 2.
+    #q_Z = np.zeros((M, K, J), dtype=np.float64)
+    #q_Z[:, 1, :] = 1
     q_Z1 = copy.deepcopy(q_Z)
     Z_tilde = copy.deepcopy(q_Z)
 
