@@ -72,6 +72,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         'InitVar': 'Initiale value of active and inactive gaussian variances',
         'InitMean': 'Initiale value of active gaussian means',
         'constrained': 'adding constrains: positivity and norm = 1 ',
+        'zero_constrained': 'putting first and last point of the HRF to zero '
     }
 
     parametersToShow = ['dt', 'hrfDuration', 'nItMax', 'nItMin',
@@ -88,11 +89,11 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateH=True, estimateG=True, use_hyperprior=False,
                  estimateSigmaH=True, estimateSigmaG=True, positivity=False,
                  sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=True,
-                 gammaH=1000, gammaG=1000,
+                 gammaH=1000, gammaG=1000, zero_constrained=True,
                  estimateLabels=True, estimateMixtParam=True, contrasts=None,
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True,
-                 phy_params=PHY_PARAMS_KHALIDOV11, prior='omega'):
+                 phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', n_session=1):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_asl_')
@@ -137,6 +138,8 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.contrasts = contrasts
         self.computeContrast = computeContrast
         self.phy_params = phy_params
+        self.n_session = n_session
+        self.zc = zero_constrained
 
         logger.info("VEM analyzer:")
         logger.info(" - estimate sigma H: %s", str(self.estimateSigmaH))
@@ -150,11 +153,33 @@ class JDEVEMAnalyser(JDEAnalyser):
         # BOLD has shape (nscans, nvoxels)
 
         # roiData.graph #list of neighbours
-        data = roiData.bold
-        Onsets = roiData.get_joined_onsets()
-        #print 'onsets = ', Onsets
-        durations = roiData.get_joined_durations()
-        #print 'durations = ', durations
+        if self.n_session>1:
+            n_scan_allsession, nvox = roiData.bold.shape
+            n_scan = n_scan_allsession / self.n_session
+            print 'BOLD shape = ', roiData.bold.shape
+            print 'n_session = ', self.n_session
+            data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
+            data = np.zeros_like(data0)
+            for s in xrange(self.n_session):
+                data_mean = np.mean(data0[s, :, :])
+                data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))
+                data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range
+            Onsets = roiData.paradigm.get_joined_onsets_dim()
+            durations = roiData.paradigm.get_joined_durations_dim()
+        else:
+            n_scan, nvox = roiData.bold.shape
+            print 'BOLD shape = ', roiData.bold.shape
+            print 'n_session = ', self.n_session
+            data0 = roiData.bold #.reshape(self.n_session, n_scan, nvox)
+            data = np.zeros_like(data0)
+            data_mean = np.mean(data0)
+            data_range = (np.max(data0) - np.min(data0))
+            data = (data0 - data_mean) * 100. / data_range
+
+            Onsets = roiData.paradigm.get_joined_onsets()
+            #print 'onsets = ', Onsets
+            durations = roiData.paradigm.get_joined_durations()
+            #print 'durations = ', durations
         TR = roiData.tr
         # K = 2                      # number of classes
         beta = self.beta
@@ -187,7 +212,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, alpha,\
             Sigma_brls, Sigma_prls, Sigma_brf, Sigma_prf, rerror, \
             CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
-            cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE, EP, EPlh, Ent = Main_vbjde_physio(
+            cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE = Main_vbjde_physio(
                                        graph, data, Onsets, durations,
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
@@ -213,7 +238,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        positivity=self.positivity,
                                        use_hyperprior=self.use_hyperprior,
                                        phy_params=self.phy_params,
-                                       prior = self.prior)
+                                       prior = self.prior, zc=self.zc)
 
 
         # Plot analysis duration
@@ -397,6 +422,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             outName = 'convergence_FE'
             outputs[outName] = xndarray(FE, axes_names=axes_names,
                                         value_label='Conv_Criterion_FE')
+
             logger.info("Convergence saved ")
 
         #######################################################################

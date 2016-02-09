@@ -213,12 +213,9 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     firstrow = np.concatenate(
         ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
-<<<<<<< HEAD
-    x_tmp2 = np.zeros_like(x_tmp)
-    for ix in xrange(0, firstrow.shape[0], 1):
-        x_tmp2[:, ix] = x_tmp[:, ix]
-=======
->>>>>>> 530c7da... Changes made to add multi-session to the BOLD model
+    #x_tmp2 = np.zeros_like(x_tmp)
+    #for i in xrange(0, x_tmp.shape[1], osf):
+    #    x_tmp2[:, i] = x_tmp[:, i]
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
     x = x_tmp[os_indexes]
     return x
@@ -560,18 +557,9 @@ def norm1_constraint(function, variance):
         """Norm2(fct) == 1"""
         return np.linalg.norm(fct, 2) - 1
 
-    def first_element_constraint(fct):
-        """fct[0] == 0"""
-        return fct[0]
-
-    def last_element_constraint(fct):
-        """fct[-1] == 0"""
-        return fct[-1]
 
     return fmin_slsqp(minimized_function, function,
-                      eqcons=[norm1_constraint_equation,
-                              first_element_constraint,
-                              last_element_constraint],
+                      eqcons=[norm1_constraint_equation],
                       bounds=[(None, None)] * (len(function)), disp=disp)
 
 
@@ -1094,28 +1082,24 @@ def expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, 
     """
 
     ## Precomputations
-    #WXG = np.zeros((S, N, M), dtype=np.float64)
     mAX = np.zeros((S, J, N, D), dtype=np.float64)
+    WXG = np.zeros((S, N, M), dtype=np.float64)
     mAX_Gamma = np.zeros((S, J, D, N), dtype=np.float64)
     for s in xrange(0, S):
-        #WXG[s, :, :] = W.dot(XX[s, :, :, :].dot(G).T)                                   # shape (N, M)
+        WXG[s, :, :] = W.dot(XX[s, :, :, :].dot(G).T)                                   # shape (N, M)
         mAX[s, :, :, :] = np.tensordot(m_A[s, :, :], XX[s, :, :, :], axes=(1, 0))       # shape (J, N, D)
         mAX_Gamma[s, :, :, :] = (np.tensordot(mAX[s, :, :, :], Gamma, axes=(1, 0)) / cov_noise[s, :, :, :]) # shape (J, D, N)
 
     ## Sigma_H computation
     # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
     S_a = R_inv / sigmaH + prior_cov_term
-    # second summand: E_pa[Saj.T*Gamma*Saj]
-    # sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
+    # second summand: sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
     for s in xrange(0, S):
         S_a += (np.einsum('ijk,lijm->klm', Sigma_A[:, :, :, s], X_Gamma_X[:, :, s, :, :]) / cov_noise[s, :, :, :]).sum(0)
-    # third summand: E_pa[Saj.T*Gamma*Saj]
-    # (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
+    # third summand: (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
     for s in xrange(0, S):
         for i in xrange(0, J):
             S_a += mAX_Gamma[s, i, :, :].dot(mAX[s, i, :, :])  #option 1 faster 13.4
-    #S_a += np.einsum('ijk,ikl->ijl', mAX_Gamma, mAX).sum(0) # option 2 second 8.8
-    #S_a += np.einsum('ijk,ikl->jl', mAX_Gamma, mAX) # option 3 slower 7.5
 
     # Sigma_H = S_a^-1
     Sigma_H = np.linalg.inv(S_a)
@@ -1126,8 +1110,7 @@ def expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, 
     y_tildeH = np.zeros_like(y_tilde)
     Y_bar_tilde = np.zeros_like(prior_mean_term)
     for s in xrange(0, S):
-        y_tildeH[s, :, :] = y_tilde[s, :, :] #- WXG[s, :, :].dot(m_C[s, :, :].T)
-        #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
+        y_tildeH[s, :, :] = y_tilde[s, :, :] - WXG[s, :, :].dot(m_C[s, :, :].T)
         Y_bar_tilde += np.einsum('ijk,ki->j', mAX_Gamma[s, :, :, :], y_tildeH[s, :, :])
 
     # we sum the term that corresponds to the prior
@@ -1153,11 +1136,7 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
 
     ## Precomputations
     XH = XX.dot(H).T
-    #WX = W.dot(XX).transpose(1, 0, 2)
     mCWX = np.tensordot(m_C, WX, axes=(1, 0))                    # shape (J, N, D)
-    #Gamma_WX = np.tensordot(Gamma, WX, axes=(1, 1))
-    #XW_Gamma_WX = np.tensordot(WX.T, Gamma_WX, axes=(1, 0))     # shape (D, M, M, D)
-    #cov_noise = np.maximum(sigma_eps, eps)[:, np.newaxis, np.newaxis]
     mCWX_Gamma = np.tensordot(mCWX, Gamma, axes=(1, 0)) / cov_noise # shape (J, D, N)
 
     ## Sigma_H computation
@@ -1191,6 +1170,57 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
     return m_G, Sigma_G
 
 
+def expectation_G_ms(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
+                  XW_Gamma_WX, J, y_tilde, cov_noise, R_inv, sigmaG,
+                  prior_mean_term, prior_cov_term, N, M, D, S):
+    """
+    Expectation-G step:
+    p_G = argmax_g(E_pa,pc,ph[log p(g|y, a, c, h; theta)])
+        \propto exp(E_pa,pc,ph[log p(y|h, a, c, g; theta) + log p(g; sigmaG)])
+
+    Returns:
+    m_G, Sigma_G of probability distribution p_G of the current iteration
+    """
+
+    ## Precomputations
+    XH = XX.dot(H).T
+    mCWX = np.zeros((S, J, N, D), dtype=np.float64)
+    mCWX_Gamma = np.zeros((S, J, D, N), dtype=np.float64)
+    for s in xrange(0, S):
+        mCWX[s, :, :, :] = np.tensordot(m_C[s, :, :], WX[s, :, :, :], axes=(1, 0))       # shape (J, N, D)
+        mCWX_Gamma[s, :, :, :] = (np.tensordot(mCWX[s, :, :, :], Gamma, axes=(1, 0)) / cov_noise[s, :, :, :]) # shape (J, D, N)
+
+    ## Sigma_H computation
+    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
+    S_c = R_inv / sigmaG + prior_cov_term
+    # second summand: sum_{m, m'} Sigma_c(m,m') X_m.T W.T Gamma_i W X_m'
+    for s in xrange(0, S):
+        S_c += (np.einsum('ijk,lijm->klm', Sigma_C[:, :, :, s], XW_Gamma_WX[:, :, s, :, :]) / cov_noise[s, :, :, :]).sum(0)
+    # third summand: (sum_m m_c X_m).T Gamma_i (sum_m m_c W X_m)
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            S_c += mCWX_Gamma[s, i, :, :].dot(mCWX[s, i, :, :])  #option 1 faster 13.4
+
+    # Sigma_G = S_c^-1
+    Sigma_G = np.linalg.inv(S_c)
+
+    ## m_G
+    # Y_bar_tilde computation: (sum_m m_c W X_m).T Gamma_i y_tildeG
+    # y_tildeG = yj - sum_m m_A XH - w alphaj - P lj
+    y_tildeG = np.zeros_like(y_tilde)
+    Y_bar_tilde = np.zeros_like(prior_mean_term)
+    for s in xrange(0, S):
+        y_tildeG[s, :, :] = y_tilde[s, :, :] - XH[:, :, s].dot(m_A[s, :, :].T)
+        Y_bar_tilde += np.einsum('ijk,ki->j', mCWX_Gamma[s, :, :, :], y_tildeG[s, :, :])
+    # we sum the term that corresponds to the prior
+    Y_bar_tilde += prior_mean_term
+
+    # m_H = S_c^-1 y_bar_tilde
+    m_G = np.dot(Sigma_G, Y_bar_tilde)
+
+    return m_G, Sigma_G
+
+
 
 def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
                       J, y_tilde, Sigma_H, sigma_eps_m):
@@ -1209,8 +1239,6 @@ def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
     Sigma_H_X = XX.dot(Sigma_H.T).T
     XG = XX.dot(G).T
     WXG = W.dot(XG)
-    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
-    #sigma_eps_m = np.maximum(sigma_eps, eps)
 
     ## Sigma_A computation
     # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
@@ -1251,15 +1279,15 @@ def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma,
 
     ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
     XH = np.zeros((S, N, M), dtype=np.float64)
-    #XG = np.zeros((S, N, M), dtype=np.float64)
+    XG = np.zeros((S, N, M), dtype=np.float64)
     Sigma_H_X = np.zeros((D, N, M, S), dtype=np.float64)
-    #WXG = np.zeros((S, N, M), dtype=np.float64)
+    WXG = np.zeros((S, N, M), dtype=np.float64)
 
     for s in xrange(0, S):
         XH[s, :, :] = XX[s, :, :, :].dot(H).T                       # (S, N, M)
         Sigma_H_X[:, :, :, s] = XX[s, :, :, :].dot(Sigma_H.T).T     # (D, N, M, S)
-        #XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
-        #WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
+        XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
+        WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
 
         ## Sigma_A computation
         # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
@@ -1278,7 +1306,7 @@ def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma,
     ## m_A computation
     # adding m_C*WXG to y_tilde
     for s in xrange(0, S):
-        y_tildeH = y_tilde[s, :, :] #- WXG[s, :, :].dot(m_C[s, :, :].T)
+        y_tildeH = y_tilde[s, :, :] - WXG[s, :, :].dot(m_C[s, :, :].T)
         Gamma_y_tildeH = Gamma.dot(y_tildeH).T
         X_tildeH = Gamma_y_tildeH.dot(XH[s, :, :]) / sigma_eps_m[s, :, np.newaxis] \
                    + (Delta_k * mu_Ma[:, :, np.newaxis]).sum(axis=1).T
@@ -1305,8 +1333,6 @@ def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
     Sigma_G_X = XX.dot(Sigma_G.T).T
     XG = XX.dot(G).T
     WXG = W.dot(XG)
-    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
-    #sigma_eps_m = np.maximum(sigma_eps, eps)
 
     ## Sigma_C computation
     # first summand of Sigma_C: WXG.T*Gamma*WXG / sigma_eps
@@ -1333,8 +1359,59 @@ def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
     return m_C, Sigma_C
 
 
-def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc,
-                      mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
+def expectation_C_ms(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
+                  J, y_tilde, Sigma_G, sigma_eps_m, N, M, D, S):
+    """
+    Expectation-C step:
+    p_C = argmax_h(E_pa,pq,ph,pg[log p(a|y, h, a, g, q; theta)])
+        \propto exp(E_pa,ph,pg[log p(y|h, a, c, g; theta)] \
+                  + E_pq[log p(c|q; mu_Mc, sigma_Mc)])
+
+    Returns:
+    m_C, Sigma_C of probability distribution p_C of the current iteration
+    """
+
+    ## Pre-compute XH, X*Sigma_G, XG, WXG, Gamma*X
+    XH = np.zeros((S, N, M), dtype=np.float64)
+    XG = np.zeros((S, N, M), dtype=np.float64)
+    Sigma_G_X = np.zeros((D, N, M, S), dtype=np.float64)
+    WXG = np.zeros((S, N, M), dtype=np.float64)
+
+    for s in xrange(0, S):
+        XH[s, :, :] = XX[s, :, :, :].dot(H).T                       # (S, N, M)
+        Sigma_G_X[:, :, :, s] = XX[s, :, :, :].dot(Sigma_G.T).T     # (D, N, M, S)
+        XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
+        WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
+
+        ## Sigma_C computation
+        # first summand of Sigma_C: WXG.T*Gamma*WXG / sigma_eps
+        Sigma_C[:, :, :, s] = WXG[s, :, :].T.dot(Gamma).dot(WXG[s, :, :])[..., np.newaxis] / sigma_eps_m[s, :]
+        # second summand of Sigma_C: tr(X.T*Gamma*X*Sigma_G / sigma_eps)
+        second_summand = np.einsum('ijk, jli', Sigma_G_X[:, :, :, s], Gamma_X[:, s, :, :])
+        Sigma_C[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
+    # third summand of Sigma_C: part of p(c|q; theta_C)
+    Delta_k = (q_Z / np.maximum(sigma_Mc[:, :, np.newaxis], eps))
+    Delta = Delta_k.sum(axis=1)          # sum across classes K
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            Sigma_C[:, :, i, s] = np.linalg.inv(Sigma_C[:, :, i, s] + \
+                                             np.diag(Delta[:, i]))
+
+    ## m_C computation
+    # adding m_A*XH to y_tilde
+    for s in xrange(0, S):
+        y_tildeG = y_tilde[s, :, :] - XH[s, :, :].dot(m_A[s, :, :].T)
+        Gamma_y_tildeG_WXG = Gamma.dot(y_tildeG).T.dot(WXG[s, :, :])
+        X_tildeG = Gamma_y_tildeG_WXG / sigma_eps_m[s, :, np.newaxis] + \
+                        (Delta_k * mu_Mc[:, :, np.newaxis]).sum(axis=1).T
+        # dot product across voxels of Sigma_C and X_tildeG
+        m_C[s, :, :] = np.einsum('ijk,kj->ki', Sigma_C[:, :, :, s], X_tildeH)
+
+    return m_C, Sigma_C
+
+
+def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+                  mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
     # between ASL and BOLD just alpha and Gauss_mat change!!!
     alpha = - 0.5 * np.diagonal(Sigma_A)[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :]) \
             - 0.5 * np.diagonal(Sigma_C)[:, :, np.newaxis] / (sigma_Mc[np.newaxis, :, :])  # (J, M, K)
@@ -1353,6 +1430,9 @@ def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc,
     aux = Probas.sum(axis=1)[:, np.newaxis, :]
     aux[np.where(aux==0)] = eps
     p_q_t = Probas / aux
+
+    return p_q_t, p_q_t
+
 
 def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
                   mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K, S):
