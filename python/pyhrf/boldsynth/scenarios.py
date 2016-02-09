@@ -589,6 +589,29 @@ def create_multisess_stim_induced_signal(nrls_session, rastered_paradigm,
 
     return bold
 
+def create_multisess_stim_induced_signal_asl(prls_session, rastered_paradigm,
+                                         prf, condition_defs,
+                                         dt, hrf_territories=None):
+    """
+    Create a stimulus induced signal from neural response levels, paradigm and
+    HRF (sum_{m=1}^M a^m X^m h)
+    For each condition, compute the convolution of the paradigm binary sequence
+    'rastered_paradigm' with the given HRF and multiply by nrls. Finally
+    compute the sum over conditions.
+
+    Return a bold array of shape (nb scans, nb voxels)
+    """
+    npos = prls_session.shape[1]
+    duration_dt = len(prf[:, 0]) + len(rastered_paradigm[0]) - 1
+    perf = np.zeros((duration_dt, npos))
+    for ipos in xrange(npos):
+        h = prf[:, ipos]
+        for ic, c in enumerate(condition_defs):
+            activity = np.array(rastered_paradigm[ic, :], dtype=float)
+            activity[np.where(activity == 1)] = prls_session[ic, ipos]
+            perf[:, ipos] += np.convolve(activity, h)
+
+    return perf
 
 def create_bold_stim_induced_signal(brls, rastered_paradigm, brf, condition_defs,
                                     dt, hrf_territories=None):
