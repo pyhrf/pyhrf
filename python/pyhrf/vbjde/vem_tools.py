@@ -413,11 +413,38 @@ def sum_over_neighbours(neighbours_indexes, array_to_sum):
     return array_cat_zero[..., neighbours_indexes].sum(axis=-1)
 
 
-def contrast_classes_gaussians(contrasts, condition_names, nrls_class_mean,
-                               nrls_class_var, nb_contrasts, nb_classes):
-    """Computes the contrasts_class_mean and contrasts_class_var from the
-    linear combinations of the conditions and the nrls_classes_gaussians."""
+def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar,
+                               nrls_class_mean, nrls_class_var, nb_contrasts,
+                               nb_classes, nb_voxels):
+    """Computes the contrasts nrls from the conditions nrls and the mean and
+    variance of the gaussian classes of the contrasts (in the cases of all
+    inactive conditions and all active conditions)
+    Parameters
+    ----------
+    def_contrasts : OrderedDict
+        TODO.
+    condition_names : list
+        TODO.
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+        TODO.
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+        TODO.
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+        TODO.
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+        TODO.
+    nb_contrasts : int
+    nb_classes : int
+    Returns
+    -------
+    contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_var : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_class_mean : ndarray, shape (nb_contrasts, nb_classes)
+    contrasts_class_var : ndarray, shape (nb_contrasts, nb_classes)
+    """
 
+    contrasts_mean = np.zeros((nb_voxels, nb_contrasts))
+    contrasts_var = np.zeros((nb_voxels, nb_contrasts))
     contrasts_class_mean = np.zeros((nb_contrasts, nb_classes))
     contrasts_class_var = np.zeros((nb_contrasts, nb_classes))
 
@@ -425,42 +452,71 @@ def contrast_classes_gaussians(contrasts, condition_names, nrls_class_mean,
         parsed_contrast = parse_expr(contrasts[contrast_name])
         for condition_name in condition_names:
             condition_nb = condition_names.index(condition_name)
-            contrasts_class_mean[i, 1] += float(parsed_contrast.coeff(condition_name)) * nrls_class_mean[condition_nb, 1]
-            contrasts_class_var[i, :] += float(parsed_contrast.coeff(condition_name))**2 * nrls_class_var[condition_nb, :]
+            coeff = parsed_contrast.coeff(condition_name)
+            contrasts_mean[:, i] += float(coeff) * nrls_mean[:, condition_nb]
+            contrasts_var[:, i] += float(coeff)**2 * nrls_covar[condition_nb, condition_nb, :]
+            contrasts_class_mean[i, 1] += float(coeff) * nrls_class_mean[condition_nb, 1]
+            contrasts_class_var[i, :] += float(coeff)**2 * nrls_class_var[condition_nb, :]
 
-    return contrasts_class_mean, contrasts_class_var
+    return contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
 
 
-def ppm_contrasts(contrast_mean, contrast_var, contrasts_class_mean, contrasts_class_var):
-    """Computes the ppm for the given contrast using the intersection of the
-    classes gaussians as threshold.
+def ppm_contrasts(contrasts_mean, contrasts_var, contrasts_class_mean,
+                  contrasts_class_var, threshold_a="std_inact", threshold_g=0.95):
+    """Computes the ppm for the given contrast using either the standard deviation
+    of the "all inactive conditions" class gaussian (default) or the intersection
+    of the [all inactive conditions] and [all active conditions] classes
+    gaussians as threshold for the PPM_a and 0.95 (default) for the PPM_g.
     Be carefull, this computation considers the mean of the inactive class as zero.
+
+    Parameters
+    ----------
+    contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_var : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_class_mean : ndarray, shape (nb_contrasts, nb_classes)
+    contrasts_class_var : ndarray, shape (nb_contrasts, nb_classes)
+    threshold_a : str, optional
+        if "std_inact" (default) uses the standard deviation of the
+        [all inactive conditions] gaussian class as PPM_a threshold, if "intersect"
+        uses the intersection of the [all inactive/all active conditions]
+        gaussian classes
+    threshold_g : float, optional
+        the threshold of the PPM_g
+
+    Returns
+    -------
+    ppm_a_contrasts : ndarray, shape (nb_voxels, nb_contrasts)
+    ppm_g_contrasts : ndarray, shape (nb_voxels, nb_contrasts)
     """
 
-    intersect1 = contrasts_class_mean[:, 1] * contrasts_class_var[:, 0]
-    intersect2 = np.sqrt(
-        contrasts_class_var.prod(axis=1) * (
-            contrasts_class_mean[:, 1]**2
-            + 2*contrasts_class_var[:, 0]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
-            - 2*contrasts_class_var[:, 1]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
+    if threshold_a == "std_inact":
+        thresh = np.sqrt(contrasts_class_var[:, 0])
+    elif threshold_a == "intersect":
+        intersect1 = contrasts_class_mean[:, 1] * contrasts_class_var[:, 0]
+        intersect2 = np.sqrt(
+            contrasts_class_var.prod(axis=1) * (
+                contrasts_class_mean[:, 1]**2
+                + 2*contrasts_class_var[:, 0]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
+                - 2*contrasts_class_var[:, 1]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
+            )
         )
-    )
-    threshs = np.concatenate(((intersect1 - intersect2)[:, np.newaxis],
-                              (intersect1 + intersect2)[:, np.newaxis]),
-                             axis=1) / (contrasts_class_var[:, 0] - contrasts_class_var[:, 1])[:, np.newaxis]
+        threshs = np.concatenate(((intersect1 - intersect2)[:, np.newaxis],
+                                  (intersect1 + intersect2)[:, np.newaxis]),
+                                 axis=1) / (contrasts_class_var[:, 0] - contrasts_class_var[:, 1])[:, np.newaxis]
 
-    mask = (
-        ((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis]))
-        | (~((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis])).any(axis=1)[:, np.newaxis]
-           & (threshs == threshs.max(axis=1)[:, np.newaxis])))
-    thresh = threshs[mask]
-    if len(thresh) < len(threshs):
-        logger.warning("The gaussians do not have one intersection between means."
-                       " Choosing the highest")
-        thresh = threshs.max(axis=1)
-        thresh = np.concatenate((thresh[:, np.newaxis], contrasts_class_var[:, 0][:, np.newaxis]), axis=1).max(axis=1)
+        mask = (
+            ((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis]))
+            | (~((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis])).any(axis=1)[:, np.newaxis]
+               & (threshs == threshs.max(axis=1)[:, np.newaxis])))
+        thresh = threshs[mask]
+        if len(thresh) < len(threshs):
+            logger.warning("The gaussians do not have one intersection between means."
+                           " Choosing the highest")
+            thresh = threshs.max(axis=1)
+            thresh = np.concatenate((thresh[:, np.newaxis], contrasts_class_var[:, 0][:, np.newaxis]), axis=1).max(axis=1)
 
-    return norm.sf(thresh, contrast_mean, contrast_var**.5)
+    return (norm.sf(thresh, contrasts_mean, contrasts_var**.5),
+            norm.isf(threshold_g, contrasts_mean, contrasts_var**.5))
 
 
 def norm1_constraint(function, variance):

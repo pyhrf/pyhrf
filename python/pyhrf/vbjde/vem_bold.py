@@ -377,54 +377,21 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
 
     nb_contrasts = len(contrasts)
-    ppm_a_contrasts = np.zeros((nb_voxels, nb_contrasts))
-    ppm_g_contrasts = np.zeros((nb_voxels, nb_contrasts))
+    if compute_contrasts and nb_contrasts > 0:
+        logger.info('Compute contrasts ...')
+        (contrasts_mean,
+         contrasts_var,
+         contrasts_class_mean,
+         contrasts_class_var) = vt.contrasts_mean_var_classes(
+             contrasts, condition_names, nrls_mean, nrls_covar,
+             nrls_class_mean, nrls_class_var, nb_contrasts, nb_classes, nb_voxels
+         )
+        ppm_a_contrasts, ppm_g_contrasts = vt.ppm_contrasts(
+            contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
+        )
+        logger.info('Done contrasts computing.')
 
-    if compute_contrasts:
-        if nb_contrasts > 0:
-            logger.info('Compute contrasts ...')
-            nrls_conds = dict([(str(cn), nrls_mean[:, ic])
-                               for ic, cn in enumerate(condition_names)])
-
-            for n, cname in enumerate(contrasts):
-                #------------ contrasts ------------#
-                contrast_expr = AExpr(contrasts[cname], **nrls_conds)
-                contrast_expr.check()
-                contrast = contrast_expr.evaluate()
-                CONTRAST[:, n] = contrast
-                #------------ contrasts ------------#
-
-                #------------ variance -------------#
-                ContrastCoef = np.zeros(nb_conditions, dtype=float)
-                ind_conds0 = {}
-                for m in xrange(0, nb_conditions):
-                    ind_conds0[condition_names[m]] = 0.0
-                for m in xrange(0, nb_conditions):
-                    ind_conds = ind_conds0.copy()
-                    ind_conds[condition_names[m]] = 1.0
-                    ContrastCoef[m] = eval(contrasts[cname], ind_conds)
-                ActiveContrasts = (ContrastCoef != 0) * np.ones(nb_conditions, dtype=float)
-                # print ContrastCoef
-                # print ActiveContrasts
-                AC = ActiveContrasts * ContrastCoef
-                for j in xrange(0, nb_voxels):
-                    S_tmp = nrls_covar[:, :, j]
-                    CONTRASTVAR[j, n] = AC.dot(S_tmp).dot(AC)
-                #------------ variance -------------#
-                logger.info('Done contrasts computing.')
-
-                ppm_g_contrasts[:, n] = cpt_ppm_g_norm(contrast, CONTRASTVAR[:, n], 0.95)
-
-
-            contrasts_class_mean, contrasts_class_var = vt.contrast_classes_gaussians(
-                contrasts, condition_names, nrls_class_mean, nrls_class_var,
-                nb_contrasts, nb_classes
-            )
-            ppm_a_contrasts = vt.ppm_contrasts(
-                CONTRAST, CONTRASTVAR, contrasts_class_mean, contrasts_class_var
-            )
-
-        #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
+    #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
 
     logger.info("Nb iterations to reach criterion: %d", loop)
     logger.info("Computational time = %s min %s s",
@@ -444,7 +411,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     # ,FreeEnergyArray
     return (loop, nrls_mean, hrf_mean, hrf_covar, labels_proba, noise_var,
             nrls_class_mean, nrls_class_var, beta, drift_coeffs, drift,
-            CONTRAST, CONTRASTVAR, compute_time[2:], compute_time_mean,
+            contrasts_mean, contrasts_var, compute_time[2:], compute_time_mean,
             nrls_covar, stimulus_induced_signal, density_ratio,
             density_ratio_cano, density_ratio_diff, density_ratio_prod, ppm_a_nrl,
             ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, variation_coeff,
