@@ -436,7 +436,9 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     stimulus_induced_signal = vt.computeFit(hrf_mean, nrls_mean, X, nb_voxels, nb_scans)
     snr = 20 * np.log(
-        np.linalg.norm(bold_data) / np.linalg.norm(bold_data - stimulus_induced_signal - drift))
+        np.linalg.norm(bold_data.astype(np.float))
+        / np.linalg.norm((bold_data - stimulus_induced_signal - drift).astype(np.float))
+    )
     snr /= np.log(10.)
     logger.info('snr comp = %f', snr)
     # ,FreeEnergyArray

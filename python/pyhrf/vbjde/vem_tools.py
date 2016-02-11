@@ -20,6 +20,7 @@ from sympy.parsing.sympy_parser import parse_expr
 from pyhrf.paradigm import restarize_events
 
 
+np.seterr(under="ignore")
 logger = logging.getLogger(__name__)
 
 
