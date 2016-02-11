@@ -206,9 +206,13 @@ class FMRITreatment(xmlio.XmlInitable):
                 raise Exception('Can not import joblib. It is required to '
                                 'enable parallel processing on a local machine.')
 
-            parallel_verb = 2 # pyhrf.verbose.verbosity  # TODO: replace that
-            if logger.getEffectiveLevel() == logging.DEBUG:
-                parallel_verb = 10
+            effective_level = logger.getEffectiveLevel()
+            if effective_level == logging.DEBUG:
+                parallel_verb = 11
+            elif effective_level == logging.INFO:
+                parallel_verb = 2
+            else:
+                parallel_verb = 0
 
             if n_jobs is None:
                 if cfg_parallel["nb_procs"]:

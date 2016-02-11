@@ -281,7 +281,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             labels_proba, neighbours_indexes, nb_conditions, nb_classes,
             nb_voxels, parallel=True)
         logger.debug("After: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
-        logger.info("labels_proba = %s", labels_proba)
 
         if estimate_hrf and estimate_sigma_h:
             logger.info("Maximization sigma_H step...")
