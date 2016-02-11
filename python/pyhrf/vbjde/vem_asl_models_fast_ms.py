@@ -605,13 +605,17 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         H /= Hnorm
         Sigma_H /= Hnorm**2
         m_A *= Hnorm
+        Sigma_A *= Hnorm**2
+    if not constraint or not normg:
         Gnorm = np.linalg.norm(G)
         G /= Gnorm
         Sigma_G /= Gnorm**2
         m_C *= Gnorm
+        Sigma_C *= Hnorm**2
     
     if zc:
         H = np.concatenate(([0], H, [0]))
+        G = np.concatenate(([0], G, [0]))
 
     ## Compute contrast maps and variance
     if computeContrast and len(contrasts) > 0:
@@ -627,7 +631,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     ###########################################################################
     ##########################################    PLOTS and SNR computation
 
-    if PLOT:
+    if PLOT and 0:
         logger.info("plotting...")
         print 'FE = ', FE
         vt.plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG, SUM_q_Z, mua1, muc1, FE)
@@ -649,9 +653,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 np.linalg.norm(Y[s, :, :] - StimulusInducedSignal - PL[s, :, :])))
     logger.info("SNR = %d",  SNR10)
 
-    return ni, m_A.mean(0), H, m_C.mean(0), G, Z_tilde, sigma_eps[s, :], \
-           mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, AL[:, :, s], PL[s, :, :], \
-           np.zeros_like(AL[0, :, s]), Sigma_A[:, :, :, s], Sigma_C[:, :, :, s], Sigma_H, Sigma_G, rerror, \
+    return ni, m_A.mean(0), H, m_C.mean(0), G, Z_tilde, sigma_eps.mean(0), \
+           mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, AL.mean(2), PL.mean(0), \
+           np.zeros_like(AL[0, :, s]), Sigma_A.mean(3), Sigma_C.mean(3), Sigma_H, Sigma_G, rerror, \
            CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
            cA[:], cH[2:], cC[2:], cG[2:], cZ[2:], cAH[2:], cCG[2:], \
            cTime, FE

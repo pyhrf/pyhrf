@@ -2456,14 +2456,14 @@ def plot_response_functions_it(ni, NitMin, M, H, G, Mu=None, prior=None):
 
 def plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG,
                      SUM_q_Z, mua1, muc1, FE):
-    SUM_p_Q_array = np.zeros((M, ni), dtype=np.float64)
+    """SUM_p_Q_array = np.zeros((M, ni), dtype=np.float64)
     mua1_array = np.zeros((M, ni), dtype=np.float64)
     muc1_array = np.zeros((M, ni), dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             SUM_p_Q_array[m, i] = SUM_q_Z[m][i]
             mua1_array[m, i] = mua1[m][i]
-            muc1_array[m, i] = muc1[m][i]
+            muc1_array[m, i] = muc1[m][i]"""
     
     import matplotlib
     import matplotlib.pyplot as plt
@@ -2489,12 +2489,12 @@ def plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG,
     plt.legend(('CA', 'CC', 'CH', 'CG'))
     plt.grid(True)
     plt.savefig('./plots/Crit_all.png')
-    plt.figure(M + 6)
+    """plt.figure(M + 6)
     for m in xrange(M):
         plt.plot(SUM_p_Q_array[m])
         plt.hold(True)
     plt.hold(False)
-    plt.savefig('./plots/Sum_p_Q_Iter_ASL.png')
+    plt.savefig('./plots/Sum_p_Q_Iter_ASL.png')"""
     plt.figure(M + 7)
     plt.plot(FE, label='Free energy')
     plt.legend(loc=4)

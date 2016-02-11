@@ -506,6 +506,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         H /= Hnorm
         Sigma_H /= Hnorm**2
         m_A *= Hnorm
+        Sigma_A *= Hnorm**2
     
     if zc:
         H = np.concatenate(([0], H, [0]))

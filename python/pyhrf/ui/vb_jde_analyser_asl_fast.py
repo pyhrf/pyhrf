@@ -154,12 +154,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData.graph #list of neighbours
         n_scan_allsession, nvox = roiData.bold.shape
         n_scan = n_scan_allsession / self.n_session
-        data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
-        data = np.zeros_like(data0)
-        for s in xrange(self.n_session):
-            data_mean = np.mean(data0[s, :, :])
-            data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))    
-            data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range    
+        data = roiData.bold.reshape(self.n_session, n_scan, nvox)
         Onsets = roiData.paradigm.get_joined_onsets_dim()
         durations = roiData.paradigm.get_joined_durations_dim()
         TR = roiData.tr
@@ -402,7 +397,9 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         axes_domains=ad,
                                         value_label='Conv_Criterion_C')
             outName = 'convergence_FE'
-            outputs[outName] = xndarray(FE, axes_names=axes_names,
+            c = np.zeros(self.nItMax)  # -.001 #
+            c[:len(FE)] = FE
+            outputs[outName] = xndarray(c, axes_names=axes_names,
                                         value_label='Conv_Criterion_FE')            
             
             logger.info("Convergence saved ")

@@ -154,12 +154,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData.graph #list of neighbours
         n_scan_allsession, nvox = roiData.bold.shape
         n_scan = n_scan_allsession / self.n_session
-        data0 = roiData.bold.reshape(self.n_session, n_scan, nvox)
-        data = np.zeros_like(data0)
-        for s in xrange(self.n_session):
-            data_mean = np.mean(data0[s, :, :])
-            data_range = (np.max(data0[s, :, :]) - np.min(data0[s, :, :]))    
-            data[s, :, :] = (data0[s, :, :] - data_mean) * 100 / data_range    
+        data = roiData.bold.reshape(self.n_session, n_scan, nvox)
         Onsets = roiData.paradigm.get_joined_onsets_dim()
         durations = roiData.paradigm.get_joined_durations_dim()
         TR = roiData.tr
@@ -404,16 +399,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs[outName] = xndarray(c, axes_names=axes_names,
                                         axes_domains=ad,
                                         value_label='Conv_Criterion_FE')            
-            """outName = 'convergence_EP'
-            outputs[outName] = xndarray(EP, axes_names=axes_names,
-                                        value_label='Conv_Criterion_EP')            
-            outName = 'convergence_EPlh'
-            outputs[outName] = xndarray(EPlh, axes_names=axes_names,
-                                        value_label='Conv_Criterion_EPlh')            
-            outName = 'convergence_Ent'
-            outputs[outName] = xndarray(Ent, axes_names=axes_names,
-                                        value_label='Conv_Criterion_Ent')            
-            """
+            
             logger.info("Convergence saved ")
 
         #######################################################################
