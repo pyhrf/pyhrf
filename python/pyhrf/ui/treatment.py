@@ -384,11 +384,11 @@ class FMRITreatment(xmlio.XmlInitable):
             make_sub_outputs = self.make_outputs
 
         if output_dir is None:
-            output_dir = self.output_dir
+            tmp_output_dir = self.output_dir
 
         sub_treatments = [FMRITreatment(d, deepcopy(self.analyser),
                                         make_outputs=make_sub_outputs,
-                                        output_dir=output_dir)
+                                        output_dir=tmp_output_dir)
                           for d in self.analyser.split_data(self.data)]
 
         if output_dir is not None:
