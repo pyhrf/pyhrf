@@ -209,8 +209,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     noise_var = np.ones(nb_voxels)
 
     labels_proba = np.zeros((nb_conditions, nb_classes, nb_voxels), dtype=np.float64)
-    logger.info("Labels are initialized by setting everything to 0.5")
-    labels_proba[:, :, :] = 0.5
+    logger.info("Labels are initialized by setting everything to {}".format(1./nb_classes))
+    labels_proba[:, :, :] = 1./nb_classes
 
     m_h = getCanoHRF(hrf_duration, dt)[1][:hrf_len]
     hrf_mean = np.array(m_h).astype(np.float64)

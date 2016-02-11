@@ -657,7 +657,7 @@ def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
 
 def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
                        beta, labels_proba, neighbours_indexes, nb_conditions,
-                       nb_classes, nb_voxels=None, parallel=True):
+                       nb_classes, nb_voxels=None, parallel=True, nans_init=False):
     """Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
 
     Parameters
@@ -705,16 +705,19 @@ def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
             neighbours_indexes, beta[..., np.newaxis, np.newaxis] * labels_proba
         )
         energy = alpha + local_energy
-        labels_proba_prev = labels_proba.copy()
+        if nans_init:
+            labels_proba_nans = np.ones_like(labels_proba)/nb_classes
+        else:
+            labels_proba_nans = labels_proba.copy()
         labels_proba = (np.exp(energy) * gauss)
 
         # Remove NaNs and Infs (# TODO: check for sequential mode)
         if (labels_proba.sum(axis=1)==0).any():
             mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
-            labels_proba[mask] = labels_proba_prev[mask]
+            labels_proba[mask] = labels_proba_nans[mask]
         if np.isinf(labels_proba.sum(axis=1)).any():
             mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
-            labels_proba[mask] = labels_proba_prev[mask]
+            labels_proba[mask] = labels_proba_nans[mask]
 
         labels_proba = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
 
