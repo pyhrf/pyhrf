@@ -27,11 +27,12 @@ class VEMASLTest(unittest.TestCase):
         tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.tmp_dir = tmpDir
+        self.clean_tmp = True
         simu = simulate_asl(self.tmp_dir, spatial_size='random_small')
         self.data_simu = FmriData.from_simulation_dict(simu)
 
     def tearDown(self):
-        if 1:
+        if self.clean_tmp:
             logger.info('Remove tmp dir %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
         else:
@@ -49,4 +50,3 @@ class VEMASLTest(unittest.TestCase):
                                  analyser=jde_vem_analyser,
                                  output_dir=None)
         tjde_vem.run()
-

@@ -370,6 +370,9 @@ class CachedEvalTest(unittest.TestCase):
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.cache_dir = tmpDir
 
+    def tearDown(self):
+        shutil.rmtree(self.cache_dir)
+
     def test_simple(self):
         cached_eval(foo_func, (1, 2), path=self.cache_dir)
 
@@ -393,9 +396,6 @@ class CachedEvalTest(unittest.TestCase):
         cached_eval(slow_func, {'a': 4, 'b': 8}, digest_code=True,
                     path=self.cache_dir)
         delta = time.time() - t0
-
-    def tearDown(self):
-        shutil.rmtree(self.cache_dir)
 
 
 def computeB(a, e):

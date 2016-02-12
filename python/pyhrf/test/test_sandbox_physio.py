@@ -43,10 +43,7 @@ class SimulationTest(unittest.TestCase):
         self.assertIn('perf_stim_induced', item_names)
         self.assertIn('flow_induction', item_names)
         self.assertIn('perf_stim_induced', item_names)
-        # cond, spatial axes
         self.assertEqual(r['labels_vol'].shape, (3, 1, 2, 2))
-        # self.assertEqual(r['bold'].shape, (297, 4)) #nb scans, flat spatial
-        # axis
 
     @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_full_physio_outputs(self):
@@ -69,7 +66,6 @@ class SimulationTest(unittest.TestCase):
         self.assertIn('perf_stim_induced', item_names)
         self.assertIn('primary_brf', item_names)
         self.assertIn('perf_stim_induced', item_names)
-        # cond, spatial axes
         self.assertEqual(r['labels_vol'].shape, (3, 1, 2, 2))
         self.assertEqual(r['bold'].shape[1], 4)  # flat spatial axis
 

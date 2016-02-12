@@ -29,13 +29,6 @@ class SpatialTest(unittest.TestCase):
         mask[1:-1, 1:-1, 1:-1] = 1
         mask_labels = mask[np.where(mask)]
         g = graph_from_lattice(mask, kerMask3D_6n)
-        if 0:
-            print 'mask:'
-            print mask
-            print 'mask_labels:'
-            print mask_labels
-            print 'g:'
-            print g
 
         nparcels = 2
         pm.split_parcel(mask_labels, {1: g}, 1, nparcels, inplace=True,
@@ -110,19 +103,8 @@ class MeasureTest(unittest.TestCase):
     def test_parcellation_distance(self):
 
         from pyhrf.parcellation import parcellation_dist
-        # dist = 4 (cost method: intersection size)
-
-        # print 'p1:'
-        # print self.p1
-
-        # print 'p2:'
-        # print self.p2
 
         dist, cano_parcellation = parcellation_dist(self.p1, self.p2)
-
-        # print 'cano_parcellation:'
-        # print cano_parcellation
-
         self.assertEqual(dist, 4)
 
 
@@ -149,12 +131,6 @@ class ParcellationMethodTest(unittest.TestCase):
         labels = parcellation_ward_spatial(X, n_clusters=5, graph=graph)
 
         labels = np.reshape(labels, self.p1.shape)
-        # print 'data:'
-        # print self.p1
-        # print ''
-
-        # print 'labels:'
-        # print labels
         # +1 because parcellation_dist sees 0 as background
         dist = parcellation_dist(self.p1 + 1, labels + 1)[0]
         self.assertEqual(dist, 0)
@@ -180,10 +156,6 @@ class ParcellationMethodTest(unittest.TestCase):
         labels = parcellation_ward_spatial(X, n_clusters=4, graph=graph)
 
         labels = expand_array_in_mask(labels, mask)
-
-        # print 'labels:'
-        # print labels
-
         #+1 because parcellation_dist sees 0 as background:
         dist = parcellation_dist(self.p1 + 1, labels + 1)[0]
         self.assertEqual(dist, 0)

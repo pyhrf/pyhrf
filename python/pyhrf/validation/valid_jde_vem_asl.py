@@ -20,24 +20,26 @@ from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.ui.vb_jde_analyser_asl_fast import JDEVEMAnalyser
 
 
-cache_dir = tempfile.mkdtemp(prefix='pyhrf_validate',
-                             dir=pyhrf.cfg['global']['tmp_path'])
-mem = Memory(cache_dir)
 logger = logging.getLogger(__name__)
 
 
 class ASLTest(unittest.TestCase):
 
     def setUp(self):
+        cache_dir = tempfile.mkdtemp(prefix='pyhrf_validate',
+                                     dir=pyhrf.cfg['global']['tmp_path'])
+        mem = Memory(cache_dir)
         np.random.seed(8652761)
 
         self.tmp_dir = pyhrf.get_tmp_path()
-        self.clean_tmp = False  # HACK True
+        self.clean_tmp = True
 
     def tearDown(self):
         if self.clean_tmp:
             logger.info('Remove tmp dir %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
+            del mem
+            shutil.rmtree(cache_dir)
         else:
             logger.info('Keep tmp dir %s', self.tmp_dir)
 

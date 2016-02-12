@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+
 import unittest
-import pyhrf
 import shutil
 
+import pyhrf
 import pyhrf.boldsynth.scenarios as simu
+
 from pyhrf.rfir import rfir
+
 
 class RFIRTest(unittest.TestCase):
     """
@@ -17,7 +20,6 @@ class RFIRTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
-
     def test_rfir_on_small_simulation(self):
         """ Check if pyhrf.rfir runs properly and that returned outputs
         contains the expected items """
@@ -28,4 +30,4 @@ class RFIRTest(unittest.TestCase):
         for k in ["fir", "fir_error", "drift"]:
             assert outputs.has_key(k)
 
-        #TODO: test shape consistency
+        # TODO: test shape consistency

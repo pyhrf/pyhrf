@@ -33,7 +33,7 @@ class A(XmlInitable):
 class TestXML(unittest.TestCase):
 
     def setUp(self):
-        self.tmp_dir = pyhrf.get_tmp_path()  # './'
+        self.tmp_dir = pyhrf.get_tmp_path()
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -101,12 +101,9 @@ class BaseTest(unittest.TestCase):
 
         d = OrderedDict([('a', 1), ('b', 2)])
         sXml = xmlio.to_xml(d)
-        # print 'sXml:'
-        # print sXml
         d2 = xmlio.from_xml(sXml)
 
         self.assertEqual(d, d2)
-        # for i1, i2 in zip(d.items(), d2.items):
 
 
 class TopClass(xmlio.XmlInitable):
@@ -199,7 +196,6 @@ class InitableTest(unittest.TestCase):
     def test_classmethod_init(self):
         b2 = B.from_stuff()
         npt.assert_array_equal(b2.obj, np.array([2, 5]))
-        # print 'b2.obj:', b2.obj
 
     def test_xml_from_init(self):
         b = B()

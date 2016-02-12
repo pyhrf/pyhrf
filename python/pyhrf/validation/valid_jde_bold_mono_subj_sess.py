@@ -34,6 +34,7 @@ class JDETest(unittest.TestCase):
         tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.tmp_dir = tmpDir
+        self.clean_tmp = True
 
         bf = 'subj0_bold_session0.nii.gz'
         self.boldFiles = [pyhrf.get_data_file_name(bf)]
@@ -136,7 +137,7 @@ class JDETest(unittest.TestCase):
         }
 
     def tearDown(self):
-        if 0:
+        if self.clean_tmp:
             logger.info('Remove tmp dir %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
         else:

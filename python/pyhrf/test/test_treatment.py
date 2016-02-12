@@ -23,7 +23,7 @@ class CmdInputTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.tmp_dir = pyhrf.get_tmp_path()  # './'
+        self.tmp_dir = pyhrf.get_tmp_path()
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -76,14 +76,13 @@ class CmdInputTest(unittest.TestCase):
 class TreatmentTest(unittest.TestCase):
 
     def setUp(self):
-        self.tmp_dir = pyhrf.get_tmp_path()  # './'
+        self.tmp_dir = pyhrf.get_tmp_path()
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 
     def test_default_treatment(self):
 
-        # pyhrf.verbose.set_verbosity(4)
         t = ptr.FMRITreatment(make_outputs=False, result_dump_file=None)
         t.enable_draft_testing()
         t.run()
@@ -143,7 +142,6 @@ class TreatmentTest(unittest.TestCase):
             raise Exception('"' + cmd + '" did not execute correctly')
 
     def test_default_treatment_parallel_LAN(self):
-        # pyhrf.verbose.set_verbosity(1)
         if cfg['parallel-LAN']['enable_unit_test'] == 1:
             t = ptr.FMRITreatment(make_outputs=False, result_dump_file=None,
                                   output_dir=self.tmp_dir)
@@ -172,7 +170,6 @@ class TreatmentTest(unittest.TestCase):
                 '([parallel-LAN][enable_unit_test] = 0 in config.cfg'
 
     def test_default_treatment_parallel_cluster(self):
-        # pyhrf.verbose.set_verbosity(1)
         if cfg['parallel-cluster']['enable_unit_test'] == 1:
             t = ptr.FMRITreatment(make_outputs=False, result_dump_file=None,
                                   output_dir=self.tmp_dir)

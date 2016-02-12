@@ -30,11 +30,10 @@ class JDETest(unittest.TestCase):
 
     def setUp(self):
         np.random.seed(8652761)
-
         tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.tmp_dir = tmpDir
-
+        self.clean_tmp = True
         bf = 'subj0_bold_session0.nii.gz'
         self.boldFiles = [pyhrf.get_data_file_name(bf)]
         pf = 'subj0_parcellation.nii.gz'
@@ -42,7 +41,6 @@ class JDETest(unittest.TestCase):
         self.tr = 2.4
         self.dt = .6
         self.onsets = pyhrf.paradigm.onsets_loc_av
-        #self.durations = pyhrf.durations_loc_av
         self.durations = None
         self.nbIt = 3
         self.pfMethod = 'es'
@@ -50,7 +48,6 @@ class JDETest(unittest.TestCase):
         simu = simulate_bold(self.tmp_dir, spatial_size='random_small')
         self.data_simu = FmriData.from_simulation_dict(simu)
 
-        # print 'Create sampler_params_for_single_test ...'
         self.sampler_params_for_single_test = {
             'nb_iterations': 100,
             'smpl_hist_pace': 1,
@@ -90,7 +87,6 @@ class JDETest(unittest.TestCase):
             'check_final_value_close_to_true': 'raise',  # print or raise
         }
 
-        # print 'Create sampler_params_for_full_test ...'
         self.sampler_params_for_full_test = {
             'nb_iterations': 500,
             'smpl_hist_pace': 1,
@@ -131,7 +127,7 @@ class JDETest(unittest.TestCase):
         }
 
     def tearDown(self):
-        if 1:
+        if self.clean_tmp:
             logger.info('Remove tmp dir %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
         else:
@@ -175,6 +171,7 @@ if 0:
             tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                       dir=pyhrf.cfg['global']['tmp_path'])
             self.tmp_dir = tmpDir
+            self.clean_tmp = True
 
             bf = 'subj0_bold_session0.nii.gz'
             self.boldFiles = [pyhrf.get_data_file_name(bf)]
@@ -190,7 +187,6 @@ if 0:
             simu = simulate_bold(self.tmp_dir, spatial_size='random_small')
             self.data_simu = FmriData.from_simulation_dict(simu)
 
-            # print 'Create sampler_params_for_single_test ...'
             self.sampler_params_for_single_test = {
                 BG.P_NB_ITERATIONS: 100,
                 BG.P_SMPL_HIST_PACE: 1,
@@ -235,7 +231,6 @@ if 0:
                 BG.P_CHECK_FINAL_VALUE: 'raise',  # print or raise
             }
 
-            # print 'Create sampler_params_for_full_test ...'
             self.sampler_params_for_full_test = {
                 BG.P_NB_ITERATIONS: 500,
                 BG.P_SMPL_HIST_PACE: 1,
@@ -280,7 +275,7 @@ if 0:
             }
 
         def tearDown(self):
-            if 1:
+            if self.clean_tmp:
                 logger.info('Remove tmp dir %s', self.tmp_dir)
                 shutil.rmtree(self.tmp_dir)
             else:
@@ -323,10 +318,7 @@ from pyhrf.jde import asl_physio as jde_asl_physio
 class ASLTest(unittest.TestCase):
 
     def setUp(self):
-
-
         np.random.seed(8652761)
-
         self.tmp_dir = pyhrf.get_tmp_path()
 
     def tearDown(self):
@@ -359,11 +351,8 @@ class ASLTest(unittest.TestCase):
 class ASLPhysioTest(unittest.TestCase):
 
     def setUp(self):
-
         np.random.seed(8652761)
-
         self.tmp_dir = pyhrf.get_tmp_path()
-        #self.tmp_dir = './'
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -414,7 +403,6 @@ def test_suite():
     return unittest.TestSuite(tests)
 
 if __name__ == '__main__':
-    # unittest.main(argv=['pyhrf.test_glm'])
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(test_suite())
 
@@ -427,9 +415,7 @@ from pyhrf.core import merge_fmri_sessions
 class MultiSessTest(unittest.TestCase):
 
     def setUp(self):
-
         self.tmp_dir = pyhrf.get_tmp_path()
-
         simu = simulate_sessions(output_dir=self.tmp_dir,
                                  snr_scenario='high_snr',
                                  spatial_size='random_small')
@@ -455,15 +441,3 @@ class MultiSessTest(unittest.TestCase):
                                   analyser=analyser)
 
         treatment.run()
-
-
-# def test_suite():
-#     tests = [unittest.makeSuite(MultiSessTest, 'test_jde_multi_sess')]
-#     return unittest.TestSuite(tests)
-
-# Method Matthieu to debug directly:
-# MultiSessTest.runTest=None
-# then we can instantiate the class directly
-
-# Plot histos to verify values
-#(z.varClassApost[1,0,np.where(z.finalLabels[0,:])]).mean()

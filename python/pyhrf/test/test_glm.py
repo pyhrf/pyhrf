@@ -17,8 +17,7 @@ class NipyGLMTest(unittest.TestCase):
         self.tmp_dir = pyhrf.get_tmp_path()
 
     def tearDown(self):
-        if 0:  # HACK
-            shutil.rmtree(self.tmp_dir)
+        shutil.rmtree(self.tmp_dir)
 
     def test_glm_default_real_data(self):
 
@@ -96,6 +95,5 @@ def test_suite():
 
 
 if __name__ == '__main__':
-    # unittest.main(argv=['pyhrf.test_glm'])
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(test_suite())
