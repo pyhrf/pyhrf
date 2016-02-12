@@ -18,12 +18,11 @@ import numpy as np
 import pyhrf
 import pyhrf.vbjde.vem_tools as vt
 
-from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
-                                genGaussianSmoothHRF_cust
-from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
-                                        linear_rf_operator,\
-                                        create_physio_brf, \
-                                        create_physio_prf
+from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF
+from pyhrf.sandbox.physio_params import (PHY_PARAMS_KHALIDOV11,
+                                         linear_rf_operator,
+                                         create_physio_brf,
+                                         create_physio_prf)
 
 import matplotlib
 import matplotlib.pyplot as plt

@@ -18,17 +18,25 @@ import numpy as np
 import pyhrf
 import pyhrf.vbjde.vem_tools as vt
 
-from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
-                                genGaussianSmoothHRF_cust
-from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
-                                        linear_rf_operator,\
-                                        create_physio_brf, \
-                                        create_physio_prf
+from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF
+from pyhrf.sandbox.physio_params import (PHY_PARAMS_KHALIDOV11,
+                                         linear_rf_operator,
+                                         create_physio_brf,
+                                         create_physio_prf)
 
 import matplotlib
-matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
-plt.switch_backend('Qt4Agg')
+try:
+    os.environ["DISPLAY"]
+except KeyError:
+    matplotlib.use("Agg")
+    plt.switch_backend("Agg")
+else:
+    try:
+        matplotlib.use("Qt4Agg")
+        plt.switch_backend("Qt4Agg")
+    except ImportError:
+        pass
 
 
 logger = logging.getLogger(__name__)
