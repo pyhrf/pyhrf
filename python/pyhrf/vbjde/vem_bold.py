@@ -364,8 +364,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         density_ratio_cano = -((hrf_mean-m_h).T.dot(np.linalg.inv(hrf_covar)).dot(hrf_mean-m_h)/2.)
         density_ratio_diff = density_ratio_cano - density_ratio
         density_ratio_prod = density_ratio_cano * density_ratio
-        variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))/(hrf_mean.T.dot(hrf_mean))**2)
-    nrls_class_var = np.sqrt(np.sqrt(nrls_class_var))
+        variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
+                                  /(hrf_mean.T.dot(hrf_mean))**2)
 
     ppm_a_nrl = np.zeros((nb_voxels, nb_conditions))
     ppm_g_nrl = np.zeros((nb_voxels, nb_conditions))
