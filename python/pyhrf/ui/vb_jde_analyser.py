@@ -154,7 +154,6 @@ class JDEVEMAnalyser(JDEAnalyser):
         durations = roiData.get_joined_durations()
         TR = roiData.tr
         #K = 2 #number of classes
-        beta = self.beta
         scale = 1#roiData.nbVoxels
         nvox = roiData.get_nb_vox_in_mask()
         if self.scale:
@@ -172,14 +171,14 @@ class JDEVEMAnalyser(JDEAnalyser):
         if self.fast:
             logger.info("fast VEM with drift estimation"+
                         ("and a constraint"*self.constrained))
-            (NbIter, nrls, estimated_hrf, hrf_covariance, labels, noiseVar, mu_k,
-             sigma_k, Beta, L, PL, CONTRAST, CONTRASTVAR, cTime,
-             cTimeMean, Sigma_nrls, StimuIndSignal, density_ratio,
+            (nb_iter, nrls_mean, hrf_mean, hrf_covar, labels_proba, noise_var,
+             nrls_class_mean, nrls_class_var, beta, drift_coeffs, drift,
+             contrasts_mean, contrasts_var, _, _, nrls_covar, _, density_ratio,
              density_ratio_cano, density_ratio_diff, density_ratio_prod,
              ppm_a_nrl, ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts,
              variation_coeff, free_energy, free_energy_crit, beta_list) = jde_vem_bold(
                  graph, data, Onsets, durations, self.hrfDuration, self.nbClasses,
-                 TR, beta, self.dt, self.estimateSigmaH, self.sigmaH, self.nItMax,
+                 TR, self.beta, self.dt, self.estimateSigmaH, self.sigmaH, self.nItMax,
                  self.nItMin, self.estimateBeta, self.contrasts,
                  self.computeContrast, self.hyper_prior_sigma_H, self.estimateHRF
              )
@@ -188,10 +187,10 @@ class JDEVEMAnalyser(JDEAnalyser):
             if self.estimateDrifts:
                 logger.info("not fast VEM")
                 logger.info("NOT WORKING")
-                nrls, estimated_hrf, \
-                labels, noiseVar, mu_k, \
-                sigma_k, Beta, L, \
-                PL = Main_vbjde_Python_constrained(graph,data,Onsets,
+                nrls_mean, hrf_mean, \
+                labels_proba, noise_var, nrls_class_mean, \
+                nrls_class_var, beta, drift_coeffs, \
+                drift = Main_vbjde_Python_constrained(graph,data,Onsets,
                                        self.hrfDuration,self.nbClasses,
                                        TR,beta,self.dt,scale,
                                        self.estimateSigmaH,self.sigmaH,
@@ -207,7 +206,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         if self.fast:
             ### OUTPUTS: Pack all outputs within a dict
             outputs = {}
-            hrf_time = np.arange(len(estimated_hrf)) * self.dt
+            hrf_time = np.arange(len(hrf_mean)) * self.dt
 
             axes_names = ['iteration']
             """axes_domains = {'iteration':np.arange(FreeEnergy.shape[0])}
@@ -215,39 +214,39 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         axes_names=axes_names,
                                         axes_domains=axes_domains)
             """
-            outputs['hrf'] = xndarray(estimated_hrf, axes_names=['time'],
+            outputs['hrf'] = xndarray(hrf_mean, axes_names=['time'],
                                       axes_domains={'time':hrf_time},
                                       value_label="HRF")
 
             domCondition = {'condition': cNames}
-            outputs['nrls'] = xndarray(nrls.transpose(), value_label="NRLs",
+            outputs['nrls'] = xndarray(nrls_mean.transpose(), value_label="nrls",
                                        axes_names=['condition','voxel'],
                                        axes_domains=domCondition)
 
             ad = {'condition': cNames,'condition2': Onsets.keys()}
 
-            outputs['Sigma_nrls'] = xndarray(Sigma_nrls, value_label="Sigma_NRLs",
+            outputs['Sigma_nrls'] = xndarray(nrls_covar, value_label="Sigma_NRLs",
                                              axes_names=['condition', 'condition2', 'voxel'],
                                              axes_domains=ad)
 
-            outputs['NbIter'] = xndarray(np.array([NbIter]), value_label="NbIter")
+            outputs['nb_iter'] = xndarray(np.array([nb_iter]), value_label="nb_iter")
 
-            outputs['beta'] = xndarray(Beta, value_label="beta",
+            outputs['beta'] = xndarray(beta, value_label="beta",
                                        axes_names=['condition'],
                                        axes_domains=domCondition)
 
-            nbc, nbv = len(cNames), nrls.shape[0]
-            repeatedBeta = np.repeat(Beta, nbv).reshape(nbc, nbv)
+            nbc, nbv = len(cNames), nrls_mean.shape[0]
+            repeatedBeta = np.repeat(beta, nbv).reshape(nbc, nbv)
             outputs['beta_mapped'] = xndarray(repeatedBeta, value_label="beta",
                                               axes_names=['condition', 'voxel'],
                                               axes_domains=domCondition)
 
-            repeated_hrf = np.repeat(estimated_hrf, nbv).reshape(-1, nbv)
+            repeated_hrf = np.repeat(hrf_mean, nbv).reshape(-1, nbv)
             outputs["hrf_mapped"] = xndarray(repeated_hrf, value_label="HRFs",
                                              axes_names=["time", "voxel"],
                                              axes_domains={"time": hrf_time})
 
-            repeated_hrf_covar = np.repeat(np.diag(hrf_covariance), nbv).reshape(-1, nbv)
+            repeated_hrf_covar = np.repeat(np.diag(hrf_covar), nbv).reshape(-1, nbv)
             outputs["hrf_variance_mapped"] = xndarray(repeated_hrf_covar,
                                                       value_label="HRFs covariance",
                                                       axes_names=["time", "voxel"],
@@ -296,16 +295,16 @@ class JDEVEMAnalyser(JDEAnalyser):
                                             #  value_label="free energy criteria",
                                             #  axes_names=["condition", "time"])
 
-            h = estimated_hrf
-            nrls = nrls.transpose()
+            h = hrf_mean
+            nrls_mean = nrls_mean.transpose()
 
-            nvox = nrls.shape[1]
-            nbconds = nrls.shape[0]
+            nvox = nrls_mean.shape[1]
+            nbconds = nrls_mean.shape[0]
             ah = np.zeros((h.shape[0], nvox, nbconds))
 
             mixtp = np.zeros((roiData.nbConditions, self.nbClasses, 2))
-            mixtp[:, :, 0] = mu_k
-            mixtp[:, :, 1] = np.sqrt(sigma_k)
+            mixtp[:, :, 0] = nrls_class_mean
+            mixtp[:, :, 1] = np.sqrt(nrls_class_var)
 
             an = ['condition', 'Act_class', 'component']
             ad = {'Act_class': ['inactiv', 'activ'],
@@ -315,31 +314,31 @@ class JDEVEMAnalyser(JDEAnalyser):
 
             ad = {'class': ['inactiv', 'activ'],
                   'condition': cNames}
-            outputs['labels'] = xndarray(labels, value_label="Labels",
+            outputs['labels'] = xndarray(labels_proba, value_label="Labels",
                                          axes_names=['condition', 'class', 'voxel'],
                                          axes_domains=ad)
-            outputs['noiseVar'] = xndarray(noiseVar,value_label="noiseVar",
+            outputs['noise_var'] = xndarray(noise_var,value_label="noise_var",
                                            axes_names=['voxel'])
             if self.estimateDrifts:
-                outputs['drift_coeff'] = xndarray(L, value_label="Drift",
+                outputs['drift_coeff'] = xndarray(drift_coeffs, value_label="Drift",
                                                   axes_names=['coeff', 'voxel'])
-                outputs['drift'] = xndarray(PL, value_label="Delta BOLD",
+                outputs['drift'] = xndarray(drift, value_label="Delta BOLD",
                                             axes_names=['time', 'voxel'])
             if (len(self.contrasts) > 0) and self.computeContrast:
                 #keys = list((self.contrasts[nc]) for nc in self.contrasts)
                 domContrast = {'contrast': self.contrasts.keys()}
-                outputs['contrasts'] = xndarray(CONTRAST, value_label="Contrast",
+                outputs['contrasts'] = xndarray(contrasts_mean, value_label="Contrast",
                                                 axes_names=['voxel', 'contrast'],
                                                 axes_domains=domContrast)
                 #print 'contrast output:'
                 #print outputs['contrasts'].descrip()
 
-                c = xndarray(CONTRASTVAR, value_label="Contrasts_Variance",
+                c = xndarray(contrasts_var, value_label="Contrasts_Variance",
                              axes_names=['voxel', 'contrast'],
                              axes_domains=domContrast)
                 outputs['contrasts_variance'] = c
 
-                outputs['ncontrasts'] = xndarray(CONTRAST/CONTRASTVAR**.5,
+                outputs['ncontrasts'] = xndarray(contrasts_mean/contrasts_var**.5,
                                                  value_label="Normalized Contrast",
                                                  axes_names=['voxel', 'contrast'],
                                                  axes_domains=domContrast)
@@ -382,16 +381,16 @@ class JDEVEMAnalyser(JDEAnalyser):
             labels_vem_audio = roiData.simulation[0]['labels'][0]
             labels_vem_video = roiData.simulation[0]['labels'][1]
 
-            M = labels.shape[0]
-            K = labels.shape[1]
-            J = labels.shape[2]
+            M = labels_proba.shape[0]
+            K = labels_proba.shape[1]
+            J = labels_proba.shape[2]
             true_labels = np.zeros((K,J))
             true_labels[0,:] = np.reshape(labels_vem_audio,(J))
             true_labels[1,:] = np.reshape(labels_vem_video,(J))
-            newlabels = np.reshape(labels[:,1,:],(M,J))
+            newlabels = np.reshape(labels_proba[:,1,:],(M,J))
             se = []
             sp = []
-            size = np.prod(labels.shape)
+            size = np.prod(labels_proba.shape)
 
             for i in xrange(0,M):
                 se0,sp0, auc = roc_curve(newlabels[i,:].tolist(),
@@ -447,11 +446,11 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs['Truenrls'] = xndarray(true_nrls,value_label="True_nrls",
                                          axes_names=['condition','voxel'],
                                          axes_domains=domCondition)
-            M = labels.shape[0]
-            K = labels.shape[1]
-            J = labels.shape[2]
+            M = labels_proba.shape[0]
+            K = labels_proba.shape[1]
+            J = labels_proba.shape[2]
 
-            newlabels = np.reshape(labels[:,1,:],(M,J))
+            newlabels = np.reshape(labels_proba[:,1,:],(M,J))
 
             for i in xrange(0,M):
                 se0,sp0, auc = roc_curve(newlabels[i,:].tolist(),
