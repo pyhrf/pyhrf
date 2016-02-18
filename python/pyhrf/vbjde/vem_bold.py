@@ -44,7 +44,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
                  tr, beta, dt, estimate_sigma_h=True, sigma_h=0.05,
                  it_max=-1, it_min=0, estimate_beta=True, contrasts=None,
                  compute_contrasts=False, hrf_hyperprior=0, estimate_hrf=True,
-                 constrained=False, seed=6537546):
+                 constrained=False, zero_constraint=True, seed=6537546):
     """This is the main function that computes the VEM analysis on BOLD data.
     This function uses optimized python functions.
 
@@ -195,6 +195,11 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     d2 = vt.buildFiniteDiffMatrix(order, hrf_len, regularization)
     hrf_regu_prior_inv = d2.T.dot(d2) / pow(dt, 2 * order)
 
+    if zero_constraint:
+        hrf_len = hrf_len - 2
+        hrf_regu_prior_inv = hrf_regu_prior_inv[1:-1, 1:-1]
+        occurence_matrix = occurence_matrix[:, :, 1:-1]
+
     noise_struct = np.identity(nb_scans)
 
     free_energy = [1.]
@@ -256,9 +261,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             if constrained:
                 hrf_mean = vt.norm1_constraint(hrf_mean, hrf_covar)
                 hrf_covar[:] = 0
-            else:
-                hrf_mean[0] = 0
-                hrf_mean[-1] = 0
             logger.debug("After: hrf_mean = %s, hrf_covar = %s", hrf_mean, hrf_covar)
             # Normalizing H at each nb_2_norm iterations:
             if not constrained and normalizing:
@@ -364,6 +366,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         mahalanobis_prod = mahalanobis_cano * mahalanobis_zero
         variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
                                   /(hrf_mean.T.dot(hrf_mean))**2)
+    if zero_constraint:
+        hrf_mean = np.concatenate([0], hrf_mean, [0])
 
     ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
         nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var
