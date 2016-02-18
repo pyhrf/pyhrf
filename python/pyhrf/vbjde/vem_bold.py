@@ -23,7 +23,6 @@ logger : logger
 
 """
 
-import os
 import time
 import logging
 
@@ -31,12 +30,11 @@ from collections import OrderedDict
 
 import numpy as np
 
+from scipy.spatial.distance import mahalanobis
+
 import pyhrf.vbjde.vem_tools as vt
 
-from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
 from pyhrf.boldsynth.hrf import getCanoHRF
-from pyhrf.tools._io import read_volume
-from pyhrf.stats.misc import cpt_ppm_a_norm, cpt_ppm_g_norm
 
 logger = logging.getLogger(__name__)
 eps = np.spacing(1)
@@ -118,9 +116,9 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         estimated coefficient of the drifts
     drift : ndarray, shape (# TODO)
         estimated drifts
-    CONTRAST : ndarray, shape (nb_voxels, len(contrasts))
+    contrasts_mean : ndarray, shape (nb_voxels, len(contrasts))
         Contrasts computed from NRLs
-    CONTRASTVAR : ndarray, shape (nb_voxels, len(contrasts))
+    contrasts_var : ndarray, shape (nb_voxels, len(contrasts))
         Variance of the contrasts
     compute_time : list
         computation time of each iteration
@@ -130,16 +128,16 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         # TODO
     stimulus_induced_signal : ndarray, shape (nb_scans, nb_voxels)
         # TODO
-    density_ratio : float
-        # TODO
-    density_ratio_cano : float
-        # TODO
-    density_ratio_diff : float
-        # TODO
-    density_ratio_prod : float
-        # TODO
+    mahalanobis_zero : float
+        Mahalanobis distance between estimated hrf_mean and the null vector
+    mahalanobis_cano : float
+        Mahalanobis distance between estimated hrf_mean and the canonical HRF
+    mahalanobis_diff : float
+        difference between mahalanobis_cano and mahalanobis_diff
+    mahalanobis_prod : float
+        product of mahalanobis_cano and mahalanobis_diff
     ppm_a_nrl : ndarray, shape (nb_voxels,)
-        # TODO
+        The posterior probability map using an alpha
     ppm_g_nrl : ndarray, shape (nb_voxels,)
         # TODO
     ppm_a_contrasts : ndarray, shape (nb_voxels,)
@@ -195,16 +193,13 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     else:
         regularization = None
     d2 = vt.buildFiniteDiffMatrix(order, hrf_len, regularization)
-    hrf_regu_prior_inv = d2.dot(d2) / pow(dt, 2 * order)
+    hrf_regu_prior_inv = d2.T.dot(d2) / pow(dt, 2 * order)
 
     noise_struct = np.identity(nb_scans)
 
     free_energy = [1.]
     free_energy_crit = [1.]
     compute_time = []
-
-    CONTRAST = np.zeros((nb_voxels, len(contrasts)), dtype=np.float64)
-    CONTRASTVAR = np.zeros((nb_voxels, len(contrasts)), dtype=np.float64)
 
     noise_var = np.ones(nb_voxels)
 
@@ -360,19 +355,17 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         nrls_covar *= hrf_norm ** 2
         nrls_class_mean *= hrf_norm
         nrls_class_var *= hrf_norm ** 2
-        density_ratio = -(hrf_mean.T.dot(np.linalg.inv(hrf_covar)).dot(hrf_mean)/2.)
-        density_ratio_cano = -((hrf_mean-m_h).T.dot(np.linalg.inv(hrf_covar)).dot(hrf_mean-m_h)/2.)
-        density_ratio_diff = density_ratio_cano - density_ratio
-        density_ratio_prod = density_ratio_cano * density_ratio
+        mahalanobis_zero = mahalanobis(hrf_mean, np.zeros_like(hrf_mean),
+                                       np.linalg.inv(hrf_covar))
+        mahalanobis_cano = mahalanobis(hrf_mean, m_h, np.linalg.inv(hrf_covar))
+        mahalanobis_diff = mahalanobis_cano - mahalanobis_zero
+        mahalanobis_prod = mahalanobis_cano * mahalanobis_zero
         variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
                                   /(hrf_mean.T.dot(hrf_mean))**2)
 
-    ppm_a_nrl = np.zeros((nb_voxels, nb_conditions))
-    ppm_g_nrl = np.zeros((nb_voxels, nb_conditions))
-    for condition in xrange(nb_conditions):
-        #  ppm_a_nrl[:, condition] = cpt_ppm_a_norm(nrls_mean[:, condition], nrls_covar[condition, condition, :], 0)
-        ppm_a_nrl[:, condition] = cpt_ppm_a_norm(nrls_mean[:, condition], nrls_covar[condition, condition, :], 3*nrls_class_var[condition, 0]**.5)
-        ppm_g_nrl[:, condition] = cpt_ppm_g_norm(nrls_mean[:, condition], nrls_covar[condition, condition, :], 0.95)
+    ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
+        nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var
+    )
 
     #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
 
@@ -386,10 +379,15 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
              contrasts, condition_names, nrls_mean, nrls_covar,
              nrls_class_mean, nrls_class_var, nb_contrasts, nb_classes, nb_voxels
          )
-        ppm_a_contrasts, ppm_g_contrasts = vt.ppm_contrasts(
+        ppm_a_contrasts, ppm_g_contrasts = vt.ppms_computation(
             contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
         )
         logger.info('Done contrasts computing.')
+    else:
+        (contrasts_mean, contrasts_var, contrasts_class_mean,
+         contrasts_class_var, ppm_a_contrasts, ppm_g_contrasts) = (None, None,
+                                                                   None, None,
+                                                                   None, None)
 
     #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
 
@@ -412,8 +410,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     return (loop, nrls_mean, hrf_mean, hrf_covar, labels_proba, noise_var,
             nrls_class_mean, nrls_class_var, beta, drift_coeffs, drift,
             contrasts_mean, contrasts_var, compute_time[2:], compute_time_mean,
-            nrls_covar, stimulus_induced_signal, density_ratio,
-            density_ratio_cano, density_ratio_diff, density_ratio_prod, ppm_a_nrl,
+            nrls_covar, stimulus_induced_signal, mahalanobis_zero,
+            mahalanobis_cano, mahalanobis_diff, mahalanobis_prod, ppm_a_nrl,
             ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, variation_coeff,
             free_energy[1:], free_energy_crit[1:], beta_list[1:])
 
