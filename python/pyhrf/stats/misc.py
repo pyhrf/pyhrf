@@ -338,16 +338,43 @@ def cpt_ppm_a_apost(means, variances, props, alpha=0.05):
     raise NotImplementedError('PPM with fixed alpha from posterior mixture '\
                                   'components is not implemented')
 
-def cpt_ppm_a_norm(mean, variance, alpha=0.05):
+def cpt_ppm_a_norm(mean, variance, alpha=0.):
     """ Compute a Posterior Probability Map (fixed alpha) by assuming a Gaussian
     distribution.
-    Expected shape of 'mean', 'variance': (voxel)
+    Parameters
+    ----------
+    mean : array_like
+        mean value(s) of the Gaussian distribution(s)
+    variance : array_like
+        variance(s) of the Gaussian distribution(s)
+    alpha : array_like, optional
+        quantile value(s) (default=0)
+    Returns
+    -------
+    ppm : array_like
+        Posterior Probability Map evaluated at alpha
     """
 
-    return norm.isf(alpha, mean, variance**.5)
+    return norm.sf(alpha, mean, variance**.5)
 
-def cpt_ppm_g_norm(mean, variance, gamma=0.):
-    return norm.sf(gamma, mean, variance**.5)
+def cpt_ppm_g_norm(mean, variance, gamma=0.95):
+    """ Compute a Posterior Probability Map (fixed gamma) by assuming a Gaussian
+    distribution.
+    Parameters
+    ----------
+    mean : array_like
+        mean value(s) of the Gaussian distribution(s)
+    variance : array_like
+        variance(s) of the Gaussian distribution(s)
+    gamma : array_like, optional
+        upper tail probability (default=0.95)
+    Returns
+    -------
+    ppm : ndarray or scalar
+        Posterior Probability Map corresponding to the upper tail probability gamma
+    """
+
+    return norm.isf(gamma, mean, variance**.5)
 
 
 # def compute_bigaussian_ppm(threshold, mean_c1, var_c1, prop_c1, 

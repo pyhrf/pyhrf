@@ -257,31 +257,17 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
-    print 'onsets = ', onsets
-    print 'durations = ', durations
-    print 'dt = ', dt
-    print 'tmax = ', tmax
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
     firstrow = np.concatenate(
         ([paradigm_bins[0]], np.zeros(lhrf - 1, dtype=int)))
     x_tmp = np.array(toeplitz(firstcol, firstrow), dtype=int)
-    x_tmp2 = np.zeros_like(x_tmp)
-    #for ix in np.arange(0, firstrow.shape[0], 1): #tr / dt):
-    for ix in np.arange(0, firstrow.shape[0], tr / dt):
-        x_tmp2[:, ix] = x_tmp[:, ix]       
+    #x_tmp2 = np.zeros_like(x_tmp)
+    #for i in xrange(0, x_tmp.shape[1], osf):
+    #    x_tmp2[:, i] = x_tmp[:, i]
     os_indexes = [(np.arange(nbscans) * osf).astype(int)]
-    x = x_tmp2[os_indexes]
-    if 0:
-        import matplotlib.pyplot as plt
-        from matplotlib.pylab import *
-        plt.matshow(x_tmp[:300, :])
-        plt.show()
-        plt.matshow(x_tmp2[:300, :])
-        plt.show()
-        plt.matshow(x[:300, :])
-        plt.show()
+    x = x_tmp[os_indexes]
     return x
 
 
@@ -327,17 +313,6 @@ def create_conditions(Onsets, M, N, D, TR, dt):
     for condition, Ons in Onsets.iteritems():
         X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
         condition_names += [condition]
-        
-        if 0:
-            import matplotlib.pyplot as plt
-            print 'printing matrices... '
-            plt.matshow(np.array(X[condition]))        
-            #print condition+', TR = '+str(TR)+', dt = '+str(dt)
-            #plt.title('cond '+str(i)+', dt = '+str(dt))
-            #print 'title fait'
-            plt.savefig('./'+condition+'_dt'+str(dt)+'_old_block.png')
-            plt.close()
-            #plt.show()
     XX = np.zeros((M, N, D), dtype=np.int32)
     nc = 0
     for condition, Ons in Onsets.iteritems():
@@ -349,25 +324,33 @@ def create_conditions(Onsets, M, N, D, TR, dt):
 def create_conditions_block(Onsets, durations, M, N, D, TR, dt):
     condition_names = []
     X = OrderedDict([])
-    i = 0
     for condition, Ons in Onsets.iteritems():
         Dur = durations[condition]
-        X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt,
-                                                Ons, durations=Dur)
-        if 0:
-            import matplotlib.pyplot as plt
-            from matplotlib.pylab import *
-            plt.matshow(np.array(X[condition]))
-            plt.title('cond '+str(i)+', dt = '+str(dt))
-            plt.savefig('./'+condition+'_dt'+str(dt)+'_old.png')
-            plt.close()
-            #plt.show()
-            i = i + 1
+        X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons,
+                                                durations=Dur)
         condition_names += [condition]
     XX = np.zeros((M, N, D), dtype=np.int32)
     nc = 0
     for condition, Ons in Onsets.iteritems():
         XX[nc, :, :] = X[condition]
+        nc += 1
+    return X, XX, condition_names
+
+
+def create_conditions_block_ms(Onsets, durations, M, N, D, S, TR, dt):
+    condition_names = []
+    X = OrderedDict([])
+    XX = np.zeros((S, M, N, D), dtype=np.int32)
+    nc = 0
+    for condition, Ons in Onsets.iteritems():
+        condition_names += [condition]
+        Dur = durations[condition]
+        print 'Onsets: ', Ons
+        print 'Durations: ', Dur
+        for s in xrange(S):
+            X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons[s, :],
+                                                    durations=Dur[s, :])
+            XX[s, nc, :, :] = X[condition]
         nc += 1
     return X, XX, condition_names
 
@@ -500,18 +483,16 @@ def norm1_constraint(function, variance):
         """Norm2(fct) == 1"""
         return np.linalg.norm(fct, 2) - 1
 
-    def first_element_constraint(fct):
-        """fct[0] == 0"""
-        return fct[0]
+    #def first_element_constraint(fct):
+    #    """fct[0] == 0"""
+    #    return fct[0]
 
-    def last_element_constraint(fct):
-        """fct[-1] == 0"""
-        return fct[-1]
+    #def last_element_constraint(fct):
+    #    """fct[-1] == 0"""
+    #    return fct[-1]
 
     return fmin_slsqp(minimized_function, function,
-                      eqcons=[norm1_constraint_equation,
-                              first_element_constraint,
-                              last_element_constraint],
+                      eqcons=[norm1_constraint_equation],
                       bounds=[(None, None)] * (len(function)), disp=disp)
 
 
@@ -858,7 +839,7 @@ def labels_expectation_soustraction(nrls_covar, nrls_mean, nrls_class_var, nrls_
     labels_proba = (np.exp(energy) * gauss).transpose(1, 2, 0)
     aux = labels_proba.sum(axis=1)[:, np.newaxis, :]
     aux[np.where(aux==0)] = eps
-    labels_proba = labels_proba / aux 
+    labels_proba = labels_proba / aux
     #/ labels_proba.sum(axis=1)[:, np.newaxis, :]
     return labels_proba
 
@@ -870,7 +851,7 @@ def labels_expectation_soustraction(nrls_covar, nrls_mean, nrls_class_var, nrls_
     Gauss_mat = vt.normpdf(m_A[...,np.newaxis], mu_Ma, np.sqrt(sigma_Ma)) * \
                 vt.normpdf(m_C[...,np.newaxis], mu_Mc, np.sqrt(sigma_Mc))
 
-    # Update Ztilde ie the quantity which is involved in the a priori 
+    # Update Ztilde ie the quantity which is involved in the a priori
     # Potts field [by solving for the mean-field fixed point Equation]
     # TODO: decide if we take out the computation of p_q_t or Ztilde
     B_pqt = Beta[:, np.newaxis, np.newaxis] * p_q_t.copy()
@@ -882,7 +863,7 @@ def labels_expectation_soustraction(nrls_covar, nrls_mean, nrls_class_var, nrls_
     aux = Probas.sum(axis=1)[:, np.newaxis, :]
     aux[np.where(aux==0)] = eps
     p_q_t = Probas / aux
-        
+
     return p_q_t, p_q_t"""
 
 
@@ -1136,7 +1117,7 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     from scipy.optimize import fmin_l_bfgs_b, fmin_slsqp
     Sigma_F_inv = np.linalg.inv(Sigma_F)
     zeros_F = np.zeros_like(Ftilde)
-    
+
     def fun(F):
         'function to minimize'
         return np.dot(np.dot((F - Ftilde).T, Sigma_F_inv), (F - Ftilde))
@@ -1154,15 +1135,15 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     def ec1(F):
         'Norm2(F)==1'
         return - 1 + np.linalg.norm(F, 2)
-    
+
     def ec2(F):
         'F(0)==0'
         return F[0]
-    
+
     def ec3(F):
         'F(end)==0'
         return F[-1]
-    
+
     if positivity:
         def ec0(F):
             'F>=0 ?? or F>=-baseline??'
@@ -1175,10 +1156,10 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
     else:
         #y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],
         #               bounds=[(None, None)] * (len(zeros_F)))
-        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],#, ec2], #, ec3], 
+        y = fmin_slsqp(fun, Ftilde, eqcons=[ec1],#, ec2], #, ec3],
                        bounds=[(None, None)] * (len(zeros_F)))
         #print fmin_l_bfgs_b(fung, Ftilde, bounds=[(-1, 1)] * (len(zeros_F)), approx_grad=True)
-        #y = fmin_l_bfgs_b(fun, Ftilde, fprime=grad_fun, 
+        #y = fmin_l_bfgs_b(fun, Ftilde, fprime=grad_fun,
         #                  bounds=[(-1, 1)] * (len(zeros_F)))[0] #, approx_grad=True)[0]
     return y
 
@@ -1187,7 +1168,7 @@ def constraint_norm1_b(Ftilde, Sigma_F, positivity=False, perfusion=None):
 def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
                   cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term):
     """
-    Expectation-H step: 
+    Expectation-H step:
     p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
         \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
 
@@ -1225,9 +1206,117 @@ def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J,
     y_tildeH = y_tilde - WXG.dot(m_C.T)
     #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
     Y_bar_tilde = np.einsum('ijk,ki->j', mAX_Gamma, y_tildeH)
+
     # we sum the term that corresponds to the prior
     Y_bar_tilde += prior_mean_term
-    
+
+    # m_H = S_a^-1 y_bar_tilde
+    m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
+
+    return m_H, Sigma_H
+
+
+def expectation_H_ms_concat(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
+                  cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, S):
+    """
+    Expectation-H step:
+    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
+        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
+
+    Returns:
+    m_H, Sigma_H of probability distribution p_H of the current iteration
+    """
+
+    ## Precomputations
+    WXG = W.dot(XX.dot(G).T)
+    mAX = np.tensordot(m_A, XX, axes=(1, 0))                # shape (J, N, D)
+    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
+    #X_Gamma_X = np.tensordot(XX.T, Gamma_X, axes=(1, 0))   # shape (D, M, M, D)
+    #cov_noise = np.maximum(sigma_eps, eps)[:, np.newaxis, np.newaxis]
+    mAX_Gamma = (np.tensordot(mAX, Gamma, axes=(1, 0)) / cov_noise) # shape (J, D, N)
+
+    ## Sigma_H computation
+    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
+    S_a = R_inv / sigmaH + prior_cov_term
+    # second summand: E_pa[Saj.T*Gamma*Saj]
+    # sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
+    print Sigma_A.shape
+    for s in xrange(0, S):
+        S_a += (np.einsum('ijk,lijm->klm', Sigma_A, X_Gamma_X) / cov_noise).sum(0)
+    # third summand: E_pa[Saj.T*Gamma*Saj]
+    # (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
+    for i in xrange(0, J):
+        for s in xrange(0, S):
+            i2 = (s-1)*J + i
+            S_a += mAX_Gamma[i2, :, :].dot(mAX[i2, :, :])  #option 1 faster 13.4
+    #S_a += np.einsum('ijk,ikl->ijl', mAX_Gamma, mAX).sum(0) # option 2 second 8.8
+    #S_a += np.einsum('ijk,ikl->jl', mAX_Gamma, mAX) # option 3 slower 7.5
+
+    # Sigma_H = S_a^-1
+    Sigma_H = np.linalg.inv(S_a)
+
+    ## m_H
+    # Y_bar_tilde computation: (sum_m m_a X_m).T Gamma_i y_tildeH
+    # y_tildeH = yj - sum_m m_C WXG - w alphaj - P lj
+    y_tildeH = y_tilde - WXG.dot(m_C.T)
+    #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
+    Y_bar_tilde = np.einsum('ijk,ki->j', mAX_Gamma, y_tildeH)
+
+    # we sum the term that corresponds to the prior
+    Y_bar_tilde += prior_mean_term
+
+    # m_H = S_a^-1 y_bar_tilde
+    m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
+
+    return m_H, Sigma_H
+
+
+def expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
+                  cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, N, M, D, S):
+    """
+    Expectation-H step:
+    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
+        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
+
+    Returns:
+    m_H, Sigma_H of probability distribution p_H of the current iteration
+    """
+
+    ## Precomputations
+    mAX = np.zeros((S, J, N, D), dtype=np.float64)
+    WXG = np.zeros((S, N, M), dtype=np.float64)
+    mAX_Gamma = np.zeros((S, J, D, N), dtype=np.float64)
+    for s in xrange(0, S):
+        WXG[s, :, :] = W.dot(XX[s, :, :, :].dot(G).T)                                   # shape (N, M)
+        mAX[s, :, :, :] = np.tensordot(m_A[s, :, :], XX[s, :, :, :], axes=(1, 0))       # shape (J, N, D)
+        mAX_Gamma[s, :, :, :] = (np.tensordot(mAX[s, :, :, :], Gamma, axes=(1, 0)) / cov_noise[s, :, :, :]) # shape (J, D, N)
+
+    ## Sigma_H computation
+    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
+    S_a = R_inv / sigmaH + prior_cov_term
+    # second summand: sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
+    for s in xrange(0, S):
+        S_a += (np.einsum('ijk,lijm->klm', Sigma_A[:, :, :, s], X_Gamma_X[:, :, s, :, :]) / cov_noise[s, :, :, :]).sum(0)
+    # third summand: (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            S_a += mAX_Gamma[s, i, :, :].dot(mAX[s, i, :, :])  #option 1 faster 13.4
+
+    # Sigma_H = S_a^-1
+    Sigma_H = np.linalg.inv(S_a)
+
+    ## m_H
+    # Y_bar_tilde computation: (sum_m m_a X_m).T Gamma_i y_tildeH
+    # y_tildeH = yj - sum_m m_C WXG - w alphaj - P lj
+    y_tildeH = np.zeros_like(y_tilde)
+    Y_bar_tilde = np.zeros_like(prior_mean_term)
+    for s in xrange(0, S):
+        y_tildeH[s, :, :] = y_tilde[s, :, :] - WXG[s, :, :].dot(m_C[s, :, :].T)
+        Y_bar_tilde += np.einsum('ijk,ki->j', mAX_Gamma[s, :, :, :], y_tildeH[s, :, :])
+
+    # we sum the term that corresponds to the prior
+    Y_bar_tilde += prior_mean_term
+
     # m_H = S_a^-1 y_bar_tilde
     m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
 
@@ -1238,7 +1327,7 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
                   XW_Gamma_WX, J, y_tilde, cov_noise, R_inv, sigmaG,
                   prior_mean_term, prior_cov_term):
     """
-    Expectation-G step: 
+    Expectation-G step:
     p_G = argmax_g(E_pa,pc,ph[log p(g|y, a, c, h; theta)])
         \propto exp(E_pa,pc,ph[log p(y|h, a, c, g; theta) + log p(g; sigmaG)])
 
@@ -1248,11 +1337,7 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
 
     ## Precomputations
     XH = XX.dot(H).T
-    #WX = W.dot(XX).transpose(1, 0, 2)
     mCWX = np.tensordot(m_C, WX, axes=(1, 0))                    # shape (J, N, D)
-    #Gamma_WX = np.tensordot(Gamma, WX, axes=(1, 1))
-    #XW_Gamma_WX = np.tensordot(WX.T, Gamma_WX, axes=(1, 0))     # shape (D, M, M, D)
-    #cov_noise = np.maximum(sigma_eps, eps)[:, np.newaxis, np.newaxis]
     mCWX_Gamma = np.tensordot(mCWX, Gamma, axes=(1, 0)) / cov_noise # shape (J, D, N)
 
     ## Sigma_H computation
@@ -1267,7 +1352,7 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
         S_c += mCWX_Gamma[i, :, :].dot(mCWX[i, :, :])  # option 1 faster 13.4
     #S_c += np.einsum('ijk,ikl->ijl', mCWX_Gamma, mCWX).sum(0) # option 2 second 8.8
     #S_c += np.einsum('ijk,ikl->jl', mCWX_Gamma, mCWX) # option 3 slower 7.5
-    
+
     # Sigma_G = S_c^-1
     Sigma_G = np.linalg.inv(S_c)
 
@@ -1279,7 +1364,58 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
     Y_bar_tilde = np.einsum('ijk,ki->j', mCWX_Gamma, y_tildeG)
     # we sum the term that corresponds to the prior
     Y_bar_tilde += prior_mean_term
-    
+
+    # m_H = S_c^-1 y_bar_tilde
+    m_G = np.dot(Sigma_G, Y_bar_tilde)
+
+    return m_G, Sigma_G
+
+
+def expectation_G_ms(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
+                  XW_Gamma_WX, J, y_tilde, cov_noise, R_inv, sigmaG,
+                  prior_mean_term, prior_cov_term, N, M, D, S):
+    """
+    Expectation-G step:
+    p_G = argmax_g(E_pa,pc,ph[log p(g|y, a, c, h; theta)])
+        \propto exp(E_pa,pc,ph[log p(y|h, a, c, g; theta) + log p(g; sigmaG)])
+
+    Returns:
+    m_G, Sigma_G of probability distribution p_G of the current iteration
+    """
+
+    ## Precomputations
+    XH = XX.dot(H).T
+    mCWX = np.zeros((S, J, N, D), dtype=np.float64)
+    mCWX_Gamma = np.zeros((S, J, D, N), dtype=np.float64)
+    for s in xrange(0, S):
+        mCWX[s, :, :, :] = np.tensordot(m_C[s, :, :], WX[s, :, :, :], axes=(1, 0))       # shape (J, N, D)
+        mCWX_Gamma[s, :, :, :] = (np.tensordot(mCWX[s, :, :, :], Gamma, axes=(1, 0)) / cov_noise[s, :, :, :]) # shape (J, D, N)
+
+    ## Sigma_H computation
+    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
+    S_c = R_inv / sigmaG + prior_cov_term
+    # second summand: sum_{m, m'} Sigma_c(m,m') X_m.T W.T Gamma_i W X_m'
+    for s in xrange(0, S):
+        S_c += (np.einsum('ijk,lijm->klm', Sigma_C[:, :, :, s], XW_Gamma_WX[:, :, s, :, :]) / cov_noise[s, :, :, :]).sum(0)
+    # third summand: (sum_m m_c X_m).T Gamma_i (sum_m m_c W X_m)
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            S_c += mCWX_Gamma[s, i, :, :].dot(mCWX[s, i, :, :])  #option 1 faster 13.4
+
+    # Sigma_G = S_c^-1
+    Sigma_G = np.linalg.inv(S_c)
+
+    ## m_G
+    # Y_bar_tilde computation: (sum_m m_c W X_m).T Gamma_i y_tildeG
+    # y_tildeG = yj - sum_m m_A XH - w alphaj - P lj
+    y_tildeG = np.zeros_like(y_tilde)
+    Y_bar_tilde = np.zeros_like(prior_mean_term)
+    for s in xrange(0, S):
+        y_tildeG[s, :, :] = y_tilde[s, :, :] - XH[:, :, s].dot(m_A[s, :, :].T)
+        Y_bar_tilde += np.einsum('ijk,ki->j', mCWX_Gamma[s, :, :, :], y_tildeG[s, :, :])
+    # we sum the term that corresponds to the prior
+    Y_bar_tilde += prior_mean_term
+
     # m_H = S_c^-1 y_bar_tilde
     m_G = np.dot(Sigma_G, Y_bar_tilde)
 
@@ -1290,7 +1426,7 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
 def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
                   J, y_tilde, Sigma_H, sigma_eps_m):
     """
-    Expectation-A step: 
+    Expectation-A step:
     p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
         \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
                   + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
@@ -1304,8 +1440,6 @@ def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
     Sigma_H_X = XX.dot(Sigma_H.T).T
     XG = XX.dot(G).T
     WXG = W.dot(XG)
-    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
-    #sigma_eps_m = np.maximum(sigma_eps, eps)
 
     ## Sigma_A computation
     # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
@@ -1319,7 +1453,7 @@ def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
     for i in xrange(0, J):
         Sigma_A[:, :, i] = np.linalg.inv(Sigma_A[:, :, i] + \
                                          np.diag(Delta[:, i]))
-    
+
     ## m_A computation
     # adding m_C*WXG to y_tilde
     y_tildeH = y_tilde - WXG.dot(m_C.T)
@@ -1332,10 +1466,61 @@ def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
     return m_A, Sigma_A
 
 
+def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
+                  J, y_tilde, Sigma_H, sigma_eps_m, N, M, D, S):
+    """
+    Expectation-A step:
+    p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
+        \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
+                  + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
+
+    Returns:
+    m_A, Sigma_A of probability distribution p_A of the current iteration
+    """
+
+    ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
+    XH = np.zeros((S, N, M), dtype=np.float64)
+    XG = np.zeros((S, N, M), dtype=np.float64)
+    Sigma_H_X = np.zeros((D, N, M, S), dtype=np.float64)
+    WXG = np.zeros((S, N, M), dtype=np.float64)
+
+    for s in xrange(0, S):
+        XH[s, :, :] = XX[s, :, :, :].dot(H).T                       # (S, N, M)
+        Sigma_H_X[:, :, :, s] = XX[s, :, :, :].dot(Sigma_H.T).T     # (D, N, M, S)
+        XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
+        WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
+
+        ## Sigma_A computation
+        # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
+        Sigma_A[:, :, :, s] = XH[s, :, :].T.dot(Gamma).dot(XH[s, :, :])[..., np.newaxis] / sigma_eps_m[s, :]
+        # second summand of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
+        second_summand = np.einsum('ijk, jli', Sigma_H_X[:, :, :, s], Gamma_X[:, s, :, :])
+        Sigma_A[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
+    # third summand of Sigma_A: part of p(a|q; theta_A)
+    Delta_k = (q_Z / np.maximum(sigma_Ma[:, :, np.newaxis], eps))
+    Delta = Delta_k.sum(axis=1)         # sum across classes K
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            Sigma_A[:, :, i, s] = np.linalg.inv(Sigma_A[:, :, i, s] + \
+                                             np.diag(Delta[:, i]))
+
+    ## m_A computation
+    # adding m_C*WXG to y_tilde
+    for s in xrange(0, S):
+        y_tildeH = y_tilde[s, :, :] - WXG[s, :, :].dot(m_C[s, :, :].T)
+        Gamma_y_tildeH = Gamma.dot(y_tildeH).T
+        X_tildeH = Gamma_y_tildeH.dot(XH[s, :, :]) / sigma_eps_m[s, :, np.newaxis] \
+                   + (Delta_k * mu_Ma[:, :, np.newaxis]).sum(axis=1).T
+        # dot product across voxels of Sigma_A and X_tildeH
+        m_A[s, :, :] = np.einsum('ijk,kj->ki', Sigma_A[:, :, :, s], X_tildeH)
+
+    return m_A, Sigma_A
+
+
 def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
                   J, y_tilde, Sigma_G, sigma_eps_m):
     """
-    Expectation-C step: 
+    Expectation-C step:
     p_C = argmax_h(E_pa,pq,ph,pg[log p(a|y, h, a, g, q; theta)])
         \propto exp(E_pa,ph,pg[log p(y|h, a, c, g; theta)] \
                   + E_pq[log p(c|q; mu_Mc, sigma_Mc)])
@@ -1343,15 +1528,13 @@ def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
     Returns:
     m_C, Sigma_C of probability distribution p_C of the current iteration
     """
-    
+
     ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
     XH = XX.dot(H).T
     Sigma_G_X = XX.dot(Sigma_G.T).T
     XG = XX.dot(G).T
     WXG = W.dot(XG)
-    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
-    #sigma_eps_m = np.maximum(sigma_eps, eps)
-    
+
     ## Sigma_C computation
     # first summand of Sigma_C: WXG.T*Gamma*WXG / sigma_eps
     Sigma_C = WXG.T.dot(Gamma).dot(WXG)[..., np.newaxis] / sigma_eps_m
@@ -1368,11 +1551,62 @@ def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
     ## m_C computation
     # adding m_A*XH to y_tilde
     y_tildeG = y_tilde - XH.dot(m_A.T)
-    Gamma_y_tildeG_WXG = Gamma.dot(y_tildeG).T.dot(WXG) 
+    Gamma_y_tildeG_WXG = Gamma.dot(y_tildeG).T.dot(WXG)
     X_tildeG = Gamma_y_tildeG_WXG / sigma_eps_m[:, np.newaxis] + \
                     (Delta_k * mu_Mc[:, :, np.newaxis]).sum(axis=1).T
     # dot product across voxels of Sigma_C and X_tildeG
     m_C = np.einsum('ijk,kj->ki', Sigma_C, X_tildeG)
+
+    return m_C, Sigma_C
+
+
+def expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
+                  J, y_tilde, Sigma_G, sigma_eps_m, N, M, D, S):
+    """
+    Expectation-C step:
+    p_C = argmax_h(E_pa,pq,ph,pg[log p(a|y, h, a, g, q; theta)])
+        \propto exp(E_pa,ph,pg[log p(y|h, a, c, g; theta)] \
+                  + E_pq[log p(c|q; mu_Mc, sigma_Mc)])
+
+    Returns:
+    m_C, Sigma_C of probability distribution p_C of the current iteration
+    """
+
+    ## Pre-compute XH, X*Sigma_G, XG, WXG, Gamma*X
+    XH = np.zeros((S, N, M), dtype=np.float64)
+    XG = np.zeros((S, N, M), dtype=np.float64)
+    Sigma_G_X = np.zeros((D, N, M, S), dtype=np.float64)
+    WXG = np.zeros((S, N, M), dtype=np.float64)
+
+    for s in xrange(0, S):
+        XH[s, :, :] = XX[s, :, :, :].dot(H).T                       # (S, N, M)
+        Sigma_G_X[:, :, :, s] = XX[s, :, :, :].dot(Sigma_G.T).T     # (D, N, M, S)
+        XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
+        WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
+
+        ## Sigma_C computation
+        # first summand of Sigma_C: WXG.T*Gamma*WXG / sigma_eps
+        Sigma_C[:, :, :, s] = WXG[s, :, :].T.dot(Gamma).dot(WXG[s, :, :])[..., np.newaxis] / sigma_eps_m[s, :]
+        # second summand of Sigma_C: tr(X.T*Gamma*X*Sigma_G / sigma_eps)
+        second_summand = np.einsum('ijk, jli', Sigma_G_X[:, :, :, s], Gamma_X[:, s, :, :])
+        Sigma_C[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
+    # third summand of Sigma_C: part of p(c|q; theta_C)
+    Delta_k = (q_Z / np.maximum(sigma_Mc[:, :, np.newaxis], eps))
+    Delta = Delta_k.sum(axis=1)          # sum across classes K
+    for s in xrange(0, S):
+        for i in xrange(0, J):
+            Sigma_C[:, :, i, s] = np.linalg.inv(Sigma_C[:, :, i, s] + \
+                                             np.diag(Delta[:, i]))
+
+    ## m_C computation
+    # adding m_A*XH to y_tilde
+    for s in xrange(0, S):
+        y_tildeG = y_tilde[s, :, :] - XH[s, :, :].dot(m_A[s, :, :].T)
+        Gamma_y_tildeG_WXG = Gamma.dot(y_tildeG).T.dot(WXG[s, :, :])
+        X_tildeG = Gamma_y_tildeG_WXG / sigma_eps_m[s, :, np.newaxis] + \
+                        (Delta_k * mu_Mc[:, :, np.newaxis]).sum(axis=1).T
+        # dot product across voxels of Sigma_C and X_tildeG
+        m_C[s, :, :] = np.einsum('ijk,kj->ki', Sigma_C[:, :, :, s], X_tildeG)
 
     return m_C, Sigma_C
 
@@ -1385,7 +1619,7 @@ def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     Gauss_mat = vt.normpdf(m_A[...,np.newaxis], mu_Ma, np.sqrt(sigma_Ma)) * \
                 vt.normpdf(m_C[...,np.newaxis], mu_Mc, np.sqrt(sigma_Mc))
 
-    # Update Ztilde ie the quantity which is involved in the a priori 
+    # Update Ztilde ie the quantity which is involved in the a priori
     # Potts field [by solving for the mean-field fixed point Equation]
     # TODO: decide if we take out the computation of p_q_t or Ztilde
     B_pqt = Beta[:, np.newaxis, np.newaxis] * p_q_t.copy()
@@ -1397,7 +1631,46 @@ def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     aux = Probas.sum(axis=1)[:, np.newaxis, :]
     aux[np.where(aux==0)] = eps
     p_q_t = Probas / aux
-        
+
+    return p_q_t, p_q_t
+
+
+def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
+                  mu_Mc, Beta, labels_proba, p_Q, neighbours_indexes, graph, \
+                  M, J, K, S, nans_init=False):
+    # between ASL and BOLD just alpha and Gauss_mat change!!!
+    alpha = np.zeros((J, M, K), dtype=np.float64)
+    Gauss_mat = np.zeros_like(alpha)
+    for s in xrange(S):
+        alpha -= 0.5 * np.diagonal(Sigma_A[:, :, :, s])[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :])
+        #Gauss_mat += np.log(vt.normpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma)))
+        Gauss_mat += sp.stats.norm.logpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma))
+
+    if nans_init:
+        labels_proba_nans = np.ones_like(labels_proba)/K
+    else:
+        labels_proba_nans = labels_proba.copy()
+
+    # Update Ztilde ie the quantity which is involved in the a priori
+    # Potts field [by solving for the mean-field fixed point Equation]
+    # TODO: decide if we take out the computation of p_q_t or Ztilde
+    B_pqt = Beta[:, np.newaxis, np.newaxis] * labels_proba.copy()
+    B_pqt = np.concatenate((B_pqt, np.zeros((M, K, 1), dtype=B_pqt.dtype)), axis=2)
+    local_energy = B_pqt[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
+    energy = (local_energy + alpha + Gauss_mat )
+    #energy -= energy.max()
+    labels_proba = (np.exp(energy)).transpose(1, 2, 0)
+    
+    # Remove NaNs and Infs (# TODO: check for sequential mode)
+    if (labels_proba.sum(axis=1)==0).any():
+        mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
+        labels_proba[mask] = labels_proba_nans[mask]
+    if np.isinf(labels_proba.sum(axis=1)).any():
+        mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
+        labels_proba[mask] = labels_proba_nans[mask]
+
+    p_q_t = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
+
     return p_q_t, p_q_t
 
 
@@ -1421,14 +1694,14 @@ def expectation_Q_async_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_M
         aux = Probas[:, :, vox].sum(axis=1)[:, np.newaxis]
         aux[np.where(aux==0)] = eps
         p_q_t[:, :, vox] = Probas[:, :, vox] / aux
-        
+
         #local_energy[:, :, vox] = sum_over_neighbours(neighbours_indexes[vox, :], beta[..., np.newaxis, np.newaxis] * labels_proba)
         #energy[:, :, vox] = alpha[:, :, vox] + local_energy[:, :, vox]
         #labels_proba[:, :, vox] = (np.exp(energy[:, :, vox])*gauss[:, :, vox])
         #labels_proba[:, :, vox] = labels_proba[:, :, vox]/labels_proba[:, :, vox].sum(axis=1)[:, np.newaxis]
 
     return p_q_t, p_q_t
-    
+
 
 def maximization_mu_sigma_asl(q_Z, m_X, Sigma_X):
 
@@ -1443,18 +1716,28 @@ def maximization_mu_sigma_asl(q_Z, m_X, Sigma_X):
     return Mu, Sigma
 
 
+def maximization_mu_sigma_ms(q_Z, m_X, Sigma_X, M, J, S, K):
+    qZ_sumvox = q_Z.sum(axis=2) * S                          # (M, K)
+    Mu = np.zeros_like(qZ_sumvox)
+    Mu[:, 1] = (q_Z[:, 1, :] * m_X.sum(0).T).sum(axis=1) / qZ_sumvox[:, 1]
+
+    sess_term = np.zeros((M, K, J), dtype=np.float64)
+    for s in xrange(S):
+        mX_minus_Mu_2 = (m_X[s, :, :, np.newaxis] - Mu[np.newaxis, :, :]).transpose(1, 2, 0)**2
+        SigmaX_diag = np.diagonal(Sigma_X[:, :, :, s]).T
+        sess_term += mX_minus_Mu_2 + np.concatenate((SigmaX_diag[:, np.newaxis, :],
+                                                     SigmaX_diag[:, np.newaxis, :]), axis=1)
+    Sigma = (q_Z * sess_term).sum(axis=2) / qZ_sumvox
+
+    return Mu, Sigma
+
+
 def maximization_sigma_asl(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
     alpha = (np.dot(m_H[:, np.newaxis] * m_H[np.newaxis, :] + Sigma_H, R_inv)).trace()
     if use_hyp:
         sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4*gamma_h)
     else:
         sigma = alpha / (D)
-    if np.isnan(sigma) or sigma==0:
-        print 'WARNING!!!'
-        print 'gamma_h = ', gamma_h
-        print 'D = ', D
-        print 'alpha = ', alpha
-        print m_H
     return sigma
 
 
@@ -1465,19 +1748,19 @@ def maximization_Mu_asl(H, G, matrix_covH, matrix_covG,
     return Mu
 
 
-def maximization_beta_m4_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
+def maximization_beta_m4_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes,
                               maxNeighbours, gamma, MaxItGrad, gradientStep):
     # Method 4 in Christine's thesis:
     # - sum_j sum_k (sum_neighbors p_Q) (p_Q_MF - p_Q) - gamma
     Gr = 100
     ni = 1
     while ((abs(Gr) > 0.0001) and (ni < MaxItGrad)):
-        
+
         # p_Q_MF according to new beta
         beta_Qtilde_sumneighbour = beta * Qtilde_sumneighbour
         E = np.exp(beta_Qtilde_sumneighbour - beta_Qtilde_sumneighbour.max(axis=0))  # (K, J)
         p_Q_MF = E / E.sum(axis=0)
-        
+
         # Gradient computation
         Gr = gamma + (Qtilde_sumneighbour * (p_Q_MF - p_Q)).sum()
 
@@ -1488,15 +1771,15 @@ def maximization_beta_m4_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursI
     return beta
 
 
-def maximization_beta_m2_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
+def maximization_beta_m2_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes,
                               maxNeighbours, gamma, MaxItGrad, gradientStep):
     # Method 2 in Christine's thesis:
     # - 1/2 sum_j sum_k sum_neighbors (p_Q_MF p_Q_MF_sumneighbour - p_Q pQ_sumneighbour) - gamma
     Gr = 100
     ni = 1
-    
+
     while ((abs(Gr) > 0.0001) and (ni < MaxItGrad)):
-        
+
         # p_Q_MF according to new beta
         beta_Qtilde_sumneighbour = beta * Qtilde_sumneighbour
         E = np.exp(beta_Qtilde_sumneighbour - beta_Qtilde_sumneighbour.max(axis=0))  # (K, J)
@@ -1568,8 +1851,8 @@ def grad_fun(Beta, p_Q, Qtilde_sumneighbour, neighboursIndexes, gamma):
     return np.asfortranarray([-gradient])
 
 
-def maximization_beta_m2_scipy_asl(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes, 
-                              maxNeighbours, gamma, MaxItGrad, gradientStep):
+def maximization_beta_m2_scipy_asl(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes,
+                                   maxNeighbours, gamma, MaxItGrad, gradientStep):
     """ Maximize beta """
     from scipy.optimize import fmin_l_bfgs_b, minimize, fmin_bfgs, fmin_cg, brentq
 
@@ -1585,7 +1868,7 @@ def maximization_beta_m2_scipy_asl(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neigh
     if not res.converged:
         logger.warning("max beta did not converge: %s (beta=%s)", res, beta_new)
 
-    return beta_new #, res.converged  
+    return beta_new #, res.converged
 
     """
     #beta_new = fmin_l_bfgs_b(fun, Beta, \
@@ -1598,7 +1881,7 @@ def maximization_beta_m2_scipy_asl(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neigh
     print n
     beta_new = fmin_l_bfgs_b(fun, np.array([Beta]), \
                     args=(p_Q, Qtilde_sumneighbour, neighboursIndexes, gamma),
-                    fprime=grad_fun, 
+                    fprime=grad_fun,
                     bounds=[(0, None)]*n)
     print beta_new
     # You can add at the end fprime=grad_fun to give the gradient separately
@@ -1610,12 +1893,12 @@ def maximization_LA_asl(Y, m_A, m_C, XX, WP, W, WP_Gamma_WP, H, G, Gamma):
     #WP = np.append(w[:, np.newaxis], P, axis=1)
     #Gamma_WP = Gamma.dot(WP)
     #WP_Gamma_WP = WP.T.dot(Gamma_WP)
-    
+
     # TODO: for BOLD, just take out mCWXG term
     mAXH = m_A.dot(XX.dot(H)).T                             # shape (N, J)
     mCWXG = XX.dot(G).dot(W).T.dot(m_C.T)                   # shape (N, J)
     S = Y - (mAXH + mCWXG)
-    
+
     AL = np.linalg.inv(WP_Gamma_WP).dot(WP.T).dot(Gamma).dot(S)
     return AL   ##AL[1:, :], AL[0, :], AL
 
@@ -1642,10 +1925,10 @@ def maximization_sigma_noise_asl(XX, m_A, Sigma_A, H, m_C, Sigma_C, G, \
     Sigma_H_X_X = np.einsum('ijk,jli->kl', XX.dot(Sigma_H.T).T, Gamma_X)
     GXWWXG = WXG.T.dot(Gamma_WX.dot(G)) # (,D)*(D,N,M)*(M,N,D)*(D,) -> (M, M)
     Sigma_G_XW_WX = np.einsum('ijk,jlk->il', WX.dot(Sigma_G.T), Gamma_WX)
-    
+
     # mA.T (X.T H.T H X + SH X.T X) mA
     HXAAXH = np.einsum('ij,ij->i', m_A.dot(HXXH + Sigma_H_X_X), m_A)
-    
+
     # mC.T (W.T X.T G.T G X W + SH W.T X.T X W) mC
     GXWCCWXG = np.einsum('ij,ij->i', m_C.dot(GXWWXG + Sigma_G_XW_WX), m_C)
 
@@ -1657,14 +1940,14 @@ def maximization_sigma_noise_asl(XX, m_A, Sigma_A, H, m_C, Sigma_C, G, \
 
     # mC.T W.T X.T G.T H X mA
     CWXGHXA = np.einsum('ij,ij->i', mCWXG_Gamma, mAXH)
-    
+
     # y_tilde.T y_tilde
     Gamma_ytilde = Gamma.dot(y_tilde)
     ytilde_ytilde = np.einsum('ij,ij->j', y_tilde, Gamma_ytilde)
-    
+
     # (mA X H + mC W X G) y_tilde
     AXH_CWXG_ytilde = np.einsum('ij,ji->i', (mAXH + mCWXG), Gamma_ytilde)
-    
+
     return (HXAAXH + GXWCCWXG + tr_SA_HXXH + tr_SC_HXXH \
             + 2 * CWXGHXA + ytilde_ytilde - 2 * AXH_CWXG_ytilde) / N
 
@@ -1679,7 +1962,7 @@ def computeFit_asl(H, m_A, G, m_C, W, XX):
     WXG = W.dot(XG.T)
     mAXH = m_A.dot(XH).T                                    # shape (N, J)
     mCWXG = m_C.dot(WXG.T).T                                # shape (N, J)
-    
+
     return mAXH + mCWXG
 
 
@@ -1879,7 +2162,7 @@ def Q_expectation_Ptilde(q_Z, neighboursIndexes, Beta, gamma, K, M):
     aux = E.sum(axis=0)
     aux[np.where(aux==0)] = eps
     p_Q_MF = E / aux
-    
+
     # sum_neighbours p_Q_MF(neighbour) according to new beta
     p_Q_MF_sumneighbour = p_Q_MF[:, :, neighboursIndexes].sum(axis=3)  # (M, K, J)
 
@@ -1893,7 +2176,7 @@ def expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, H, Sigma_H, m_C,
                                   Sigma_C, G, Sigma_G, XX, W, sigma_eps,
                                   Gamma, J, D, M, N, Gamma_X, Gamma_WX):
     #print sigma_eps[np.where(np.isnan(np.log(sigma_eps)))]
-    sigma_eps_1 = maximization_sigma_noise(XX, m_A, Sigma_A, H, m_C, Sigma_C, \
+    sigma_eps_1 = maximization_sigma_noise_asl(XX, m_A, Sigma_A, H, m_C, Sigma_C, \
                                            G, Sigma_H, Sigma_G, W, y_tilde, Gamma, \
                                            Gamma_X, Gamma_WX, N)
     return  - (N * J * np.log(2 * np.pi) - J * np.log(np.linalg.det(Gamma)) \
@@ -1903,20 +2186,16 @@ def expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, H, Sigma_H, m_C,
 def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, AuxH,
                        R, R_inv, sigmaH, sigmaG, m_C, Sigma_C, mu_Mc, sigma_Mc,
                        m_G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                       gamma, gamma_h, gamma_g, sigma_eps, XX, W, 
-                       J, D, M, N, K, hyp, Gamma_X, Gamma_WX, plot=False, 
-                       bold=False):
+                       gamma, gamma_h, gamma_g, sigma_eps, XX, W,
+                       J, D, M, N, K, hyp, Gamma_X, Gamma_WX, plot=False,
+                       bold=False, S=1):
     # Entropy
     EntropyA = RL_Entropy(Sigma_A, M, J)
     EntropyC = RL_Entropy(Sigma_C, M, J)
     EntropyH = RF_Entropy(Sigma_H, D)
     EntropyG = RF_Entropy(Sigma_G, D)
     EntropyQ = Q_Entropy(q_Z, M, J)
-    if bold:
-        Total_Entropy = EntropyA + EntropyH + EntropyQ        
-    else:
-        Total_Entropy = EntropyA + EntropyH + EntropyC + EntropyG + EntropyQ        
-    
+
     # Likelihood
     EPtildeLikelihood = expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, m_H, Sigma_H, m_C,
                                                       Sigma_C, m_G, Sigma_G, XX, W, sigma_eps,
@@ -1933,22 +2212,29 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
     else:
         EPtildeVh = 0.
         EPtildeVg = 0.
+
     if bold:
-        EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeQ \
-                + EPtildeBeta + EPtildeVh
+        Total_Entropy = EntropyA + EntropyH / S + EntropyQ / S
+        EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH / S + EPtildeQ / S \
+                + EPtildeBeta / S + EPtildeVh / S
     else:
+        Total_Entropy = EntropyA + EntropyH + EntropyC + EntropyG + EntropyQ
         EPtilde = EPtildeLikelihood + EPtildeA + EPtildeH + EPtildeC + EPtildeG + EPtildeQ \
                 + EPtildeBeta + EPtildeVh + EPtildeVg
+
     if plot:
         print 'Total_Entropy = ', Total_Entropy
-        print 'EA = ', EntropyA, 'EH = ', EntropyH, 'EC = ', EntropyC, \
-                'EG = ', EntropyG, 'EQ = ', EntropyQ
+        print 'EA = ', EntropyA, 'EH = ', EntropyH, 'EQ = ', EntropyQ
+        if not bold:
+            print 'EC = ', EntropyC, 'EG = ', EntropyG,
         print 'Total_EPtilde = ', EPtilde
-        print 'ELklh = ', EPtildeLikelihood, 'EPtA = ', EPtildeA, 'EPtC = ', EPtildeC, \
-                'EPtH = ', EPtildeH, 'EPtG = ', EPtildeG, 'EPtQ = ', EPtildeQ, \
-                'EPtBeta = ', EPtildeBeta, 'EPtVh = ', EPtildeVh, 'EPtVg = ', EPtildeVg
+        print 'ELklh = ', EPtildeLikelihood, 'EPtA = ', EPtildeA,  \
+                'EPtH = ', EPtildeH, 'EPtQ = ', EPtildeQ, \
+                'EPtBeta = ', EPtildeBeta, 'EPtVh = ', EPtildeVh
+        if not bold:
+            print 'EPtC = ', EPtildeC, 'EPtG = ', EPtildeG, 'EPtVg = ', EPtildeVg
 
-    return EPtilde, EPtildeLikelihood, Total_Entropy, EPtilde + Total_Entropy
+    return EPtilde + Total_Entropy
 
 
 
@@ -2099,7 +2385,7 @@ def computeFit(m_H, m_A, m_G, m_C, W, X, J, N):
 ##########################
 from pyhrf.tools.aexpression import ArithmeticExpression as AExpr
 
-def compute_contrasts(condition_names, contrasts, m_A, m_C, 
+def compute_contrasts(condition_names, contrasts, m_A, m_C,
                       Sigma_A, Sigma_C, M, J):
     brls_conds = dict([(str(cn), m_A[:, ic])
                       for ic, cn in enumerate(condition_names)])
@@ -2144,6 +2430,111 @@ def compute_contrasts(condition_names, contrasts, m_A, m_C,
     return CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C
 
 
+def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar,
+                               nrls_class_mean, nrls_class_var, nb_contrasts,
+                               nb_classes, nb_voxels):
+    """Computes the contrasts nrls from the conditions nrls and the mean and
+    variance of the gaussian classes of the contrasts (in the cases of all
+    inactive conditions and all active conditions)
+    Parameters
+    ----------
+    def_contrasts : OrderedDict
+        TODO.
+    condition_names : list
+        TODO.
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+        TODO.
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+        TODO.
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+        TODO.
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+        TODO.
+    nb_contrasts : int
+    nb_classes : int
+    Returns
+    -------
+    contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_var : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_class_mean : ndarray, shape (nb_contrasts, nb_classes)
+    contrasts_class_var : ndarray, shape (nb_contrasts, nb_classes)
+    """
+
+    contrasts_mean = np.zeros((nb_voxels, nb_contrasts))
+    contrasts_var = np.zeros((nb_voxels, nb_contrasts))
+    contrasts_class_mean = np.zeros((nb_contrasts, nb_classes))
+    contrasts_class_var = np.zeros((nb_contrasts, nb_classes))
+
+    for i, contrast_name in enumerate(contrasts):
+        parsed_contrast = parse_expr(contrasts[contrast_name])
+        for condition_name in condition_names:
+            condition_nb = condition_names.index(condition_name)
+            coeff = parsed_contrast.coeff(condition_name)
+            contrasts_mean[:, i] += float(coeff) * nrls_mean[:, condition_nb]
+            contrasts_var[:, i] += float(coeff)**2 * nrls_covar[condition_nb, condition_nb, :]
+            contrasts_class_mean[i, 1] += float(coeff) * nrls_class_mean[condition_nb, 1]
+            contrasts_class_var[i, :] += float(coeff)**2 * nrls_class_var[condition_nb, :]
+
+    return contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
+
+
+def ppm_contrasts(contrasts_mean, contrasts_var, contrasts_class_mean,
+                  contrasts_class_var, threshold_a="std_inact", threshold_g=0.95):
+    """Computes the ppm for the given contrast using either the standard deviation
+    of the "all inactive conditions" class gaussian (default) or the intersection
+    of the [all inactive conditions] and [all active conditions] classes
+    gaussians as threshold for the PPM_a and 0.95 (default) for the PPM_g.
+    Be carefull, this computation considers the mean of the inactive class as zero.
+    Parameters
+    ----------
+    contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_var : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_class_mean : ndarray, shape (nb_contrasts, nb_classes)
+    contrasts_class_var : ndarray, shape (nb_contrasts, nb_classes)
+    threshold_a : str, optional
+        if "std_inact" (default) uses the standard deviation of the
+        [all inactive conditions] gaussian class as PPM_a threshold, if "intersect"
+        uses the intersection of the [all inactive/all active conditions]
+        gaussian classes
+    threshold_g : float, optional
+        the threshold of the PPM_g
+    Returns
+    -------
+    ppm_a_contrasts : ndarray, shape (nb_voxels, nb_contrasts)
+    ppm_g_contrasts : ndarray, shape (nb_voxels, nb_contrasts)
+    """
+
+    if threshold_a == "std_inact":
+        thresh = np.sqrt(contrasts_class_var[:, 0])
+    elif threshold_a == "intersect":
+        intersect1 = contrasts_class_mean[:, 1] * contrasts_class_var[:, 0]
+        intersect2 = np.sqrt(
+            contrasts_class_var.prod(axis=1) * (
+                contrasts_class_mean[:, 1]**2
+                + 2*contrasts_class_var[:, 0]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
+                - 2*contrasts_class_var[:, 1]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
+            )
+        )
+        threshs = np.concatenate(((intersect1 - intersect2)[:, np.newaxis],
+                                  (intersect1 + intersect2)[:, np.newaxis]),
+                                 axis=1) / (contrasts_class_var[:, 0] - contrasts_class_var[:, 1])[:, np.newaxis]
+
+        mask = (
+            ((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis]))
+            | (~((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis])).any(axis=1)[:, np.newaxis]
+               & (threshs == threshs.max(axis=1)[:, np.newaxis])))
+        thresh = threshs[mask]
+        if len(thresh) < len(threshs):
+            logger.warning("The gaussians do not have one intersection between means."
+                           " Choosing the highest")
+            thresh = threshs.max(axis=1)
+            thresh = np.concatenate((thresh[:, np.newaxis], contrasts_class_var[:, 0][:, np.newaxis]), axis=1).max(axis=1)
+
+    return (norm.sf(thresh, contrasts_mean, contrasts_var**.5),
+            norm.isf(threshold_g, contrasts_mean, contrasts_var**.5))
+
+
+
 # Plots
 ####################################
 
@@ -2183,15 +2574,15 @@ def plot_response_functions_it(ni, NitMin, M, H, G, Mu=None, prior=None):
 
 def plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG,
                      SUM_q_Z, mua1, muc1, FE):
-    SUM_p_Q_array = np.zeros((M, ni), dtype=np.float64)
+    """SUM_p_Q_array = np.zeros((M, ni), dtype=np.float64)
     mua1_array = np.zeros((M, ni), dtype=np.float64)
     muc1_array = np.zeros((M, ni), dtype=np.float64)
     for m in xrange(M):
         for i in xrange(ni):
             SUM_p_Q_array[m, i] = SUM_q_Z[m][i]
             mua1_array[m, i] = mua1[m][i]
-            muc1_array[m, i] = muc1[m][i]
-    
+            muc1_array[m, i] = muc1[m][i]"""
+
     import matplotlib
     import matplotlib.pyplot as plt
     font = {'size': 15}
@@ -2216,12 +2607,12 @@ def plot_convergence(ni, M, cA, cC, cH, cG, cAH, cCG,
     plt.legend(('CA', 'CC', 'CH', 'CG'))
     plt.grid(True)
     plt.savefig('./plots/Crit_all.png')
-    plt.figure(M + 6)
+    """plt.figure(M + 6)
     for m in xrange(M):
         plt.plot(SUM_p_Q_array[m])
         plt.hold(True)
     plt.hold(False)
-    plt.savefig('./plots/Sum_p_Q_Iter_ASL.png')
+    plt.savefig('./plots/Sum_p_Q_Iter_ASL.png')"""
     plt.figure(M + 7)
     plt.plot(FE, label='Free energy')
     plt.legend(loc=4)

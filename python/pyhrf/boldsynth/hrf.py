@@ -74,16 +74,15 @@ def buildFiniteDiffMatrix(order, size):
 
 def genGaussianSmoothHRF(zc, length, eventdt, rh, order=2):
 
-    prcov = length-(2*zc)
+    prcov = length #-(2*zc)
     matQ = buildFiniteDiffMatrix(order, prcov)
     matQ = np.divide(np.dot(matQ.transpose(),matQ), eventdt**(order**2))
+    if zc:
+        matQ = matQ[1:-1, 1:-1]
     matL = np.array(np.transpose(np.linalg.cholesky(matQ/rh)))
 
-    hrf = np.linalg.solve(matL, np.random.randn(prcov,1))
-    #hrf = np.sqrt(rh)*hrf
-    if zc :
-        hrf = np.concatenate(([[0]],hrf,[[0]]))
-
+    hrf = np.linalg.solve(matL, np.random.randn(prcov-(2*zc),1))
+    
     return (hrf[:,0],matQ)
 
 

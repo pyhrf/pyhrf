@@ -758,7 +758,7 @@ def run_pyhrf_cmd_treatment(cfg_cmd, exec_cmd, default_cfg_file,
 # TODO : cleanup the imports (and put them at the beginning)
 from pyhrf.tools import add_prefix, add_suffix
 from pyhrf.ui.jde import JDEAnalyser as JDE
-from pyhrf.ui.vb_jde_analyser import JDEVEMAnalyser as VBJDE
+from pyhrf.ui.vb_jde_analyser_bold_fast import JDEVEMAnalyser as VBJDE
 
 from pyhrf.ui.jde import DEFAULT_CFG_FILE as DEFAULT_CFG_FILE_JDE
 
