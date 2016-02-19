@@ -20,7 +20,7 @@ from glm_tools import combine_masks, fix_paradigm, compute_prf_regressor
 
 subjects = ['RG130377', 'SC120530', 'CD110147']
 subjects = np.genfromtxt(
-    '/volatile/new/salma/asl/data/HEROES_ASL1/subjects.txt' ,dtype=str)
+    '/volatile/new/salma/asl/data/HEROES_ASL1/subjects.txt', dtype=str)
 subject = subjects[2]
 data_dir = os.path.join('/volatile/new/salma/asl/data/HEROES_ASL1/',
                         'gin_struct/archives', subject, 'standard')
