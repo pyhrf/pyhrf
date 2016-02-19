@@ -170,7 +170,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     if it_max <= 0:
         it_max = 100
     gamma = 7.5
-    thresh_free_energy = 1e-5
+    thresh_free_energy = 1e-4
 
     # Initialize sizes vectors
     hrf_len = np.int(np.ceil(hrf_duration / dt)) + 1
@@ -233,7 +233,9 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     start_time = time.time()
     loop = 0
-    while (loop <= it_min) or (free_energy_crit[-1] > thresh_free_energy and loop < it_max):
+    while (loop <= it_min or
+           ((np.asarray(free_energy_crit[-5:]) > thresh_free_energy).any()
+            and loop < it_max)):
 
         logger.info("{:-^80}".format(" Iteration n°"+str(loop+1)+" "))
 
