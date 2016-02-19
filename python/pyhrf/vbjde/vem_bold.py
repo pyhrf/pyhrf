@@ -367,7 +367,18 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
                                   /(hrf_mean.T.dot(hrf_mean))**2)
     if zero_constraint:
-        hrf_mean = np.concatenate([0], hrf_mean, [0])
+        hrf_mean = np.concatenate(([0], hrf_mean, [0]))
+        # when using the zero constraint the hrf covariance is fill with
+        # arbitrary zeros around the matrix, this is maybe a bad idea if we need
+        # it for later computation...
+        hrf_covar = np.concatenate(
+            (np.zeros((hrf_covar.shape[0], 1)), hrf_covar, np.zeros((hrf_covar.shape[0], 1))),
+            axis=1
+        )
+        hrf_covar = np.concatenate(
+            (np.zeros((1, hrf_covar.shape[1])), hrf_covar, np.zeros((1, hrf_covar.shape[1]))),
+            axis=0
+        )
 
     ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
         nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var
