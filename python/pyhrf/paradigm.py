@@ -693,6 +693,22 @@ class Paradigm:
             jDurations[cn] = np.concatenate(tuple(sessDur))
 
         return jDurations
+        
+    def get_joined_onsets_dim(self):
+        """ For each condition, join onsets of all sessions.
+        """
+        jOnsets = OrderedDict([])
+        for cn, sessOns in self.stimOnsets.iteritems():
+            jOnsets[cn] = np.array(sessOns)
+        return jOnsets
+
+    def get_joined_durations_dim(self):
+        """ For each condition, join stimulus durations of all sessions.
+        """
+        jDurations = OrderedDict([])
+        for cn, sessDur in self.stimDurations.iteritems():
+            jDurations[cn] = np.array(sessDur)
+        return jDurations
 
     def get_stimulus_names(self):
         return self.stimOnsets.keys()

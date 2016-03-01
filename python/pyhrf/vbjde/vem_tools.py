@@ -1735,7 +1735,7 @@ def maximization_mu_sigma_ms(q_Z, m_X, Sigma_X, M, J, S, K):
 def maximization_sigma_asl(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
     alpha = (np.dot(m_H[:, np.newaxis] * m_H[np.newaxis, :] + Sigma_H, R_inv)).trace()
     if use_hyp:
-        sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4*gamma_h)
+        sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4 * gamma_h)
     else:
         sigma = alpha / (D)
     return sigma
@@ -2103,16 +2103,13 @@ def Z_Entropy(q_Z, M, J):
 
 eps_FreeEnergy = 0.0000000001
 
-
 def RL_Entropy(Sigma_RL, M, J):
-    #logger.info('Computing RLs Entropy ...')
-    Det_Sigma_RL_j = np.zeros(J, dtype=np.float64)
-    Const = (2 * np.pi * np.exp(1)) ** M
     Entropy = 0.0
+    Const = (2 * np.pi * np.exp(1)) ** M
     for j in xrange(0, J):
-        Det_Sigma_RL_j = np.linalg.det(Sigma_RL[:, :, j])
-        Entropy_j = np.sqrt(Const * Det_Sigma_RL_j)
-        Entropy += np.log(Entropy_j)
+        if not Sigma_RL.sum()==0:
+            _, log_Det_Sigma_RL_j = np.linalg.slogdet(Sigma_RL[:, :, j])
+            Entropy += (np.log(Const) + log_Det_Sigma_RL_j) /2
     return Entropy
 
 
