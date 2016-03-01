@@ -373,7 +373,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     nb_contrasts = len(contrasts)
     if compute_contrasts and nb_contrasts > 0:
-        logger.info('Compute contrasts ...')
+        logger.info('Computing contrasts ...')
         (contrasts_mean,
          contrasts_var,
          contrasts_class_mean,
@@ -384,7 +384,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         ppm_a_contrasts, ppm_g_contrasts = vt.ppms_computation(
             contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
         )
-        logger.info('Done contrasts computing.')
+        logger.info('Done computing contrasts.')
     else:
         (contrasts_mean, contrasts_var, contrasts_class_mean,
          contrasts_class_var, ppm_a_contrasts, ppm_g_contrasts) = (None, None,
