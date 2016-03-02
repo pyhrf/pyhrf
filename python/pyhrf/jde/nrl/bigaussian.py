@@ -863,19 +863,15 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
 
         self.countLabels(self.labels, self.voxIdx, self.cardClass)
 
-# TODO: rewrite the following function to use logging module
-    def printState(self, verboseLevel):
-        if pyhrf.verbose.verbosity >= verboseLevel:
-            for j in xrange(self.nbConditions):
-                pyhrf.verbose(verboseLevel, 'nrl cond %d = %1.3f(%1.3f)'
-                              % (j, self.currentValue[j, :].mean(),
-                                 self.currentValue[j, :].std()))
-                for c in xrange(self.nbClasses):
-                    ivc = self.voxIdx[c][j]
-                    pyhrf.verbose(verboseLevel, 'nrl %s cond %d = %1.3f(%1.3f)'
-                                  % (self.CLASS_NAMES[c], j,
-                                     self.currentValue[j, ivc].mean(),
-                                     self.currentValue[j, ivc].std()))
+    def printState(self, _):
+        for j in xrange(self.nbConditions):
+            logger.info('nrl cond %d = %1.3f(%1.3f)', j,
+                        self.currentValue[j, :].mean(), self.currentValue[j, :].std())
+        for c in xrange(self.nbClasses):
+            ivc = self.voxIdx[c][j]
+            logger.info('nrl %s cond %d = %1.3f(%1.3f)', self.CLASS_NAMES[c], j,
+                        self.currentValue[c, ivc].mean(),
+                        self.currentValue[j, ivc].std())
 
     def sampleNrlsParallel(self, varXh, rb, h, varLambda, varCI, varCA,
                            meanCA, gTQg, variables):

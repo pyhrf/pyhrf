@@ -36,9 +36,6 @@ class SimulationTest(unittest.TestCase):
     @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_full_physio(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
-
         r = phy.simulate_asl_full_physio()
         # let's just test the shapes of objects and the presence of some
         # physio-specific simulation items
@@ -46,16 +43,10 @@ class SimulationTest(unittest.TestCase):
         self.assertIn('perf_stim_induced', item_names)
         self.assertIn('flow_induction', item_names)
         self.assertIn('perf_stim_induced', item_names)
-        # cond, spatial axes
         self.assertEqual(r['labels_vol'].shape, (3, 1, 2, 2))
-        # self.assertEqual(r['bold'].shape, (297, 4)) #nb scans, flat spatial
-        # axis
 
     @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_full_physio_outputs(self):
-
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         phy.simulate_asl_full_physio(self.tmp_path)
 
@@ -68,9 +59,6 @@ class SimulationTest(unittest.TestCase):
     @unittest.skipUnless(is_importable("PIL"), "Pillow (optional dep) is N/A")
     def test_simulate_asl_physio_rfs(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
-
         r = phy.simulate_asl_physio_rfs()
         # let's just test the shapes of objects and the presence of some
         # physio-specific simulation items:
@@ -78,7 +66,6 @@ class SimulationTest(unittest.TestCase):
         self.assertIn('perf_stim_induced', item_names)
         self.assertIn('primary_brf', item_names)
         self.assertIn('perf_stim_induced', item_names)
-        # cond, spatial axes
         self.assertEqual(r['labels_vol'].shape, (3, 1, 2, 2))
         self.assertEqual(r['bold'].shape[1], 4)  # flat spatial axis
 

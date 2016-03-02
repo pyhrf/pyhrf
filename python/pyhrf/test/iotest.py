@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
 
-
 import unittest
-import numpy as _np
+import shutil
 import tempfile
-
-import pyhrf
-from pyhrf import get_data_file_name
-from pyhrf.ndarray import MRI3Daxes, MRI4Daxes
-
 import os
 import os.path as op
+
 import numpy as np
 
-import shutil
-
-
+import pyhrf
 import pyhrf.tools._io as pio
+
+from pyhrf import get_data_file_name
+from pyhrf.ndarray import MRI3Daxes, MRI4Daxes
 from pyhrf.ndarray import xndarray
 
 
@@ -216,9 +212,10 @@ class NiftiTest(unittest.TestCase):
         tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.tmp_dir = tmpDir
+        self.clean_tmp = True
 
     def tearDown(self):
-        if 1:
+        if self.clean_tmp:
             shutil.rmtree(self.tmp_dir)
 
     def test_process_history_extension(self):
@@ -226,7 +223,6 @@ class NiftiTest(unittest.TestCase):
             'real_data_vol_4_regions_mask.nii.gz')
 
         nii_fn_out = op.join(self.tmp_dir, 'proc_ext_test.nii')
-        # print 'nii_fn_out:', nii_fn_out
         input_pname = 'dummy_proc_test'
         input_pparams = {'my_param': 5.5, 'input_file': '/home/blh'}
 
@@ -234,7 +230,6 @@ class NiftiTest(unittest.TestCase):
                                 img_output_fn=nii_fn_out)
 
         i2, (aff, header) = pio.read_volume(nii_fn_out)
-        # print 'Loaded extensions:', header.extensions
 
         reloaded_pinfo = pio.get_process_info(nii_fn_out)
         self.assertNotEqual(reloaded_pinfo, None)
@@ -282,25 +277,25 @@ class DataLoadTest(unittest.TestCase):
             print len(g), g[1]
             print b[1].shape
             print ss
-            print m.shape, _np.unique(m)
+            print m.shape, np.unique(m)
             print h
 
 
 class xndarrayIOTest(unittest.TestCase):
 
     def setUp(self):
-        self.cub0 = xndarray(_np.random.rand(10, 10))
-        self.cub3DVol = xndarray(_np.random.rand(10, 10, 10),
+        self.cub0 = xndarray(np.random.rand(10, 10))
+        self.cub3DVol = xndarray(np.random.rand(10, 10, 10),
                                  axes_names=MRI3Daxes)
-        d4D = _np.zeros((2, 2, 2, 3))
+        d4D = np.zeros((2, 2, 2, 3))
         for c in xrange(3):
-            d4D[:, :, :, c] = _np.ones((2, 2, 2)) * (c - 2)
+            d4D[:, :, :, c] = np.ones((2, 2, 2)) * (c - 2)
 
         self.cub4DVol = xndarray(d4D, axes_names=['condition'] + MRI3Daxes)
 
-        self.cub4DTimeVol = xndarray(_np.random.rand(100, 10, 10, 10),
+        self.cub4DTimeVol = xndarray(np.random.rand(100, 10, 10, 10),
                                      axes_names=['time'] + MRI3Daxes)
-        self.cubNDVol = xndarray(_np.random.rand(10, 2, 2, 2, 3),
+        self.cubNDVol = xndarray(np.random.rand(10, 2, 2, 2, 3),
                                  axes_names=['time'] +
                                  MRI3Daxes + ['condition'],
                                  axes_domains={'condition': ['audio', 'video', 'na']})
@@ -323,48 +318,6 @@ class xndarrayIOTest(unittest.TestCase):
         c = self.cubNDVol.reorient(MRI4Daxes + ['condition'])
         c.save(op.join(self.tmp_dir, './testND.nii'))
 
-    # def test_cuboid_save_xml(self):
-    #     cxml = xndarrayXml.fromxndarray(self.cubNDVol, 'mydata1')
-    #     #print pyhrf.xmlio.to_xml(cxml,NumpyXMLHandler(),pretty=True)
-    #     cxml.cleanFiles()
-
-    # def test_cuboid_load_xml(self):
-    #     cxml = xndarrayXml.fromxndarray(self.cub4DVol, 'mydata2')
-    #     sxml = pyhrf.xmlio.to_xml(cxml, NumpyXMLHandler(),pretty=True)
-    #     #print sxml
-    #     #print 'loading from xml ...'
-    #     c = pyhrf.xmlio.from_xml(sxml, NumpyXMLHandler())
-    #     #print 'loaded cuboid:'
-    #     #print c.cuboid.descrip()
-    #     #print c.cuboid.data
-    #     #print 'original cuboid:'
-    #     #print self.cub4DVol.descrip()
-    #     #print self.cub4DVol.data
-    #     cxml.cleanFiles()
-
-    # def test_cuboidND_load_xml(self):
-    #     #print 'Creating xmlable cuboid ...'
-    #     cxml = xndarrayXml.fromxndarray(self.cubNDVol, 'mydata3')
-    #     import cPickle
-    #     #cPickle.dump(self.cubNDVol, open('./cubNDVol.pck','w'))
-    #     #print 'Converting to XML & dumping data ...'
-    #     sxml = pyhrf.xmlio.to_xml(cxml, NumpyXMLHandler(),pretty=True)
-    #     #print sxml
-    #     #print 'loading from xml ...'
-    #     c = pyhrf.xmlio.from_xml(sxml, NumpyXMLHandler())
-    #     #print 'loaded cuboid:'
-    #     #print c.cuboid.descrip()
-    #     #cPickle.dump(c.cuboid,open('./cubfromxml.pck','w'))
-    #     #print c.cuboid.data
-    #     #print 'original cuboid:'
-    #     #print self.cubNDVol.descrip()
-    #     c.cleanFiles()
-    #     #print self.cubNDVol.data
-
-    #     #from ndview import stack_cuboids
-    #     #comparxndarray = stack_cuboids([self.cubNDVol,c.cuboid],'case',['orig','xml'])
-    #     #cPickle.dump(comparxndarray,open('./cubFromXml.pck','w'))
-
 
 class FileHandlingTest(unittest.TestCase):
 
@@ -378,23 +331,12 @@ class FileHandlingTest(unittest.TestCase):
     def test_split_ext(self):
         bfn = pyhrf.get_data_file_name('subj0_bold_session0.nii.gz')
         pio.split_ext_safe(bfn)
-        # print 's:', s
 
     def test_split4DVol(self):
         s = 'subj0_bold_session0.nii.gz'
         bfn = pyhrf.get_data_file_name(s)
         bold_files = pio.split4DVol(bfn, output_dir=self.tmp_dir)
-        # print bold_files
         i, meta = pio.read_volume(bold_files[0])
-
-        if 0:
-            from pprint import pprint
-            affine, header = meta
-            print ''
-            print 'one vol shape:'
-            print i.shape
-            print 'header:'
-            pprint(dict(header))
 
         for bf in bold_files:
             os.remove(bf)
@@ -424,12 +366,6 @@ class GiftiTest(unittest.TestCase):
         bold, bold_gii = pio.read_texture(bold_file)
         parcellation, parcel_gii = pio.read_texture(parcel_file)
 
-        if 0:
-            print 'cor:', cor.shape, cor.dtype
-            print 'tri:', tri.shape, tri.dtype
-            print 'bold:', bold.shape, bold.dtype
-            print 'parcellation:', parcellation.shape, parcellation.dtype
-
     def test_load_fmri_surf_data(self):
         """ Test surfacic data loading
         """
@@ -438,75 +374,42 @@ class GiftiTest(unittest.TestCase):
         fn = 'real_data_surf_tiny_parcellation.gii'
         parcel_file = pyhrf.get_data_file_name(fn)
 
-        # boldFn = pyhrf.get_data_file_name('localizer_surface_bold.tex')
-        # roiMaskFn = pyhrf.get_data_file_name('roimask_gyrii.tex')
-        # meshFn = pyhrf.get_data_file_name('right_hemisphere.mesh')
-        # g, b, ss, m, h = load_fmri_surf_data([boldFn, boldFn],  meshFn,
-        #                                     roiMaskFn)
-
-        # graph, bold, session_scans, mask, edge lengthes
-        # pyhrf.verbose.set_verbosity(3)
         g, b, ss, m, el = pio.load_fmri_surf_data([bold_file, bold_file],
                                                   mesh_file,
                                                   parcel_file)
         assert len(g) == len(np.unique(m))
 
-        if 0:
-            first_parcel = g.keys()[0]
-            print len(g), 'g[%d]:' % first_parcel, len(g[first_parcel])
-            print 'edge lengthes of roi %d:' % first_parcel
-            print el[first_parcel]
-            print b[first_parcel].shape
-            print ss[0][0], '-', ss[0][-1], ',', ss[1][0], '-', ss[1][-1]
-            print m.shape, _np.unique(m)
-
     def test_write_tex_gii_labels(self):
         labels = np.random.randint(0, 2, 10)
-        # print 'labels:', labels.dtype
-        # print labels
         tex_fn = op.join(self.tmp_dir, 'labels.gii')
         pio.write_texture(labels, tex_fn)
         t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == labels.dtype
         assert (t == labels).all()
-        # print 'labels loaded:', labels.dtype
-        # print t
 
     def test_write_tex_gii_float(self):
         values = np.random.randn(10)
-        # print 'values:', values.dtype
-        # print values
         tex_fn = op.join(self.tmp_dir, 'float_values.gii')
         pio.write_texture(values, tex_fn)
         t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == values.dtype
         assert np.allclose(t, values)
-        # print 'loaded values:', t.dtype
-        # print t
 
     def test_write_tex_gii_time_series(self):
         values = np.random.randn(120, 10).astype(np.float32)
-        # print 'values:', values.dtype
-        # print values
         tex_fn = op.join(self.tmp_dir, 'time_series.gii')
         pio.write_texture(values, tex_fn, intent='time series')
         t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == values.dtype
         assert np.allclose(t, values)
-        # print 'loaded values:', t.dtype
-        # print t
 
     def test_write_tex_gii_2D_float(self):
         values = np.random.randn(2, 10).astype(np.float32)
-        # print 'values:', values.dtype
-        # print values
         tex_fn = op.join(self.tmp_dir, 'floats_2d.gii')
         pio.write_texture(values, tex_fn)
         t, tgii = pio.read_texture(tex_fn)
         assert t.dtype == values.dtype
         assert np.allclose(t, values)
-        # print 'loaded values:', t.dtype
-        # print t
 
 
 class SPMIOTest(unittest.TestCase):

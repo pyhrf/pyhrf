@@ -1,5 +1,6 @@
-#! /usr/bin/python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+
 from pyhrf.ui.treatment import run_pyhrf_cmd_treatment
 from pyhrf.ui.jde import DEFAULT_CFG_FILE
 

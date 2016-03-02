@@ -8,9 +8,7 @@ import logging
 from copy import deepcopy
 
 import pyhrf
-#import pyhrf.jde.asl_physio_alpha as jasl  # FIXME: no asl_physio_alpha
-import pyhrf.jde.asl_physio as jasl  # TODO: check if this is the same that
-                                     # above
+import pyhrf.jde.asl_physio as jasl
 
 from pyhrf.core import FmriData
 from pyhrf.ui.jde import JDEMCMCAnalyser
@@ -26,7 +24,7 @@ class ASLTest(unittest.TestCase):
         np.random.seed(8652761)
 
         self.tmp_dir = pyhrf.get_tmp_path()
-        self.clean_tmp = False  # HACK True
+        self.clean_tmp = True
 
         self.sampler_params_for_single_test = {
             'nb_iterations': 40,

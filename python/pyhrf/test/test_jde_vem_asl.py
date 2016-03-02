@@ -13,8 +13,7 @@ import pyhrf.tools as tools
 from pyhrf import FmriData
 from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.jde.asl import simulate_asl
-from pyhrf.ui.vb_jde_analyser_asl import JDEVEMAnalyser
-from pyhrf.vbjde.vem_asl_constrained import Main_vbjde_c_constrained
+from pyhrf.ui.vb_jde_analyser_asl_fast import JDEVEMAnalyser
 
 
 logger = logging.getLogger(__name__)
@@ -28,11 +27,12 @@ class VEMASLTest(unittest.TestCase):
         tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.tmp_dir = tmpDir
+        self.clean_tmp = True
         simu = simulate_asl(self.tmp_dir, spatial_size='random_small')
         self.data_simu = FmriData.from_simulation_dict(simu)
 
     def tearDown(self):
-        if 1:
+        if self.clean_tmp:
             logger.info('Remove tmp dir %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
         else:
@@ -42,8 +42,6 @@ class VEMASLTest(unittest.TestCase):
         """ Test BOLD VEM sampler on small simulation with small
         nb of iterations. Estimation accuracy is not tested.
         """
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         jde_vem_analyser = JDEVEMAnalyser(beta=.8, dt=.5, hrfDuration=25.,
                                           nItMax=2, nItMin=2, fast=True,
                                           PLOT=False,
@@ -52,24 +50,3 @@ class VEMASLTest(unittest.TestCase):
                                  analyser=jde_vem_analyser,
                                  output_dir=None)
         tjde_vem.run()
-
-    @unittest.skipIf(not tools.is_importable('cvxpy'),
-                     'joblib (optional dep) is N/A')
-    def test_vem_asl_constrained(self):
-        """ #Test ASL VEM constraint function.
-        #Estimation accuracy is not tested.
-        """
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
-        data = self.data_simu
-        graph = data.get_graph()
-        Onsets = data.get_joined_onsets()
-
-        NbIter, nrls, estimated_hrf, \
-            labels, noiseVar, mu_k, sigma_k, \
-            Beta, L, PL, CONTRAST, CONTRASTVAR, \
-            cA, cH, cZ, cAH, cTime, cTimeMean, \
-            Sigma_nrls, StimuIndSignal,\
-            FreeEnergy = Main_vbjde_c_constrained(graph, data.bold, Onsets,
-                                                  Thrf=25., K=2, TR=1., beta=1.0,
-                                                  dt=.5, NitMax=2, NitMin=2)

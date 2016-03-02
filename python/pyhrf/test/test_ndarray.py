@@ -163,7 +163,6 @@ class xndarrayTest(unittest.TestCase):
                             hval_fmt={'time': '%1.1f'}, val_fmt='%d')
 
         lines = [range(i, i + 4) for i in range(0, 24, 4)]
-        # print 'lines:', lines
         good_result = \
             '\\begin{tabular}{c c c c | ' + ' '.join(['c'] * 4) + '}\n' \
             '&&&&\multicolumn{4}{c}{subj}\\\\\n' \
@@ -482,20 +481,14 @@ class xndarrayTest(unittest.TestCase):
 
         sh = (2, 100, 50)
         c = xndarray(np.arange(np.prod(sh)).reshape(sh), ['c', 'voxel', 't'])
-        # print 'c:'
-        # print c.descrip()
         m = np.zeros((10, 10, 10), dtype=int)
         m.flat[:100] = 1
         c_expanded = c.expand(m, axis='voxel', target_axes=['x', 'y', 'z'])
 
         c_flat = c_expanded.flatten(m, ['x', 'y', 'z'], 'voxel')
-        # print 'c_flat:'
-        # print c_flat.descrip()
         assert c == c_flat
 
     def test_sub_cuboid(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
 
         c = xndarray(self.arr_flat, self.arr_flat_names, self.arr_flat_domains)
 
@@ -516,35 +509,19 @@ class xndarrayTest(unittest.TestCase):
     def test_operations(self):
 
         data1 = np.arange(4 * 5, dtype=float).reshape(4, 5) + 1
-        # print 'data1:', data1.dtype
         data1_copy = data1.copy()
         data2 = np.arange(4 * 5).reshape(4, 5) * 4. + 1
-        # print 'data2:', data2.dtype
         data2_copy = data2.copy()
 
         c = xndarray(data1, ['x', 'time'], {'time': np.arange(5) + 2 / 3.})
         c_bak = c
-        # print 'c:', id(c)
-        # print c.descrip()
-        # print c.data
-        # print ''
 
         c2 = xndarray(data2, ['x', 'time'], {'time': np.arange(5) + 2 / 3.})
-        # print 'c2:', id(c2)
-        # print c2.descrip()
-        # print c2.data
-        # print ''
 
         c_add = c + c2
-        # print 'c_add:', id(c_add)
-        # print c_add.descrip()
-        # print c_add.data
         assert (c_add.data == data1_copy + data2_copy).all()
 
         c += c2
-        # print 'c after inplace add:', id(c)
-        # print c.descrip()
-        # print c.data
         assert c.data is data1
         assert (c.data == data1_copy + data2_copy).all()
         assert c is c_bak
@@ -560,10 +537,6 @@ class xndarrayTest(unittest.TestCase):
         assert (c_mul.data == data1_copy * data2_copy).all()
 
         c_div = c / c2
-        # print 'c_div:'
-        # print c_div.data
-        # print data1_copy / data2_copy
-        #assert np.isnan(c_div.data[0,0])
         assert (c_div.data.flat[1:] == (
             data1_copy / data2_copy).flat[1:]).all()
 
@@ -607,8 +580,6 @@ class xndarrayTest(unittest.TestCase):
 
     def test_save_as_nii(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         c = xndarray(self.arr3d, ['x', 'y', 'z'],
                      {'x': np.arange(self.sh3d[0]) * 3,
                       'y': np.arange(self.sh3d[1]) * 3,
@@ -663,8 +634,6 @@ class xndarrayTest(unittest.TestCase):
 
     def test_split(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         sh = (2, 4, 4, 4)
         c = xndarray(np.arange(np.prod(sh)).reshape(sh), ['condition'] + MRI3Daxes,
                      {'condition': ['audio', 'video']})

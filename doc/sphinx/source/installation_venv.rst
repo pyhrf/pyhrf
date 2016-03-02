@@ -25,7 +25,6 @@ Once your virtualenv is ready, activate it and run:
     (pyhrf) $ pip install nibabel
     (pyhrf) $ pip install sympy
     (pyhrf) $ pip install nipy
-    (pyhrf) $ pip install pyhrf
 
 It is not trivial (and not described here) to install PyQt4 in an virtualenv so no viewer will be available in virtualenv.
 Optional dependencies:
@@ -38,7 +37,13 @@ Optional dependencies:
     (pyhrf) $ pip install pygraphviz
     (pyhrf) $ pip install Pillow
 
-If you want to install the last development version, replace the last command by:
+Install pyhrf itself:
+
+.. code:: bash
+
+    (pyhrf) $ pip install pyhrf
+
+If you want to install the last development version, replace the previous command by:
 
 .. code:: bash
 

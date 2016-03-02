@@ -417,6 +417,7 @@ def merge_fmri_sessions(fmri_data_sets):
                     mask_loaded_from_file=fmri_data_sets[0].mask_loaded_from_file)
 
 
+
 # FIXME: remove the following class and rewrite the next function
 class Object(object):
     pass
@@ -925,6 +926,7 @@ class FmriData(XmlInitable):
         from pyhrf.tools._io import read_volume
 
         bold = simulation['bold']
+
         if isinstance(bold, xndarray):
             bold = bold.reorient(['time', 'voxel'])
             nvox = bold.data.shape[1]
@@ -1105,6 +1107,9 @@ class FmriData(XmlInitable):
 
     def get_joined_onsets(self):
         return self.paradigm.get_joined_onsets()
+
+    def get_joined_durations(self):
+        return self.paradigm.get_joined_durations()
 
     # TODO : fix average computing -> handle sparse representation of mask
     def compute_average(self):

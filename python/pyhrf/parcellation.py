@@ -28,6 +28,15 @@ from pyhrf.glm import glm_nipy
 
 logger = logging.getLogger(__name__)
 
+old_to_new_log_dict = {
+    0: logging.WARNING,
+    1: logging.INFO,
+    2: logging.INFO,
+    3: logging.INFO,
+    4: logging.INFO,
+    5: logging.DEBUG,
+    6: logging.DEBUG,
+}
 
 def round_nb_parcels(n):
     if n >= 100:
@@ -92,7 +101,12 @@ def parcellation_ward_spatial(func_data, n_clusters, graph=None):
             independent)
     Output: parcellation labels
     """
-    from sklearn.cluster import Ward
+    try:
+        # sklearn version < 0.17
+        from sklearn.cluster import Ward as AgglomerativeClustering
+    except ImportError:
+        from sklearn.cluster import AgglomerativeClustering
+
     from pyhrf.graph import graph_to_sparse_matrix, sub_graph
     if graph is not None:
         labels = np.zeros(len(graph), dtype=np.int32)
@@ -130,12 +144,14 @@ def parcellation_ward_spatial(func_data, n_clusters, graph=None):
             cc_data = func_data[cc]
             logger.info('Launch spatial Ward (nclusters=%d)  on data of shape %s',
                         nc, str(cc_data.shape))
-            ward_object = Ward(
-                n_clusters=nc, connectivity=cc_connectivity).fit(cc_data)
+            ward_object = AgglomerativeClustering(
+                n_clusters=nc, connectivity=cc_connectivity
+            ).fit(cc_data)
             labels[cc] += ward_object.labels_ + 1 + labels.max()
     else:
-        ward_object = Ward(n_clusters=n_clusters).fit(
-            func_data)  # connectivity=None
+        ward_object = AgglomerativeClustering(
+            n_clusters=n_clusters
+        ).fit(func_data)  # connectivity=None
         labels = ward_object.labels_ + 1
 
     return labels
@@ -281,9 +297,7 @@ class Talker:
             self.t_id = ''
 
     def verbose(self, level, msg):
-        if self.verbosity >= level:
-            stars = '*' * level
-            print stars, self.t_id, msg
+        logger.log(old_to_new_log_dict[level], msg)
 
     def verbose_array(self, level, array):
         if self.verbosity >= level:

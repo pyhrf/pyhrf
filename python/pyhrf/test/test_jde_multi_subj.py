@@ -103,10 +103,6 @@ def simulate_subjects(output_dir, snr_scenario='high_snr',
 class MultiSubjTest(unittest.TestCase):
 
     def setUp(self):
-
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
-
         np.random.seed(8652761)
 
         self.simu_dir = pyhrf.get_tmp_path()
@@ -234,7 +230,6 @@ class MultiSubjTest(unittest.TestCase):
                                   output_dir=output_dir)
 
         outputs = treatment.run()
-        # print 'out_dir:', output_dir
         return outputs
 
     def test_quick(self):

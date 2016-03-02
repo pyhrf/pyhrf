@@ -25,11 +25,11 @@ try:
     # raise ImportError() # for test
 except ImportError, e:
     if 0 and pyhrf.__usemode__ == pyhrf.DEVEL:
-        print '---------------------------------------------------'
-        print 'Warning: pygraph is not available. Maybe it is not installed.'
-        print 'You may try "easy_install python-graph-core" or the package '\
-            '"python-pygraph" may be available from ubuntu reps.'
-        print '---------------------------------------------------'
+        logger.warning('---------------------------------------------------')
+        logger.warning('Warning: pygraph is not available. Maybe it is not installed.')
+        logger.warning('You may try "easy_install python-graph-core" or the package'
+                       '"python-pygraph" may be available from ubuntu reps.')
+        logger.warning('---------------------------------------------------')
     pygraph_available = False
 else:
     pygraph_available = True
@@ -399,7 +399,7 @@ def connected_components_iter(g):
         g = graph_pygraph(g)
         bfs = bfs_pygraph
     else:
-        print 'Warning: pygraph not available ... fall back to slow BFS function'
+        logger.warning('Warning: pygraph not available ... fall back to slow BFS function')
         bfs = breadth_first_search
 
     visited = np.zeros(len(g), dtype=bool)
@@ -418,7 +418,7 @@ def connected_components(g):
         g = graph_pygraph(g)
         bfs = bfs_pygraph
     else:
-        print 'Warning: pygraph not available ... fall back to slow BFS function'
+        logger.warning('Warning: pygraph not available ... fall back to slow BFS function')
         bfs = breadth_first_search
 
     if 1:

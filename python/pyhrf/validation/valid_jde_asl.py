@@ -24,7 +24,7 @@ class ASLTest(unittest.TestCase):
         np.random.seed(8652761)
 
         self.tmp_dir = pyhrf.get_tmp_path()
-        self.clean_tmp = False  # HACK True
+        self.clean_tmp = True
 
         self.sampler_params_for_single_test = {
             'nb_iterations': 40,

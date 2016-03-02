@@ -370,6 +370,9 @@ class CachedEvalTest(unittest.TestCase):
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.cache_dir = tmpDir
 
+    def tearDown(self):
+        shutil.rmtree(self.cache_dir)
+
     def test_simple(self):
         cached_eval(foo_func, (1, 2), path=self.cache_dir)
 
@@ -393,9 +396,6 @@ class CachedEvalTest(unittest.TestCase):
         cached_eval(slow_func, {'a': 4, 'b': 8}, digest_code=True,
                     path=self.cache_dir)
         delta = time.time() - t0
-
-    def tearDown(self):
-        shutil.rmtree(self.cache_dir)
 
 
 def computeB(a, e):
@@ -514,7 +514,7 @@ class PipelineTest(unittest.TestCase):
     def test_cached(self):
         try:
             from joblib import Memory
-            mem = Memory(self.cache_dir)
+            mem = Memory(self.cache_dir, verbose=0)
             dep_tree = {
                 'a': 5,
                 'b': 6,
@@ -534,8 +534,6 @@ class PipelineTest(unittest.TestCase):
 
     def test_multiple_output_values(self):
 
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         data = Pipeline({'e': foo_a,
                          'b': foo_default_arg,
                          ('a', 'd'): foo_multiple_returns})

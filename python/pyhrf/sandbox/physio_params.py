@@ -99,9 +99,9 @@ PHY_PARAMS_KHALIDOV11 = {
     'r0': 100,  # 25 at 1.5T, and rO = 25 (B0/1.5)**2
     'vt0': 80.6,  # 40.3 at 1.5T, and vt0 = 40.3 (B0/1.5)
     'e': 1.43,  # 0.4 or 1
-    'TE': 0.04,
+    'TE': 0.018,
     'model': 'RBM',
-    'linear': True,
+    'linear': False,
     'obata': False,
     'buxton': False
 }
@@ -238,11 +238,29 @@ def phy_integrate_euler(phy_params, tstep, stim, epsilon, Y0=None):
 
     res = np.zeros((stim.size + 1, 4))
     res[0, :] = Y0 or np.array([0., 1., 1., 1.])
+    #res[0, :] = Y0 or np.array([0., 0., 0., 0.]) 
 
     for ti in xrange(1, stim.size + 1):
         cpt_phy_model_deriv(res[ti - 1], stim[ti - 1], epsilon, dest=res[ti])
         res[ti] *= tstep
         res[ti] += res[ti - 1]
+
+    if 0:
+        print 'res shape = ', res.shape
+
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.plot(res[1:, 0], label='N')
+        plt.plot(res[1:, 1], label='fi')
+        plt.plot(res[1:, 2], label='v')
+        plt.plot(res[1:, 3], label='q')
+        plt.legend()
+        plt.xlabel('points')
+        plt.show()
+
+        import nibabel
+        img = nibabel.Nifti1Image(res, np.eye(4))
+        nibabel.save(img, 'BM_variables.nii')
 
     return res[1:, :].T
 
@@ -279,7 +297,7 @@ def create_evoked_physio_signals(physiological_params, paradigm,
     first_cond = paradigm.get_stimulus_names()[0]
     stim = paradigm.get_rastered(integration_step)[first_cond][0]
     neural_efficacies = neural_efficacies[0]
-
+    
     # response matrix intialization
     integrated_vars = np.zeros((4, neural_efficacies.shape[0], stim.shape[0]))
     for i, epsilon in enumerate(neural_efficacies):
@@ -291,6 +309,7 @@ def create_evoked_physio_signals(physiological_params, paradigm,
     nb_scans = paradigm.get_rastered(dt)[first_cond][0].size
     dsf = int(dt / integration_step)
     return np.swapaxes(integrated_vars[:, :, ::dsf][:, :, :nb_scans], 1, 2)
+    #return np.swapaxes(integrated_vars[:, :, :][:, :, :], 1, 2)
 
 
 def create_k_parameters(physiological_params):
@@ -372,10 +391,10 @@ def create_physio_brf(physiological_params, response_dt=.5,
     brf = create_bold_from_hbr_and_cbv(physiological_params, q[:, 0], v[:, 0])
     if return_brf_q_v:
         # WARNING!! Added to compute figures
-        return brf / (brf**2).sum()**.5, q, v, s, f
-        # return  brf, q, v, s, f  #WARNING!! Added to compute figures
+        #return brf / (brf**2).sum()**.5 , q, v, s, f
+        return  brf, q, v, s, f
     else:
-        return brf  # / (brf**2).sum()**.5
+        return brf #/ (brf**2).sum()**.5
 
 
 def create_physio_prf(physiological_params, response_dt=.5,
@@ -405,10 +424,10 @@ def create_physio_prf(physiological_params, response_dt=.5,
                                               response_dt)
     prf = f[:, 0] - f[0, 0]  # remove y-intercept
     if return_prf_q_v:
-        return prf / (prf**2).sum()**.5  # , q, v
-        # return prf, q, v
+        #return prf / (prf**2).sum()**.5  # , q, v
+        return prf, q, v
     else:
-        return prf  # / (prf**2).sum()**.5
+        return prf #/ (prf**2).sum()**.5
 
 
 def create_omega_prf(primary_brf, dt, phy_params):
@@ -445,12 +464,12 @@ def linear_rf_operator(rf_size, phy_params, dt, calculating_brf=False):
     k1, k2, k3 = create_k_parameters(phy_params)
     c = tau_m_inv * (1 + (1 - E0) * np.log(1 - E0) / E0)
 
-    from pyhrf.sandbox.physio2 import buildOrder1FiniteDiffMatrix_central
+    from pyhrf.sandbox.physio import buildOrder1FiniteDiffMatrix_central
     D = buildOrder1FiniteDiffMatrix_central(rf_size, dt)  # numpy matrix
     eye = np.matrix(np.eye(rf_size))  # numpy matrix
 
-    A3 = tau_m_inv * ((D + (alpha_w_inv * tau_m_inv) * eye).I)
-    A4 = c * (D + tau_m_inv * eye).I - (D + tau_m_inv * eye).I * ((1 - alpha_w)
+    A3 = - tau_m_inv * ((D + (alpha_w_inv * tau_m_inv) * eye).I)
+    A4 = - c * (D + tau_m_inv * eye).I + (D + tau_m_inv * eye).I * ((1 - alpha_w)
           * alpha_w_inv * tau_m_inv**2) * (D + alpha_w_inv * tau_m_inv * eye).I
     # A = V0 * ( (k1+k2)*A4 + (k3-k2)* A3 ) # A = h x2^{-1} = Omega^{-1}
 
@@ -467,9 +486,9 @@ def linear_rf_operator(rf_size, phy_params, dt, calculating_brf=False):
              (eye - (eye - A4) * np.linalg.inv(eye - A3)) + k3 * A3)
 
     if (calculating_brf):
-        return -A.A
+        return A.A
     else:  # calculating_prf
-        return -(A.I).A
+        return (A.I).A
 
 
 def calc_linear_rfs(simu_brf, simu_prf, phy_params, dt, normalized_rfs=True):
@@ -535,8 +554,6 @@ def calc_linear_rfs(simu_brf, simu_prf, phy_params, dt, normalized_rfs=True):
         # A = h x2^{-1} = Omega^{-1}
         X = V0 * ((k1 + k2) * X4 + sign * (k3 - k2) * X3)
     else:  # non-linear
-        # print X4
-        # print X3
         X = V0 * (k1 * X4 + k2 * (X4 - X3) * np.linalg.inv(I - X3) + k3 * X3)
 
     # for error checking

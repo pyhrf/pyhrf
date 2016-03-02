@@ -632,35 +632,16 @@ def discard_bad_data(bold, roiMask, time_axis=None):
         time_axis = TIME_AXIS
 
     m = roiMask
-    # print 'roiMask:', roiMask.shape
-    # print 'bold.shape:', bold.shape
     var_bold = (bold ** 2).sum(time_axis) / (bold.shape[time_axis] - 1) - \
         bold.mean(time_axis) ** 2
-    # zeroVarianceVoxels = np.bitwise_and(m>=1, bold.std(0)==0.) #TODO check
-    # MemoryError ?
     zeroVarianceVoxels = np.bitwise_and(m >= 1, var_bold == 0.)
-    # print 'zeroVarianceVoxels:', zeroVarianceVoxels.shape
     if zeroVarianceVoxels.any():
         logger.debug('discarded voxels (std=0):')
         logger.debug(np.where(zeroVarianceVoxels == True))
         logger.info('!! discarded voxels (std=0): %d/%d',
                     zeroVarianceVoxels.sum(), (m != 0).sum())
 
-        # HACK
-        zvv = zeroVarianceVoxels
-        mzvv = np.where(zeroVarianceVoxels)
-        bsh = bold.shape
-        if bold.ndim == 2:
-            bold[:, mzvv[0]] = np.random.randn(bsh[0], zvv.sum()) * \
-                var_bold.max() ** .5
-        else:
-            bold[mzvv[0], mzvv[1], mzvv[2], :] = np.random.randn(zvv.sum(), bsh[3]) *\
-                var_bold.max() ** .5
-
-        zeroVarianceVoxels = np.zeros_like(zeroVarianceVoxels)
-
     nanVoxels = np.bitwise_and(m >= 1, np.isnan(bold.sum(time_axis)))
-    # print 'nanVoxels:', nanVoxels.shape
     if nanVoxels.any():
         logger.debug('discarded voxels (nan values):')
         logger.debug(np.where(nanVoxels == True))
@@ -668,9 +649,6 @@ def discard_bad_data(bold, roiMask, time_axis=None):
                     (m != 0).sum())
 
     toDiscard = np.bitwise_or(zeroVarianceVoxels, nanVoxels)
-    # print toDiscard.sum()
-    # print 'np.bitwise_not(toDiscard):', (np.bitwise_not(toDiscard)).shape
-    # print 'np.bitwise_not(toDiscard):', np.bitwise_not(toDiscard).sum()
     roiMask *= np.bitwise_not(toDiscard)
 
 

@@ -92,8 +92,8 @@ comment=no
 [FORMAT]
 
 # Maximum number of characters on a single line.
-# Maximum IS 80 but for convenience, we set the warning to 83
-max-line-length=83
+# Maximum is 90-ish so for convenience, we set the warning to 100
+max-line-length=100
 
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=^\s*(# )?<?https?://\S+>?$

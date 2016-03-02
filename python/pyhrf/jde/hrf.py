@@ -71,13 +71,13 @@ def buildDiagGaussianMat(size, width):
 
 def sampleHRF_voxelwise_iid(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
-    logger.info('stLambdaS:')
-    logger.info(stLambdaS)
-    logger.info('varR:')
-    logger.info(varR)
-    logger.info('rh: %f', rh)
-    logger.info('varR/rh:')
-    logger.info(varR / rh)
+    logger.debug('stLambdaS:')
+    logger.debug(stLambdaS)
+    logger.debug('varR:')
+    logger.debug(varR)
+    logger.debug('rh: %f', rh)
+    logger.debug('varR/rh:')
+    logger.debug(varR / rh)
 
     varInvSigma_h = stLambdaS + nbVox * varR / rh
 
@@ -96,13 +96,13 @@ def sampleHRF_voxelwise_iid(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 def sampleHRF_single_hrf_hack(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
     varInvSigma_h = stLambdaS / nbVox
 
-    logger.info('stLambdaS:')
-    logger.info(stLambdaS)
-    logger.info('varR:')
-    logger.info(varR)
-    logger.info('rh: %f', rh)
-    logger.info('varR/rh:')
-    logger.info(varR / rh)
+    logger.debug('stLambdaS:')
+    logger.debug(stLambdaS)
+    logger.debug('varR:')
+    logger.debug(varR)
+    logger.debug('rh: %f', rh)
+    logger.debug('varR/rh:')
+    logger.debug(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -121,13 +121,13 @@ def sampleHRF_single_hrf_hack(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 def sampleHRF_single_hrf(stLambdaS, stLambdaY, varR, rh, nbColX, nbVox):
 
     varInvSigma_h = stLambdaS
-    logger.info('stLambdaS:')
-    logger.info(stLambdaS)
-    logger.info('varR:')
-    logger.info(varR)
-    logger.info('rh: %f', rh)
-    logger.info('varR/rh:')
-    logger.info(varR / rh)
+    logger.debug('stLambdaS:')
+    logger.debug(stLambdaS)
+    logger.debug('varR:')
+    logger.debug(varR)
+    logger.debug('rh: %f', rh)
+    logger.debug('varR/rh:')
+    logger.debug(varR / rh)
 
     varInvSigma_h += varR / rh
 
@@ -323,7 +323,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         return varR / rh
 
     def samplingWarmUp(self, variables):
-        if self.varR == None:
+        if self.varR is None:
             smplRH = self.get_variable('hrf_var')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
@@ -532,10 +532,10 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         self.finalValue_sign_corr = self.finalValue * \
             (1 - 2 * sign_error)  # sign_error at 0 or 1
         if sign_error:
-            logger.info('Warning : sign error on HRF')
+            logger.warning('Warning : sign error on HRF')
 
-        logger.info('HRF finalValue :\n')
-        logger.info(self.finalValue)
+        logger.debug('HRF finalValue :\n')
+        logger.debug(self.finalValue)
 
     def get_final_value(self):
         """ Used to compare with simulated value """
@@ -555,7 +555,7 @@ class HRFSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         return ['crit_norm'], crit_norm
 
     def getScaleFactor(self):
-        if self.finalValue == None:
+        if self.finalValue is None:
             self.setFinalValue()
         # Use amplitude :
         #scaleF = self.finalValue.max()-self.finalValue.min()
@@ -1414,7 +1414,7 @@ class HRF_two_parts_Sampler(HRFSampler):
         return varR / rh
 
     def samplingWarmUp(self, variables):
-        if self.varR == None:
+        if self.varR is None:
             smplRH = self.get_variable('hrf_var')
             rh = smplRH.currentValue
             (useless, self.varR) = genGaussianSmoothHRF(self.zc,
@@ -1627,13 +1627,13 @@ class HRF_two_parts_Sampler(HRFSampler):
         self.finalValue_sign_corr = self.finalValue * \
             (1 - 2 * sign_error)  # sign_error at 0 or 1
         if sign_error:
-            logger.info('Warning : sign error on HRF')
+            logger.warning('Warning : sign error on HRF')
 
         logger.info('HRF finalValue :\n')
         logger.info(self.finalValue)
 
     def getScaleFactor(self):
-        if self.finalValue == None:
+        if self.finalValue is None:
             self.setFinalValue()
         # Use amplitude :
         #scaleF = self.finalValue.max()-self.finalValue.min()
@@ -1881,7 +1881,7 @@ class RHSampler(xmlio.XmlInitable, GibbsSamplerVariable):
                 raise Exception('True HRF variance have to be used but '
                                 'none defined.')
 
-        if self.currentValue == None:
+        if self.currentValue is None:
             self.currentValue = np.array([0.0001])
 
     def sampleNextInternal(self, variables):
@@ -1993,7 +1993,7 @@ if 0:  # not maintained
             self.nbVox = self.dataInput.nbVoxels
 
         def checkAndSetInitValue(self, variables):
-            if self.currentValue == None:
+            if self.currentValue is None:
                 if not self.sampleFlag and self.dataInput.simulData != None \
                         and self.dataInput.simulData.hrf.hrfParams.has_key('rh'):
                     simulRh = self.dataInput.simulData.hrf.hrfParams['rh']

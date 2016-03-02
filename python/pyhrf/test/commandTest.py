@@ -14,7 +14,7 @@ from pyhrf import (FMRISessionVolumicData, FmriData, FMRISessionSimulationData,
                    FMRISessionSurfacicData)
 from pyhrf.jde.models import availableModels
 from pyhrf import xmlio
-from pyhrf.xmlio import read_xml  # , write_xml
+from pyhrf.xmlio import read_xml
 from pyhrf.ui.jde import JDEMCMCAnalyser
 
 
@@ -27,9 +27,10 @@ class TreatmentCommandTest(unittest.TestCase):
         tmpDir = tempfile.mkdtemp(prefix='pyhrf_tests',
                                   dir=pyhrf.cfg['global']['tmp_path'])
         self.tmp_dir = tmpDir
+        self.clean_tmp = True
 
     def tearDown(self):
-        if 0:  # HACK
+        if self.clean_tmp:
             shutil.rmtree(self.tmp_dir)
 
     def _test_buildcfg(self, cmd, paradigm, data_type, data_scenario,
@@ -61,8 +62,6 @@ class TreatmentCommandTest(unittest.TestCase):
         self.assertTrue(isinstance(t.analyser, JDEMCMCAnalyser))
 
     def test_buildcfg_jde_locav_vol_default(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         cfg_file = self._test_buildcfg(cmd='pyhrf_jde_buildcfg',
                                        paradigm='loc_av',
                                        data_type='volume',
@@ -145,15 +144,10 @@ class TreatmentCommandTest(unittest.TestCase):
 
         f = open(xmlFile, 'w')
         sxml = xmlio.to_xml(t)
-        # print 'sxml:'
-        # print sxml
         f.write(sxml)
         f.close()
 
     def makeQuietOutputs(self, xmlFile):
-
-        # print 'makeQuietOutputs ...'
-        # print 'xmlFile:', xmlFile
         t = xmlio.from_xml(file(xmlFile).read())
         t.set_init_param('output_dir', None)
         f = open(xmlFile, 'w')
@@ -170,16 +164,12 @@ class TreatmentCommandTest(unittest.TestCase):
             raise Exception('Default cfg file was not created')
 
         self.makeQuietOutputs(cfg_file)
-        # if pyhrf.__usemode__ == 'enduser':
-        #     self.makeQuickJDE(cfg_file)
 
         cmd = 'pyhrf_jde_estim -s -c %s' % cfg_file
         if os.system(cmd) != 0:
             raise Exception('"' + cmd + '" did not execute correctly')
 
     def test_WNSGGMS_surf_cmd(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         self._testJDEModelCmd('WNSGGMS', datatype='surface')
 
     def test_WNSGGMS(self):
@@ -230,8 +220,6 @@ class TreatmentCommandTest(unittest.TestCase):
                             'was not created' % (modelLabel, cmd))
 
         self.setDummyInputData(cfg_file)
-        # if pyhrf.__usemode__ == 'enduser':
-        #     self.makeQuickJDE(cfg_file)
         self.makeQuietOutputs(cfg_file)
         cmd = 'pyhrf_jde_estim -s -c %s -v %d' % (cfg_file,
                                                   logger.getEffectiveLevel())
@@ -240,8 +228,6 @@ class TreatmentCommandTest(unittest.TestCase):
                             % (modelLabel, datatype, cmd))
 
     def testHrfEstim(self):
-        # pyhrf.verbose.set_verbosity(0)
-        pyhrf.logger.setLevel(logging.WARNING)
         from pyhrf.ui.rfir_ui import DEFAULT_CFG_FILE
         cfg_file = op.join(self.tmp_dir, DEFAULT_CFG_FILE)
         cmd = 'pyhrf_rfir_buildcfg -o %s -n 3' % cfg_file
@@ -349,8 +335,6 @@ anatomy.{hdr,img}
         cmd = ['pyhrf_gls', '-r', '--colors=off', '-g', group_re,
                self.tmp_dir]
         output = check_output(cmd)
-        # print 'output:'
-        # print output
         expected_ouput = """%s:
 %s/subject1:
 %s/subject1/fmri:

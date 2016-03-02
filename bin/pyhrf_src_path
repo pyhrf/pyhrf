@@ -1,4 +1,6 @@
-#! /bin/env python
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+
 import os
 import pyhrf
 print os.path.join(os.path.dirname(pyhrf.__file__),'../../')

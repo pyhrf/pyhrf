@@ -93,7 +93,7 @@ class Verbose(pyhrf._verbose.Verbose):
 
     old_to_new_log_dict = {
         0: logging.WARNING,
-        1: logging.CRITICAL,
+        1: logging.INFO,
         2: logging.INFO,
         3: logging.INFO,
         4: logging.INFO,

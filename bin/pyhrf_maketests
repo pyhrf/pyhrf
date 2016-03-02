@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
-from pyhrf.test import *
 import unittest
+import logging
+
+from pyhrf import logger
+from pyhrf.test import *
+
+logger.setLevel(logging.CRITICAL)
 
 #TODO : create different test scenarios ...
 if 0:

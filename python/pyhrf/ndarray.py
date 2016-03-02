@@ -416,7 +416,7 @@ class xndarray:
         outer_axes = row_axes + col_axes
         plot_args = plot_args or {}
 
-        norm = plt.normalize(self.min(), self.max())
+        norm = plt.Normalize(self.min(), self.max())
 
         def protect_html_fn(fn):
             base, ext = op.splitext(fn)
