@@ -151,6 +151,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData is of type FmriRoiData, see pyhrf.core.FmriRoiData
         # roiData.bold : numpy array of shape
         # BOLD has shape (nscans, nvoxels)
+
         # roiData.graph #list of neighbours
         n_scan_allsession, nvox = roiData.bold.shape
         n_scan = n_scan_allsession / self.n_session
@@ -158,6 +159,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         Onsets = roiData.paradigm.get_joined_onsets_dim()
         durations = roiData.paradigm.get_joined_durations_dim()
         TR = roiData.tr
+        # K = 2                      # number of classes
         beta = self.beta
         scale = 1                   # roiData.nbVoxels
         #nvox = roiData.get_nb_vox_in_mask()
@@ -183,38 +185,37 @@ class JDEVEMAnalyser(JDEAnalyser):
             except:
                 simu = None
 
-        if self.physio:
-            NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
-            noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, alpha,\
-            Sigma_brls, Sigma_prls, Sigma_brf, Sigma_prf, rerror, \
-            CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
-            cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE = Main_vbjde_physio(
-                                       graph, data, Onsets, durations, self.hrfDuration,
-                                       self.nbClasses, TR, beta, self.dt, scale=scale,
-                                       estimateSigmaG=self.estimateSigmaG,
-                                       sigmaH=self.sigmaH, sigmaG=self.sigmaG,
-                                       gamma_h=self.gammaH, gamma_g=self.gammaG,
-                                       NitMax=self.nItMax, NitMin=self.nItMin,
-                                       estimateSigmaH=self.estimateSigmaH,
-                                       estimateBeta=self.estimateBeta, PLOT=self.PLOT,
-                                       contrasts=self.contrasts,
-                                       computeContrast=self.computeContrast,
-                                       idx_first_tag=idx_tag1,
-                                       simulation=simu, sigmaMu=self.sigmaMu,
-                                       estimateH=self.estimateH,
-                                       estimateG=self.estimateG,
-                                       estimateA=self.estimateA,
-                                       estimateC=self.estimateC,
-                                       estimateNoise=self.estimateNoise,
-                                       estimateMP=self.estimateMixtParam,
-                                       estimateZ=self.estimateLabels,
-                                       estimateLA=self.estimateLA,
-                                       constraint=self.constrained,
-                                       positivity=self.positivity,
-                                       use_hyperprior=self.use_hyperprior,
-                                       phy_params=self.phy_params, 
-                                       prior=self.prior, zc=self.zc)
-        
+        NbIter, brls, brls_std, estimated_brf, prls, estimated_prf, labels, \
+        noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, alpha,\
+        Sigma_brls, Sigma_prls, Sigma_brf, Sigma_prf, rerror, \
+        CONTRAST_A, CONTRASTVAR_A, ppm_a_nrl, ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, \
+        cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE = Main_vbjde_physio(
+                                   graph, data, Onsets, durations, self.hrfDuration,
+                                   self.nbClasses, TR, beta, self.dt, scale=scale,
+                                   estimateSigmaG=self.estimateSigmaG,
+                                   sigmaH=self.sigmaH, sigmaG=self.sigmaG,
+                                   gamma_h=self.gammaH, gamma_g=self.gammaG,
+                                   NitMax=self.nItMax, NitMin=self.nItMin,
+                                   estimateSigmaH=self.estimateSigmaH,
+                                   estimateBeta=self.estimateBeta, PLOT=self.PLOT,
+                                   contrasts=self.contrasts,
+                                   compute_contrasts=self.computeContrast,
+                                   idx_first_tag=idx_tag1,
+                                   simulation=simu, sigmaMu=self.sigmaMu,
+                                   estimateH=self.estimateH,
+                                   estimateG=self.estimateG,
+                                   estimateA=self.estimateA,
+                                   estimateC=self.estimateC,
+                                   estimateNoise=self.estimateNoise,
+                                   estimateMP=self.estimateMixtParam,
+                                   estimateZ=self.estimateLabels,
+                                   estimateLA=self.estimateLA,
+                                   constraint=self.constrained,
+                                   positivity=self.positivity,
+                                   use_hyperprior=self.use_hyperprior,
+                                   phy_params=self.phy_params, 
+                                   prior=self.prior, zc=self.zc)
+    
         # Plot analysis duration
         self.analysis_duration = time() - t_start
         logger.info('JDE VEM analysis took: %s',
@@ -230,6 +231,9 @@ class JDEVEMAnalyser(JDEAnalyser):
         #logger.info("BRF prepared ")
         domCondition = {'condition': cNames}
         outputs['brls'] = xndarray(brls.T, value_label="BRLs",
+                                   axes_names=['condition', 'voxel'],
+                                   axes_domains=domCondition)
+        outputs['brls_div_std'] = xndarray(brls_std.T, value_label="BRLs / std",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
         #logger.info("BRLs prepared ")
@@ -322,31 +326,50 @@ class JDEVEMAnalyser(JDEAnalyser):
             logger.info("drift prepared ")
         logger.info("outputs prepared ")
 
+
+        outputs["ppm_a_nrl"] = xndarray(ppm_a_nrl, value_label="PPM NRL alpha fixed",
+                                            axes_names=["voxel", "condition"],
+                                            axes_domains=domCondition)
+
+        outputs["ppm_g_nrl"] = xndarray(ppm_g_nrl, value_label="PPM NRL gamma fixed",
+                                            axes_names=["voxel", "condition"],
+                                            axes_domains=domCondition)
+
         if (len(self.contrasts) >0) and self.computeContrast:
             #keys = list((self.contrasts[nc]) for nc in self.contrasts)
             domContrast = {'contrast':self.contrasts.keys()}
-            outputs['contrastsA'] = xndarray(CONTRAST_A, value_label="Contrast_A",
+            outputs['contrasts'] = xndarray(CONTRAST_A, value_label="Contrast",
                                             axes_names=['voxel','contrast'],
                                             axes_domains=domContrast)
-            outputs['contrastsC'] = xndarray(CONTRAST_C, value_label="Contrast_C",
-                                            axes_names=['voxel','contrast'],
-                                            axes_domains=domContrast)
-            c = xndarray(CONTRASTVAR_A, value_label="Contrasts_Variance_A",
-                         axes_names=['voxel','contrast'],
-                         axes_domains=domContrast)
-            outputs['contrasts_variance_a'] = c
-            outputs['ncontrasts_a'] = xndarray(CONTRAST_A/CONTRASTVAR_A**.5,
-                                             value_label="Normalized Contrast A",
+            outputs['contrasts_variance'] = xndarray(CONTRASTVAR_A, 
+                                             value_label="Contrasts Variance",
                                              axes_names=['voxel','contrast'],
                                              axes_domains=domContrast)
-            c = xndarray(CONTRASTVAR_C, value_label="Contrasts_Variance_C",
-                         axes_names=['voxel','contrast'],
-                         axes_domains=domContrast)
-            outputs['contrasts_variance_c'] = c
-            outputs['ncontrasts_c'] = xndarray(CONTRAST_C/CONTRASTVAR_C**.5,
-                                             value_label="Normalized Contrast C",
+            outputs['ncontrasts'] = xndarray(CONTRAST_A/CONTRASTVAR_A**.5,
+                                             value_label="Normalized Contrast",
                                              axes_names=['voxel','contrast'],
                                              axes_domains=domContrast)
+
+            outputs["ppm_a_contrasts"] = xndarray(ppm_a_contrasts,
+                                                  value_label="PPM Contrasts alpha fixed",
+                                                  axes_names=["voxel", "contrast"],
+                                                  axes_domains=domContrast)
+
+            affine = np.eye(4)
+            for i, contrast in enumerate(self.contrasts.keys()):
+                header = nibabel.Nifti1Header()
+                header['descrip'] = contrast
+                outputs["ppm_a_"+contrast] = xndarray(ppm_a_contrasts[:, i],
+                                                      value_label="PPM Contrasts alpha fixed",
+                                                      axes_names=["voxel"],
+                                                      meta_data=(affine, header))
+                outputs["ppm_a_"+contrast].meta_data[1]["descrip"] = contrast
+
+            outputs["ppm_g_contrasts"] = xndarray(ppm_g_contrasts,
+                                                  value_label="PPM Contrasts alpha fixed",
+                                                  axes_names=["voxel", "contrast"],
+                                                  axes_domains=domContrast)
+
 
         #######################################################################
         # CONVERGENCE

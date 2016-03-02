@@ -646,19 +646,6 @@ def discard_bad_data(bold, roiMask, time_axis=None):
         logger.info('!! discarded voxels (std=0): %d/%d',
                     zeroVarianceVoxels.sum(), (m != 0).sum())
 
-        # HACK
-        zvv = zeroVarianceVoxels
-        mzvv = np.where(zeroVarianceVoxels)
-        bsh = bold.shape
-        if bold.ndim == 2:
-            bold[:, mzvv[0]] = np.random.randn(bsh[0], zvv.sum()) * \
-                var_bold.max() ** .5
-        else:
-            bold[mzvv[0], mzvv[1], mzvv[2], :] = np.random.randn(zvv.sum(), bsh[3]) *\
-                var_bold.max() ** .5
-
-        zeroVarianceVoxels = np.zeros_like(zeroVarianceVoxels)
-
     nanVoxels = np.bitwise_and(m >= 1, np.isnan(bold.sum(time_axis)))
     # print 'nanVoxels:', nanVoxels.shape
     if nanVoxels.any():

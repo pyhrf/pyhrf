@@ -257,6 +257,10 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    print 'onsets = ', onsets
+    print 'durations = ', durations
+    print 'dt = ', dt
+    print 'tmax = ', tmax
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -482,14 +486,6 @@ def norm1_constraint(function, variance):
     def norm1_constraint_equation(fct):
         """Norm2(fct) == 1"""
         return np.linalg.norm(fct, 2) - 1
-
-    #def first_element_constraint(fct):
-    #    """fct[0] == 0"""
-    #    return fct[0]
-
-    #def last_element_constraint(fct):
-    #    """fct[-1] == 0"""
-    #    return fct[-1]
 
     return fmin_slsqp(minimized_function, function,
                       eqcons=[norm1_constraint_equation],
@@ -1209,62 +1205,7 @@ def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J,
 
     # we sum the term that corresponds to the prior
     Y_bar_tilde += prior_mean_term
-
-    # m_H = S_a^-1 y_bar_tilde
-    m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
-
-    return m_H, Sigma_H
-
-
-def expectation_H_ms_concat(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
-                  cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, S):
-    """
-    Expectation-H step:
-    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
-        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
-
-    Returns:
-    m_H, Sigma_H of probability distribution p_H of the current iteration
-    """
-
-    ## Precomputations
-    WXG = W.dot(XX.dot(G).T)
-    mAX = np.tensordot(m_A, XX, axes=(1, 0))                # shape (J, N, D)
-    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
-    #X_Gamma_X = np.tensordot(XX.T, Gamma_X, axes=(1, 0))   # shape (D, M, M, D)
-    #cov_noise = np.maximum(sigma_eps, eps)[:, np.newaxis, np.newaxis]
-    mAX_Gamma = (np.tensordot(mAX, Gamma, axes=(1, 0)) / cov_noise) # shape (J, D, N)
-
-    ## Sigma_H computation
-    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
-    S_a = R_inv / sigmaH + prior_cov_term
-    # second summand: E_pa[Saj.T*Gamma*Saj]
-    # sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
-    print Sigma_A.shape
-    for s in xrange(0, S):
-        S_a += (np.einsum('ijk,lijm->klm', Sigma_A, X_Gamma_X) / cov_noise).sum(0)
-    # third summand: E_pa[Saj.T*Gamma*Saj]
-    # (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
-    for i in xrange(0, J):
-        for s in xrange(0, S):
-            i2 = (s-1)*J + i
-            S_a += mAX_Gamma[i2, :, :].dot(mAX[i2, :, :])  #option 1 faster 13.4
-    #S_a += np.einsum('ijk,ikl->ijl', mAX_Gamma, mAX).sum(0) # option 2 second 8.8
-    #S_a += np.einsum('ijk,ikl->jl', mAX_Gamma, mAX) # option 3 slower 7.5
-
-    # Sigma_H = S_a^-1
-    Sigma_H = np.linalg.inv(S_a)
-
-    ## m_H
-    # Y_bar_tilde computation: (sum_m m_a X_m).T Gamma_i y_tildeH
-    # y_tildeH = yj - sum_m m_C WXG - w alphaj - P lj
-    y_tildeH = y_tilde - WXG.dot(m_C.T)
-    #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
-    Y_bar_tilde = np.einsum('ijk,ki->j', mAX_Gamma, y_tildeH)
-
-    # we sum the term that corresponds to the prior
-    Y_bar_tilde += prior_mean_term
-
+    
     # m_H = S_a^-1 y_bar_tilde
     m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
 
@@ -1636,7 +1577,8 @@ def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
 
 
 def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
-                  mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K, S):
+                  mu_Mc, Beta, labels_proba, p_Q, neighbours_indexes, graph, \
+                  M, J, K, S, nans_init=False):
     # between ASL and BOLD just alpha and Gauss_mat change!!!
     alpha = np.zeros((J, M, K), dtype=np.float64)
     Gauss_mat = np.zeros_like(alpha)
@@ -1645,18 +1587,30 @@ def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
         #Gauss_mat += np.log(vt.normpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma)))
         Gauss_mat += sp.stats.norm.logpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma))
 
+    if nans_init:
+        labels_proba_nans = np.ones_like(labels_proba)/K
+    else:
+        labels_proba_nans = labels_proba.copy()
+
     # Update Ztilde ie the quantity which is involved in the a priori
     # Potts field [by solving for the mean-field fixed point Equation]
     # TODO: decide if we take out the computation of p_q_t or Ztilde
-    B_pqt = Beta[:, np.newaxis, np.newaxis] * p_q_t.copy()
+    B_pqt = Beta[:, np.newaxis, np.newaxis] * labels_proba.copy()
     B_pqt = np.concatenate((B_pqt, np.zeros((M, K, 1), dtype=B_pqt.dtype)), axis=2)
     local_energy = B_pqt[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
     energy = (local_energy + alpha + Gauss_mat )
     #energy -= energy.max()
-    Probas = (np.exp(energy)).transpose(1, 2, 0)
-    aux = Probas.sum(axis=1)[:, np.newaxis, :]
-    aux[np.where(aux==0)] = eps
-    p_q_t = Probas / aux
+    labels_proba = (np.exp(energy)).transpose(1, 2, 0)
+    
+    # Remove NaNs and Infs (# TODO: check for sequential mode)
+    if (labels_proba.sum(axis=1)==0).any():
+        mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
+        labels_proba[mask] = labels_proba_nans[mask]
+    if np.isinf(labels_proba.sum(axis=1)).any():
+        mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
+        labels_proba[mask] = labels_proba_nans[mask]
+
+    p_q_t = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
 
     return p_q_t, p_q_t
 
@@ -1722,9 +1676,15 @@ def maximization_mu_sigma_ms(q_Z, m_X, Sigma_X, M, J, S, K):
 def maximization_sigma_asl(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
     alpha = (np.dot(m_H[:, np.newaxis] * m_H[np.newaxis, :] + Sigma_H, R_inv)).trace()
     if use_hyp:
-        sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4*gamma_h)
+        sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4 * gamma_h)
     else:
         sigma = alpha / (D)
+    if np.isnan(sigma) or sigma==0:
+        print 'WARNING!!!'
+        print 'gamma_h = ', gamma_h
+        print 'D = ', D
+        print 'alpha = ', alpha
+        print m_H
     return sigma
 
 
@@ -2090,16 +2050,13 @@ def Z_Entropy(q_Z, M, J):
 
 eps_FreeEnergy = 0.0000000001
 
-
 def RL_Entropy(Sigma_RL, M, J):
-    #logger.info('Computing RLs Entropy ...')
-    Det_Sigma_RL_j = np.zeros(J, dtype=np.float64)
-    Const = (2 * np.pi * np.exp(1)) ** M
     Entropy = 0.0
+    Const = (2 * np.pi * np.exp(1)) ** M
     for j in xrange(0, J):
-        Det_Sigma_RL_j = np.linalg.det(Sigma_RL[:, :, j])
-        Entropy_j = np.sqrt(Const * Det_Sigma_RL_j)
-        Entropy += np.log(Entropy_j)
+        if not Sigma_RL.sum()==0:
+            _, log_Det_Sigma_RL_j = np.linalg.slogdet(Sigma_RL[:, :, j])
+            Entropy += (np.log(Const) + log_Det_Sigma_RL_j) /2
     return Entropy
 
 
@@ -2415,6 +2372,111 @@ def compute_contrasts(condition_names, contrasts, m_A, m_C,
 
         n += 1
     return CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C
+
+
+def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar,
+                               nrls_class_mean, nrls_class_var, nb_contrasts,
+                               nb_classes, nb_voxels):
+    """Computes the contrasts nrls from the conditions nrls and the mean and
+    variance of the gaussian classes of the contrasts (in the cases of all
+    inactive conditions and all active conditions)
+    Parameters
+    ----------
+    def_contrasts : OrderedDict
+        TODO.
+    condition_names : list
+        TODO.
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+        TODO.
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+        TODO.
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+        TODO.
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+        TODO.
+    nb_contrasts : int
+    nb_classes : int
+    Returns
+    -------
+    contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_var : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_class_mean : ndarray, shape (nb_contrasts, nb_classes)
+    contrasts_class_var : ndarray, shape (nb_contrasts, nb_classes)
+    """
+
+    contrasts_mean = np.zeros((nb_voxels, nb_contrasts))
+    contrasts_var = np.zeros((nb_voxels, nb_contrasts))
+    contrasts_class_mean = np.zeros((nb_contrasts, nb_classes))
+    contrasts_class_var = np.zeros((nb_contrasts, nb_classes))
+
+    for i, contrast_name in enumerate(contrasts):
+        parsed_contrast = parse_expr(contrasts[contrast_name])
+        for condition_name in condition_names:
+            condition_nb = condition_names.index(condition_name)
+            coeff = parsed_contrast.coeff(condition_name)
+            contrasts_mean[:, i] += float(coeff) * nrls_mean[:, condition_nb]
+            contrasts_var[:, i] += float(coeff)**2 * nrls_covar[condition_nb, condition_nb, :]
+            contrasts_class_mean[i, 1] += float(coeff) * nrls_class_mean[condition_nb, 1]
+            contrasts_class_var[i, :] += float(coeff)**2 * nrls_class_var[condition_nb, :]
+
+    return contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
+
+
+def ppm_contrasts(contrasts_mean, contrasts_var, contrasts_class_mean,
+                  contrasts_class_var, threshold_a="std_inact", threshold_g=0.95):
+    """Computes the ppm for the given contrast using either the standard deviation
+    of the "all inactive conditions" class gaussian (default) or the intersection
+    of the [all inactive conditions] and [all active conditions] classes
+    gaussians as threshold for the PPM_a and 0.95 (default) for the PPM_g.
+    Be carefull, this computation considers the mean of the inactive class as zero.
+    Parameters
+    ----------
+    contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_var : ndarray, shape (nb_voxels, nb_contrasts)
+    contrasts_class_mean : ndarray, shape (nb_contrasts, nb_classes)
+    contrasts_class_var : ndarray, shape (nb_contrasts, nb_classes)
+    threshold_a : str, optional
+        if "std_inact" (default) uses the standard deviation of the
+        [all inactive conditions] gaussian class as PPM_a threshold, if "intersect"
+        uses the intersection of the [all inactive/all active conditions]
+        gaussian classes
+    threshold_g : float, optional
+        the threshold of the PPM_g
+    Returns
+    -------
+    ppm_a_contrasts : ndarray, shape (nb_voxels, nb_contrasts)
+    ppm_g_contrasts : ndarray, shape (nb_voxels, nb_contrasts)
+    """
+
+    if threshold_a == "std_inact":
+        thresh = np.sqrt(contrasts_class_var[:, 0])
+    elif threshold_a == "intersect":
+        intersect1 = contrasts_class_mean[:, 1] * contrasts_class_var[:, 0]
+        intersect2 = np.sqrt(
+            contrasts_class_var.prod(axis=1) * (
+                contrasts_class_mean[:, 1]**2
+                + 2*contrasts_class_var[:, 0]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
+                - 2*contrasts_class_var[:, 1]*np.log(np.sqrt(contrasts_class_var[:, 0]/contrasts_class_var[:, 1]))
+            )
+        )
+        threshs = np.concatenate(((intersect1 - intersect2)[:, np.newaxis],
+                                  (intersect1 + intersect2)[:, np.newaxis]),
+                                 axis=1) / (contrasts_class_var[:, 0] - contrasts_class_var[:, 1])[:, np.newaxis]
+
+        mask = (
+            ((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis]))
+            | (~((threshs > 0) & (threshs < contrasts_class_mean[:, 1][:, np.newaxis])).any(axis=1)[:, np.newaxis]
+               & (threshs == threshs.max(axis=1)[:, np.newaxis])))
+        thresh = threshs[mask]
+        if len(thresh) < len(threshs):
+            logger.warning("The gaussians do not have one intersection between means."
+                           " Choosing the highest")
+            thresh = threshs.max(axis=1)
+            thresh = np.concatenate((thresh[:, np.newaxis], contrasts_class_var[:, 0][:, np.newaxis]), axis=1).max(axis=1)
+
+    return (norm.sf(thresh, contrasts_mean, contrasts_var**.5),
+            norm.isf(threshold_g, contrasts_mean, contrasts_var**.5))
+
 
 
 # Plots

@@ -24,12 +24,12 @@ from pyhrf.sandbox.physio_params import PHY_PARAMS_KHALIDOV11, \
                                         linear_rf_operator,\
                                         create_physio_brf, \
                                         create_physio_prf
-
+"""
 import matplotlib
 matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 plt.switch_backend('Qt4Agg')
-
+"""
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
