@@ -151,6 +151,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData is of type FmriRoiData, see pyhrf.core.FmriRoiData
         # roiData.bold : numpy array of shape
         # BOLD has shape (nscans, nvoxels)
+
         # roiData.graph #list of neighbours
         n_scan_allsession, nvox = roiData.bold.shape
         n_scan = n_scan_allsession / self.n_session
@@ -158,6 +159,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         Onsets = roiData.paradigm.get_joined_onsets_dim()
         durations = roiData.paradigm.get_joined_durations_dim()
         TR = roiData.tr
+        # K = 2                      # number of classes
         beta = self.beta
         scale = 1                   # roiData.nbVoxels
         #nvox = roiData.get_nb_vox_in_mask()

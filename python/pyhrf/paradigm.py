@@ -667,18 +667,22 @@ class Paradigm:
         """ For each condition, join onsets of all sessions.
         """
         jOnsets = OrderedDict([])
-
         for cn, sessOns in self.stimOnsets.iteritems():
             scanStartTime = 0.
             jons = np.array([])
             for iSess, ons in enumerate(sessOns):
                 shiftedOns = ons + scanStartTime
                 jons = np.concatenate((jons, shiftedOns))
-                scanStartTime = self.sessionDurations[iSess]
+                scanStartTime += self.sessionDurations[iSess]
             jOnsets[cn] = jons
-        #print 'jOnsets:'
-        #print jOnsets
-        
+        return jOnsets
+
+    def get_joined_onsets_dim(self):
+        """ For each condition, join onsets of all sessions.
+        """
+        jOnsets = OrderedDict([])
+        for cn, sessOns in self.stimOnsets.iteritems():
+            jOnsets[cn] = np.array(sessOns)
         return jOnsets
 
     def get_nb_trials(self):
@@ -689,9 +693,15 @@ class Paradigm:
         """
         jDurations = OrderedDict([])
         for cn, sessDur in self.stimDurations.iteritems():
-            #print 'sessDur:', sessDur
             jDurations[cn] = np.concatenate(tuple(sessDur))
+        return jDurations
 
+    def get_joined_durations_dim(self):
+        """ For each condition, join stimulus durations of all sessions.
+        """
+        jDurations = OrderedDict([])
+        for cn, sessDur in self.stimDurations.iteritems():
+            jDurations[cn] = np.array(sessDur)
         return jDurations
         
     def get_joined_onsets_dim(self):

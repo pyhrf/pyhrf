@@ -257,6 +257,10 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    print 'onsets = ', onsets
+    print 'durations = ', durations
+    print 'dt = ', dt
+    print 'tmax = ', tmax
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -482,14 +486,6 @@ def norm1_constraint(function, variance):
     def norm1_constraint_equation(fct):
         """Norm2(fct) == 1"""
         return np.linalg.norm(fct, 2) - 1
-
-    #def first_element_constraint(fct):
-    #    """fct[0] == 0"""
-    #    return fct[0]
-
-    #def last_element_constraint(fct):
-    #    """fct[-1] == 0"""
-    #    return fct[-1]
 
     return fmin_slsqp(minimized_function, function,
                       eqcons=[norm1_constraint_equation],
@@ -1209,114 +1205,7 @@ def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J,
 
     # we sum the term that corresponds to the prior
     Y_bar_tilde += prior_mean_term
-
-    # m_H = S_a^-1 y_bar_tilde
-    m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
-
-    return m_H, Sigma_H
-
-
-def expectation_H_ms_concat(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
-                  cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, S):
-    """
-    Expectation-H step:
-    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
-        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
-
-    Returns:
-    m_H, Sigma_H of probability distribution p_H of the current iteration
-    """
-
-    ## Precomputations
-    WXG = W.dot(XX.dot(G).T)
-    mAX = np.tensordot(m_A, XX, axes=(1, 0))                # shape (J, N, D)
-    #Gamma_X = np.tensordot(Gamma, XX, axes=(1, 1))
-    #X_Gamma_X = np.tensordot(XX.T, Gamma_X, axes=(1, 0))   # shape (D, M, M, D)
-    #cov_noise = np.maximum(sigma_eps, eps)[:, np.newaxis, np.newaxis]
-    mAX_Gamma = (np.tensordot(mAX, Gamma, axes=(1, 0)) / cov_noise) # shape (J, D, N)
-
-    ## Sigma_H computation
-    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
-    S_a = R_inv / sigmaH + prior_cov_term
-    # second summand: E_pa[Saj.T*Gamma*Saj]
-    # sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
-    print Sigma_A.shape
-    for s in xrange(0, S):
-        S_a += (np.einsum('ijk,lijm->klm', Sigma_A, X_Gamma_X) / cov_noise).sum(0)
-    # third summand: E_pa[Saj.T*Gamma*Saj]
-    # (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
-    for i in xrange(0, J):
-        for s in xrange(0, S):
-            i2 = (s-1)*J + i
-            S_a += mAX_Gamma[i2, :, :].dot(mAX[i2, :, :])  #option 1 faster 13.4
-    #S_a += np.einsum('ijk,ikl->ijl', mAX_Gamma, mAX).sum(0) # option 2 second 8.8
-    #S_a += np.einsum('ijk,ikl->jl', mAX_Gamma, mAX) # option 3 slower 7.5
-
-    # Sigma_H = S_a^-1
-    Sigma_H = np.linalg.inv(S_a)
-
-    ## m_H
-    # Y_bar_tilde computation: (sum_m m_a X_m).T Gamma_i y_tildeH
-    # y_tildeH = yj - sum_m m_C WXG - w alphaj - P lj
-    y_tildeH = y_tilde - WXG.dot(m_C.T)
-    #Y_bar_tilde = np.tensordot(mAX_Gamma, y_tildeH, axes=([0, 2], [1, 0])) # slower
-    Y_bar_tilde = np.einsum('ijk,ki->j', mAX_Gamma, y_tildeH)
-
-    # we sum the term that corresponds to the prior
-    Y_bar_tilde += prior_mean_term
-
-    # m_H = S_a^-1 y_bar_tilde
-    m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
-
-    return m_H, Sigma_H
-
-
-def expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde,
-                  cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, N, M, D, S):
-    """
-    Expectation-H step:
-    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
-        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
-
-    Returns:
-    m_H, Sigma_H of probability distribution p_H of the current iteration
-    """
-
-    ## Precomputations
-    mAX = np.zeros((S, J, N, D), dtype=np.float64)
-    WXG = np.zeros((S, N, M), dtype=np.float64)
-    mAX_Gamma = np.zeros((S, J, D, N), dtype=np.float64)
-    for s in xrange(0, S):
-        WXG[s, :, :] = W.dot(XX[s, :, :, :].dot(G).T)                                   # shape (N, M)
-        mAX[s, :, :, :] = np.tensordot(m_A[s, :, :], XX[s, :, :, :], axes=(1, 0))       # shape (J, N, D)
-        mAX_Gamma[s, :, :, :] = (np.tensordot(mAX[s, :, :, :], Gamma, axes=(1, 0)) / cov_noise[s, :, :, :]) # shape (J, D, N)
-
-    ## Sigma_H computation
-    # first summand: part of the prior -> R^-1 / sigmaH + prior_cov_term
-    S_a = R_inv / sigmaH + prior_cov_term
-    # second summand: sum_{m, m'} Sigma_a(m,m') X_m.T Gamma_i X_m'
-    for s in xrange(0, S):
-        S_a += (np.einsum('ijk,lijm->klm', Sigma_A[:, :, :, s], X_Gamma_X[:, :, s, :, :]) / cov_noise[s, :, :, :]).sum(0)
-    # third summand: (sum_m m_a X_m).T Gamma_i (sum_m m_a X_m)
-    for s in xrange(0, S):
-        for i in xrange(0, J):
-            S_a += mAX_Gamma[s, i, :, :].dot(mAX[s, i, :, :])  #option 1 faster 13.4
-
-    # Sigma_H = S_a^-1
-    Sigma_H = np.linalg.inv(S_a)
-
-    ## m_H
-    # Y_bar_tilde computation: (sum_m m_a X_m).T Gamma_i y_tildeH
-    # y_tildeH = yj - sum_m m_C WXG - w alphaj - P lj
-    y_tildeH = np.zeros_like(y_tilde)
-    Y_bar_tilde = np.zeros_like(prior_mean_term)
-    for s in xrange(0, S):
-        y_tildeH[s, :, :] = y_tilde[s, :, :] - WXG[s, :, :].dot(m_C[s, :, :].T)
-        Y_bar_tilde += np.einsum('ijk,ki->j', mAX_Gamma[s, :, :, :], y_tildeH[s, :, :])
-
-    # we sum the term that corresponds to the prior
-    Y_bar_tilde += prior_mean_term
-
+    
     # m_H = S_a^-1 y_bar_tilde
     m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
 
@@ -1738,6 +1627,12 @@ def maximization_sigma_asl(D, Sigma_H, R_inv, m_H, use_hyp, gamma_h):
         sigma = (-(D) + np.sqrt((D) * (D) + 8 * gamma_h * alpha)) / (4 * gamma_h)
     else:
         sigma = alpha / (D)
+    if np.isnan(sigma) or sigma==0:
+        print 'WARNING!!!'
+        print 'gamma_h = ', gamma_h
+        print 'D = ', D
+        print 'alpha = ', alpha
+        print m_H
     return sigma
 
 
