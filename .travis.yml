@@ -21,7 +21,7 @@ addons:
             - libpng-dev
 
 before_install:
-    - pip install --no-index --trusted-host nipy.bic.berkeley.edu -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy "matplotlib<1.4";
+    - pip install --no-index --trusted-host nipy.bic.berkeley.edu -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
     - pip install nibabel
     - pip install sympy
     - pip install nipy
