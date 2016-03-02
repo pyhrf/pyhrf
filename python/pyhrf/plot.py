@@ -56,7 +56,11 @@ def plot_func_slice(func_slice_data, anatomy=None, parcellation=None,
         highlighted_parcels_col = {}
 
     if func_cmap is None:
+<<<<<<< HEAD
         func_cmap = plt.get_cmap('seismic')
+=======
+        func_cmap = plt.get_cmap('hot')
+>>>>>>> salma1601/retreat
 
     if anatomy is not None:
         if func_slice_data.shape != anatomy.shape:

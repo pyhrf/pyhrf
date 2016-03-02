@@ -123,7 +123,10 @@ def build_matrix(paradigm_fn, output_fn, nscans, tr, dt, plot=False,
     reg_names = []
     if cond_order is None:
         cond_order = ons.iterkeys()
+<<<<<<< HEAD
     print cond_order
+=======
+>>>>>>> salma1601/retreat
     j = 0
     for i, cname in enumerate(cond_order):
         o = ons[cname]
@@ -206,8 +209,13 @@ def load_paradigm(fn):
         if len(sline) < 4:
             cond, onset, _ = sline
         else:
+<<<<<<< HEAD
             sess, cond, onset, duration, amplitude = sline
             #sess, cond, onset, duration = sline
+=======
+            #sess, cond, onset, duration, amplitude = sline
+            sess, cond, onset, duration = sline
+>>>>>>> salma1601/retreat
             duration = duration[:-1]
             if 0:            
                 print 'sess = ', sess
@@ -253,6 +261,73 @@ def format_duration(dt):
     return s
 
 
+<<<<<<< HEAD
+=======
+def plot_maps2(plot_params, anat_fn, anat_slice_def, output_dir='./',
+              flip_sign=False, crop_def=None, norm=None, cond='video'):
+
+    ldata = []
+    for p in plot_params:
+        print 'load:', p['fn']
+        print 'slice: ', p['slice_def']        
+        c = xndarray.load(p['fn']).sub_cuboid(axial=ax_slice).reorient(\
+                                                    ['coronal', 'sagittal'])
+        #c.data[:,18:] = 0
+        c.data *= p.get('scale_factor', 1.)
+        if flip_sign:
+            ldata.append(c.data * -1.)
+        else:
+            ldata.append(c.data)
+
+    c_anat = xndarray.load(anat_fn).sub_cuboid(**anat_slice_def)
+    c_anat.set_orientation(['coronal', 'sagittal'])
+
+    all_data = np.array(ldata)
+    mask = plot_params[0].get('mask')
+    if cond == 'audio':
+        mask[:, 18:] = 0            # WARNING!! Uncomment for audio
+    m = np.where(mask > 0)
+    all_data_masked = all_data[:, m[0], m[1]]
+    #if norm == None:
+    #    norm = normalize(all_data_masked.min(), all_data_masked.max())
+    #    print 'norm:', (all_data_masked.min(), all_data_masked.max())
+    for data, plot_param in zip(all_data, plot_params):
+        fn = plot_param['fn']
+        #plt.figure()
+        print 'fn:', fn
+        print '->', (data.min(), data.max())
+        norm = normalize(data.min(), data.max())
+        plot_func_slice(data, anatomy=c_anat.data,
+                        parcellation=mask,
+                        func_cmap=cmap,
+                        parcels_line_width=1.)#, func_norm=norm)
+        set_ticks_fontsize(fs)
+        fig_fn = op.join(output_dir, '%s.png' % op.splitext(op.basename(fn))[0])
+        output_fig_fn = fig_fn
+        print 'Save to: %s' % output_fig_fn
+        plt.savefig(output_fig_fn)
+        autocrop(output_fig_fn)
+
+        if crop_def is not None:
+            # convert to jpg (avoid page size issues):
+            output_fig_fn_jpg = op.splitext(output_fig_fn)[0] + '.jpg'
+            os.system('convert %s %s' % (output_fig_fn, output_fig_fn_jpg))
+            # crop and convert back to png:
+            output_fig_fn_cropped = add_suffix(output_fig_fn, '_cropped')
+            print 'output_fig_fn_cropped:', output_fig_fn_cropped
+            os.system('convert %s -crop %s +repage %s' \
+                      % (output_fig_fn_jpg, crop_def, output_fig_fn_cropped))
+        
+        plot_palette(cmap, norm, 45)
+        palette_fig_fn = op.join(output_dir1, \
+                            op.splitext(op.basename(fn))[0] + '_palette.png')
+        plt.savefig(palette_fig_fn)
+        autocrop(palette_fig_fn)
+
+    return
+
+
+>>>>>>> salma1601/retreat
 def plot_maps(plot_params, anat_fn, roi_mask_fn, anat_slice_def, flip_sign=False,
               crop_def=None, norm=None, cond='video', subject=None, fig_dir='./'):
     ldata = []
@@ -269,6 +344,7 @@ def plot_maps(plot_params, anat_fn, roi_mask_fn, anat_slice_def, flip_sign=False
             ldata = c.data
 
     all_data = np.array(ldata)
+<<<<<<< HEAD
     all_data_mean = np.array(ldata)
     ind = np.unravel_index(all_data.argmax(), all_data.shape)
     print 'Index of the maximum: ', ind
@@ -277,25 +353,69 @@ def plot_maps(plot_params, anat_fn, roi_mask_fn, anat_slice_def, flip_sign=False
     mask = roi_mask.data
     print 'ROI of the maximum: ', mask[ind]
     
+=======
+    #all_data_left = np.array(ldata)
+    all_data_mean = np.array(ldata)
+    #all_data_right = np.array(ldata)
+    #all_data_right[:,:,:all_data_right.shape[2]/2] = 0
+    ind = np.unravel_index(all_data.argmax(), all_data.shape)
+    #print 'Index of the maximum left: ', ind_left
+    print 'Index of the maximum: ', ind
+    roi_mask = xndarray.load(roi_mask_fn)
+    roi_mask.set_orientation(['coronal', 'axial', 'sagittal'])
+    #print roi_mask.data.sum()
+    mask = roi_mask.data
+    #print 'ROI of the maximum left: ', mask[ind_left]
+    print 'ROI of the maximum right: ', mask[ind]
+    
+    #sum_data[:,:,sum_data.shape[2]/2:] = 0
+    #inds = np.unravel_index(np.argmax(sum_data), sum_data.shape)
+>>>>>>> salma1601/retreat
     for mind in xrange(0, 220):
         all_data_mean[np.where(mask==mind)] = np.mean(all_data_mean[np.where(mask==mind)])
     ind_mean = np.unravel_index(all_data_mean.argmax(), all_data.shape)
     print 'Index of the mean max: ', ind_mean
     print 'ROI of the mean max: ', mask[ind_mean]
+<<<<<<< HEAD
 
     if cond == 'video':
+=======
+     
+    #m = np.where(mask > 0)
+    #all_data_masked = all_data[:, m[0], m[1]]
+    #print mask.shape
+    if cond == 'video':
+        #voxel2 = ind_left #[12, 22, 42]
+>>>>>>> salma1601/retreat
         voxel = ind #[12, 25, 20]
         roi_voxel = mask[voxel[0], voxel[1], voxel[2]]
         m = np.where(mask == roi_voxel)
         print 'voxel = ', voxel
         print 'voxel ROI = ', roi_voxel    
+<<<<<<< HEAD
     else:
+=======
+        #roi_voxel = mask[voxel2[0], voxel2[1], voxel2[2]]
+        #print 'voxel2 = ', voxel2
+        #print 'voxel2 ROI = ', roi_voxel    
+        #m2 = np.where(mask == roi_voxel)
+    else:
+        #voxel2 = ind_left #[38, 25, 51]
+>>>>>>> salma1601/retreat
         voxel = ind #[40, 24, 11]
         roi_voxel = mask[voxel[0], voxel[1], voxel[2]]
         m = np.where(mask == roi_voxel)
         print 'voxel = ', voxel
         print 'voxel ROI = ', roi_voxel    
+<<<<<<< HEAD
 
+=======
+        #roi_voxel = mask[voxel2[0], voxel2[1], voxel2[2]]
+        #print 'voxel2 = ', voxel2
+        #print 'voxel2 ROI = ', roi_voxel    
+        #m2 = np.where(mask == roi_voxel)
+    #print m
+>>>>>>> salma1601/retreat
     all_data_masked1 = all_data[:, voxel[1], :]
     mask_data = np.zeros_like(all_data)
     mask_data[m] = 1.
@@ -335,6 +455,7 @@ def plot_maps(plot_params, anat_fn, roi_mask_fn, anat_slice_def, flip_sign=False
 
 if __name__ == '__main__':
     
+<<<<<<< HEAD
     #subjects = ['AINSI_010_TV']#, 'AINSI_001_GC', 'AINSI_007_AB', 'AINSI_006_FM',
                 #'AINSI_005_SB', 'AINSI_004_AE', 'AINSI_003_CP', 'AINSI_002_EV']
     subjects = ['RG130377']
@@ -356,6 +477,24 @@ if __name__ == '__main__':
         for subject in subjects:
             nscans = 164
             tr = 2.5
+=======
+    subjects = ['AINSI_010_TV']#, 'AINSI_001_GC', 'AINSI_007_AB', 'AINSI_006_FM',
+                #'AINSI_005_SB', 'AINSI_004_AE', 'AINSI_003_CP', 'AINSI_002_EV']
+    
+    conds = ['audio', 'video']
+    #conds = ['video']
+    #conds = ['audio']
+    #cond = ['clicGaudio', 'clicGvideo',
+    #                   'clicDaudio', 'clicDvideo',
+    #                   'phraseaudio', 'phrasevideo']
+    #can = 0
+
+    for cond in conds:
+        #if 1:
+        for subject in subjects:
+            nscans = 291
+            tr = 3.
+>>>>>>> salma1601/retreat
             dt = .5
             archives = './archives'
             data_dir = op.join(archives, subject)
@@ -364,25 +503,37 @@ if __name__ == '__main__':
             #paradigm_fn = './archives/paradigm.csv'
             #roi_mask_fn = op.join(data_dir, 'ASLf', 'parcellation',
             #                      'parcellation_func.nii')
+<<<<<<< HEAD
             paradigm_fn = paradigm_csv_file
 
             """if cond == 'audio':
+=======
+            if cond == 'audio':
+>>>>>>> salma1601/retreat
                 paradigm_fn = op.join(archives, 'paradigm_a.csv')
                 #roi_mask_fn = op.join(archives, 'roi_mask_audio.nii')
                 roi_mask_fn = op.join(parcel_dir, 'parcellation_audio_func_masked.nii')
             else:
                 paradigm_fn = op.join(archives, 'paradigm_v.csv')
                 #roi_mask_fn = op.join(archives, 'roi_mask_visual_2.nii')
+<<<<<<< HEAD
                 roi_mask_fn = op.join(parcel_dir, 'parcellation_video_func_masked.nii')"""
             #paradigm_fn = op.join(archives, 'paradigm_av.csv')
             roi_mask_fn = op.join(parcel_dir, 'parcellation_func_masked.nii')
             roi_mask_fn = op.join(archives, 'mask_brain.nii')
 
+=======
+                roi_mask_fn = op.join(parcel_dir, 'parcellation_video_func_masked.nii')
+            #paradigm_fn = op.join(archives, 'paradigm_av.csv')
+            #roi_mask_fn = op.join(parcel_dir, 'parcellation_func_masked.nii')
+            
+>>>>>>> salma1601/retreat
             # BOLD data
             bold_fn = op.join(data_dir, 'ASLf', 'funct', 'normalise', \
                               'wr' + subject + '_ASLf_correctionT1.nii')
             gm_fn = op.join(data_dir, 'anat', 'wc1' + subject + '_anat-0001.nii')
             gm = xndarray.load(gm_fn).data
+<<<<<<< HEAD
             wm_fn = op.join(data_dir, 'anat', 'wc2' + subject + '_anat-0001.nii')
             wm = xndarray.load(wm_fn).data
             csf_fn = op.join(data_dir, 'anat', 'wc3' + subject + '_anat-0001.nii')
@@ -406,13 +557,27 @@ if __name__ == '__main__':
             print 'BOLD mean', bold_mean
             print 'BOLD range', bold_range
 
+=======
+            bold = xndarray.load(bold_fn).data
+            bold_mean = np.mean(bold[np.where(gm > 0)])
+            bold_range = (np.max(bold) - np.min(bold))
+            del bold
+            del gm
+            print 'BOLD mean', bold_mean
+            print 'BOLD range', bold_range
+>>>>>>> salma1601/retreat
             fdata = FmriData.from_vol_files(mask_file=roi_mask_fn,
                                             paradigm_csv_file=paradigm_fn,
                                             bold_files=[bold_fn], tr=tr)
             Y = (fdata.bold - bold_mean) * 100 / bold_range
             print 'mean bold = ', np.mean(Y)
+<<<<<<< HEAD
             print 'data shape = ', Y.shape
 
+=======
+            print Y.shape
+            
+>>>>>>> salma1601/retreat
             #   for can in xrange(0):
             if 1:
                 can = 1
@@ -425,8 +590,13 @@ if __name__ == '__main__':
                     else:
                         labc = '_can'
                 labc = labc + '_big'
+<<<<<<< HEAD
                 dm, rn = gen_spm_regs(subject, nscans, tr, dt, paradigm_fn, conds, can)
                 print 'design matrix shape = ', dm.shape
+=======
+                dm, rn = gen_spm_regs(subject, nscans, tr, dt, paradigm_fn, [cond], can)
+                
+>>>>>>> salma1601/retreat
                 """
                 dm0, rn = gen_spm_regs(subject, nscans, tr, dt, paradigm_fn, [cond], 0)
                 dm1, rn = gen_spm_regs(subject, nscans, tr, dt, paradigm_fn, [cond], 1)
@@ -445,15 +615,22 @@ if __name__ == '__main__':
                 """
                 residuals_model = 'spherical'
                 fit_method = 'ols'
+<<<<<<< HEAD
                 print 'doing GLM...'
                 my_glm.fit(Y, dm, method=fit_method, model=residuals_model)
                 print 'fitting done!'
+=======
+                my_glm.fit(Y, dm, method=fit_method, model=residuals_model)
+>>>>>>> salma1601/retreat
                 rescale_results = False
                 if rescale_results:
                     # Rescale by the norm of each regressor in the design matrix
                     dm_reg_norms = (dm ** 2).sum(0) ** .5
                     for ib in xrange(my_glm.beta.shape[0]):
+<<<<<<< HEAD
                         print ib
+=======
+>>>>>>> salma1601/retreat
                         my_glm.beta[ib] = my_glm.beta[ib] * dm_reg_norms[ib]
                         #my_glm.beta[ib] = my_glm.beta[ib] * rescale_factor[ib]
         
@@ -464,26 +641,47 @@ if __name__ == '__main__':
                 if not op.exists(output_dir1):
                     os.makedirs(output_dir1)
                 regressors = []
+<<<<<<< HEAD
                 
                 print 'shape of regressors = ', my_glm.beta.shape
                 print rn
                 for ib in xrange(my_glm.beta.shape[0]):
                     print 'nb regressor ', ib
                     print 'regressor ', rn[ib]
+=======
+                for ib in xrange(my_glm.beta.shape[0]):
+                    print ib
+                    print rn[ib]
+>>>>>>> salma1601/retreat
                     print my_glm.beta[ib]
                     print my_glm.beta[ib].shape
                     output0 = xndarray(my_glm.beta[ib], value_label=rn[ib],
                                       axes_names=['voxel'])
+<<<<<<< HEAD
                     fn = op.join(output_dir1, rn[ib] + '.nii')
+=======
+                    fn = op.join(output_dir1, rn[ib] + '_' + cond + '.nii')
+>>>>>>> salma1601/retreat
                     #fn = op.join(output_dir1, rn[ib] + '.nii')
                     output0 = output0.expand(roi_mask, 'voxel', MRI3Daxes)
                     output0.save(fn)
             
                     #prepare plots of RL maps:
+<<<<<<< HEAD
                     ax_slice = 21
                     crop_def = "140x181+0+174"
                     slice_def = {'axial': ax_slice}  # , 'condition': cond}
                     fig_fn = rn[ib] + '_' + subject + '.png'
+=======
+                    if cond == 'video':
+                        ax_slice = 22
+                        crop_def = "140x181+170+0"
+                    else:
+                        ax_slice = 21
+                        crop_def = "140x181+0+174"
+                    slice_def = {'axial': ax_slice}  # , 'condition': cond}
+                    fig_fn = rn[ib] + '_' + cond + '_' + subject + '.png'
+>>>>>>> salma1601/retreat
                     #fig_fn = rn[ib] + '.png'
                     mask = xndarray.load(roi_mask_fn)
                     mask = mask.sub_cuboid(axial=ax_slice).reorient(\
@@ -494,8 +692,11 @@ if __name__ == '__main__':
                     anat_fn = op.join(anat_dir, 'w' + subject + '_anat-0001.nii')
                     #plot_maps(regressors, anat_fn, {"axial": ax_slice * 3},
                     #          output_dir=output_dir1, crop_def=crop_def, cond=cond)
+<<<<<<< HEAD
                     
                     print 'plotting maps...'
+=======
+>>>>>>> salma1601/retreat
                     norm = plot_maps(regressors, anat_fn,
                                              roi_mask_fn, {"axial": ax_slice * 3},
                                              crop_def=crop_def, cond=rn[ib],
@@ -503,8 +704,13 @@ if __name__ == '__main__':
                     cmap = 'hot'
                     plot_palette(cmap, norm, 45)
                     palette_fig_fn = op.join(output_dir1,
+<<<<<<< HEAD
                                              'real_data_brls_palette_%s_%s.png' \
                                              % (subject, rn[ib]))
+=======
+                                             'real_data_brls_palette_%s_%s_%s.png' \
+                                             % (cond, subject, rn[ib]))
+>>>>>>> salma1601/retreat
                     plt.savefig(palette_fig_fn)
                     autocrop(palette_fig_fn)
                 

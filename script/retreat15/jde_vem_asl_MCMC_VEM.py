@@ -51,13 +51,13 @@ def main():
 
     #prior_types = np.array(['omega', 'balloon', 'no'])
     prior_types = np.array(['omega', 'balloon', 'no'])
-    prior_types = np.array(['no'])
+    #prior_types = np.array(['no'])
     #prior_types = np.array(['balloon'])
     #noise_scenarios = np.array(['low_snr', 'high_snr'])
     noise_scenarios = np.array(['low_snr'])
     #noise_scenarios = np.array(['high_snr'])
-    
-    
+
+
     # Initialisation values
     simulate = True
     do_jde_asl = True
@@ -72,112 +72,114 @@ def main():
     hyp_opt = np.array([True, False])
     #hyp_opt = np.array([False])
     pos_opt = np.array([False])
-    cons_opt = np.array([True])
-    
+    cons_opt = np.array([True, False])
+
     n_method = len(hyp_opt) * len(pos_opt)
     print v_noise_range
     error = np.zeros((len(v_noise_range), n_method, 4))
     error2 = np.zeros((len(v_noise_range), n_method, 4))
+    block_opt = np.array([True, False])
 
-    
     for prior in prior_types:
 
         for noise_scen in noise_scenarios:
 
-            for hyp in hyp_opt:
+            for block in block_opt:
 
-                for cons in cons_opt:
+                for hyp in hyp_opt:
 
-                    fig_prefix = 'prior' + prior + '_' + noise_scen + '2_hyp' + str(hyp*1) + '_cons' + str(cons*1) 
-                    simulation_dir = fig_prefix + '_simulated'
-                    fig_dir = fig_prefix + '_figs'
-                    if not op.exists(fig_dir):
-                        os.makedirs(fig_dir)
-                    if not op.exists(simulation_dir):
-                        os.makedirs(simulation_dir)
+                    for cons in cons_opt:
 
-                    for pos in pos_opt:
-                        for ivn, v_noise in enumerate(v_noise_range):
-                            print 'Generating BOLD data ...'
-                            print 'index v_noise = ', ivn
-                            print 'v_noise = ', v_noise
-                            if simulate:
-                                
-                                # HEROES
-                                asl_items, conds = simulate_asl(output_dir=simulation_dir,
-                                                              noise_scenario=noise_scen,
-                                                              v_noise=v_noise, dt=dt, scale=s)
-                                """
-                                # AINSI
-                                asl_items = jdem.simulate_asl(output_dir=simulation_dir,
-                                                              noise_scenario='low_snr',
-                                                              v_noise=v_noise, 
-                                                              dt=dt)
-                                """
-                                Y = asl_items['bold']
-                                n = asl_items['noise']
-                                print 'noise mean = ', np.mean(n)
-                                print 'noise var = ', np.var(n)
-                                p = asl_items['perf_baseline']
-                                print 'perfusion baseline mean = ', np.mean(p)
-                                print 'perfusion baseline var = ', np.var(p)
-                                l = asl_items['drift']
-                                print 'drifts mean = ', np.mean(l)
-                                print 'drifts var = ', np.var(l)
-                                
-                                snr_range[ivn] = 20 * (np.log(np.linalg.norm(Y) / \
-                                    np.linalg.norm(n))) / np.log(10.)
-                            norm = plot_jde_inputs(simulation_dir, fig_dir,
-                                                   'simu_vn' + str(np.round(v_noise*10).astype(np.int32)) + '_', conds)
-                            print 'Finished generation of ASL data.'
+                        fig_prefix = 'prior' + prior + '_' + noise_scen + '2_hyp' + str(hyp*1) + '_cons' + str(cons*1)
+                        simulation_dir = fig_prefix + '_simulated'
+                        fig_dir = fig_prefix + '_figs'
+                        if not op.exists(fig_dir):
+                            os.makedirs(fig_dir)
+                        if not op.exists(simulation_dir):
+                            os.makedirs(simulation_dir)
 
-                            old_output_dir = op.join(simulation_dir, 'jde_analysis_mcmc')
-                            if do_jde_asl and mcmc:
-                                print 'JDE MCMC analysis'
-                                np.random.seed(48258)
-                                if not op.exists(old_output_dir):
-                                    os.makedirs(old_output_dir)
-                                print '1 step ...'
-                                prf_var = 0.00000001
-                                brf_var = 0.01
-                                nbit = 1000
-                                
-                                print 'JDE analysis MCMC on simulation ...'
-                                phy_params = PHY_PARAMS_KHALIDOV11
-                                t1 = time.time()
-                                jde_mcmc_sampler = jde_analyse(old_output_dir,
-                                                    asl_items, dt*s, nb_iterations=nbit,
-                                                    rf_prior='physio_stochastic_regularized',
-                                                    brf_var=brf_var, prf_var=prf_var, 
-                                                    phy_params = phy_params,
-                                                    do_sampling_brf_var=False,
-                                                    do_sampling_prf_var=False)
-                                print time.time() - t1
-                            old_output_dir2 = op.join(simulation_dir, 'jde_analysis_vem')
-                            if do_jde_asl and vem:
-                                print 'JDE VEM analysis'
-                                np.random.seed(48258)
-                                if not op.exists(old_output_dir2):
-                                    os.makedirs(old_output_dir2)
+                        for pos in pos_opt:
+                            for ivn, v_noise in enumerate(v_noise_range):
+                                print 'Generating BOLD data ...'
+                                print 'index v_noise = ', ivn
+                                print 'v_noise = ', v_noise
+                                if simulate:
 
-                                print 'JDE analysis VEM on simulation ...'
-                                t2 = time.time()
-                                jde_vem_sampler = jde_analyse_vem(simulation_dir, old_output_dir2, asl_items,
-                                                                              do_physio=True, positivity=pos,
-                                                                              use_hyperprior=hyp, dt=(dt), nItMin=6,
-                                                                              constrained=cons, prior=prior)
-                                print time.time() - t2
+                                    if block:
+                                        # HEROES
+                                        asl_items, conds = simulate_asl(output_dir=simulation_dir,
+                                                                      noise_scenario=noise_scen,
+                                                                      v_noise=v_noise, dt=dt, scale=s)
+                                    else:
+                                        # AINSI
+                                        asl_items = jdem.simulate_asl(output_dir=simulation_dir,
+                                                                      noise_scenario='low_snr',
+                                                                      v_noise=v_noise, dt=dt)
 
-                            print 1-hyp*1 + pos*2
-                            print ivn
-                            print error.shape
-                            #plot_jde_outputs(old_output_dir, fig_dir, 'mcmc_', norm, conds, asl_items=asl_items)
-                            plot_jde_outputs(old_output_dir2, fig_dir, 'vem_', norm, conds, asl_items=asl_items)#, dt_est=dt)
-                            print 'printing HRF results together...'
-                            output_dir_tag = 'jde_analysis_'
-                            plot_jde_rfs(simulation_dir, old_output_dir2, fig_dir,
-                                         'vn' + str(v_noise.astype(np.int32)) + '_', asl_items)
-                        
+                                    Y = asl_items['bold']
+                                    n = asl_items['noise']
+                                    print 'noise mean = ', np.mean(n)
+                                    print 'noise var = ', np.var(n)
+                                    p = asl_items['perf_baseline']
+                                    print 'perfusion baseline mean = ', np.mean(p)
+                                    print 'perfusion baseline var = ', np.var(p)
+                                    l = asl_items['drift']
+                                    print 'drifts mean = ', np.mean(l)
+                                    print 'drifts var = ', np.var(l)
+
+                                    snr_range[ivn] = 20 * (np.log(np.linalg.norm(Y) / \
+                                        np.linalg.norm(n))) / np.log(10.)
+                                norm = plot_jde_inputs(simulation_dir, fig_dir,
+                                                       'simu_vn' + str(np.round(v_noise*10).astype(np.int32)) + '_', conds)
+                                print 'Finished generation of ASL data.'
+
+                                old_output_dir = op.join(simulation_dir, 'jde_analysis_mcmc')
+                                if do_jde_asl and mcmc:
+                                    print 'JDE MCMC analysis'
+                                    np.random.seed(48258)
+                                    if not op.exists(old_output_dir):
+                                        os.makedirs(old_output_dir)
+                                    print '1 step ...'
+                                    prf_var = 0.00000001
+                                    brf_var = 0.01
+                                    nbit = 1000
+
+                                    print 'JDE analysis MCMC on simulation ...'
+                                    phy_params = PHY_PARAMS_KHALIDOV11
+                                    t1 = time.time()
+                                    jde_mcmc_sampler = jde_analyse(old_output_dir,
+                                                        asl_items, dt*s, nb_iterations=nbit,
+                                                        rf_prior='physio_stochastic_regularized',
+                                                        brf_var=brf_var, prf_var=prf_var,
+                                                        phy_params = phy_params,
+                                                        do_sampling_brf_var=False,
+                                                        do_sampling_prf_var=False)
+                                    print time.time() - t1
+                                old_output_dir2 = op.join(simulation_dir, 'jde_analysis_vem')
+                                if do_jde_asl and vem:
+                                    print 'JDE VEM analysis'
+                                    np.random.seed(48258)
+                                    if not op.exists(old_output_dir2):
+                                        os.makedirs(old_output_dir2)
+
+                                    print 'JDE analysis VEM on simulation ...'
+                                    t2 = time.time()
+                                    jde_vem_sampler = jde_analyse_vem(simulation_dir, old_output_dir2, asl_items,
+                                                                                  do_physio=True, positivity=pos,
+                                                                                  use_hyperprior=hyp, dt=(dt), nItMin=6,
+                                                                                  constrained=cons, prior=prior)
+                                    print time.time() - t2
+
+                                print 1-hyp*1 + pos*2
+                                print ivn
+                                print error.shape
+                                #plot_jde_outputs(old_output_dir, fig_dir, 'mcmc_', norm, conds, asl_items=asl_items)
+                                plot_jde_outputs(old_output_dir2, fig_dir, 'vem_', norm, conds, asl_items=asl_items)#, dt_est=dt)
+                                print 'printing HRF results together...'
+                                output_dir_tag = 'jde_analysis_'
+                                plot_jde_rfs(simulation_dir, old_output_dir2, fig_dir,
+                                             'vn' + str(v_noise.astype(np.int32)) + '_', asl_items)
+
 
 
 def jde_analyse_vem(simulation_dir, output_dir, simulation, constrained=False,
@@ -200,7 +202,7 @@ def jde_analyse_vem(simulation_dir, output_dir, simulation, constrained=False,
     vh = 0.000001 #0.0001
     vg = 0.000001 #0.0001
     gamma_h = 100000  # 10000000000  # 7.5 #100000
-    gamma_g = 1000000  
+    gamma_g = 1000000
     """
 
     jde_vem_analyser = JDEVEMAnalyser(beta=0.8, dt=dt, hrfDuration=25.,
@@ -224,8 +226,8 @@ def jde_analyse_vem(simulation_dir, output_dir, simulation, constrained=False,
 
 
 def jde_analyse(output_dir, simulation, dt, nb_iterations, rf_prior,
-                brf_var, prf_var, phy_params = PHY_PARAMS_FRISTON00, 
-                do_sampling_brf_var=False, do_sampling_prf_var=False, 
+                brf_var, prf_var, phy_params = PHY_PARAMS_FRISTON00,
+                do_sampling_brf_var=False, do_sampling_prf_var=False,
                 do_basic_nN=False):
     """
     Return:
@@ -237,7 +239,7 @@ def jde_analyse(output_dir, simulation, dt, nb_iterations, rf_prior,
     # set the verbosity of what's next, 0: quiet, ..., 6: everything (for debug)
     #pyhrf.verbose.set_verbosity(6)
     fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
-    jde_mcmc_sampler = physio_build_jde_mcmc_sampler(nb_iterations, 
+    jde_mcmc_sampler = physio_build_jde_mcmc_sampler(nb_iterations,
                                 rf_prior, phy_params, brf_var, prf_var,
                                 do_sampling_brf_var, do_sampling_prf_var,
                                 do_basic_nN=do_basic_nN)
@@ -247,7 +249,7 @@ def jde_analyse(output_dir, simulation, dt, nb_iterations, rf_prior,
                                     #default initialization sets this true
     tjde_mcmc = FMRITreatment(fmri_data, analyser, output_dir=output_dir)
     tjde_mcmc.run()
-    
+
     return jde_mcmc_sampler
 
 
@@ -262,7 +264,7 @@ def physio_build_jde_mcmc_sampler(nb_iterations, rf_prior, phy_params,
                                   brls_ini=None, do_sampling_brls=True,
                                   perf_bl_ini=None, drift_ini=None,
                                   noise_var_ini=None, labels_ini=None,
-                                  do_sampling_labels=True, 
+                                  do_sampling_labels=True,
                                   do_basic_nN=False):
     """
     """
@@ -273,7 +275,7 @@ def physio_build_jde_mcmc_sampler(nb_iterations, rf_prior, phy_params,
     else:
         import pyhrf.jde.asl_physio as jap
         norm = 1.
-    
+
     zc = False
 
     sampler_params = {
@@ -341,8 +343,8 @@ def physio_build_jde_mcmc_sampler(nb_iterations, rf_prior, phy_params,
             'check_final_value' : 'none',
         }
     sampler = jap.ASLPhysioSampler(**sampler_params)
-    return sampler 
-    
+    return sampler
+
 
 ##################
 ### Simulation ###
@@ -560,7 +562,7 @@ def plot_error(fig_dir, v_noise_range, error):
     lst = ['solid', 'dashed', ':', '-.']
     plt.figure(1)
     plt.hold('on')
-    for i in np.arange(0,error.shape[1]):  
+    for i in np.arange(0,error.shape[1]):
         plt.plot(v_noise_range, error[:,i,0], color='b', linewidth = lw, linestyle = lst[i], label = 'BRF, '+label0[i])
         plt.plot(v_noise_range, error[:,i,1], color='r', linewidth = lw, linestyle = lst[i], label = 'PRF, '+label0[i])
     #plt.xlabel('SNR(dB)')
@@ -573,7 +575,7 @@ def plot_error(fig_dir, v_noise_range, error):
     plt.close()
     plt.figure(2)
     plt.hold('on')
-    for i in np.arange(0,error.shape[1]):  
+    for i in np.arange(0,error.shape[1]):
         plt.plot(v_noise_range, error[:,i,2], color='g', linewidth = lw, linestyle = lst[i], label = 'BRL, '+label0[i])
         plt.plot(v_noise_range, error[:,i,3], color='m', linewidth = lw, linestyle = lst[i], label = 'PRL, '+label0[i])
     plt.xlabel('noise variance')
@@ -584,14 +586,14 @@ def plot_error(fig_dir, v_noise_range, error):
     set_ticks_fontsize(fs)
     save_and_crop(op.join(fig_dir, 'error_prl_and_brl.png'))
     plt.close()
-    
-    
-"""    
+
+
+"""
 def compute_snr(jde_dir, fig_dir, fig_prefix, norm, cond='audio',
                      asl_items=None):
     #BRF
     print asl_items
-"""    
+"""
 
 """
 def plot_jde_rfs(simu_dir, jde_dir_tag, fig_dir, fig_prefix, asl_items=None):
@@ -599,7 +601,7 @@ def plot_jde_rfs(simu_dir, jde_dir_tag, fig_dir, fig_prefix, asl_items=None):
     lw = 2             # linewtidth -> better bigger since image is often small
     enorm = plt.normalize(0., 1.)
     plt.close('all')
-    
+
     #BRF
     plt.figure()
     jde_dir = op.join(simu_dir, 'jde_mcmc_'+jde_dir_tag)
@@ -654,7 +656,7 @@ def plot_jde_rfs(simu_dir, jde_dir, fig_dir, fig_prefix, asl_items=None):
     set_ticks_fontsize(fs)
     save_and_crop(op.join(fig_dir, fig_prefix + 'brf_est.png'))
     plt.close()
-    
+
     #PRF
     plt.figure()
     ch = xndarray.load(op.join(simu_dir, 'prf.nii'))
@@ -908,7 +910,7 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
 
     return #np.mean(error_hrf_rel), np.mean(error_prf_rel), \
            #np.mean(error_nrls_rel), np.mean(error_prls_rel)
-                
+
 
 def plot_jde_inputs(jde_dir, fig_dir, fig_prefix, conds):
 

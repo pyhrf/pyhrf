@@ -10,8 +10,16 @@ from collections import OrderedDict
 
 import pyhrf
 from pyhrf.ndarray import xndarray
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
 from pyhrf.vbjde.vem_asl_models_fast_ms import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools import roc_curve
+=======
+from pyhrf.vbjde.vem_asl_constrained import (Main_vbjde_c_constrained,
+                                             Main_vbjde_constrained)
+#from pyhrf.vbjde.vem_asl_physio_mu import Main_vbjde_physio
+from pyhrf.vbjde.vem_asl_physio import Main_vbjde_physio
+from pyhrf.vbjde.vem_tools_asl import roc_curve
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 from pyhrf.ui.jde import JDEAnalyser
@@ -85,12 +93,20 @@ class JDEVEMAnalyser(JDEAnalyser):
 
     def __init__(self, hrfDuration=25., dt=.5, fast=True, constrained=False,
                  nbClasses=2, PLOT=False, nItMax=1, nItMin=1, scale=False,
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
                  beta=1.0, simulation=None, fmri_data=None, computeContrast=True,
                  estimateH=True, estimateG=True, use_hyperprior=False,
                  estimateSigmaH=True, estimateSigmaG=True, positivity=False,
                  sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=True,
                  gammaH=1000, gammaG=1000, zero_constrained=False,
                  estimateLabels=True, estimateMixtParam=True, contrasts=None, 
+=======
+                 beta=1.0, simulation=None, fmri_data=None,
+                 estimateH=True, estimateG=True, use_hyperprior=False,
+                 estimateSigmaH=True, estimateSigmaG=True, positivity=False,
+                 sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=False,
+                 estimateLabels=True, estimateMixtParam=True,
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True,
                  phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', n_session=1):
@@ -118,8 +134,12 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.sigmaH = sigmaH
         self.sigmaG = sigmaG
         self.sigmaMu = sigmaMu
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         self.gammaH = gammaH
         self.gammaG = gammaG
+=======
+        self.physio = physio
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         self.estimateLabels = estimateLabels
         self.estimateMixtParam = estimateMixtParam
         self.InitVar = InitVar
@@ -131,6 +151,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.estimateLA = estimateLA
         self.use_hyperprior = use_hyperprior
         self.positivity = positivity
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         self.physio = physio
         self.prior = prior
         if contrasts is None:
@@ -140,6 +161,8 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.phy_params = phy_params
         self.n_session = n_session
         self.zc = zero_constrained
+=======
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
 
         logger.info("VEM analyzer:")
         logger.info(" - estimate sigma H: %s", str(self.estimateSigmaH))
@@ -184,6 +207,7 @@ class JDEVEMAnalyser(JDEAnalyser):
             except:
                 simu = None
 
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         if self.physio:
             NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
             noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, alpha,\
@@ -191,10 +215,45 @@ class JDEVEMAnalyser(JDEAnalyser):
             CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
             cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE = Main_vbjde_physio(
                                        graph, data, Onsets, durations,
+=======
+        if 0 and self.fast:
+            NbIter, nrls, estimated_hrf, \
+            labels, noiseVar, mu_k, sigma_k, \
+            Beta, L, PL, \
+            cA, cH, cZ, cAH, cTime, cTimeMean, \
+            Sigma_nrls, StimuIndSignal,\
+            FreeEnergy = Main_vbjde_c_constrained(graph, data, Onsets,
+                                                  self.hrfDuration, self.nbClasses, TR,
+                                                  beta, self.dt, scale,
+                                                  estimateSigmaH=self.estimateSigmaH,
+                                                  estimateSigmaG=self.estimateSigmaG,
+                                                  sigmaH=self.sigmaH, sigmaG=self.sigmaG,
+                                                  NitMax=self.nItMax, NitMin=self.nItMin,
+                                                  estimateBeta=self.estimateBeta,
+                                                  PLOT=self.PLOT, idx_first_tag=idx_tag1,
+                                                  simulation=simu, 
+                                                  estimateH=self.estimateH,
+                                                  estimateG=self.estimateG,
+                                                  estimateA=self.estimateA,
+                                                  estimateC=self.estimateC,
+                                                  estimateZ=self.estimateLabels,
+                                                  estimateNoise=self.estimateNoise,
+                                                  estimateMP=self.estimateMixtParam,
+                                                  estimateLA=self.estimateLA)
+        if self.physio:
+            """NbIter, brls, estimated_brf, prls, estimated_prf, labels,
+            noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean,
+            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL,
+            Sigma_brls, Sigma_prls = """
+            NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
+            noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
+            Sigma_brls, Sigma_prls = Main_vbjde_physio(graph, data, Onsets,
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
                                        estimateSigmaG=self.estimateSigmaG,
                                        sigmaH=self.sigmaH, sigmaG=self.sigmaG,
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
                                        gamma_h=self.gammaH, gamma_g=self.gammaG,
                                        NitMax=self.nItMax, NitMin=self.nItMin,
                                        estimateSigmaH=self.estimateSigmaH,
@@ -202,6 +261,12 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        contrasts=self.contrasts,
                                        computeContrast=self.computeContrast,
                                        idx_first_tag=idx_tag1,
+=======
+                                       NitMax=self.nItMax, NitMin=self.nItMin,
+                                       estimateSigmaH=self.estimateSigmaH,
+                                       estimateBeta=self.estimateBeta,
+                                       PLOT=self.PLOT, idx_first_tag=idx_tag1,
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
                                        simulation=simu, sigmaMu=self.sigmaMu,
                                        estimateH=self.estimateH,
                                        estimateG=self.estimateG,
@@ -211,12 +276,42 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        estimateMP=self.estimateMixtParam,
                                        estimateZ=self.estimateLabels,
                                        estimateLA=self.estimateLA,
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
                                        constraint=self.constrained,
                                        positivity=self.positivity,
                                        use_hyperprior=self.use_hyperprior,
                                        phy_params=self.phy_params, 
                                        prior = self.prior, zc=self.zc)
 
+=======
+                                       positivity=self.positivity,
+                                       use_hyperprior=self.use_hyperprior)
+        else:
+            """NbIter, brls, estimated_brf, prls, estimated_prf, labels,
+            noiseVar, cA, cH, cZ, cAH, cCG, cTime, cTimeMean,
+            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL,
+            Sigma_brls, Sigma_prls = """
+            NbIter, brls, estimated_brf, prls, estimated_prf, labels, \
+            noiseVar, mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, L, PL, \
+            Sigma_brls, Sigma_prls = Main_vbjde_constrained(graph, data, Onsets,
+                                       self.hrfDuration, self.nbClasses, TR,
+                                       beta, self.dt, scale=scale,
+                                       estimateSigmaG=self.estimateSigmaG,
+                                       sigmaH=self.sigmaH, sigmaG=self.sigmaG,
+                                       NitMax=self.nItMax, NitMin=self.nItMin,
+                                       estimateSigmaH=self.estimateSigmaH,
+                                       estimateBeta=self.estimateBeta,
+                                       PLOT=self.PLOT, idx_first_tag=idx_tag1,
+                                       simulation=simu,
+                                       estimateH=self.estimateH,
+                                       estimateG=self.estimateG,
+                                       estimateA=self.estimateA,
+                                       estimateC=self.estimateC,
+                                       estimateNoise=self.estimateNoise,
+                                       estimateMP=self.estimateMixtParam,
+                                       estimateZ=self.estimateLabels,
+                                       estimateLA=self.estimateLA)
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         
         # Plot analysis duration
         self.analysis_duration = time() - t_start
@@ -230,16 +325,26 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs['brf'] = xndarray(estimated_brf, axes_names=['time'],
                                   axes_domains={'time': brf_time},
                                   value_label="BRF")
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("BRF prepared ")
+=======
+        logger.info("BRF prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         domCondition = {'condition': cNames}
+        print brls.T.shape
         outputs['brls'] = xndarray(brls.T, value_label="BRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("BRLs prepared ")
+=======
+        logger.info("BRLs prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         prf_time = np.arange(len(estimated_prf)) * self.dt
         outputs['prf'] = xndarray(estimated_prf, axes_names=['time'],
                                   axes_domains={'time': prf_time},
                                   value_label="PRF")
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("PRF prepared ")
         outputs['prls'] = xndarray(prls.T, value_label="PRLs",
                                    axes_names=['condition', 'voxel'],
@@ -251,32 +356,53 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs['Sigma_prf'] = xndarray(Sigma_prf, value_label="Sigma_PRF")
         #logger.info("Sigma_PRF prepared ")
         
+=======
+        logger.info("PRF prepared ")
+        print prls.T.shape
+        outputs['prls'] = xndarray(prls.T, value_label="PRLs",
+                                   axes_names=['condition', 'voxel'],
+                                   axes_domains=domCondition)
+        logger.info("PRLs prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         ad = {'condition': cNames, 'condition2': Onsets.keys()}
         outputs['Sigma_brls'] = xndarray(Sigma_brls, value_label="Sigma_BRLs",
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("Sigma_a prepared ")
+=======
+        logger.info("Sigma_a prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         outputs['Sigma_prls'] = xndarray(Sigma_prls, value_label="Sigma_PRLs",
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("Sigma_c prepared ")
+=======
+        logger.info("Sigma_c prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         outputs['NbIter'] = xndarray(np.array([NbIter]), value_label="NbIter")
         outputs['beta'] = xndarray(Beta, value_label="beta",
                                    axes_names=['condition'],
                                    axes_domains=domCondition)
 
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("perfusion baseline prepared ")
         outputs['alpha'] = xndarray(alpha, value_label="Perf_baseline",
                                           axes_names=['voxel'])
         
         #logger.info("Beta prepared ")
+=======
+        logger.info("Beta prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         nbc, nbv = len(cNames), brls.shape[0]
         repeatedBeta = np.repeat(Beta, nbv).reshape(nbc, nbv)
         outputs['beta_mapped'] = xndarray(repeatedBeta, value_label="beta",
                                           axes_names=['condition', 'voxel'],
                                           axes_domains=domCondition)
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
 
         repeated_brf = np.repeat(estimated_brf, nbv).reshape(-1, nbv)
         outputs["brf_mapped"] = xndarray(repeated_brf, value_label="BRFs",
@@ -289,11 +415,18 @@ class JDEVEMAnalyser(JDEAnalyser):
                                          axes_domains={"time": prf_time})
 
         #logger.info("beta mapped prepared ")
+=======
+        logger.info("beta mapped prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         outputs['roi_mask'] = xndarray(np.zeros(nbv) + roiData.get_roi_id(),
                                        value_label="ROI",
                                        axes_names=['voxel'])
 
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("ROI mask prepared ")
+=======
+        logger.info("ROI mask prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         mixtpB = np.zeros((roiData.nbConditions, self.nbClasses, 2))
         mixtpB[:, :, 0] = mu_Ma
         mixtpB[:, :, 1] = sigma_Ma ** 2
@@ -306,6 +439,7 @@ class JDEVEMAnalyser(JDEAnalyser):
               'component': ['mean', 'var']}
         outputs['mixt_pB'] = xndarray(mixtpB, axes_names=an, axes_domains=ad)
         outputs['mixt_pP'] = xndarray(mixtpP, axes_names=an, axes_domains=ad)
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         #logger.info("Mixture parameters prepared ")
         an = ['condition', 'Act_class', 'voxel']
         ad = {'Act_class': ['inactiv', 'activ'],
@@ -317,6 +451,19 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs['noiseVar'] = xndarray(noiseVar, value_label="noiseVar",
                                        axes_names=['voxel'])
         #logger.info("noise variance prepared ")
+=======
+        logger.info("Mixture parameters prepared ")
+        an = ['condition', 'Act_class', 'voxel']
+        ad = {'Act_class': ['inactiv', 'activ'],
+              'condition': cNames}
+        logger.info("mixt params prepared ")
+        outputs['labels'] = xndarray(labels, value_label="Labels",
+                                     axes_names=an, axes_domains=ad)
+        logger.info("labels prepared ")
+        outputs['noiseVar'] = xndarray(noiseVar, value_label="noiseVar",
+                                       axes_names=['voxel'])
+        logger.info("noise variance prepared ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         if self.estimateLA:
             outputs['drift_coeff'] = xndarray(L, value_label="Drift",
                                               axes_names=['coeff', 'voxel'])
@@ -324,6 +471,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                         axes_names=['time', 'voxel'])
             logger.info("drift prepared ")
         logger.info("outputs prepared ")
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
 
         if (len(self.contrasts) >0) and self.computeContrast:
             #keys = list((self.contrasts[nc]) for nc in self.contrasts)
@@ -357,6 +505,13 @@ class JDEVEMAnalyser(JDEAnalyser):
             cTimeMean = cTime[-1] / np.float(NbIter)
             logger.info("Saving convergence... ")
             
+=======
+
+        #######################################################################
+        # CONVERGENCE
+        if 0:
+            logger.info("Saving convergence... ")
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
             axes_names = ['duration']
             ax = (np.arange(self.nItMax) + 1) * cTimeMean
             ax[:len(cTime)] = cTime
@@ -368,7 +523,11 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs[outName] = xndarray(c, axes_names=axes_names,
                                         axes_domains=ad,
                                         value_label='Conv_Criterion_Z')
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
             outName = 'convergence_BRF'
+=======
+            outName = 'Convergence_BRF'
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
             #ad = {'Conv_Criterion':np.arange(len(cH))}
             c = np.zeros(self.nItMax)   # -.001 #
             c[:len(cH)] = cH
@@ -396,26 +555,47 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs[outName] = xndarray(c, axes_names=axes_names,
                                         axes_domains=ad,
                                         value_label='Conv_Criterion_C')
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
             outName = 'convergence_FE'
             c = np.zeros(self.nItMax)  # -.001 #
             c[:len(FE)] = FE
             outputs[outName] = xndarray(c, axes_names=axes_names,
                                         value_label='Conv_Criterion_FE')            
             
+=======
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
             logger.info("Convergence saved ")
 
         #######################################################################
         # SIMULATION
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         if self.simulation is not None:
+=======
+
+        if self.simulation:
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
             logger.info("Prepare parameters to compare if simulation")
             M = labels.shape[0]
             K = labels.shape[1]
             J = labels.shape[2]
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
 
             true_labels = np.zeros((M, J))
             for m in xrange(0,M):
                 true_labels[m, :] = roiData.simulation[0]['labels'][m].flatten()
 
+=======
+            labels_vem_audio = roiData.simulation[0]['labels'][0]
+            if M>1:
+                labels_vem_video = roiData.simulation[0]['labels'][1]
+            true_labels = np.zeros((K, J))
+            # print true_labels.shape
+            true_labels[0, :] = labels_vem_audio.flatten()
+            if M>1:
+                true_labels[1, :] = labels_vem_video.flatten()
+            #true_labels[0, :] = np.reshape(labels_vem_audio, (J))
+            #true_labels[1, :] = np.reshape(labels_vem_video, (J))
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
             newlabels = np.reshape(labels[:, 1, :], (M, J))
             #true_labels = roiData.simulation[0]['labels']
             #newlabels = labels
@@ -487,8 +667,11 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                 [self.analysis_duration]),
                                                 axes_names=['parcel_size'],
                                                 axes_domains=d)
+<<<<<<< HEAD:python/pyhrf/ui/vb_jde_analyser_asl_fast.py
         """outputs['rerror'] = xndarray(np.array(  rerror),
                                                 axes_names=['parcel_size'])"""
+=======
+>>>>>>> salma1601/retreat:python/pyhrf/ui/vb_jde_analyser_asl.py
         return outputs
 
 

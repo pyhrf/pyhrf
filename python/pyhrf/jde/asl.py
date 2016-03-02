@@ -1763,15 +1763,25 @@ from pyhrf.boldsynth.scenarios import *
 
 
 def simulate_asl(output_dir=None, noise_scenario='high_snr',
+<<<<<<< HEAD
                  spatial_size='tiny', v_noise=None, dt=0.5, tr=2.5):
+=======
+                 spatial_size='tiny', v_noise=None):
+>>>>>>> salma1601/retreat
     from pyhrf import Condition
     from pyhrf.tools import Pipeline
 
     drift_var = 10.
     
+<<<<<<< HEAD
     #tr = 2.5
     #dt = 0.5
     dsf = tr/dt  # down sampling factor
+=======
+    tr = 1.
+    dt = 0.5
+    dsf = 2  # down sampling factor
+>>>>>>> salma1601/retreat
 
     if spatial_size == 'tiny':
         lmap1, lmap2, lmap3 = 'tiny_1', 'tiny_2', 'tiny_3'
@@ -1797,6 +1807,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
     elif noise_scenario == 'low_snr_low_prl':
         v_noise = v_noise or 7.
         scale = .3
+<<<<<<< HEAD
         conditions = [
             Condition(name='audio', perf_m_act=1.6*scale, perf_v_act=.1,
                       perf_v_inact=.1,
@@ -1804,6 +1815,25 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
                       label_map=lmap1),
             Condition(name='video', perf_m_act=1.6*scale, perf_v_act=.1,
                       perf_v_inact=.1,
+=======
+        conditions = [
+            Condition(name='audio', perf_m_act=1.6*scale, perf_v_act=.1,
+                      perf_v_inact=.1,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap1),
+            Condition(name='video', perf_m_act=1.6*scale, perf_v_act=.1,
+                      perf_v_inact=.1,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap2),
+                      ]
+    else:  # low_snr
+        v_noise = v_noise or 2.
+        conditions = [
+            Condition(name='audio', perf_m_act=1.6, perf_v_act=.3, perf_v_inact=.3,
+                      bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
+                      label_map=lmap1),
+            Condition(name='video', perf_m_act=1.6, perf_v_act=.3, perf_v_inact=.3,
+>>>>>>> salma1601/retreat
                       bold_m_act=2.2, bold_v_act=.3, bold_v_inact=.3,
                       label_map=lmap2),
                       ]
@@ -1819,6 +1849,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
                       label_map=lmap2),
             # 2.2 .3  1.6 .3
         ]
+<<<<<<< HEAD
         """
         conditions = [
             Condition(name='audio', perf_m_act=4.7, perf_v_act=.31, perf_v_inact=.32,
@@ -1845,6 +1876,11 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         plt.plot(brf)
         plt.plot(prf)
         plt.show()
+=======
+
+    from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11
+    brf = create_canonical_hrf()
+>>>>>>> salma1601/retreat
     simulation_steps = {
         'dt': dt,
         'dsf': dsf,
@@ -1866,8 +1902,12 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         'brf': duplicate_brf,
         # PRF
         #'primary_prf': create_prf,  # canonical HRF for testing
+<<<<<<< HEAD
         'primary_prf': prf,
         #'primary_prf': prf,
+=======
+        'primary_prf': create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11),
+>>>>>>> salma1601/retreat
         'prf': duplicate_prf,
         # Perf baseline
         'perf_baseline': create_perf_baseline,
