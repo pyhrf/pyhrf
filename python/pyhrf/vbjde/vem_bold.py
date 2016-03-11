@@ -252,6 +252,14 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             hrf_covar, noise_var)
         logger.debug("After: nrls_mean = %s, nrls_covar = %s", nrls_mean, nrls_covar)
 
+        logger.info("Expectation Z step...")
+        logger.debug("Before: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
+        labels_proba = vt.labels_expectation(
+            nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta,
+            labels_proba, neighbours_indexes, nb_conditions, nb_classes,
+            nb_voxels, parallel=True)
+        logger.debug("After: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
+
         if estimate_hrf:
             logger.info("Expectation H step...")
             logger.debug("Before: hrf_mean = %s, hrf_covar = %s", hrf_mean, hrf_covar)
@@ -272,14 +280,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
                     hrf_covar /= hrf_norm ** 2
                     nrls_mean *= hrf_norm
                     nrls_covar *= hrf_norm ** 2
-
-        logger.info("Expectation Z step...")
-        logger.debug("Before: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
-        labels_proba = vt.labels_expectation(
-            nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta,
-            labels_proba, neighbours_indexes, nb_conditions, nb_classes,
-            nb_voxels, parallel=True)
-        logger.debug("After: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
 
         if estimate_hrf and estimate_sigma_h:
             logger.info("Maximization sigma_H step...")
