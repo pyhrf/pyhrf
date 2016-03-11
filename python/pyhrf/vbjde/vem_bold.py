@@ -17,7 +17,7 @@ TODO: add some refs?
 Attributes
 ----------
 eps : float
-    mimics the mechine epsilon to avoid zero values
+    mimics the machine epsilon to avoid zero values
 logger : logger
     logger instance identifying this module to log informations
 
@@ -380,6 +380,16 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             axis=0
         )
 
+    if estimate_hrf:
+        (delay_of_response, delay_of_undershoot, dispersion_of_response,
+         dispersion_of_undershoot, ratio_resp_under, delay) = vt.fit_hrf_two_gammas(
+             hrf_mean, dt, hrf_duration
+         )
+    else:
+        (delay_of_response, delay_of_undershoot, dispersion_of_response,
+         dispersion_of_undershoot, ratio_resp_under, delay) = (None, None, None,
+                                                               None, None, None)
+
     ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
         nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var
     )
@@ -430,5 +440,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             nrls_covar, stimulus_induced_signal, mahalanobis_zero,
             mahalanobis_cano, mahalanobis_diff, mahalanobis_prod, ppm_a_nrl,
             ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, variation_coeff,
-            free_energy[1:], free_energy_crit[1:], beta_list[1:])
+            free_energy[1:], free_energy_crit[1:], beta_list[1:],
+            delay_of_response, delay_of_undershoot, dispersion_of_response,
+            dispersion_of_undershoot, ratio_resp_under, delay)
 

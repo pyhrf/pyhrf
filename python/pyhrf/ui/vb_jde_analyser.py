@@ -176,7 +176,9 @@ class JDEVEMAnalyser(JDEAnalyser):
              contrasts_mean, contrasts_var, _, _, nrls_covar, _, density_ratio,
              density_ratio_cano, density_ratio_diff, density_ratio_prod,
              ppm_a_nrl, ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts,
-             variation_coeff, free_energy, free_energy_crit, beta_list) = jde_vem_bold(
+             variation_coeff, free_energy, free_energy_crit, beta_list,
+             delay_of_response, delay_of_undershoot, dispersion_of_response,
+             dispersion_of_undershoot, ratio_resp_under, delay) = jde_vem_bold(
                  graph, data, Onsets, durations, self.hrfDuration, self.nbClasses,
                  TR, self.beta, self.dt, self.estimateSigmaH, self.sigmaH, self.nItMax,
                  self.nItMin, self.estimateBeta, self.contrasts,
@@ -289,6 +291,46 @@ class JDEVEMAnalyser(JDEAnalyser):
             outputs["free_energy"] = xndarray(free_energy,
                                               value_label="free energy",
                                               axes_names=["time", "voxel"])
+
+            if self.estimateHRF:
+                affine = np.eye(4)
+                header = nibabel.Nifti1Header()
+                header['descrip'] = "Delay of response"
+                outputs["delay_of_response"] = xndarray(
+                    np.zeros(nbv)+delay_of_response,
+                    value_label="Delay of response of the fitted estimated HRF",
+                    axes_names=["voxel"], meta_data=(affine, header)
+                )
+                header['descrip'] = "Delay of undershoot"
+                outputs["delay_of_undershoot"] = xndarray(
+                    np.zeros(nbv)+delay_of_undershoot,
+                    value_label="Delay of undershoot of the fitted estimated HRF",
+                    axes_names=["voxel"], meta_data=(affine, header)
+                )
+                header['descrip'] = "Dispesion of response"
+                outputs["dispersion_of_response"] = xndarray(
+                    np.zeros(nbv)+dispersion_of_response,
+                    value_label="Dispersion of response of the fitted estimated HRF",
+                    axes_names=["voxel"], meta_data=(affine, header)
+                )
+                header['descrip'] = "Dispesion of undershoot"
+                outputs["dispersion_of_undershoot"] = xndarray(
+                    np.zeros(nbv)+dispersion_of_undershoot,
+                    value_label="Dispersion of undershoot of the fitted estimated HRF",
+                    axes_names=["voxel"], meta_data=(affine, header)
+                )
+                header['descrip'] = "Ratio response to undershoot"
+                outputs["ratio_response_undershoot"] = xndarray(
+                    np.zeros(nbv)+ratio_resp_under,
+                    value_label="Ratio between response and undershoot peaks of the fitted estimated HRF",
+                    axes_names=["voxel"], meta_data=(affine, header)
+                )
+                header['descrip'] = "Delay of the HRF"
+                outputs["hrf_delay"] = xndarray(
+                    np.zeros(nbv)+delay,
+                    value_label="Delay of the HRF",
+                    axes_names=["voxel"], meta_data=(affine, header)
+                )
 
             #  beta_list = np.concatenate((np.asarray(beta_list), np.zeros((self.nItMax - len(beta_list), nbc))), axis=1)
             #  outputs["beta_list"] = xndarray(beta_list,

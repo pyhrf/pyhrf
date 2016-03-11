@@ -18,6 +18,7 @@ from scipy.stats import norm
 from sympy.parsing.sympy_parser import parse_expr
 
 from pyhrf.paradigm import restarize_events
+from pyhrf.boldsynth.hrf import getCanoHRF
 
 
 np.seterr(under="ignore")
@@ -194,6 +195,47 @@ def roc_curve(dvals, labels, rocN=None, normalize=True):
             area /= (TP * FP)
 
     return fpc, tpc, area
+
+
+def fit_hrf_two_gammas(hrf_mean, dt, duration):
+    """Fits the estimated HRF to the standard two gammas model.
+
+    Parameters
+    ----------
+    hrf_mean : ndarray, shape (hrf_len,)
+
+    Returns
+    -------
+    delay_of_response : float
+    delay_of_undershoot : float
+    dispersion_of_response : float
+    dispersion_of_undershoot : float
+    ratio_resp_under : float
+    delay : float
+    """
+
+    def two_gamma_hrf(params):
+
+        delay_of_response = params[0]
+        delay_of_undershoot = params[1]
+        dispersion_of_response = params[2]
+        dispersion_of_undershoot = params[3]
+        ratio_resp_under = params[4]
+        delay = params[5]
+
+        return getCanoHRF(duration, dt, True, delay_of_response,
+                          delay_of_undershoot, dispersion_of_response,
+                          dispersion_of_undershoot, ratio_resp_under, delay)[1] - hrf_mean
+
+    try:
+        from scipy.optimize import least_squares
+        res = least_squares(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]),
+                            bounds=(np.zeros(6), duration + np.zeros(6))).x
+    except ImportError as e:
+        from scipy.optimize import leastsq
+        res, cov_res = leastsq(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]))
+
+    return res
 
 
 def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
