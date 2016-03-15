@@ -30,6 +30,7 @@ Check website for details: www.pyhrf.org
 import os
 import logging
 import warnings
+import sys
 
 import numpy
 
@@ -63,7 +64,7 @@ for pname, pval in pyhrf.configuration.cfg['global'].iteritems():
 # logging configuration
 # warnings.filterwarnings("always", message=".*verbos.*",
 #                         category=DeprecationWarning)
-logging.basicConfig()
+logging.basicConfig(stream=sys.stdout)
 logger = logging.getLogger(__name__)
 verb = cfg['log']['level']
 try:
