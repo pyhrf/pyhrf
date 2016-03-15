@@ -344,10 +344,10 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     compute_time_mean = compute_time[-1] / loop
 
-    density_ratio = np.nan
-    density_ratio_cano = np.nan
-    density_ratio_diff = np.nan
-    density_ratio_prod = np.nan
+    mahalanobis_zero = np.nan
+    mahalanobis_cano = np.nan
+    mahalanobis_diff = np.nan
+    mahalanobis_prod = np.nan
     variation_coeff = np.nan
 
     if estimate_hrf and not constrained and not normalizing:
