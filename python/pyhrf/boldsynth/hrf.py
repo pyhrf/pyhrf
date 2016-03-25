@@ -127,30 +127,31 @@ def getCanoHRF(duration=25, dt=.6, hrf_from_spm=True, delay_of_response=6.,
 
     Returns
     -------
-    tAxis : ndarray, shape (round(duration/dt)+1,)
+    time_axis : ndarray, shape (round(duration/dt)+1,)
         time axis of the HRF in seconds
     HRF : ndarray, shape (round(duration/dt)+1,)
 
     """
 
-    tAxis = np.arange(0, duration+dt, dt)
+    time_axis = np.arange(0, duration+dt, dt)
+    axis = np.arange(len(time_axis))
 
     if hrf_from_spm:
-        h = (scipy.stats.gamma.pdf(tAxis - delay,
-                                   delay_of_response/dispersion_of_response, 0,
-                                   dispersion_of_response/dt) -
-            scipy.stats.gamma.pdf(tAxis - delay,
-                                  delay_of_undershoot/dispersion_of_undershoot,
-                                  0, dispersion_of_undershoot/dt)/ratio_resp_under)
-        h[-1] = 0
-        h /= (h**2).sum()**.5
+        hrf_cano = (scipy.stats.gamma.pdf(axis - delay/dt,
+                                          delay_of_response/dispersion_of_response, 0,
+                                          dispersion_of_response/dt) -
+                    scipy.stats.gamma.pdf(axis - delay/dt,
+                                          delay_of_undershoot/dispersion_of_undershoot,
+                                          0, dispersion_of_undershoot/dt)/ratio_resp_under)
+        hrf_cano[-1] = 0
+        hrf_cano /= np.linalg.norm(hrf_cano)
     else:
-        h = resampleToGrid(tAxisHCano, hCano.copy(), tAxis)
-        h[-1] = 0.
-        assert len(h) == len(tAxis)
-        h /= (h**2).sum()**.5
+        hrf_cano = resampleToGrid(time_axisHCano, hCano.copy(), time_axis)
+        hrf_cano[-1] = 0.
+        assert len(hrf_cano) == len(time_axis)
+        hrf_cano /= (hrf_cano**2).sum()**.5
 
-    return tAxis, h
+    return time_axis, hrf_cano
 
 
 def getCanoHRF_tderivative(duration=25., dt=.5):
