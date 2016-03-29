@@ -391,7 +391,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
                                                                None, None, None)
 
     ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
-        nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var
+        nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var,
+        threshold_a="intersect"
     )
 
     #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
