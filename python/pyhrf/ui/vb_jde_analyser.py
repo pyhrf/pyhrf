@@ -324,7 +324,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                     value_label="Ratio between response and undershoot peaks of the fitted estimated HRF",
                     axes_names=["voxel"], meta_data=(affine, header)
                 )
-                outputs["ratio_resp_under"].meta_data[1]["descrip"] = "Ratio response/undershoot"
+                outputs["ratio_response_undershoot"].meta_data[1]["descrip"] = "Ratio response/undershoot"
                 #  header['descrip'] = "Delay of the HRF"
                 outputs["hrf_delay"] = xndarray(
                     np.zeros(nbv)+delay,
