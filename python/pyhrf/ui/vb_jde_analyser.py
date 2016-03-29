@@ -372,14 +372,14 @@ class JDEVEMAnalyser(JDEAnalyser):
             affine = np.eye(4)
             for condition_nb, condition_name in enumerate(cNames):
                 header = nibabel.Nifti1Header()
-                outputs["ppm_a_nrl_"+condition_name] = xndarray(ppm_a_nrl[:, i],
+                outputs["ppm_a_nrl_"+condition_name] = xndarray(ppm_a_nrl[:, condition_nb],
                                                 value_label="PPM NRL alpha fixed",
                                                 axes_names=["voxel"],
                                                 meta_data=(affine, header))
                 outputs["ppm_a_nrl_"+condition_name].meta_data[1]["descrip"] = condition_name
 
 
-                outputs["ppm_g_nrl_"+condition_name] = xndarray(ppm_g_nrl,
+                outputs["ppm_g_nrl_"+condition_name] = xndarray(ppm_g_nrl[:, condition_nb],
                                                                 value_label="PPM NRL gamma fixed",
                                                                 axes_names=["voxel"],
                                                                 meta_data=(affine, header))
