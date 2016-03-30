@@ -289,55 +289,24 @@ class JDEVEMAnalyser(JDEAnalyser):
                                               axes_names=["time", "voxel"])
 
             if self.estimateHRF:
+                fitting_parameters = {
+                    "hrf_fit_delay_of_response":  delay_of_response,
+                    "hrf_fit_delay_of_undershoot":  delay_of_undershoot,
+                    "hrf_fit_dispersion_of_response":  dispersion_of_response,
+                    "hrf_fit_dispersion_of_undershoot":  dispersion_of_undershoot,
+                    "hrf_fit_ratio_response_undershoot": ratio_resp_under,
+                    "hrf_fit_delay": delay,
+                }
                 affine = np.eye(4)
-                header = nibabel.Nifti1Header()
-                #  header['descrip'] = "Delay of response"
-                outputs["delay_of_response"] = xndarray(
-                    np.zeros(nbv)+delay_of_response,
-                    value_label="Delay of response of the fitted estimated HRF",
-                    axes_names=["voxel"], meta_data=(affine, header)
-                )
-                outputs["delay_of_response"].meta_data[1]["descrip"] = "Delay of response"
-                #  header['descrip'] = "Delay of undershoot"
-                outputs["delay_of_undershoot"] = xndarray(
-                    np.zeros(nbv)+delay_of_undershoot,
-                    value_label="Delay of undershoot of the fitted estimated HRF",
-                    axes_names=["voxel"], meta_data=(affine, header)
-                )
-                outputs["delay_of_undershoot"].meta_data[1]["descrip"] = "Delay of undershoot"
-                #  header['descrip'] = "Dispesion of response"
-                outputs["dispersion_of_response"] = xndarray(
-                    np.zeros(nbv)+dispersion_of_response,
-                    value_label="Dispersion of response of the fitted estimated HRF",
-                    axes_names=["voxel"], meta_data=(affine, header)
-                )
-                outputs["dispersion_of_response"].meta_data[1]["descrip"] = "Dispersion of response"
-                #  header['descrip'] = "Dispesion of undershoot"
-                outputs["dispersion_of_undershoot"] = xndarray(
-                    np.zeros(nbv)+dispersion_of_undershoot,
-                    value_label="Dispersion of undershoot of the fitted estimated HRF",
-                    axes_names=["voxel"], meta_data=(affine, header)
-                )
-                outputs["dispersion_of_undershoot"].meta_data[1]["descrip"] = "Dispersion of undershoot"
-                #  header['descrip'] = "Ratio response to undershoot"
-                outputs["ratio_response_undershoot"] = xndarray(
-                    np.zeros(nbv)+ratio_resp_under,
-                    value_label="Ratio between response and undershoot peaks of the fitted estimated HRF",
-                    axes_names=["voxel"], meta_data=(affine, header)
-                )
-                outputs["ratio_response_undershoot"].meta_data[1]["descrip"] = "Ratio response/undershoot"
-                #  header['descrip'] = "Delay of the HRF"
-                outputs["hrf_delay"] = xndarray(
-                    np.zeros(nbv)+delay,
-                    value_label="Delay of the HRF",
-                    axes_names=["voxel"], meta_data=(affine, header)
-                )
-                outputs["hrf_delay"].meta_data[1]["descrip"] = "Delay of the HRF"
-
-            #  beta_list = np.concatenate((np.asarray(beta_list), np.zeros((self.nItMax - len(beta_list), nbc))), axis=1)
-            #  outputs["beta_list"] = xndarray(beta_list,
-                                            #  value_label="free energy criteria",
-                                            #  axes_names=["condition", "time"])
+                for param_name in fitting_parameters:
+                    header = nibabel.Nifti1Header()
+                    description = param_name[8:].replace("_", " ").capitalize()
+                    outputs[param_name] = xndarray(
+                        np.zeros(nbv)+fitting_parameters[param_name],
+                        value_label=description + " of the fitted estimated HRF",
+                        axes_names=["voxel"], meta_data=(affine, header)
+                    )
+                    outputs[param_name].meta_data[1]["descrip"] = description
 
             h = hrf_mean
             nrls_mean = nrls_mean.transpose()
