@@ -385,7 +385,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                           value_label="PPM Contrasts gamma fixed",
                                                           axes_names=["voxel"],
                                                           meta_data=(affine, header))
-                    outputs["ppm_g_"+contrast].meta_data[1]["descript"] = contrast
+                    outputs["ppm_g_"+contrast].meta_data[1]["descrip"] = contrast
 
 
         ################################################################################
