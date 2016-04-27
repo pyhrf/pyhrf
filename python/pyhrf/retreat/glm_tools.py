@@ -12,6 +12,11 @@ except ImportError:
     from nipy.modalities.fmri.hemodynamic_models import _resample_regressor as\
         resample_regressor
 
+import pyhrf.vbjde.vem_tools as vt
+from pyhrf.sandbox.physio_params import (linear_rf_operator,
+                                         PHY_PARAMS_KHALIDOV11)
+from nistats import design_matrix
+
 
 def fix_paradigm(paradigm):
     """Fix a paradigm. Force its amplitude to be an array of floats.
@@ -174,3 +179,66 @@ def combine_masks(binary_path, probabilistic_path, out_path, threshold=.5):
                                   bin_img.get_header())
     nibabel.save(out_img, out_path)
     return out_img
+
+
+def make_design_matrix_asl(paradigm, n_scans, t_r, hrf_length=32., oversampling=16, hrf_model='canonical', prf_model='physio',
+                           drift_model='polynomial', drift_order=4, model = 'ols', mvt_file=None):
+    dt = t_r / oversampling
+    frametimes = np.arange(0, n_scans * t_r, t_r)
+    phy_params = PHY_PARAMS_KHALIDOV11
+    phy_params['V0'] = 2.
+    prf_matrix = linear_rf_operator(hrf_length / dt,  phy_params, dt, calculating_brf=False)
+
+    # Activation BOLD and ASL regressors
+    bold_regs = []
+    add_regs = []
+    add_reg_names = []
+    for condition_name in np.unique(paradigm.name):
+        onsets = paradigm.onset[paradigm.name == condition_name]
+        values = paradigm.modulation[paradigm.name == condition_name]
+        try:
+            duration = paradigm.duration[paradigm.name == condition_name]
+        except:
+            duration = np.zeros_like(onsets)
+        exp_condition = (onsets, duration, values)
+        bold_regs.append(compute_prf_regressor(exp_condition, hrf_model, frametimes, prf_model=prf_model,
+                                               prf_matrix=prf_matrix, con_id=condition_name, oversampling=16,
+                                               normalize=True, plot=False)[0])
+        reg, reg_name = compute_prf_regressor(exp_condition, hrf_model, frametimes, prf_model=prf_model,
+                                              prf_matrix=prf_matrix, con_id=condition_name, oversampling=16,
+                                              normalize=True)
+        #reg[0] = 0.
+        reg[::2] *= 0.5
+        reg[1::2] *= -0.5
+        add_regs.append(reg.squeeze())
+        add_reg_names.append(reg_name[0] + '_' + condition_name)
+
+    # Baseline ASL regressor
+    reg = np.ones(n_scans)
+    #reg[0] = 0.
+    reg[::2] *= 0.5
+    reg[1::2] *= -0.5
+    add_regs.append(reg)
+    add_reg_names.append('perfusion_baseline')
+
+    #reg = np.zeros(n_scans)
+    #reg[0] = 1.
+    #add_regs.append(reg)
+    #add_reg_names.append('m_0')
+
+    bold_regs = np.array(bold_regs).squeeze(axis=-1)
+    bold_regs = bold_regs.transpose()
+    add_regs = np.array(add_regs).transpose()
+
+    if mvt_file is not None:
+        # Motion regressors
+        add_regs = np.hstack((add_regs, np.genfromtxt(mvt_file, skip_header=1)))
+        add_reg_names += ['translation x', 'translation y', 'translation z', 'pitch', 'roll', 'yaw']
+
+    # Create the design matrix
+    dm = design_matrix.make_design_matrix(frametimes, paradigm=paradigm,
+                                   hrf_model=hrf_model, drift_model=drift_model,
+                                   drift_order=drift_order, add_regs=add_regs,
+                                   add_reg_names=add_reg_names)
+
+    return dm

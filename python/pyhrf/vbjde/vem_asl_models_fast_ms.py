@@ -68,9 +68,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     SUM_q_Z = [[] for m in xrange(M)]
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
-    sigmaH = sigmaH * J / 100
+    #sigmaH = sigmaH * J / 100
     print sigmaH
-    gamma_h = gamma_h * 100 / J
+    #gamma_h = gamma_h * 100 / J
     print gamma_h
 
     # Beta data
@@ -85,6 +85,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     # Control-tag
     w = np.ones((N))
     w[idx_first_tag + 1::2] = -1
+    w *= 0.5
     W = np.diag(w)
 
     # Conditions

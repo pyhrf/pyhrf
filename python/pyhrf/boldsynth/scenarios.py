@@ -117,8 +117,8 @@ def create_localizer_paradigm_avd(condition_defs):
     cnames = [c.name for c in condition_defs]
     onsets = OrderedDict(zip(cnames, [ons[c] for c in cnames]))
     par = mpar.Paradigm(onsets, sessionDurations=[300.*2.8])
-    print 'Paradigm information: '
-    print par.get_info()
+    #print 'Paradigm information: '
+    #print par.get_info()
     return par
 
 
@@ -156,7 +156,7 @@ def rasterize_paradigm(paradigm, dt, condition_defs):
     temporal resolution dt, for all conditions. 'paradigm' is expected to be
     an instance of 'pyhrf.paradigm.mpar.Paradigm'
     """
-    print paradigm
+    #print paradigm
     rparadigm = paradigm.get_rastered(dt)
     return np.vstack([rparadigm[c.name][0] for c in condition_defs])
 
@@ -234,6 +234,11 @@ def create_time_invariant_gaussian_nrls(condition_defs, labels):
         nrls_c = randn(labels_c.size) * c.v_inact ** .5 + 0
         nrls_c[mask_activ] = randn(labels_c.sum()) * c.v_act ** .5 + c.m_act
         nrls.append(nrls_c)
+        print nrls_c[mask_activ]
+        print c.v_inact
+        print c.v_act
+        print c.m_act
+        print nrls_c[mask_activ].mean()
 
     return np.vstack(nrls)
 
@@ -782,8 +787,9 @@ def create_bold_controlled_variance(stim_induced_signal, alpha, nb_voxels, dsf, 
     return bold
 
 
-def build_ctrl_tag_matrix(asl_shape):
+def build_ctrl_tag_matrix(asl_shape):  #asl_shape
     units = np.ones(asl_shape[0]) * -1
+    #units = np.ones(nb_scans) * -1
     units[::2] = 1
     return np.diag(units)
 
@@ -879,7 +885,8 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
         brfs_vol = expand_array_in_mask(
             simulation['brf'], mask_vol, flat_axis=1)
         dt = simulation['dt']
-        cbrfs = xndarray(brfs_vol, axes_names=['time', ] + MRI3Daxes,
+        print brfs_vol.shape
+        cbrfs = xndarray(brfs_vol[:, 0, :, :, :], axes_names=['time', ] + MRI3Daxes,
                          axes_domains={'time': np.arange(brfs_vol.shape[0]) * dt})
         cbrfs.save(fn_brf, vol_meta)
 
@@ -890,7 +897,7 @@ def simulation_save_vol_outputs(simulation, output_dir, bold_3D_vols_dir=None,
         brfs_vol = expand_array_in_mask(
             simulation['prf'], mask_vol, flat_axis=1)
         dt = simulation['dt']
-        cbrfs = xndarray(brfs_vol, axes_names=['time', ] + MRI3Daxes,
+        cbrfs = xndarray(brfs_vol[:, 0, :, :, :], axes_names=['time', ] + MRI3Daxes,
                          axes_domains={'time': np.arange(brfs_vol.shape[0]) * dt})
         cbrfs.save(fn_brf, vol_meta)
 

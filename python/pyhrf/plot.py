@@ -56,11 +56,8 @@ def plot_func_slice(func_slice_data, anatomy=None, parcellation=None,
         highlighted_parcels_col = {}
 
     if func_cmap is None:
-<<<<<<< HEAD
         func_cmap = plt.get_cmap('seismic')
-=======
-        func_cmap = plt.get_cmap('hot')
->>>>>>> salma1601/retreat
+
 
     if anatomy is not None:
         if func_slice_data.shape != anatomy.shape:
@@ -380,7 +377,7 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
 
     def protect_latex_str(s):
         return s.replace('_','\_')
-        
+
     axes = axes or plt.gca()
     colors = colors or {}
     plot_kwargs = plot_kwargs or {}
@@ -412,7 +409,7 @@ def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
 
     if show_axis_labels:
         if c.get_ndims() == 1:
-            axes.set_xlabel(protect_latex_str(c.axes_names[0]), 
+            axes.set_xlabel(protect_latex_str(c.axes_names[0]),
                             fontsize=axis_label_fontsize)
         else:
             axes.set_xlabel(protect_latex_str(c.axes_names[1]),
