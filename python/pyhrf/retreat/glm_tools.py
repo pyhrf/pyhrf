@@ -208,16 +208,16 @@ def make_design_matrix_asl(paradigm, n_scans, t_r, hrf_length=32., oversampling=
                                               prf_matrix=prf_matrix, con_id=condition_name, oversampling=16,
                                               normalize=True)
         #reg[0] = 0.
-        reg[::2] *= 0.5
-        reg[1::2] *= -0.5
+        reg[::2] *= -0.5
+        reg[1::2] *= 0.5
         add_regs.append(reg.squeeze())
         add_reg_names.append(reg_name[0] + '_' + condition_name)
 
     # Baseline ASL regressor
     reg = np.ones(n_scans)
     #reg[0] = 0.
-    reg[::2] *= 0.5
-    reg[1::2] *= -0.5
+    reg[::2] *= -0.5
+    reg[1::2] *= 0.5
     add_regs.append(reg)
     add_reg_names.append('perfusion_baseline')
 
@@ -232,7 +232,9 @@ def make_design_matrix_asl(paradigm, n_scans, t_r, hrf_length=32., oversampling=
 
     if mvt_file is not None:
         # Motion regressors
-        add_regs = np.hstack((add_regs, np.genfromtxt(mvt_file, skip_header=1)))
+        #print np.genfromtxt(mvt_file).shape
+        #print add_regs.shape
+        add_regs = np.hstack((add_regs, np.genfromtxt(mvt_file, skip_header=0)))
         add_reg_names += ['translation x', 'translation y', 'translation z', 'pitch', 'roll', 'yaw']
 
     # Create the design matrix
