@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 import pyhrf
 from pyhrf.ndarray import xndarray
-from pyhrf.vbjde.vem_asl_models_fast_ms import Main_vbjde_physio
+from pyhrf.vbjde.vem_asl_models_fast import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
@@ -152,11 +152,15 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData.bold : numpy array of shape
         # BOLD has shape (nscans, nvoxels)
         # roiData.graph #list of neighbours
-        n_scan_allsession, nvox = roiData.bold.shape
-        n_scan = n_scan_allsession / self.n_session
-        data = roiData.bold.reshape(self.n_session, n_scan, nvox)
-        Onsets = roiData.paradigm.get_joined_onsets_dim()
-        durations = roiData.paradigm.get_joined_durations_dim()
+        #n_scan_allsession, nvox = roiData.bold.shape
+        #n_scan = n_scan_allsession / self.n_session
+        #data = roiData.bold.reshape(self.n_session, n_scan, nvox)
+        #Onsets = roiData.paradigm.get_joined_onsets_dim()
+        #durations = roiData.paradigm.get_joined_durations_dim()
+        n_scan, nvox = roiData.bold.shape
+        data = roiData.bold
+        Onsets = roiData.paradigm.get_joined_onsets()
+        durations = roiData.paradigm.get_joined_durations()
         TR = roiData.tr
         # K = 2                      # number of classes
         beta = self.beta
