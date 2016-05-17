@@ -323,21 +323,7 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
     return diffMat
 
 
-def create_conditions(Onsets, M, N, D, TR, dt):
-    condition_names = []
-    X = OrderedDict([])
-    for condition, Ons in Onsets.iteritems():
-        X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
-        condition_names += [condition]
-    XX = np.zeros((M, N, D), dtype=np.int32)
-    nc = 0
-    for condition, Ons in Onsets.iteritems():
-        XX[nc, :, :] = X[condition]
-        nc += 1
-    return X, XX, condition_names
-
-
-def create_conditions_block(Onsets, durations, M, N, D, TR, dt):
+def create_conditions(Onsets, durations, M, N, D, TR, dt):
     condition_names = []
     X = OrderedDict([])
     for condition, Ons in Onsets.iteritems():
