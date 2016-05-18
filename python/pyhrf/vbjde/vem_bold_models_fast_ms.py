@@ -57,15 +57,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     logger.info("data shape: ")
     logger.info(Y.shape)
 
-    Thresh = 1e-5
+    Thresh = 1e-4
     D, M = np.int(np.ceil(Thrf / dt)) + 1, len(Onsets)
     #D, M = np.int(np.ceil(Thrf / dt)), len(Onsets)
-    if Y.ndim < 3:
-        n_sess, N = Y.shape[0], Y.shape[1]
-        Y2 = np.zeros((Y.shape[0], Y.shape[1], 1))
-        J = 1
-    else:
-        n_sess, N, J = Y.shape[0], Y.shape[1], Y.shape[2]
+    n_sess, N, J = Y.shape[0], Y.shape[1], Y.shape[2]
 
     Crit_AH, Crit_CG, cTime, rerror, FE = 1, 1, [], [], []
     EP, EPlh, Ent = [],[],[]
@@ -77,10 +72,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
     sigmaH = sigmaH #* J / 100
-    print 'num_voxels = ', J
-    print 'v_h = ', sigmaH
-    gamma_h = gamma_h #* 100 / J
-    print 'gamma_h = ', gamma_h
+    print sigmaH
+    gamma_h = gamma_h # * 100 / J
+    print gamma_h
 
     # Beta data
     MaxItGrad = 200
@@ -93,17 +87,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     # Conditions
     print 'Onsets: ', Onsets
-    print 'durations: ', durations
+    print 'durations = ', durations
     print 'creating conditions...'
     X, XX, condition_names = vt.create_conditions_block_ms(Onsets, durations,
                                                     M, N, D, n_sess, TR, dt)
-    if 0:
-        print condition_names
-        import matplotlib.pyplot as plt
-        plt.matshow(XX[0, :, :, 0])
-        plt.show()
-        plt.matshow(XX[1, :, :, 0])
-        plt.show()
 
     # Covariance matrix
     #R = vt.covariance_matrix(2, D, dt)

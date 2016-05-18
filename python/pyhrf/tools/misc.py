@@ -1137,10 +1137,7 @@ def get_leaf(element, branch):
     branch from element
     """
     if isinstance(element, dict) and len(branch) > 0:
-        if element.has_key(branch[0]):
-            return get_leaf(element[branch[0]], branch[1:])
-        else:
-            return [np.array([])]
+        return get_leaf(element[branch[0]], branch[1:])
     else:
         return element
 
@@ -1244,14 +1241,14 @@ def stack_trees(trees, join_func=None):
     across input trees. 'trees' is a list of dict
     """
     stackedTree = trees[0].__class__()
-    for it in xrange(len(trees)):
-        for branch, branch_classes in izip(treeBranches(trees[it]),
-                                           treeBranchesClasses(trees[it])):
-            if join_func is None:
-                leaveList = [get_leaf(tree, branch) for tree in trees]
-            else:
-                leaveList = join_func([get_leaf(tree, branch) for tree in trees])
-            set_leaf(stackedTree, branch, leaveList, branch_classes)
+
+    for branch, branch_classes in izip(treeBranches(trees[0]),
+                                       treeBranchesClasses(trees[0])):
+        if join_func is None:
+            leaveList = [get_leaf(tree, branch) for tree in trees]
+        else:
+            leaveList = join_func([get_leaf(tree, branch) for tree in trees])
+        set_leaf(stackedTree, branch, leaveList, branch_classes)
     return stackedTree
 
 
