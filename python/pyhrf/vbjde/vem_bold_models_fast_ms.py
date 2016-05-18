@@ -53,7 +53,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                       phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=False):
 
     logger.info("EM for ASL!")
-    np.random.seed(6537540)
+    #np.random.seed(6537540)
     logger.info("data shape: ")
     logger.info(Y.shape)
 
@@ -149,8 +149,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     y_tilde = Y - PL
 
     # Parameters Gaussian mixtures
-    mu_Ma = np.append(np.zeros((M, 1)), np.ones((M, 1)), axis=1).astype(np.float64)
-    sigma_Ma = np.ones((M, K), dtype=np.float64) * 0.3
+    mu_Ma = 2 * np.append(np.zeros((M, 1)), np.ones((M, 1)), axis=1).astype(np.float64)
+    sigma_Ma = np.ones((M, K), dtype=np.float64) * (0.3)**2
 
     # Params RLs
     m_A = np.zeros((n_sess, J, M), dtype=np.float64)
@@ -166,7 +166,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     Sigma_G = np.zeros_like(Sigma_H)
     Sigma_C = np.zeros_like(Sigma_A)
     mu_Mc = np.zeros_like(mu_Ma)
-    sigma_Mc = np.ones_like(sigma_Ma)
+    sigma_Mc = np.zeros_like(sigma_Ma)
     W = np.zeros_like(Gamma)            # (N, N)
 
     # Precomputations
@@ -252,10 +252,12 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Q labels
         if estimateZ:
             logger.info("E Q step ...")
+            old_params = np.seterr(all='raise')
             q_Z, Z_tilde = vt.expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
                                             Beta, Z_tilde, q_Z, neighboursIndexes,
                                             graph, M, J, K, n_sess)
+            np.seterr(**old_params)
 
             if 0:
                 import matplotlib.pyplot as plt
@@ -292,7 +294,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             if free_energyQ < free_energyA:
                 logger.info("free energy has decreased after E-Q step from %f to %f", free_energyA, free_energyQ)
 
-        
+
         # HRF H
         if estimateH:
             logger.info("E H step ...")
@@ -540,7 +542,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     if zc:
         H = np.concatenate(([0], H, [0]))
 
-    
+
     ppm_a_nrl = np.zeros((J, M))
     ppm_g_nrl = np.zeros((J, M))
     nrls_mean = m_A.mean(0)
