@@ -1582,8 +1582,9 @@ def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     Gauss_mat = np.zeros_like(alpha)
     for s in xrange(S):
         alpha -= 0.5 * np.diagonal(Sigma_A[:, :, :, s])[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :])
-        #Gauss_mat += np.log(vt.normpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma)))
-        Gauss_mat += sp.stats.norm.logpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma))
+        #normpdf(x, mu, sigma)
+        Gauss_mat += normpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma))
+        #Gauss_mat += sp.stats.norm.logpdf(m_A[s, :, :, np.newaxis], mu_Ma, np.sqrt(sigma_Ma))
 
     if nans_init:
         labels_proba_nans = np.ones_like(labels_proba)/K
@@ -1596,9 +1597,10 @@ def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     B_pqt = Beta[:, np.newaxis, np.newaxis] * labels_proba.copy()
     B_pqt = np.concatenate((B_pqt, np.zeros((M, K, 1), dtype=B_pqt.dtype)), axis=2)
     local_energy = B_pqt[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
-    energy = (local_energy + alpha + Gauss_mat )
-    #energy -= energy.max()
-    labels_proba = (np.exp(energy)).transpose(1, 2, 0)
+    #energy = (local_energy + alpha + Gauss_mat )
+    #labels_proba = (np.exp(energy)).transpose(1, 2, 0)
+    energy = (local_energy + alpha)
+    labels_proba = (np.exp(energy) * Gauss_mat ).transpose(1, 2, 0)
 
     # Remove NaNs and Infs (# TODO: check for sequential mode)
     if (labels_proba.sum(axis=1)==0).any():
