@@ -149,6 +149,18 @@ def PolyMat(Nscans, paramLFD, tr):
     lfdMat = np.array(sp.linalg.orth(lfdMat))
     return lfdMat
 
+def CosMat(Nscans, paramLFD, tr):
+    n = np.arange(0, Nscans)
+    fctNb = np.fix(2 * (Nscans * tr) / paramLFD + 1.)  # +1 stands for the
+    # mean/cst regressor
+    lfdMat = np.zeros((Nscans, fctNb), dtype=float)
+    lfdMat[:, 0] = np.ones(Nscans, dtype=float) / sqrt(Nscans)
+    samples = 1. + np.arange(fctNb - 2)
+    for k in samples:
+        lfdMat[:, k] = np.sqrt(2. / Nscans) \
+            * np.cos(np.pi * (2. * n + 1.) * k / (2 * Nscans))
+    lfdMat = np.array(sp.linalg.orth(lfdMat))
+    return lfdMat
 
 def covariance_matrix(order, D, dt):
     D2 = vt.buildFiniteDiffMatrix_s(order, D)
@@ -257,10 +269,10 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
-    print 'onsets = ', onsets
-    print 'durations = ', durations
-    print 'dt = ', dt
-    print 'tmax = ', tmax
+    #print 'onsets = ', onsets
+    #print 'durations = ', durations
+    #print 'dt = ', dt
+    #print 'tmax = ', tmax
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -311,21 +323,7 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
     return diffMat
 
 
-def create_conditions(Onsets, M, N, D, TR, dt):
-    condition_names = []
-    X = OrderedDict([])
-    for condition, Ons in Onsets.iteritems():
-        X[condition] = vt.compute_mat_X_2(N, TR, D, dt, Ons)
-        condition_names += [condition]
-    XX = np.zeros((M, N, D), dtype=np.int32)
-    nc = 0
-    for condition, Ons in Onsets.iteritems():
-        XX[nc, :, :] = X[condition]
-        nc += 1
-    return X, XX, condition_names
-
-
-def create_conditions_block(Onsets, durations, M, N, D, TR, dt):
+def create_conditions(Onsets, durations, M, N, D, TR, dt):
     condition_names = []
     X = OrderedDict([])
     for condition, Ons in Onsets.iteritems():
@@ -349,8 +347,8 @@ def create_conditions_block_ms(Onsets, durations, M, N, D, S, TR, dt):
     for condition, Ons in Onsets.iteritems():
         condition_names += [condition]
         Dur = durations[condition]
-        print 'Onsets: ', Ons
-        print 'Durations: ', Dur
+        #print 'Onsets: ', Ons
+        #print 'Durations: ', Dur
         for s in xrange(S):
             X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons[s, :],
                                                     durations=Dur[s, :])
@@ -1205,7 +1203,7 @@ def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J,
 
     # we sum the term that corresponds to the prior
     Y_bar_tilde += prior_mean_term
-    
+
     # m_H = S_a^-1 y_bar_tilde
     m_H = np.dot(np.linalg.inv(S_a), Y_bar_tilde)
 
@@ -1601,7 +1599,7 @@ def expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
     energy = (local_energy + alpha + Gauss_mat )
     #energy -= energy.max()
     labels_proba = (np.exp(energy)).transpose(1, 2, 0)
-    
+
     # Remove NaNs and Infs (# TODO: check for sequential mode)
     if (labels_proba.sum(axis=1)==0).any():
         mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0

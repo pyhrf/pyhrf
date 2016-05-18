@@ -49,36 +49,30 @@ def main():
 
     np.random.seed(48258)
 
-    #prior_types = np.array(['omega', 'balloon', 'no'])
-    prior_types = np.array(['omega', 'balloon', 'no'])
-    #prior_types = np.array(['no'])
-    #prior_types = np.array(['balloon'])
+    prior_types = np.array(['balloon'])
     #noise_scenarios = np.array(['low_snr', 'high_snr'])
-    noise_scenarios = np.array(['low_snr'])
+    noise_scenarios = np.array(['low_snr_scale'])
     #noise_scenarios = np.array(['high_snr'])
 
 
     # Initialisation values
     simulate = True
     do_jde_asl = True
-    mcmc = False
-    vem = True
     tr = 2.5
     dt = tr / 2.
-    s = 2.
+    s = 0.5
 
-    v_noise_range = np.arange(2.0, 2.3, 1.)
+    v_noise_range = np.arange(10.0, 10.3, 1.)
     snr_range = np.zeros_like(v_noise_range)
-    hyp_opt = np.array([True, False])
-    #hyp_opt = np.array([False])
+    hyp_opt = np.array([True])
     pos_opt = np.array([False])
-    cons_opt = np.array([True, False])
+    cons_opt = np.array([False])
 
     n_method = len(hyp_opt) * len(pos_opt)
     print v_noise_range
     error = np.zeros((len(v_noise_range), n_method, 4))
     error2 = np.zeros((len(v_noise_range), n_method, 4))
-    block_opt = np.array([True, False])
+    block_opt = np.array([True])
 
     for prior in prior_types:
 
@@ -90,7 +84,7 @@ def main():
 
                     for cons in cons_opt:
 
-                        fig_prefix = 'prior' + prior + '_' + noise_scen + '2_hyp' + str(hyp*1) + '_cons' + str(cons*1)
+                        fig_prefix = 'prior' + prior + '_very' + noise_scen + '_block' * block + '_hyp' * hyp + '_cons' * cons
                         simulation_dir = fig_prefix + '_simulated'
                         fig_dir = fig_prefix + '_figs'
                         if not op.exists(fig_dir):
@@ -104,7 +98,6 @@ def main():
                                 print 'index v_noise = ', ivn
                                 print 'v_noise = ', v_noise
                                 if simulate:
-
                                     if block:
                                         # HEROES
                                         asl_items, conds = simulate_asl(output_dir=simulation_dir,
@@ -112,8 +105,10 @@ def main():
                                                                       v_noise=v_noise, dt=dt, scale=s)
                                     else:
                                         # AINSI
+                                        conds = ['audio', 'video']
                                         asl_items = jdem.simulate_asl(output_dir=simulation_dir,
                                                                       noise_scenario='low_snr',
+                                                                      spatial_size='normal',
                                                                       v_noise=v_noise, dt=dt)
 
                                     Y = asl_items['bold']
@@ -126,57 +121,26 @@ def main():
                                     l = asl_items['drift']
                                     print 'drifts mean = ', np.mean(l)
                                     print 'drifts var = ', np.var(l)
-
                                     snr_range[ivn] = 20 * (np.log(np.linalg.norm(Y) / \
                                         np.linalg.norm(n))) / np.log(10.)
                                 norm = plot_jde_inputs(simulation_dir, fig_dir,
                                                        'simu_vn' + str(np.round(v_noise*10).astype(np.int32)) + '_', conds)
                                 print 'Finished generation of ASL data.'
 
-                                old_output_dir = op.join(simulation_dir, 'jde_analysis_mcmc')
-                                if do_jde_asl and mcmc:
-                                    print 'JDE MCMC analysis'
-                                    np.random.seed(48258)
-                                    if not op.exists(old_output_dir):
-                                        os.makedirs(old_output_dir)
-                                    print '1 step ...'
-                                    prf_var = 0.00000001
-                                    brf_var = 0.01
-                                    nbit = 1000
-
-                                    print 'JDE analysis MCMC on simulation ...'
-                                    phy_params = PHY_PARAMS_KHALIDOV11
-                                    t1 = time.time()
-                                    jde_mcmc_sampler = jde_analyse(old_output_dir,
-                                                        asl_items, dt*s, nb_iterations=nbit,
-                                                        rf_prior='physio_stochastic_regularized',
-                                                        brf_var=brf_var, prf_var=prf_var,
-                                                        phy_params = phy_params,
-                                                        do_sampling_brf_var=False,
-                                                        do_sampling_prf_var=False)
-                                    print time.time() - t1
                                 old_output_dir2 = op.join(simulation_dir, 'jde_analysis_vem')
-                                if do_jde_asl and vem:
+                                if do_jde_asl:
                                     print 'JDE VEM analysis'
-                                    np.random.seed(48258)
                                     if not op.exists(old_output_dir2):
                                         os.makedirs(old_output_dir2)
-
                                     print 'JDE analysis VEM on simulation ...'
                                     t2 = time.time()
                                     jde_vem_sampler = jde_analyse_vem(simulation_dir, old_output_dir2, asl_items,
-                                                                                  do_physio=True, positivity=pos,
-                                                                                  use_hyperprior=hyp, dt=(dt), nItMin=6,
-                                                                                  constrained=cons, prior=prior)
+                                                                      do_physio=True, positivity=pos,
+                                                                      use_hyperprior=hyp, dt=(dt), nItMin=6,
+                                                                      constrained=cons, prior=prior)
                                     print time.time() - t2
-
-                                print 1-hyp*1 + pos*2
-                                print ivn
-                                print error.shape
-                                #plot_jde_outputs(old_output_dir, fig_dir, 'mcmc_', norm, conds, asl_items=asl_items)
                                 plot_jde_outputs(old_output_dir2, fig_dir, 'vem_', norm, conds, asl_items=asl_items)#, dt_est=dt)
                                 print 'printing HRF results together...'
-                                output_dir_tag = 'jde_analysis_'
                                 plot_jde_rfs(simulation_dir, old_output_dir2, fig_dir,
                                              'vn' + str(v_noise.astype(np.int32)) + '_', asl_items)
 
@@ -185,165 +149,68 @@ def main():
 def jde_analyse_vem(simulation_dir, output_dir, simulation, constrained=False,
                 fast=False, do_physio=True, positivity = False,
                 use_hyperprior=False, prior='omega', dt=0.5, nItMin=10):
-
     # Create an FmriData object directly from the simulation dictionary:
     fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
-    pyhrf.verbose.set_verbosity(4)
-    do = True
-    do2 = False
-
-    vmu = 100.
     vh = 0.00001 #0.0001
     vg = 0.00001 #0.0001
-    gamma_h = 1000000000  # 10000000000  # 7.5 #100000
-    gamma_g = 1000000000                  #10000000
-
+    gamma_h = 1000000000  # 10000000000
+    gamma_g = 1000000000
+    do = True
+    do2 = False
+    phy_params=PHY_PARAMS_KHALIDOV11.copy()
     """
-    vh = 0.000001 #0.0001
-    vg = 0.000001 #0.0001
-    gamma_h = 100000  # 10000000000  # 7.5 #100000
-    gamma_g = 1000000
-    """
+    PHY_PARAMS_KHALIDOV11 = { 'model_name': 'Khalidov11',
+    'tau_s': 1.54, 'tau_m': 0.98, 'tau_f': 2.46,
+    'eps': .54, 'alpha_w': .33, 'E0': .34, 'V0': 1, 'e': 1.43,
+    'TE': 0.018,
+    'model': 'RBM', 'linear': False, 'obata': False, 'buxton': False } """
+    slightly_different = False
+    very_different_brf = False
+    very_different_prf = False
+    if slightly_different:
+        phy_params['tau_s'] = 1.74 #2.74
+        phy_params['tau_m'] = 1.1 #1.8
+        phy_params['tau_f'] = 2.66 #3.1
+        phy_params['eps'] = 0.74#1.74
+        phy_params['alpha_w'] = 0.53#1.3
+        phy_params['E0'] = 0.54#0.94
+        phy_params['V0'] = 1.2#2.
+        phy_params['e'] = 1. #0.3
+    if very_different_brf:
+        phy_params['tau_s'] = 2.74
+        phy_params['tau_m'] = 1.8
+        phy_params['tau_f'] = 3.1
+        phy_params['eps'] = 1.74
+        phy_params['alpha_w'] = 1.3
+        phy_params['E0'] = 0.94
+        phy_params['V0'] = 2.
+        phy_params['e'] = 0.3
+    if very_different_prf:
+        phy_params['tau_s'] = 6.
+        phy_params['tau_m'] = 1.8
+        phy_params['tau_f'] = 2.
+        phy_params['eps'] = 1.74
+        phy_params['alpha_w'] = 1.3
+        phy_params['E0'] = 0.94
+        phy_params['V0'] = 2.
+        phy_params['e'] = 0.3
 
     jde_vem_analyser = JDEVEMAnalyser(beta=0.8, dt=dt, hrfDuration=25.,
                                       nItMax=100, nItMin=nItMin, PLOT=False,
-                                      estimateA=do, estimateH=do,
-                                      estimateC=do, estimateG=do,
+                                      estimateA=do, estimateH=do, estimateC=do, estimateG=do,
                                       estimateSigmaH=do, sigmaH=vh, gammaH=gamma_h,
                                       estimateSigmaG=do, sigmaG=vg, gammaG=gamma_g,
-                                      estimateLabels=do,
-                                      physio=do_physio, sigmaMu=vmu,
-                                      estimateBeta=do, estimateMixtParam=do,
-                                      estimateLA=do, estimateNoise=do,
-                                      fast=fast, constrained=constrained,
+                                      estimateLabels=do, physio=do_physio, sigmaMu=100.,
+                                      estimateBeta=do, estimateMixtParam=do, estimateLA=do,
+                                      estimateNoise=do, fast=fast, constrained=constrained,
                                       fmri_data=simulation, positivity=positivity,
-                                      use_hyperprior=use_hyperprior, prior=prior)
-
+                                      use_hyperprior=use_hyperprior, prior=prior,
+                                      phy_params=phy_params, zero_constrained=False)
     tjde_vem = FMRITreatment(fmri_data=fmri_data, analyser=jde_vem_analyser,
                              output_dir=output_dir)
     tjde_vem.run()
     return 'asl_'
 
-
-def jde_analyse(output_dir, simulation, dt, nb_iterations, rf_prior,
-                brf_var, prf_var, phy_params = PHY_PARAMS_FRISTON00,
-                do_sampling_brf_var=False, do_sampling_prf_var=False,
-                do_basic_nN=False):
-    """
-    Return:
-        result of FMRITreatment.run(), that is: (dict of outputs, output fns)
-    """
-    # Create an FmriData object directly from the simulation dictionary:
-    # -> this way JDE could use some true simulated values to check results
-    #    and add them to outputs for comparison
-    # set the verbosity of what's next, 0: quiet, ..., 6: everything (for debug)
-    #pyhrf.verbose.set_verbosity(6)
-    fmri_data = FmriData.from_simulation_dict(simulation, mask=None)
-    jde_mcmc_sampler = physio_build_jde_mcmc_sampler(nb_iterations,
-                                rf_prior, phy_params, brf_var, prf_var,
-                                do_sampling_brf_var, do_sampling_prf_var,
-                                do_basic_nN=do_basic_nN)
-
-    analyser = JDEMCMCAnalyser(jde_mcmc_sampler, dt=dt)
-    analyser.set_pass_errors(False) #do not bypass errors during sampling
-                                    #default initialization sets this true
-    tjde_mcmc = FMRITreatment(fmri_data, analyser, output_dir=output_dir)
-    tjde_mcmc.run()
-
-    return jde_mcmc_sampler
-
-
-
-def physio_build_jde_mcmc_sampler(nb_iterations, rf_prior, phy_params,
-                                  brf_var_ini=None, prf_var_ini=None,
-                                  do_sampling_brf_var=False,
-                                  do_sampling_prf_var=False,
-                                  prf_ini=None, do_sampling_prf=True,
-                                  prls_ini=None, do_sampling_prls=True,
-                                  brf_ini=None, do_sampling_brf=True,
-                                  brls_ini=None, do_sampling_brls=True,
-                                  perf_bl_ini=None, drift_ini=None,
-                                  noise_var_ini=None, labels_ini=None,
-                                  do_sampling_labels=True,
-                                  do_basic_nN=False):
-    """
-    """
-    #import pyhrf.jde.asl_physio as jap
-    if rf_prior=='physio_stochastic_regularized' or do_basic_nN:
-        import pyhrf.jde.asl_physio_1step_params as jap
-        norm = 0.
-    else:
-        import pyhrf.jde.asl_physio as jap
-        norm = 1.
-
-    zc = False
-
-    sampler_params = {
-            'nb_iterations' : nb_iterations,
-            'smpl_hist_pace' : -1,
-            'obs_hist_pace' : -1,
-            'brf' : \
-                jap.PhysioBOLDResponseSampler(phy_params=phy_params,
-                                          val_ini=brf_ini,
-                                          zero_constraint=zc,
-                                          normalise=norm,
-                                          do_sampling=do_sampling_brf,
-                                          use_true_value=False),
-            'brf_var' : \
-                jap.PhysioBOLDResponseVarianceSampler(\
-                    val_ini=np.array([brf_var_ini]),
-                    do_sampling=do_sampling_brf_var),
-            'prf' : \
-                jap.PhysioPerfResponseSampler(phy_params=phy_params,
-                                              val_ini=prf_ini,
-                                              zero_constraint=zc,
-                                              normalise=norm,
-                                              do_sampling=do_sampling_prf,
-                                              use_true_value=False,
-                                              prior_type=rf_prior),
-            'prf_var' : \
-                jap.PhysioPerfResponseVarianceSampler(\
-                    val_ini=np.array([prf_var_ini]), do_sampling=False),
-            'noise_var' : \
-                jap.NoiseVarianceSampler(val_ini=noise_var_ini,
-                                         use_true_value=False,
-                                         do_sampling=True),
-            'drift_var' : \
-                jap.DriftVarianceSampler(use_true_value=False,
-                                         do_sampling=True),
-            'drift' : \
-                jap.DriftCoeffSampler(val_ini=drift_ini,
-                                      use_true_value=False,
-                                      do_sampling=True),
-            'bold_response_levels' : \
-                jap.BOLDResponseLevelSampler(val_ini=brls_ini,
-                                             use_true_value=False,
-                                             do_sampling=do_sampling_brls),
-            'perf_response_levels' : \
-                jap.PerfResponseLevelSampler(val_ini=prls_ini,
-                                             use_true_value=False,
-                                             do_sampling=do_sampling_prls),
-            'bold_mixt_params' : \
-                jap.BOLDMixtureSampler(use_true_value=False,
-                                       do_sampling=do_sampling_brls),
-            'perf_mixt_params' : \
-                jap.PerfMixtureSampler(use_true_value=False,
-                                       do_sampling=do_sampling_prls),
-            'labels' : \
-                jap.LabelSampler(val_ini=labels_ini,
-                                 use_true_value=False,
-                                 do_sampling=do_sampling_labels),
-            'perf_baseline' : \
-                jap.PerfBaselineSampler(val_ini=perf_bl_ini,
-                                        use_true_value=False,
-                                        do_sampling=True),
-            'perf_baseline_var' : \
-                jap.PerfBaselineVarianceSampler(use_true_value=False,
-                                                do_sampling=True),
-            'check_final_value' : 'none',
-        }
-    sampler = jap.ASLPhysioSampler(**sampler_params)
-    return sampler
 
 
 ##################
@@ -369,7 +236,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
     #paradigm_csv_file = './../paradigm_data/paradigm_bilateral_vjoint.csv'
     #paradigm_csv_file = './../paradigm_data/paradigm_bilateral_v1_no_final_rest.csv'
     #paradigm_csv_file = './paradigm_data/paradigm_bilateral_v2_no_final_rest_1.csv'
-    paradigm_csv_file = './../paradigm_data/paradigm_bilateral_v2_no_final_rest.csv'
+    paradigm_csv_file = './../HEROES_DB/paradigm_data/paradigm_bilateral_v2_no_final_rest.csv'
     paradigm_csv_delim = ' '
     #onsets, durations = load_paradigm(paradigm_csv_file)
     #paradigm2 = mpar.Paradigm(onsets, durations)
@@ -422,12 +289,43 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr', v_noise=None,
     from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11, \
                                             create_physio_brf, create_physio_prf
 
-    brf = create_canonical_hrf(dt=dt)
-    prf = create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11)
+    #brf = create_canonical_hrf(dt=dt)
+    #prf = create_omega_prf(brf, dt, PHY_PARAMS_KHALIDOV11)
     Thrf = 25.
-    brf = create_physio_brf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
+    phy_params = PHY_PARAMS_KHALIDOV11.copy()
+    slightly_different = False
+    very_different_brf = False
+    very_different_prf = True
+    if slightly_different:
+        phy_params['tau_s'] = 1.74 #2.74
+        phy_params['tau_m'] = 1.1 #1.8
+        phy_params['tau_f'] = 2.66 #3.1
+        phy_params['eps'] = 0.74#1.74
+        phy_params['alpha_w'] = 0.53#1.3
+        phy_params['E0'] = 0.54#0.94
+        phy_params['V0'] = 1.2#2.
+        phy_params['e'] = 1. #0.3
+    if very_different_brf:
+        phy_params['tau_s'] = 2.74
+        phy_params['tau_m'] = 1.8
+        phy_params['tau_f'] = 3.1
+        phy_params['eps'] = 1.74
+        phy_params['alpha_w'] = 1.3
+        phy_params['E0'] = 0.94
+        phy_params['V0'] = 2.
+        phy_params['e'] = 0.3
+    if very_different_prf:
+        phy_params['tau_s'] = 6.
+        phy_params['tau_m'] = 1.8
+        phy_params['tau_f'] = 2.
+        phy_params['eps'] = 1.74
+        phy_params['alpha_w'] = 1.3
+        phy_params['E0'] = 0.94
+        phy_params['V0'] = 2.
+        phy_params['e'] = 0.3
+    brf = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)
     brf /= np.linalg.norm(brf)
-    prf = create_physio_prf(PHY_PARAMS_KHALIDOV11, response_dt=dt, response_duration=Thrf)
+    prf = create_physio_prf(phy_params, response_dt=dt, response_duration=Thrf)
     prf /= np.linalg.norm(prf)
 
     simulation_steps = {
@@ -588,54 +486,57 @@ def plot_error(fig_dir, v_noise_range, error):
     plt.close()
 
 
-"""
-def compute_snr(jde_dir, fig_dir, fig_prefix, norm, cond='audio',
-                     asl_items=None):
-    #BRF
-    print asl_items
-"""
-
-"""
-def plot_jde_rfs(simu_dir, jde_dir_tag, fig_dir, fig_prefix, asl_items=None):
-    fs = 23            # fontsize
-    lw = 2             # linewtidth -> better bigger since image is often small
-    enorm = plt.normalize(0., 1.)
-    plt.close('all')
-
-    #BRF
-    plt.figure()
-    jde_dir = op.join(simu_dir, 'jde_mcmc_'+jde_dir_tag)
-    ch = xndarray.load(op.join(jde_dir, 'jde_mcmc_hrf_pm.nii'))
-    plot_cub_as_curve(ch.sub_cuboid(ROI=1).roll('time'),
-                      colors={'estim': 'b', 'true': 'w'},
-                      legend_prefix=' JDE MCMC HRF ',
-                      plot_kwargs={'linewidth': lw})
-    plt.hold('on')
-    jde_dir = op.join(simu_dir, 'jde_vem_'+jde_dir_tag)
-    ch = xndarray.load(op.join(jde_dir, 'jde_vem_hrf.nii'))
-    plot_cub_as_curve(ch.sub_cuboid(ROI=1).roll('time'),
-                      #colors={'estim': 'b', 'true': 'r'},
-                      legend_prefix=' JDE VEM HRF ',
-                      plot_kwargs={'linewidth': lw, 'color': 'r'})
-    plt.hold('on')
-    ch = xndarray.load(op.join(simu_dir, 'hrf.nii'))
-    plot_cub_as_curve(ch.sub_cuboid(sagittal=0, coronal=0,
-                                    axial=0).roll('time'),
-                      #colors={'estim': 'b', 'true': 'r'},
-                      legend_prefix='simulated BRF ',
-                      plot_kwargs={'linewidth': lw, 'linestyle': '--',
-                                   'color': 'k'})
-    plt.legend()
-    set_ticks_fontsize(fs)
-    save_and_crop(op.join(fig_dir, fig_prefix + 'brf_est.png'))
-    plt.close()
-"""
-
-
 def plot_jde_rfs(simu_dir, jde_dir, fig_dir, fig_prefix, asl_items=None):
     fs = 23            # fontsize
     lw = 2             # linewtidth -> better bigger since image is often small
     enorm = plt.normalize(0., 1.)
+
+    from pyhrf.sandbox.physio_params import create_omega_prf, PHY_PARAMS_KHALIDOV11, \
+                                            create_physio_brf, create_physio_prf
+    phy_params=PHY_PARAMS_KHALIDOV11.copy()
+    """
+    PHY_PARAMS_KHALIDOV11 = { 'model_name': 'Khalidov11',
+    'tau_s': 1.54, 'tau_m': 0.98, 'tau_f': 2.46,
+    'eps': .54, 'alpha_w': .33, 'E0': .34, 'V0': 1, 'e': 1.43,
+    'TE': 0.018,
+    'model': 'RBM', 'linear': False, 'obata': False, 'buxton': False } """
+    slightly_different = False
+    very_different_brf = False
+    very_different_prf = False
+    if slightly_different:
+        phy_params['tau_s'] = 1.74 #2.74
+        phy_params['tau_m'] = 1.1 #1.8
+        phy_params['tau_f'] = 2.66 #3.1
+        phy_params['eps'] = 0.74#1.74
+        phy_params['alpha_w'] = 0.53#1.3
+        phy_params['E0'] = 0.54#0.94
+        phy_params['V0'] = 1.2#2.
+        phy_params['e'] = 1. #0.3
+    if very_different_brf:
+        phy_params['tau_s'] = 2.74
+        phy_params['tau_m'] = 1.8
+        phy_params['tau_f'] = 3.1
+        phy_params['eps'] = 1.74
+        phy_params['alpha_w'] = 1.3
+        phy_params['E0'] = 0.94
+        phy_params['V0'] = 2.
+        phy_params['e'] = 0.3
+    if very_different_prf:
+        phy_params['tau_s'] = 8.
+        phy_params['tau_m'] = 1.8
+        phy_params['tau_f'] = 2.
+        phy_params['eps'] = 1.74
+        phy_params['alpha_w'] = 1.3
+        phy_params['E0'] = 0.94
+        phy_params['V0'] = 2.
+        phy_params['e'] = 0.1
+    Thrf = 25.
+    dt = 1.25
+    brf = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)
+    brf /= np.linalg.norm(brf)
+    prf = create_physio_prf(phy_params, response_dt=dt, response_duration=Thrf)
+    prf /= np.linalg.norm(prf)
+    time_array = np.arange(0, Thrf + dt, dt)
 
     #BRF
     plt.figure()
@@ -652,6 +553,7 @@ def plot_jde_rfs(simu_dir, jde_dir, fig_dir, fig_prefix, asl_items=None):
                       #colors={'estim': 'b', 'true': 'r'},
                       legend_prefix=' estimated BRF ',
                       plot_kwargs={'linewidth': lw, 'color': 'b'})
+    plt.plot(time_array, brf, 'g', label='prior mean')
     plt.legend()
     set_ticks_fontsize(fs)
     save_and_crop(op.join(fig_dir, fig_prefix + 'brf_est.png'))
@@ -672,6 +574,7 @@ def plot_jde_rfs(simu_dir, jde_dir, fig_dir, fig_prefix, asl_items=None):
                       #colors={'estim': 'b', 'true': 'r'},
                       legend_prefix='PRF ',
                       plot_kwargs={'linewidth': lw, 'color': 'r'})
+    plt.plot(time_array, prf, 'g', label='prior mean')
     plt.legend()
     set_ticks_fontsize(fs)
     save_and_crop(op.join(fig_dir, fig_prefix + 'prf_est.png'))
@@ -684,7 +587,6 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
     fs = 23            # fontsize
     lw = 2             # linewtidth -> better bigger since image is often small
     enorm = plt.normalize(0., 1.)
-
 
     #FE
     plt.figure()
@@ -706,71 +608,8 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
     set_ticks_fontsize(fs)
     save_and_crop(op.join(fig_dir, fig_prefix + 'free_energy_no0.png'))
 
-    """
-    #EP
-    plt.figure()
-    name = 'jde_vem_asl_convergence_EP.nii'
-    ch = xndarray.load(op.join(jde_dir, name))
-    plt.plot(ch.sub_cuboid(ROI=1).data, label='EPtilde', linewidth=lw, marker='o')
-    plt.legend(loc=4)
-    plt.grid()
-    set_ticks_fontsize(fs)
-    save_and_crop(op.join(fig_dir, fig_prefix + 'EPtilde.png'))
-
-    #EP
-    plt.figure()
-    name = 'jde_vem_asl_convergence_EP.nii'
-    ch = xndarray.load(op.join(jde_dir, name))
-    plt.plot(ch.sub_cuboid(ROI=1).data[1:], label='EPtilde', linewidth=lw, marker='o')
-    plt.legend(loc=4)
-    plt.grid()
-    set_ticks_fontsize(fs)
-    save_and_crop(op.join(fig_dir, fig_prefix + 'EPtilde_no0.png'))
-
-    #EP
-    plt.figure()
-    name = 'jde_vem_asl_convergence_EPlh.nii'
-    ch = xndarray.load(op.join(jde_dir, name))
-    plt.plot(ch.sub_cuboid(ROI=1).data, label='EPtildelh', linewidth=lw, marker='o')
-    plt.legend(loc=4)
-    plt.grid()
-    set_ticks_fontsize(fs)
-    save_and_crop(op.join(fig_dir, fig_prefix + 'EPtildelh.png'))
-
-    #EP
-    plt.figure()
-    name = 'jde_vem_asl_convergence_EPlh.nii'
-    ch = xndarray.load(op.join(jde_dir, name))
-    plt.plot(ch.sub_cuboid(ROI=1).data[1:], label='EPtildelh', linewidth=lw, marker='o')
-    plt.legend(loc=4)
-    plt.grid()
-    set_ticks_fontsize(fs)
-    save_and_crop(op.join(fig_dir, fig_prefix + 'EPtildelh_no0.png'))
-
-    #Ent
-    plt.figure()
-    name = 'jde_vem_asl_convergence_Ent.nii'
-    ch = xndarray.load(op.join(jde_dir, name))
-    plt.plot(ch.sub_cuboid(ROI=1).data, label='entropy', linewidth=lw, marker='o')
-    plt.legend()
-    plt.grid()
-    set_ticks_fontsize(fs)
-    save_and_crop(op.join(fig_dir, fig_prefix + 'entropy.png'))
-
-    #Ent
-    plt.figure()
-    name = 'jde_vem_asl_convergence_Ent.nii'
-    ch = xndarray.load(op.join(jde_dir, name))
-    plt.plot(ch.sub_cuboid(ROI=1).data[1:], label='entropy', linewidth=lw, marker='o')
-    plt.legend()
-    plt.grid()
-    set_ticks_fontsize(fs)
-    save_and_crop(op.join(fig_dir, fig_prefix + 'entropy_no0.png'))
-    """
-
     #BRF
     plt.figure()
-
     if fig_prefix=='mcmc_':
         name = 'jde_mcmc_brf_pm.nii'
     else:
@@ -808,6 +647,8 @@ def plot_jde_outputs(jde_dir, fig_dir, fig_prefix, norm, conds,
         nrls2 = asl_items['brls'][icond]
         error_nrls_abs = np.abs(nrls1 - nrls2)
         error_nrls_rel = np.abs((nrls1 - nrls2) / (nrls2))
+        print error_nrls_rel.shape
+        print error_nrls_abs.shape
         #BRLS absolute error
         print 'BRLS:'
         print ' - Mean Absolute Error = ', np.mean(error_nrls_abs)

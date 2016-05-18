@@ -108,7 +108,7 @@ def genGaussianSmoothHRF_cust(zc, length, eventdt, rh, order=2):
         hrf = np.concatenate(([[0]],hrf,[[0]]))
 
     return (hrf[:,0],matQ)
-    
+
 
 def genExpHRF(timeAxis=np.arange(0,25,0.5), ttp=6, pa=1, pw=0.2,
               ttu=11, ua=0.2, uw=0.01):

@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 import pyhrf
 from pyhrf.ndarray import xndarray
-from pyhrf.vbjde.vem_asl_models_fast_ms import Main_vbjde_physio
+from pyhrf.vbjde.vem_asl_models_fast import Main_vbjde_physio
 from pyhrf.vbjde.vem_tools import roc_curve
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
@@ -90,7 +90,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateSigmaH=True, estimateSigmaG=True, positivity=False,
                  sigmaH=0.0001, sigmaG=0.0001, sigmaMu=0.0001, physio=True,
                  gammaH=1000, gammaG=1000, zero_constrained=False,
-                 estimateLabels=True, estimateMixtParam=True, contrasts=None, 
+                 estimateLabels=True, estimateMixtParam=True, contrasts=None,
                  InitVar=0.5, InitMean=2.0, estimateA=True, estimateC=True,
                  estimateBeta=True, estimateNoise=True, estimateLA=True,
                  phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', n_session=1):
@@ -152,11 +152,15 @@ class JDEVEMAnalyser(JDEAnalyser):
         # roiData.bold : numpy array of shape
         # BOLD has shape (nscans, nvoxels)
         # roiData.graph #list of neighbours
-        n_scan_allsession, nvox = roiData.bold.shape
-        n_scan = n_scan_allsession / self.n_session
-        data = roiData.bold.reshape(self.n_session, n_scan, nvox)
-        Onsets = roiData.paradigm.get_joined_onsets_dim()
-        durations = roiData.paradigm.get_joined_durations_dim()
+        #n_scan_allsession, nvox = roiData.bold.shape
+        #n_scan = n_scan_allsession / self.n_session
+        #data = roiData.bold.reshape(self.n_session, n_scan, nvox)
+        #Onsets = roiData.paradigm.get_joined_onsets_dim()
+        #durations = roiData.paradigm.get_joined_durations_dim()
+        n_scan, nvox = roiData.bold.shape
+        data = roiData.bold
+        Onsets = roiData.paradigm.get_joined_onsets()
+        durations = roiData.paradigm.get_joined_durations()
         TR = roiData.tr
         # K = 2                      # number of classes
         beta = self.beta
@@ -214,10 +218,9 @@ class JDEVEMAnalyser(JDEAnalyser):
                                        constraint=self.constrained,
                                        positivity=self.positivity,
                                        use_hyperprior=self.use_hyperprior,
-                                       phy_params=self.phy_params, 
+                                       phy_params=self.phy_params,
                                        prior = self.prior, zc=self.zc)
 
-        
         # Plot analysis duration
         self.analysis_duration = time() - t_start
         logger.info('JDE VEM analysis took: %s',
@@ -230,54 +233,42 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs['brf'] = xndarray(estimated_brf, axes_names=['time'],
                                   axes_domains={'time': brf_time},
                                   value_label="BRF")
-        #logger.info("BRF prepared ")
         domCondition = {'condition': cNames}
+        print brls.T.shape
         outputs['brls'] = xndarray(brls.T, value_label="BRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
-        #logger.info("BRLs prepared ")
         prf_time = np.arange(len(estimated_prf)) * self.dt
         outputs['prf'] = xndarray(estimated_prf, axes_names=['time'],
                                   axes_domains={'time': prf_time},
                                   value_label="PRF")
-        #logger.info("PRF prepared ")
         outputs['prls'] = xndarray(prls.T, value_label="PRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
-        #logger.info("PRLs prepared ")
-        
+
         outputs['Sigma_brf'] = xndarray(Sigma_brf, value_label="Sigma_BRF")
-        #logger.info("Sigma_BRF prepared ")
         outputs['Sigma_prf'] = xndarray(Sigma_prf, value_label="Sigma_PRF")
-        #logger.info("Sigma_PRF prepared ")
-        
         ad = {'condition': cNames, 'condition2': Onsets.keys()}
         outputs['Sigma_brls'] = xndarray(Sigma_brls, value_label="Sigma_BRLs",
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
-        #logger.info("Sigma_a prepared ")
         outputs['Sigma_prls'] = xndarray(Sigma_prls, value_label="Sigma_PRLs",
                                          axes_names=['condition', 'condition2',
                                                      'voxel'],
                                          axes_domains=ad)
-        #logger.info("Sigma_c prepared ")
         outputs['NbIter'] = xndarray(np.array([NbIter]), value_label="NbIter")
         outputs['beta'] = xndarray(Beta, value_label="beta",
                                    axes_names=['condition'],
                                    axes_domains=domCondition)
-
-        #logger.info("perfusion baseline prepared ")
         outputs['alpha'] = xndarray(alpha, value_label="Perf_baseline",
                                           axes_names=['voxel'])
-        
-        #logger.info("Beta prepared ")
+
         nbc, nbv = len(cNames), brls.shape[0]
         repeatedBeta = np.repeat(Beta, nbv).reshape(nbc, nbv)
         outputs['beta_mapped'] = xndarray(repeatedBeta, value_label="beta",
                                           axes_names=['condition', 'voxel'],
                                           axes_domains=domCondition)
-
         repeated_brf = np.repeat(estimated_brf, nbv).reshape(-1, nbv)
         outputs["brf_mapped"] = xndarray(repeated_brf, value_label="BRFs",
                                          axes_names=["time", "voxel"],
@@ -287,13 +278,10 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs["prf_mapped"] = xndarray(repeated_prf, value_label="PRFs",
                                          axes_names=["time", "voxel"],
                                          axes_domains={"time": prf_time})
-
-        #logger.info("beta mapped prepared ")
         outputs['roi_mask'] = xndarray(np.zeros(nbv) + roiData.get_roi_id(),
                                        value_label="ROI",
                                        axes_names=['voxel'])
 
-        #logger.info("ROI mask prepared ")
         mixtpB = np.zeros((roiData.nbConditions, self.nbClasses, 2))
         mixtpB[:, :, 0] = mu_Ma
         mixtpB[:, :, 1] = sigma_Ma ** 2
@@ -306,17 +294,15 @@ class JDEVEMAnalyser(JDEAnalyser):
               'component': ['mean', 'var']}
         outputs['mixt_pB'] = xndarray(mixtpB, axes_names=an, axes_domains=ad)
         outputs['mixt_pP'] = xndarray(mixtpP, axes_names=an, axes_domains=ad)
-        #logger.info("Mixture parameters prepared ")
+
         an = ['condition', 'Act_class', 'voxel']
         ad = {'Act_class': ['inactiv', 'activ'],
               'condition': cNames}
-        #logger.info("mixt params prepared ")
         outputs['labels'] = xndarray(labels, value_label="Labels",
                                      axes_names=an, axes_domains=ad)
-        #logger.info("labels prepared ")
         outputs['noiseVar'] = xndarray(noiseVar, value_label="noiseVar",
                                        axes_names=['voxel'])
-        #logger.info("noise variance prepared ")
+
         if self.estimateLA:
             outputs['drift_coeff'] = xndarray(L, value_label="Drift",
                                               axes_names=['coeff', 'voxel'])
@@ -356,12 +342,12 @@ class JDEVEMAnalyser(JDEAnalyser):
         if 1:
             cTimeMean = cTime[-1] / np.float(NbIter)
             logger.info("Saving convergence... ")
-            
+
             axes_names = ['duration']
             ax = (np.arange(self.nItMax) + 1) * cTimeMean
             ax[:len(cTime)] = cTime
             ad = {'duration': ax}
-            
+
             outName = 'convergence_Labels'
             c = np.zeros(self.nItMax)  # -.001 #
             c[:len(cZ)] = cZ
@@ -400,13 +386,13 @@ class JDEVEMAnalyser(JDEAnalyser):
             c = np.zeros(self.nItMax)  # -.001 #
             c[:len(FE)] = FE
             outputs[outName] = xndarray(c, axes_names=axes_names,
-                                        value_label='Conv_Criterion_FE')            
-            
+                                        value_label='Conv_Criterion_FE')
             logger.info("Convergence saved ")
 
         #######################################################################
         # SIMULATION
         if self.simulation is not None:
+
             logger.info("Prepare parameters to compare if simulation")
             M = labels.shape[0]
             K = labels.shape[1]
@@ -487,8 +473,6 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                 [self.analysis_duration]),
                                                 axes_names=['parcel_size'],
                                                 axes_domains=d)
-        """outputs['rerror'] = xndarray(np.array(  rerror),
-                                                axes_names=['parcel_size'])"""
         return outputs
 
 

@@ -53,7 +53,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     np.random.seed(6537540)
     logger.info("data shape: ")
     logger.info(Y.shape)
-    
+
     Thresh = 1e-5
     D, M = np.int(np.ceil(Thrf / dt)) + 1, len(Onsets)
     #D, M = np.int(np.ceil(Thrf / dt)), len(Onsets)
@@ -67,7 +67,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     SUM_q_Z = [[] for m in xrange(M)]
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
-    
+
     # Beta data
     MaxItGrad = 200
     gradientStep = 0.005
@@ -81,11 +81,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     # Conditions
     X, XX, condition_names = vt.create_conditions_block(Onsets, durations, M, N, D, TR, dt)
     #X, XX, condition_names = vt.create_conditions(Onsets, M, N, D, TR, dt)
-    if zc: 
+    if zc:
         XX = XX[:, :, 1:-1]    # XX shape (S, M, N, D)
         D = D - 2
     AH1, CG1 = np.zeros((J, M, D)), np.zeros((J, M, D))
-    
+
     # Covariance matrix
     #R = vt.covariance_matrix(2, D, dt)
     _, R_inv = genGaussianSmoothHRF(False, D, dt, 1., 2)
@@ -108,6 +108,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     H = np.array(m_h[1:D+1]).astype(np.float64)
     H /= np.linalg.norm(H)
     G = copy.deepcopy(H)
+    print phy_params
     Hb = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)
     Hb /= np.linalg.norm(Hb)
     Gb = create_physio_prf(phy_params, response_dt=dt, response_duration=Thrf)
@@ -132,7 +133,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             Omega /= np.linalg.norm(OmegaH)
             OmegaH /=np.linalg.norm(OmegaH)
             G /= np.linalg.norm(G)
-    # Initialize model parameters 
+    # Initialize model parameters
     Beta = beta * np.ones((M), dtype=np.float64)
     P = vt.PolyMat(N, 4, TR)
     L = vt.polyFit(Y, TR, 4, P)
@@ -173,7 +174,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     t1 = time.time()
     ni = 0
-    
+
     #while ((ni < NitMin + 1) or (((Crit_AH > Thresh) or (Crit_CG > Thresh)) \
     #        and (ni < NitMax))):
     #while ((ni < NitMin + 1) or (((Crit_AH > Thresh)) \
@@ -227,10 +228,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info("E H step ...")
             Ht, Sigma_H = vt.expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma,
                                             Gamma_X, X_Gamma_X, J, y_tilde,
-                                            cov_noise, matrix_covH, sigmaH, 
+                                            cov_noise, matrix_covH, sigmaH,
                                             priorH_mean_term, priorH_cov_term)
 
-            if constraint: 
+            if constraint:
                 if not np.linalg.norm(Ht)==1:
                     logger.info("   constraint l2-norm = 1")
                     H = vt.constraint_norm1_b(Ht, Sigma_H)
@@ -243,13 +244,13 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 H = Ht.copy()
                 h_norm = np.append(h_norm, np.linalg.norm(H))
                 print 'h_norm = ', h_norm
-            
+
             Crit_H = (np.linalg.norm(H - H1) / np.linalg.norm(H1)) ** 2
             cH += [Crit_H]
             H1[:] = H[:]
             if prior=='omega':
                 OmegaH = np.dot(Omega0, H)
-                Omega = Omega0 
+                Omega = Omega0
                 if normOh:
                     Omega /= np.linalg.norm(OmegaH)
                     OmegaH /= np.linalg.norm(OmegaH)
@@ -263,7 +264,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                              J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
             if free_energyH < free_energy:
                 logger.info("free energy has decreased after E-H step from %f to %f", free_energy, free_energyH)
-        
+
         # A
         if estimateA:
             logger.info("E A step ...")
@@ -283,7 +284,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                              J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
             if free_energyA < free_energyH:
                 logger.info("free energy has decreased after E-A step from %f to %f", free_energyH, free_energyA)
-        
+
         # PRF G
         if estimateG:
             logger.info("E G step ...")
@@ -317,8 +318,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                              J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
             if free_energyG < free_energyA:
                 logger.info("free energy has decreased after E-G step from %f to %f", free_energyA, free_energyG)
-        
-        
+
+
         # C
         if estimateC:
             logger.info("E C step ...")
@@ -338,17 +339,17 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                              J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
             if free_energyC < free_energyG:
                 logger.info("free energy has decreased after E-C step from %f to %f", free_energyG, free_energyC)
-        
+
 
         # Q labels
         if estimateZ:
             logger.info("E Q step ...")
             q_Z, Z_tilde = vt.expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C,
                                             sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
-                                            Beta, Z_tilde, q_Z, neighboursIndexes, graph, M, J, K)    
+                                            Beta, Z_tilde, q_Z, neighboursIndexes, graph, M, J, K)
             #q_Z0, Z_tilde0 = vt.expectation_Q_async(Sigma_A, m_A, Sigma_C, m_C,
             #                                sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
-            #                                Beta, Z_tilde, q_Z, neighboursIndexes, graph, M, J, K) 
+            #                                Beta, Z_tilde, q_Z, neighboursIndexes, graph, M, J, K)
             #print 'synchronous vs asynchronous: ', np.abs(q_Z - q_Z0).sum()
             cZ += [(np.linalg.norm(q_Z - q_Z1) / (np.linalg.norm(q_Z1) + eps)) ** 2]
             q_Z1 = q_Z
@@ -362,13 +363,13 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                              J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
             if free_energyQ < free_energyC:
                 logger.info("free energy has decreased after E-Q step from %f to %f", free_energyC, free_energyQ)
-        
+
 
         # crit. AH and CG
         logger.info("crit. AH and CG")
         AH = m_A[:, :, np.newaxis] * H[np.newaxis, np.newaxis, :]
         CG = m_C[:, :, np.newaxis] * G[np.newaxis, np.newaxis, :]
-        
+
         Crit_AH = (np.linalg.norm(AH - AH1) / (np.linalg.norm(AH1) + eps)) ** 2
         cAH += [Crit_AH]
         AH1 = AH.copy()
@@ -416,7 +417,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
             if free_energyVh < free_energyQ:
                 logger.info("free energy has decreased after v_h computation from %f to %f", free_energyQ, free_energyVh)
-        
+
 
         # Variance PRF: sigmaG
         if estimateSigmaG:
@@ -434,7 +435,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
             if free_energyVg < free_energyVh:
                 logger.info("free energy has decreased after v_g computation from %f to %f", free_energyVh, free_energyVg)
-        
+
 
         # Mu: True HRF in the hierarchical prior case
         if prior=='hierarchical':
@@ -453,7 +454,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
             if free_energyMu < free_energyVg:
                 logger.info("free energy has decreased after v_g computation from %f to %f", free_energyVg, free_energyMu)
-        
+
 
         # (mu,sigma)
         if estimateMP:
@@ -470,7 +471,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                              J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
             if free_energyMP < free_energyVg:
                 logger.info("free energy has decreased after GMM parameters computation from %f to %f", free_energyVg, free_energyMP)
-        
+
 
         # Drift L, alpha
         if estimateLA:
@@ -487,7 +488,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                                  J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX)
             if free_energyLA < free_energyMP:
                 logger.info("free energy has decreased after drifts computation from %f to %f", free_energyMP, free_energyLA)
-        
+
 
         # Beta
         if estimateBeta:
@@ -525,7 +526,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 beta_plotting = np.zeros_like(range_b)
                 for ib, b in enumerate(range_b):
                     beta_plotting[ib] = vt.beta_function(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
-                                                         neighboursIndexes, gamma)                                        
+                                                         neighboursIndexes, gamma)
                 #print beta_plotting
                 plt.figure(1)
                 plt.hold('on')
@@ -537,15 +538,15 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info("M sigma noise step ...")
             sigma_eps = vt.maximization_sigma_noise_asl(XX, m_A, Sigma_A, H, m_C, Sigma_C, \
                                                     G, Sigma_H, Sigma_G, W, y_tilde, Gamma, \
-                                                    Gamma_X, Gamma_WX, N)            
+                                                    Gamma_X, Gamma_WX, N)
 
         if PLOT:
             for m in xrange(M):
                 SUM_q_Z[m] += [q_Z[m, 1, :].sum()]
                 mua1[m] += [mu_Ma[m, 1]]
                 muc1[m] += [mu_Mc[m, 1]]
-        
-        
+
+
         free_energy = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma,
                                              H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
                                              m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G,
@@ -555,7 +556,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if ni > 0:
             if free_energy < free_energyB:
                 logger.info("free energy has decreased after Noise computation from %f to %f", free_energyB, free_energy)
-        
+
         if ni > 0:
             if free_energy < FE[-1]:
                 logger.info("WARNING! free energy has decreased in this iteration from %f to %f", FE[-1], free_energy)
@@ -564,7 +565,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         #EP += [EPt]
         #EPlh += [EPt_lh]
         #Ent += [Entropy]
-        
+
         if ni > NitMin:
             #Crit_FE = np.abs((FE[-1] - FE[-2]) / FE[-2])
             FE0 = np.array(FE)
@@ -576,13 +577,13 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
         ni += 1
         cTime += [time.time() - t1]
-        
+
         logger.info("Computing reconstruction error")
         StimulusInducedSignal = vt.computeFit_asl(H, m_A, G, m_C, W, XX)
         rerror = np.append(rerror, \
                            np.mean(((Y - StimulusInducedSignal) ** 2).sum(axis=0)) \
                            / np.mean((Y ** 2).sum(axis=0)))
-        
+
     CompTime = time.time() - t1
 
 
@@ -606,8 +607,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     if computeContrast and len(contrasts) > 0:
         logger.info("Computing contrasts ... ")
         CONTRAST_A, CONTRASTVAR_A, \
-        CONTRAST_C, CONTRASTVAR_C = vt.compute_contrasts(condition_names, 
-                                                         contrasts, m_A, m_C, 
+        CONTRAST_C, CONTRASTVAR_C = vt.compute_contrasts(condition_names,
+                                                         contrasts, m_A, m_C,
                                                          Sigma_A, Sigma_C, M, J)
     else:
         CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C = 0, 0, 0, 0

@@ -99,7 +99,7 @@ PHY_PARAMS_KHALIDOV11 = {
     'r0': 100,  # 25 at 1.5T, and rO = 25 (B0/1.5)**2
     'vt0': 80.6,  # 40.3 at 1.5T, and vt0 = 40.3 (B0/1.5)
     'e': 1.43,  # 0.4 or 1
-    'TE': 0.018,
+    'TE': 0.04, #0.018,
     'model': 'RBM',
     'linear': False,
     'obata': False,
@@ -238,7 +238,7 @@ def phy_integrate_euler(phy_params, tstep, stim, epsilon, Y0=None):
 
     res = np.zeros((stim.size + 1, 4))
     res[0, :] = Y0 or np.array([0., 1., 1., 1.])
-    #res[0, :] = Y0 or np.array([0., 0., 0., 0.]) 
+    #res[0, :] = Y0 or np.array([0., 0., 0., 0.])
 
     for ti in xrange(1, stim.size + 1):
         cpt_phy_model_deriv(res[ti - 1], stim[ti - 1], epsilon, dest=res[ti])
@@ -297,7 +297,6 @@ def create_evoked_physio_signals(physiological_params, paradigm,
     first_cond = paradigm.get_stimulus_names()[0]
     stim = paradigm.get_rastered(integration_step)[first_cond][0]
     neural_efficacies = neural_efficacies[0]
-    
     # response matrix intialization
     integrated_vars = np.zeros((4, neural_efficacies.shape[0], stim.shape[0]))
     for i, epsilon in enumerate(neural_efficacies):
@@ -515,11 +514,11 @@ def calc_linear_rfs(simu_brf, simu_prf, phy_params, dt, normalized_rfs=True):
     ** Warning**:
       - this function assumes prf.size == brf.size and uses this to build D, I
       - if making modifications:
-        calc_brf, calc_prf have a truncation error (due to the finite difference        
-        matrix used) on the order of O(dt)^2. If for any reason a hack is later         
+        calc_brf, calc_prf have a truncation error (due to the finite difference
+        matrix used) on the order of O(dt)^2. If for any reason a hack is later
         implemented to set the y-intecepts of brf_calc, prf_calc to zero by
         setting the first row of X4, X3 = 0, this will raise a singular matrix
-        error in the calculation of calc_prf (due to X.I command), so this error        
+        error in the calculation of calc_prf (due to X.I command), so this error
         is helpful in this case
     """
 
@@ -543,7 +542,7 @@ def calc_linear_rfs(simu_brf, simu_prf, phy_params, dt, normalized_rfs=True):
 
     X3 = tau_m_inv * ((D + (alpha_w_inv * tau_m_inv) * I).I)
 
-    X4 = c * (D + tau_m_inv * I).I - (D + tau_m_inv * I).I * ((1 - alpha_w) 
+    X4 = c * (D + tau_m_inv * I).I - (D + tau_m_inv * I).I * ((1 - alpha_w)
           * alpha_w_inv * tau_m_inv**2) * (D + alpha_w_inv * tau_m_inv * I).I
 
     # linear vs non-linear

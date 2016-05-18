@@ -1768,7 +1768,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
     from pyhrf.tools import Pipeline
 
     drift_var = 10.
-    
+
     #tr = 2.5
     #dt = 0.5
     dsf = tr/dt  # down sampling factor
@@ -1809,7 +1809,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
                       ]
     else:  # low_snr
         v_noise = v_noise or 2.
-        
+
         conditions = [
             Condition(name='audio', perf_m_act=1.7, perf_v_act=.31, perf_v_inact=.32,
                       bold_m_act=2.3, bold_v_act=.31, bold_v_inact=.32,
@@ -1845,6 +1845,7 @@ def simulate_asl(output_dir=None, noise_scenario='high_snr',
         plt.plot(brf)
         plt.plot(prf)
         plt.show()
+
     simulation_steps = {
         'dt': dt,
         'dsf': dsf,
