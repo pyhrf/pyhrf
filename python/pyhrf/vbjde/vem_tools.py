@@ -254,13 +254,10 @@ def compute_mat_X_2_block(nbscans, tr, lhrf, dt, onsets, durations=None):
     if int(osf) != osf:
         raise Exception('OSF (%f) is not an integer' % osf)
 
+    print 'now we create x'
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
     lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
-    print 'onsets = ', onsets
-    print 'durations = ', durations
-    print 'dt = ', dt
-    print 'tmax = ', tmax
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -349,11 +346,9 @@ def create_conditions_block_ms(Onsets, durations, M, N, D, S, TR, dt):
     for condition, Ons in Onsets.iteritems():
         condition_names += [condition]
         Dur = durations[condition]
-        print 'Onsets: ', Ons
-        print 'Durations: ', Dur
         for s in xrange(S):
-            X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons[s, :],
-                                                    durations=Dur[s, :])
+            X[condition] = vt.compute_mat_X_2_block(N, TR, D, dt, Ons[s],
+                                                    durations=Dur[s])
             XX[s, nc, :, :] = X[condition]
         nc += 1
     return X, XX, condition_names
@@ -1553,25 +1548,36 @@ def expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc,
 
 
 def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
-                  mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
+                  mu_Mc, Beta, labels_proba, p_Q, neighbours_indexes, graph, M, J, K,
+                  nans_init=False):
     # between ASL and BOLD just alpha and Gauss_mat change!!!
     alpha = - 0.5 * np.diagonal(Sigma_A)[:, :, np.newaxis] / (sigma_Ma[np.newaxis, :, :]) \
             - 0.5 * np.diagonal(Sigma_C)[:, :, np.newaxis] / (sigma_Mc[np.newaxis, :, :])  # (J, M, K)
     Gauss_mat = vt.normpdf(m_A[...,np.newaxis], mu_Ma, np.sqrt(sigma_Ma)) * \
                 vt.normpdf(m_C[...,np.newaxis], mu_Mc, np.sqrt(sigma_Mc))
-
+    if nans_init:
+        labels_proba_nans = np.ones_like(labels_proba)/K
+    else:
+        labels_proba_nans = labels_proba.copy()
     # Update Ztilde ie the quantity which is involved in the a priori
     # Potts field [by solving for the mean-field fixed point Equation]
     # TODO: decide if we take out the computation of p_q_t or Ztilde
-    B_pqt = Beta[:, np.newaxis, np.newaxis] * p_q_t.copy()
+    B_pqt = Beta[:, np.newaxis, np.newaxis] * labels_proba.copy()
     B_pqt = np.concatenate((B_pqt, np.zeros((M, K, 1), dtype=B_pqt.dtype)), axis=2)
     local_energy = B_pqt[:, :, neighbours_indexes].sum(axis=3).transpose(2, 0, 1)
-    energy = (alpha + local_energy)
-    energy -= energy.max()
-    Probas = (np.exp(energy) * Gauss_mat).transpose(1, 2, 0)
-    aux = Probas.sum(axis=1)[:, np.newaxis, :]
-    aux[np.where(aux==0)] = eps
-    p_q_t = Probas / aux
+    energy = (local_energy + alpha + Gauss_mat )
+    #energy -= energy.max()
+    labels_proba = (np.exp(energy)).transpose(1, 2, 0)
+
+    # Remove NaNs and Infs (# TODO: check for sequential mode)
+    if (labels_proba.sum(axis=1)==0).any():
+        mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
+        labels_proba[mask] = labels_proba_nans[mask]
+    if np.isinf(labels_proba.sum(axis=1)).any():
+        mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
+        labels_proba[mask] = labels_proba_nans[mask]
+
+    p_q_t = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
 
     return p_q_t, p_q_t
 

@@ -68,9 +68,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     SUM_q_Z = [[] for m in xrange(M)]
     mua1 = [[] for m in xrange(M)]
     muc1 = [[] for m in xrange(M)]
-    sigmaH = sigmaH * J / 100
+    #sigmaH = sigmaH * J / 100
     print sigmaH
-    gamma_h = gamma_h * 100 / J
+    #gamma_h = gamma_h * 100 / J
     print gamma_h
 
     # Beta data
@@ -85,6 +85,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     # Control-tag
     w = np.ones((N))
     w[idx_first_tag + 1::2] = -1
+    w *= 0.5
     W = np.diag(w)
 
     # Conditions
@@ -127,13 +128,15 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     H = np.array(m_h[:D]).astype(np.float64)
     H /= np.linalg.norm(H)
     G = copy.deepcopy(H)
-    Hb = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)
+    Hb = create_physio_brf(phy_params, response_dt=dt,
+                            response_duration=(D-1)*dt)
     Hb /= np.linalg.norm(Hb)
-    Gb = create_physio_prf(phy_params, response_dt=dt, response_duration=Thrf)
+    Gb = create_physio_prf(phy_params, response_dt=dt,
+                            response_duration=(D-1)*dt)
     Gb /= np.linalg.norm(Gb)
-    if prior=='balloon':
-        H = Hb.copy()
-        G = Gb.copy()
+    #if prior=='balloon':
+    #    H = Hb.copy()
+    #    G = Gb.copy()
     Mu = Hb.copy()
     H1 = copy.deepcopy(H)
     Sigma_H = np.zeros((D, D), dtype=np.float64)
@@ -661,7 +664,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     return ni, m_A.mean(0), H, m_C.mean(0), G, Z_tilde, sigma_eps.mean(0), \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, AL.mean(2), PL.mean(0), \
-           np.zeros_like(AL[0, :, s]), Sigma_A.mean(3), Sigma_C.mean(3), Sigma_H, Sigma_G, rerror, \
+           AL[0, :, s], Sigma_A.mean(3), Sigma_C.mean(3), Sigma_H, Sigma_G, rerror, \
            CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
            cA[:], cH[2:], cC[2:], cG[2:], cZ[2:], cAH[2:], cCG[2:], \
            cTime, FE
