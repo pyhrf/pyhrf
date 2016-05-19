@@ -119,7 +119,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     #q_Z = np.zeros((M, K, J), dtype=np.float64)
     #q_Z[:, 1, :] = 1
     q_Z1 = copy.deepcopy(q_Z)
-    Z_tilde = copy.deepcopy(q_Z)
 
     # H and G
     TT, m_h = getCanoHRF(Thrf, dt)
@@ -131,7 +130,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     if prior=='balloon':
         H = Hb.copy()
     H1 = copy.deepcopy(H)
-    Sigma_H = np.zeros((D, D), dtype=np.float64)
+
+    if estimateH:
+        Sigma_H = np.identity(D, dtype=np.float64)
+    else:
+        Sigma_H = np.zeros((D, D), dtype=np.float64)
 
     # Initialize model parameters
     Beta = beta * np.ones((M), dtype=np.float64)
@@ -223,6 +226,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # EXPECTATION
         #####################
 
+        import pdb; pdb.set_trace()
 
         # A
         if estimateA:
@@ -253,8 +257,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateZ:
             logger.info("E Q step ...")
             old_params = np.seterr(all='raise')
-            q_Z, Z_tilde = vt.labels_expectation(Sigma_A, m_A, sigma_Ma, mu_Ma,
-                                            Beta, Z_tilde, neighboursIndexes,
+            q_Z = vt.labels_expectation(Sigma_A[:, :, :, 0], m_A[0, :, :], sigma_Ma, mu_Ma,
+                                            Beta, q_Z, neighboursIndexes,
                                             M, K, J)
             np.seterr(**old_params)
 
@@ -380,7 +384,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # (mu,sigma)
         if estimateMP:
             logger.info("M (mu,sigma) a and c step ...")
-            mu_Ma, sigma_Ma = vt.maximization_mu_sigma_ms(q_Z, m_A, Sigma_A, M, J, n_sess, K)
+            mu_Ma, sigma_Ma = vt.maximization_class_proba(q_Z, m_A[0, :, :], Sigma_A[:, :, :, 0])
+            #mu_Ma, sigma_Ma = vt.maximization_mu_sigma_ms(q_Z, m_A, Sigma_A, M, J, n_sess, K)
 
         if ni > 0:
             free_energyMP = 0
@@ -420,7 +425,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Beta
         if estimateBeta:
             logger.info("M beta step ...")
-            """Qtilde = np.concatenate((Z_tilde, np.zeros((M, K, 1), dtype=Z_tilde.dtype)), axis=2)
+            """Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
             Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             Beta = vt.maximization_beta_m2(Beta.copy(), q_Z, Qtilde_sumneighbour,
                                              Qtilde, neighboursIndexes, maxNeighbours,
@@ -428,10 +433,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info(Beta)
             """
             logger.info("M beta step ...")
-            Qtilde = np.concatenate((Z_tilde, np.zeros((M, K, 1), dtype=Z_tilde.dtype)), axis=2)
+            Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
             Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             for m in xrange(0, M):
-                Beta[m] = vt.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
+                Beta[m], _ = vt.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
 
                 #Beta[m] = vt.maximization_beta_m2_scipy_asl(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :], Qtilde[m, :, :], neighboursIndexes, maxNeighbours, gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
@@ -595,7 +600,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 np.linalg.norm(Y[s, :, :] - StimulusInducedSignal - PL[s, :, :])))
     logger.info("SNR = %d",  SNR10)
 
-    return ni, m_A.mean(0), A_std, H, m_C.mean(0), G, Z_tilde, sigma_eps[s, :], \
+    return ni, m_A.mean(0), A_std, H, m_C.mean(0), G, q_Z, sigma_eps[s, :], \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, AL[:, :, s], PL[s, :, :], \
            np.zeros_like(AL[0, :, s]), Sigma_A.mean(3), Sigma_C[:, :, :, s], Sigma_H, Sigma_G, rerror, \
            contrasts_mean, contrasts_var, ppm_a_nrl, ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, \

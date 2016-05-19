@@ -1387,7 +1387,7 @@ def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
     second_summand = np.einsum('ijk, jli', Sigma_H_X, Gamma_X)
     Sigma_A += second_summand[..., np.newaxis] / sigma_eps_m
     # third summand of Sigma_A: part of p(a|q; theta_A)
-    Delta_k = (q_Z / np.maximum(sigma_Ma[:, :, np.newaxis], eps))
+    Delta_k = (q_Z / sigma_Ma[:, :, np.newaxis])
     Delta = Delta_k.sum(axis=1)         # sum across classes K
     for i in xrange(0, J):
         Sigma_A[:, :, i] = np.linalg.inv(Sigma_A[:, :, i] + \
@@ -1436,7 +1436,7 @@ def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma,
         second_summand = np.einsum('ijk, jli', Sigma_H_X[:, :, :, s], Gamma_X[:, s, :, :])
         Sigma_A[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
     # third summand of Sigma_A: part of p(a|q; theta_A)
-    Delta_k = (q_Z / np.maximum(sigma_Ma[:, :, np.newaxis], eps))
+    Delta_k = (q_Z / sigma_Ma[:, :, np.newaxis])
     Delta = Delta_k.sum(axis=1)         # sum across classes K
     for s in xrange(0, S):
         for i in xrange(0, J):
@@ -1481,7 +1481,7 @@ def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
     second_summand = np.einsum('ijk, jli', Sigma_G_X, Gamma_X)
     Sigma_C += second_summand[..., np.newaxis] / sigma_eps_m
     # third summand of Sigma_C: part of p(c|q; theta_C)
-    Delta_k = (q_Z / np.maximum(sigma_Mc[:, :, np.newaxis], eps))
+    Delta_k = (q_Z / sigma_Mc[:, :, np.newaxis])
     Delta = Delta_k.sum(axis=1)          # sum across classes K
     for i in xrange(0, J):
         Sigma_C[:, :, i] = np.linalg.inv(Sigma_C[:, :, i] + \
@@ -1530,7 +1530,7 @@ def expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc,
         second_summand = np.einsum('ijk, jli', Sigma_G_X[:, :, :, s], Gamma_X[:, s, :, :])
         Sigma_C[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
     # third summand of Sigma_C: part of p(c|q; theta_C)
-    Delta_k = (q_Z / np.maximum(sigma_Mc[:, :, np.newaxis], eps))
+    Delta_k = (q_Z / sigma_Mc[:, :, np.newaxis])
     Delta = Delta_k.sum(axis=1)          # sum across classes K
     for s in xrange(0, S):
         for i in xrange(0, J):
