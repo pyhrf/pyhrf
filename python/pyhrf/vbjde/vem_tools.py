@@ -1550,6 +1550,74 @@ def expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc,
     return m_C, Sigma_C
 
 
+def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
+                       beta, labels_proba, neighbours_indexes, nb_conditions,
+                       nb_classes, nb_voxels=None, parallel=True, nans_init=False):
+    """Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+
+    Parameters
+    ----------
+    nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
+    nrls_mean : ndarray, shape (nb_voxels, nb_conditions)
+    nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
+    nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
+    beta : ndarray, shape
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    neighbours_indexes : ndarray, shape (nb_voxels, max(len(a) for a in graph))
+        This is the version of graph array where arrays from graph smaller than
+        the maximum ones are filled with -1
+    nb_conditions : int
+    nb_classes : int
+
+    Returns
+    -------
+    labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
+    """
+
+    alpha = (-0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / (nrls_class_var[np.newaxis, :, :])).transpose(1, 2, 0)
+
+    alpha -= alpha.mean(axis=2)[:, :, np.newaxis]
+    gauss = normpdf(nrls_mean[...,np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var)).transpose(1, 2, 0)
+
+    # Update Ztilde ie the quantity which is involved in the a priori
+    # Potts field [by solving for the mean-field fixed point Equation]
+    if not parallel and nb_voxels:
+        energy = np.zeros_like(labels_proba)
+        local_energy = np.zeros_like(labels_proba)
+        for vox in xrange(nb_voxels):
+            local_energy[:, :, vox] = sum_over_neighbours(
+                neighbours_indexes[vox, :],
+                beta[..., np.newaxis, np.newaxis] * labels_proba
+            )
+            energy[:, :, vox] = alpha[:, :, vox] + local_energy[:, :, vox]
+            labels_proba[:, :, vox] = np.exp(energy[:, :, vox])*gauss[:, :, vox]
+            labels_proba[:, :, vox] = labels_proba[:, :, vox]/labels_proba[:, :, vox].sum(axis=1)[:, np.newaxis]
+    else:
+        if not parallel:
+            logger.warning("Could not use ascynchronous expectation."
+                           " Please provide the nb_voxels parameter")
+        local_energy = sum_over_neighbours(
+            neighbours_indexes, beta[..., np.newaxis, np.newaxis] * labels_proba
+        )
+        energy = alpha + local_energy
+        if nans_init:
+            labels_proba_nans = np.ones_like(labels_proba)/nb_classes
+        else:
+            labels_proba_nans = labels_proba.copy()
+        labels_proba = (np.exp(energy) * gauss)
+
+        # Remove NaNs and Infs (# TODO: check for sequential mode)
+        if (labels_proba.sum(axis=1)==0).any():
+            mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
+            labels_proba[mask] = labels_proba_nans[mask]
+        if np.isinf(labels_proba.sum(axis=1)).any():
+            mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
+            labels_proba[mask] = labels_proba_nans[mask]
+
+        labels_proba = labels_proba / labels_proba.sum(axis=1)[:, np.newaxis, :]
+
+    return labels_proba
+
 def expectation_Q_asl(Sigma_A, m_A, Sigma_C, m_C, sigma_Ma, mu_Ma, sigma_Mc, \
                   mu_Mc, Beta, p_q_t, p_Q, neighbours_indexes, graph, M, J, K):
     # between ASL and BOLD just alpha and Gauss_mat change!!!

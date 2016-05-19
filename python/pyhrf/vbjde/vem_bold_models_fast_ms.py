@@ -253,10 +253,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateZ:
             logger.info("E Q step ...")
             old_params = np.seterr(all='raise')
-            q_Z, Z_tilde = vt.expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C,
-                                            sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
-                                            Beta, Z_tilde, q_Z, neighboursIndexes,
-                                            graph, M, J, K, n_sess)
+            q_Z, Z_tilde = vt.labels_expectation(Sigma_A, m_A, sigma_Ma, mu_Ma,
+                                            Beta, Z_tilde, neighboursIndexes,
+                                            M, K, J)
             np.seterr(**old_params)
 
             if 0:
