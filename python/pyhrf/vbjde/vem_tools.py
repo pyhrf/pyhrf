@@ -1695,6 +1695,23 @@ def maximization_Mu_asl(H, G, matrix_covH, matrix_covG,
     return Mu
 
 
+
+def sum_over_neighbours(neighbours_indexes, array_to_sum):
+    """Sums the `array_to_sum` over the neighbours in the graph."""
+
+    if not neighbours_indexes.size:
+        return array_to_sum
+
+    if neighbours_indexes.max() > array_to_sum.shape[-1] - 1:
+        raise Exception("Can't sum over neighbours. Please check dimensions")
+
+    array_cat_zero = np.concatenate(
+        (array_to_sum,
+         np.zeros(array_to_sum.shape[:-1]+(1,), dtype=array_to_sum.dtype)),
+        axis=-1)
+    return array_cat_zero[..., neighbours_indexes].sum(axis=-1)
+
+
 def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma,
                   gradient_method="m1"):
     """Computes the gradient of the beta function
