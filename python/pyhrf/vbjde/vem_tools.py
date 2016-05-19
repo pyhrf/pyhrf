@@ -1059,7 +1059,7 @@ def maximization_beta(beta, q_Z, Z_tilde, J, K, m, graph, gamma, neighbour, maxN
     return max(beta, eps)
 
 
-def beta_maximization(beta, labels_proba, neighbours_indexes, gamma, nb_classes,
+def beta_maximization_old(beta, labels_proba, neighbours_indexes, gamma, nb_classes,
                       it_max_grad=200, gradient_step=0.003):
     """
     update beta for one condition
@@ -1695,6 +1695,72 @@ def maximization_Mu_asl(H, G, matrix_covH, matrix_covG,
     return Mu
 
 
+def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma,
+                  gradient_method="m1"):
+    """Computes the gradient of the beta function
+
+    Parameters
+    ----------
+    beta : float
+    labels_proba : ndarray
+    labels_neigh : ndarray
+    neighbours_indexes : ndarray
+    gamma : float
+    gradient_method : str
+        for testing purposes
+
+    Returns
+    -------
+    gradient : float
+        the gradient estimated in beta
+    """
+
+    beta_labels_neigh = beta * labels_neigh
+    energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
+    energy /= energy.sum(axis=0)
+    energy_neigh = sum_over_neighbours(neighbours_indexes, energy)
+
+    if gradient_method == "m1":
+        return (gamma*np.ones_like(beta)
+                + (energy*energy_neigh - labels_proba*labels_neigh).sum()/2.)
+    elif gradient_method == "m2":
+        return (gamma*np.ones_like(beta)
+                + ((energy - labels_proba)*labels_neigh).sum()/2.)
+
+
+def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
+    """Computes the Beta Maximization step of the JDE VEM algorithm
+
+    Parameters
+    ----------
+    beta : ndarray
+        initial value of beta
+    labels_proba : ndarray
+    neighbours_indexes : ndarray
+    gamma : float
+
+    Returns
+    -------
+    beta : float
+        the new value of beta
+    success : bool
+        True if the maximization has succeeded
+    """
+
+    labels_neigh = sum_over_neighbours(neighbours_indexes, labels_proba)
+    try:
+        beta_new, res = brentq(
+            beta_gradient, 0., 10, args=(labels_proba, labels_neigh, neighbours_indexes, gamma),
+            full_output=True
+        )
+        converged = res.converged
+    except ValueError:
+        beta_new = beta
+        converged = False
+
+    return beta_new, converged
+
+
 def maximization_beta_m4_asl(beta, p_Q, Qtilde_sumneighbour, Qtilde, neighboursIndexes,
                               maxNeighbours, gamma, MaxItGrad, gradientStep):
     # Method 4 in Christine's thesis:
@@ -1816,23 +1882,6 @@ def maximization_beta_m2_scipy_asl(Beta, p_Q, Qtilde_sumneighbour, Qtilde, neigh
         logger.warning("max beta did not converge: %s (beta=%s)", res, beta_new)
 
     return beta_new #, res.converged
-
-    """
-    #beta_new = fmin_l_bfgs_b(fun, Beta, \
-    #                args=(p_Q, Qtilde_sumneighbour, neighboursIndexes, gamma),
-    #                bounds=[(0, 10)] * (len(np.array([Beta]))))
-    try:
-        n = len(Beta)
-    except:
-        n = 1
-    print n
-    beta_new = fmin_l_bfgs_b(fun, np.array([Beta]), \
-                    args=(p_Q, Qtilde_sumneighbour, neighboursIndexes, gamma),
-                    fprime=grad_fun,
-                    bounds=[(0, None)]*n)
-    print beta_new
-    # You can add at the end fprime=grad_fun to give the gradient separately
-    return beta_new[0]"""
 
 
 def maximization_LA_asl(Y, m_A, m_C, XX, WP, W, WP_Gamma_WP, H, G, Gamma):
