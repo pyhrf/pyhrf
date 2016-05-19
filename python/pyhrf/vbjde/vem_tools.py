@@ -12,7 +12,7 @@ import scipy as sp
 
 from numpy.matlib import *
 from scipy.linalg import toeplitz
-from scipy.optimize import fmin_slsqp
+from scipy.optimize import brentq
 
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
