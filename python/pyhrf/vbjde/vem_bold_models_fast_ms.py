@@ -432,9 +432,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             Qtilde = np.concatenate((Z_tilde, np.zeros((M, K, 1), dtype=Z_tilde.dtype)), axis=2)
             Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             for m in xrange(0, M):
-                Beta[m] = vt.maximization_beta_m2_scipy_asl(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
-                                                   Qtilde[m, :, :], neighboursIndexes, maxNeighbours,
-                                                   gamma, MaxItGrad, gradientStep)
+                Beta[m] = vt.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
+
+                #Beta[m] = vt.maximization_beta_m2_scipy_asl(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :], Qtilde[m, :, :], neighboursIndexes, maxNeighbours, gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
         if ni > 0:
             free_energyB = 0
