@@ -34,7 +34,7 @@ plt.switch_backend('Qt4Agg')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-eps = 1e-6
+eps = np.spacing(1)
 
 #@profile
 def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
@@ -97,15 +97,16 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     print 'creating conditions...'
     X, XX, condition_names = vt.create_conditions_block_ms(Onsets, durations,
                                                     M, N, D, n_sess, TR, dt)
-    # Covariance matrix
-    #R = vt.covariance_matrix(2, D, dt)
-    _, R_inv = genGaussianSmoothHRF(zc, D, dt, 1., 2)
-    R = np.linalg.inv(R_inv)
     if zc:
         XX = XX[:, :, :, 1:-1]    # XX shape (S, M, N, D)
         D = D - 2
     AH1, CG1 = np.zeros((J, M, D)), np.zeros((J, M, D))
 
+    # Covariance matrix
+    #R = vt.covariance_matrix(2, D, dt)
+    _, R_inv = genGaussianSmoothHRF(zc, D, dt, 1., 2)
+    R = np.linalg.inv(R_inv)
+    
     print 'HRF length = ', D
     print 'Condition number = ', M
     print 'Number of scans = ', N
@@ -124,7 +125,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     #q_Z = np.zeros((M, K, J), dtype=np.float64)
     #q_Z[:, 1, :] = 1
     q_Z1 = copy.deepcopy(q_Z)
-    Z_tilde = copy.deepcopy(q_Z)
 
     # H and G
     TT, m_h = getCanoHRF(Thrf, dt)
@@ -142,9 +142,15 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     #    G = Gb.copy()
     Mu = Hb.copy()
     H1 = copy.deepcopy(H)
-    Sigma_H = np.zeros((D, D), dtype=np.float64)
     G1 = copy.deepcopy(G)
-    Sigma_G = copy.deepcopy(Sigma_H)
+    if estimateH:
+        Sigma_H = np.identity(D, dtype=np.float64)
+    else:
+        Sigma_H = np.zeros((D, D), dtype=np.float64)
+    if estimateG:
+        Sigma_G = np.identity(D, dtype=np.float64)
+    else:
+        Sigma_G = np.zeros((D, D), dtype=np.float64)
     normOh = False
     normg = False
     if prior=='hierarchical' or prior=='omega':
@@ -175,7 +181,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     y_tilde = Y - PL
 
     # Parameters Gaussian mixtures
-    mu_Ma = np.append(np.zeros((M, 1)), np.ones((M, 1)), axis=1).astype(np.float64)
+    mu_Ma = 2 * np.append(np.zeros((M, 1)), np.ones((M, 1)), axis=1).astype(np.float64)
     mu_Mc = mu_Ma.copy()
     sigma_Ma = np.ones((M, K), dtype=np.float64) * 0.3
     sigma_Mc = sigma_Ma.copy()
@@ -192,7 +198,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     Sigma_C = Sigma_A.copy()
 
     # Precomputations
-    print 'W shape is ', W.shape
     WX = W.dot(XX).transpose(1, 2, 0, 3)                                       # shape (S, M, N, D)
     Gamma_X = np.zeros((N, n_sess, M, D), dtype=np.float64)                    # shape (N, S, M, D)
     X_Gamma_X = np.zeros((D, M, n_sess, M, D), dtype=np.float64)               # shape (D, M, S, M, D)
@@ -266,6 +271,63 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         #####################
 
 
+        # A
+        if estimateA:
+            logger.info("E A step ...")
+            m_A, Sigma_A = vt.expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX,
+                                             Gamma, Gamma_X, q_Z,
+                                             mu_Ma, sigma_Ma, J, y_tilde,
+                                             Sigma_H, sigma_eps_m, N, M, D, n_sess)
+
+            cA += [(np.linalg.norm(m_A - m_A1) / np.linalg.norm(m_A1)) ** 2]
+            m_A1[:, :, :] = m_A[:, :, :]
+
+
+        # C
+        if estimateC:
+            logger.info("E C step ...")
+            m_C, Sigma_C = vt.expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z,
+                                             mu_Mc, sigma_Mc, J, y_tilde,
+                                             Sigma_G, sigma_eps_m, N, M, D, n_sess)
+
+            cC += [(np.linalg.norm(m_C - m_C1) / np.linalg.norm(m_C1)) ** 2]
+            m_C1[:, :] = m_C[:, :]
+
+
+        # Q labels
+        if estimateZ:
+            logger.info("E Q step ...")
+            q_Z = vt.labels_expectation_asl(Sigma_A[:, :, :, 0], m_A[0, :, :], sigma_Ma, mu_Ma,
+                                            Sigma_C[:, :, :, 0], m_C[0, :, :], sigma_Mc, mu_Mc,
+                                            Beta, q_Z, neighboursIndexes,
+                                            M, K, J)
+            #q_Z, Z_tilde = vt.expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C,
+            #                                sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
+            #                                Beta, Z_tilde, q_Z, neighboursIndexes, graph, M, J, K, n_sess)
+
+            if 0:
+                import matplotlib.pyplot as plt
+                plt.close('all')
+                fig = plt.figure(1)
+                for m in xrange(M):
+                    ax = fig.add_subplot(2, M, m + 1)
+                    im = ax.matshow(m_A[:, :, m].mean(0).reshape(20, 20))
+                    plt.colorbar(im, ax=ax)
+                    ax = fig.add_subplot(2, M, m + 3)
+                    im = ax.matshow(q_Z[m, 1, :].reshape(20, 20))
+                    plt.colorbar(im, ax=ax)
+                fig = plt.figure(2)
+                for m in xrange(M):
+                    for s in xrange(n_sess):
+                        ax = fig.add_subplot(M, n_sess, n_sess * m + s + 1)
+                        im = ax.matshow(m_A[s, :, m].reshape(20, 20))
+                        plt.colorbar(im, ax=ax)
+                plt.show()
+
+            cZ += [(np.linalg.norm(q_Z - q_Z1) / (np.linalg.norm(q_Z1) + eps)) ** 2]
+            q_Z1 = q_Z
+
+
         # HRF H
         if estimateH:
             logger.info("E H step ...")
@@ -299,18 +361,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                     OmegaH /= np.linalg.norm(OmegaH)
 
 
-        # A
-        if estimateA:
-            logger.info("E A step ...")
-            m_A, Sigma_A = vt.expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX,
-                                             Gamma, Gamma_X, q_Z,
-                                             mu_Ma, sigma_Ma, J, y_tilde,
-                                             Sigma_H, sigma_eps_m, N, M, D, n_sess)
-
-            cA += [(np.linalg.norm(m_A - m_A1) / np.linalg.norm(m_A1)) ** 2]
-            m_A1[:, :, :] = m_A[:, :, :]
-
-
         # PRF G
         if estimateG:
             logger.info("E G step ...")
@@ -335,45 +385,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             cG += [(np.linalg.norm(G - G1) / np.linalg.norm(G1)) ** 2]
             G1[:] = G[:]
 
-        # C
-        if estimateC:
-            logger.info("E C step ...")
-            m_C, Sigma_C = vt.expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z,
-                                             mu_Mc, sigma_Mc, J, y_tilde,
-                                             Sigma_G, sigma_eps_m, N, M, D, n_sess)
-
-            cC += [(np.linalg.norm(m_C - m_C1) / np.linalg.norm(m_C1)) ** 2]
-            m_C1[:, :] = m_C[:, :]
-
-
-        # Q labels
-        if estimateZ:
-            logger.info("E Q step ...")
-            q_Z, Z_tilde = vt.expectation_Q_ms(Sigma_A, m_A, Sigma_C, m_C,
-                                            sigma_Ma, mu_Ma, sigma_Mc, mu_Mc,
-                                            Beta, Z_tilde, q_Z, neighboursIndexes, graph, M, J, K, n_sess)
-
-            if 0:
-                import matplotlib.pyplot as plt
-                plt.close('all')
-                fig = plt.figure(1)
-                for m in xrange(M):
-                    ax = fig.add_subplot(2, M, m + 1)
-                    im = ax.matshow(m_A[:, :, m].mean(0).reshape(20, 20))
-                    plt.colorbar(im, ax=ax)
-                    ax = fig.add_subplot(2, M, m + 3)
-                    im = ax.matshow(q_Z[m, 1, :].reshape(20, 20))
-                    plt.colorbar(im, ax=ax)
-                fig = plt.figure(2)
-                for m in xrange(M):
-                    for s in xrange(n_sess):
-                        ax = fig.add_subplot(M, n_sess, n_sess * m + s + 1)
-                        im = ax.matshow(m_A[s, :, m].reshape(20, 20))
-                        plt.colorbar(im, ax=ax)
-                plt.show()
-
-            cZ += [(np.linalg.norm(q_Z - q_Z1) / (np.linalg.norm(q_Z1) + eps)) ** 2]
-            q_Z1 = q_Z
+        
 
         if ni > 0:
             free_energyE = 0
@@ -459,8 +471,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # (mu,sigma)
         if estimateMP:
             logger.info("M (mu,sigma) a and c step ...")
-            mu_Ma, sigma_Ma = vt.maximization_mu_sigma_ms(q_Z, m_A, Sigma_A, M, J, n_sess, K)
-            mu_Mc, sigma_Mc = vt.maximization_mu_sigma_ms(q_Z, m_C, Sigma_C, M, J, n_sess, K)
+            mu_Ma, sigma_Ma = vt.maximization_class_proba(q_Z, m_A[0, :, :], Sigma_A[:, :, :, 0])
+            mu_Mc, sigma_Mc = vt.maximization_class_proba(q_Z, m_C[0, :, :], Sigma_C[:, :, :, 0])
+            #mu_Ma, sigma_Ma = vt.maximization_mu_sigma_ms(q_Z, m_A, Sigma_A, M, J, n_sess, K)
+            #mu_Mc, sigma_Mc = vt.maximization_mu_sigma_ms(q_Z, m_C, Sigma_C, M, J, n_sess, K)
 
         if ni > 0:
             free_energyMP = 0
@@ -507,12 +521,13 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                                              gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
             """
-            Qtilde = np.concatenate((Z_tilde, np.zeros((M, K, 1), dtype=Z_tilde.dtype)), axis=2)
-            Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
+            #Qtilde = np.concatenate((Z_tilde, np.zeros((M, K, 1), dtype=Z_tilde.dtype)), axis=2)
+            #Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             for m in xrange(0, M):
-                Beta[m] = vt.maximization_beta_m2_scipy_asl(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
-                                                   Qtilde[m, :, :], neighboursIndexes, maxNeighbours,
-                                                   gamma, MaxItGrad, gradientStep)
+                Beta[m], _ = vt.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
+                #Beta[m] = vt.maximization_beta_m2_scipy_asl(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
+                #                                   Qtilde[m, :, :], neighboursIndexes, maxNeighbours,
+                #                                   gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
         if ni > 0:
             free_energyB = 0
@@ -639,6 +654,20 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     else:
         CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C = 0, 0, 0, 0
 
+    ppm_a_brl, ppm_a_prl = np.zeros((J, M)), np.zeros((J, M))
+    ppm_g_brl, ppm_g_prl = np.zeros((J, M)), np.zeros((J, M))
+    brls_mean, prls_mean = m_A.mean(0), m_C.mean(0)
+    brls_covar, prls_covar = Sigma_A.mean(3), Sigma_C.mean(3)
+    A_std, C_std = np.zeros_like(brls_mean)n np.zeros_like(prls_mean)
+    for condition in xrange(M):
+        #  ppm_a_nrl[:, condition] = cpt_ppm_a_norm(nrls_mean[:, condition], nrls_covar[condition, condition, :], 0)
+        ppm_a_brl[:, condition] = cpt_ppm_a_norm(brls_mean[ :, condition], brls_covar[condition, condition, :], sigma_Ma[condition, 0]**.5)
+        ppm_g_brl[:, condition] = cpt_ppm_g_norm(brls_mean[:, condition], brls_covar[condition, condition, :], 0.95)
+        A_std[:, condition] = brls_mean[:, condition] / np.sqrt(brls_covar[condition, condition, :])
+        ppm_a_prl[:, condition] = cpt_ppm_a_norm(prls_mean[ :, condition], prls_covar[condition, condition, :], sigma_Mc[condition, 0]**.5)
+        ppm_g_prl[:, condition] = cpt_ppm_g_norm(prls_mean[:, condition], prls_covar[condition, condition, :], 0.95)
+        C_std[:, condition] = prls_mean[:, condition] / np.sqrt(prls_covar[condition, condition, :])
+
 
     ###########################################################################
     ##########################################    PLOTS and SNR computation
@@ -665,10 +694,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 np.linalg.norm(Y[s, :, :] - StimulusInducedSignal - PL[s, :, :])))
     logger.info("SNR = %d",  SNR10)
 
-    return ni, m_A.mean(0), H, m_C.mean(0), G, Z_tilde, sigma_eps.mean(0), \
+    return ni, m_A.mean(0), H, m_C.mean(0), G, q_Z, sigma_eps.mean(0), \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, AL.mean(2), PL.mean(0), \
            AL[0, :, s], Sigma_A.mean(3), Sigma_C.mean(3), Sigma_H, Sigma_G, rerror, \
            CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
+           ppm_a_brl, ppm_g_brl, ppm_a_prl, ppm_g_prl, \
            cA[:], cH[2:], cC[2:], cG[2:], cZ[2:], cAH[2:], cCG[2:], \
            cTime, FE
 
