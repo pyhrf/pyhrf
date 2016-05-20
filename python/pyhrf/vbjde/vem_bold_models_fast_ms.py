@@ -37,7 +37,7 @@ plt.switch_backend('Qt4Agg')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-eps = 1e-6
+eps = np.spacing(1)
 
 #@profile
 def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
@@ -52,7 +52,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                       positivity=False, constraint=False,
                       phy_params=PHY_PARAMS_KHALIDOV11, prior='omega', zc=False):
 
-    logger.info("EM for ASL!")
+    logger.info("EM for BOLD!")
     #np.random.seed(6537540)
     logger.info("data shape: ")
     logger.info(Y.shape)
@@ -123,7 +123,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     # H and G
     TT, m_h = getCanoHRF(Thrf, dt)
     H = np.array(m_h[:D]).astype(np.float64)
-    H /= np.linalg.norm(H)
+    #H /= np.linalg.norm(H)
     #Hb = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)
     #Hb /= np.linalg.norm(Hb)
     Hb = H.copy()
@@ -153,7 +153,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     # Parameters Gaussian mixtures
     mu_Ma = 2 * np.append(np.zeros((M, 1)), np.ones((M, 1)), axis=1).astype(np.float64)
-    sigma_Ma = np.ones((M, K), dtype=np.float64) * (0.3)**2
+    sigma_Ma = np.ones((M, K), dtype=np.float64) * 0.3
 
     # Params RLs
     m_A = np.zeros((n_sess, J, M), dtype=np.float64)
@@ -173,7 +173,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     W = np.zeros_like(Gamma)            # (N, N)
 
     # Precomputations
-    print 'W shape is ', W.shape
     WX = W.dot(XX).transpose(1, 2, 0, 3)                                       # shape (S, M, N, D)
     Gamma_X = np.zeros((N, n_sess, M, D), dtype=np.float64)                    # shape (N, S, M, D)
     X_Gamma_X = np.zeros((D, M, n_sess, M, D), dtype=np.float64)               # shape (D, M, S, M, D)
@@ -191,6 +190,19 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     sigma_eps_m = np.maximum(sigma_eps, eps)                                   # (n_sess, J)
     cov_noise = sigma_eps_m[:, :, np.newaxis, np.newaxis]                      # (n_sess, J, 1, 1)
 
+
+    print 'HRF norm ', np.linalg.norm(H)
+    print 'HRF ', H.mean(), H.var()
+    print 'HRF S ', Sigma_H.mean(), Sigma_H.var()
+    print 'sigma_h ', sigmaH
+    print 'NRLs ', m_A.mean(), m_A.var()
+    print 'NRLs S ', Sigma_A.mean(), Sigma_A.var()
+    print 'labels_proba ', q_Z.mean(), q_Z.var()
+    print 'class ', mu_Ma
+    print sigma_Ma
+    print 'beta ', Beta
+    print 'drifts ', PL.mean(), PL.var()
+    print 'noise_var ', sigma_eps.mean(), sigma_eps.var()
 
     ###########################################################################
     #############################################             VBJDE
@@ -433,8 +445,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info(Beta)
             """
             logger.info("M beta step ...")
-            Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
-            Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
+            #Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
+            #Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             for m in xrange(0, M):
                 Beta[m], _ = vt.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
 
@@ -480,6 +492,19 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 sigma_eps[s, :] = vt.maximization_sigma_noise_asl(XX[s, :, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], H, m_C[s, :, :], Sigma_C[:, :, :, s], \
                                                     G, Sigma_H, Sigma_G, W, y_tilde[s, :, :], Gamma, \
                                                     Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], N)
+
+        print 'HRF norm ', np.linalg.norm(H)
+        print 'HRF ', H.mean(), H.var()
+        print 'HRF S ', Sigma_H.mean(), Sigma_H.var()
+        print 'sigma_h ', sigmaH
+        print 'NRLs ', m_A.mean(), m_A.var()
+        print 'NRLs S ', Sigma_A.mean(), Sigma_A.var()
+        print 'labels_proba ', q_Z.mean(), q_Z.var()
+        print 'class ', mu_Ma
+        print sigma_Ma
+        print 'beta ', Beta
+        print 'drifts ', PL.mean(), PL.var()
+        print 'noise_var ', sigma_eps.mean(), sigma_eps.var()
 
         if PLOT:
             for m in xrange(M):
