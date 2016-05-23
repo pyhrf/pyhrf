@@ -17,6 +17,7 @@ import numpy as np
 
 import pyhrf
 import pyhrf.vbjde.vem_tools as vt
+import pyhrf.vbjde.vem_tools2 as vt2
 
 from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
                                 genGaussianSmoothHRF_cust
@@ -238,15 +239,16 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # EXPECTATION
         #####################
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
         # A
         if estimateA:
             logger.info("E A step ...")
-            m_A, Sigma_A = vt.expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX,
-                                             Gamma, Gamma_X, q_Z,
-                                             mu_Ma, sigma_Ma, J, y_tilde,
-                                             Sigma_H, sigma_eps_m, N, M, D, n_sess)
+            #m_A, Sigma_A = vt.expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma, J, y_tilde, Sigma_H, sigma_eps_m, N, M, D, n_sess)
+            m_A, Sigma_A = vt2.nrls_expectation(
+            H, m_A[0, :, :], XX[s, :, :, :], Gamma, q_Z, mu_Ma, sigma_Ma, M, y_tilde[s, :, :], Sigma_A[:, :, :, 0], Sigma_H, sigma_eps[s, :])
+            m_A = m_A[np.newaxis, ...]
+            Sigma_A = Sigma_A[..., np.newaxis]
 
             cA += [(np.linalg.norm(m_A - m_A1) / np.linalg.norm(m_A1)) ** 2]
             m_A1[:, :, :] = m_A[:, :, :]
@@ -254,13 +256,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if ni > 0:
             free_energyA = 0
             for s in xrange(n_sess):
-                free_energyA += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s],
-                                             mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :],
-                                             W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :],
-                                             Gamma_WX[:, s, :, :], bold=True, S=n_sess)
+                free_energyA += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
             if free_energyA < free_energy:
                 logger.info("free energy has decreased after E-A step from %f to %f", free_energy, free_energyA)
 
@@ -269,29 +265,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateZ:
             logger.info("E Q step ...")
             old_params = np.seterr(all='raise')
-            q_Z = vt.labels_expectation(Sigma_A[:, :, :, 0], m_A[0, :, :], sigma_Ma, mu_Ma,
-                                            Beta, q_Z, neighboursIndexes,
-                                            M, K, J)
+            q_Z = vt2.labels_expectation(Sigma_A[:, :, :, 0], m_A[0, :, :], sigma_Ma, mu_Ma, Beta, q_Z, neighboursIndexes, M, K, J, parallel=True)
             np.seterr(**old_params)
-
-            if 0:
-                import matplotlib.pyplot as plt
-                plt.close('all')
-                fig = plt.figure(1)
-                for m in xrange(M):
-                    ax = fig.add_subplot(2, M, m + 1)
-                    im = ax.matshow(m_A[:, :, m].mean(0).reshape(20, 20))
-                    plt.colorbar(im, ax=ax)
-                    ax = fig.add_subplot(2, M, m + 3)
-                    im = ax.matshow(q_Z[m, 1, :].reshape(20, 20))
-                    plt.colorbar(im, ax=ax)
-                fig = plt.figure(2)
-                for m in xrange(M):
-                    for s in xrange(n_sess):
-                        ax = fig.add_subplot(M, n_sess, n_sess * m + s + 1)
-                        im = ax.matshow(m_A[s, :, m].reshape(20, 20))
-                        plt.colorbar(im, ax=ax)
-                plt.show()
 
             cZ += [(np.linalg.norm(q_Z - q_Z1) / (np.linalg.norm(q_Z1) + eps)) ** 2]
             q_Z1 = q_Z
@@ -299,13 +274,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if ni > 0:
             free_energyQ = 0
             for s in xrange(n_sess):
-                free_energyQ += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s],
-                                             mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :],
-                                             W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :],
-                                             Gamma_WX[:, s, :, :], bold=True, S=n_sess)
+                free_energyQ += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
             if free_energyQ < free_energyA:
                 logger.info("free energy has decreased after E-Q step from %f to %f", free_energyA, free_energyQ)
 
@@ -313,11 +282,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # HRF H
         if estimateH:
             logger.info("E H step ...")
-            Ht, Sigma_H = vt.expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma,
-                                            Gamma_X, X_Gamma_X, J, y_tilde,
-                                            cov_noise, matrix_covH, sigmaH,
-                                            priorH_mean_term, priorH_cov_term, N, M, D, n_sess)
-
+            #Ht, Sigma_H = vt.expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde, cov_noise, matrix_covH, sigmaH, priorH_mean_term, priorH_cov_term, N, M, D, n_sess)
+            Ht, Sigma_H = vt2.hrf_expectation(Sigma_A[:, :, :, s], m_A[s, :, :], XX[s, :, :, :], Gamma, R_inv, sigmaH, J, y_tilde[s, :, :], sigma_eps[s, :])
             if constraint:
                 if not np.linalg.norm(Ht)==1:
                     logger.info("   constraint l2-norm = 1")
@@ -340,13 +306,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if ni > 0:
             free_energyE = 0
             for s in xrange(n_sess):
-                free_energyE += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s],
-                                             mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :],
-                                             W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :],
-                                             Gamma_WX[:, s, :, :], bold=True, S=n_sess)
+                free_energyE += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
             if free_energyE < free_energyQ:
                 logger.info("free energy has decreased after E-H step from %f to %f", free_energyQ, free_energyE)
 
@@ -377,18 +337,17 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Variance HRF: sigmaH
         if estimateSigmaH:
             logger.info("M sigma_H step ...")
-            sigmaH = vt.maximization_sigma_asl(D, Sigma_H, matrix_covH, AuxH, use_hyperprior, gamma_h)
+            #sigmaH = vt.maximization_sigma_asl(D, Sigma_H, matrix_covH, AuxH, use_hyperprior, gamma_h)
+            if use_hyperprior:
+                sigmaH = vt2.maximization_sigmaH_prior(D, Sigma_H, R_inv, H, gamma_h)
+            else:
+                sigmaH = vt2.maximization_sigmaH(D, Sigma_H, R_inv, H)
             logger.info('sigmaH = ' + str(sigmaH))
 
         if ni > 0:
             free_energyVh = 0
             for s in xrange(n_sess):
-                free_energyVh += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma,
-                                             H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W,
-                                             J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
+                free_energyVh += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
             if free_energyVh < free_energyE:
                 logger.info("free energy has decreased after v_h computation from %f to %f", free_energyE, free_energyVh)
 
@@ -396,18 +355,13 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # (mu,sigma)
         if estimateMP:
             logger.info("M (mu,sigma) a and c step ...")
-            mu_Ma, sigma_Ma = vt.maximization_class_proba(q_Z, m_A[0, :, :], Sigma_A[:, :, :, 0])
+            mu_Ma, sigma_Ma = vt2.maximization_class_proba(q_Z, m_A[0, :, :], Sigma_A[:, :, :, 0])
             #mu_Ma, sigma_Ma = vt.maximization_mu_sigma_ms(q_Z, m_A, Sigma_A, M, J, n_sess, K)
 
         if ni > 0:
             free_energyMP = 0
             for s in xrange(n_sess):
-                free_energyMP += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma,
-                                             H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W,
-                                             J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
+                free_energyMP += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
             if free_energyMP < free_energyVh:
                 logger.info("free energy has decreased after GMM parameters computation from %f to %f", free_energyVh, free_energyMP)
 
@@ -416,20 +370,15 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateLA:
             logger.info("M L, alpha step ...")
             for s in xrange(n_sess):
-                AL[:, :, s] = vt.maximization_LA_asl(Y[s, :, :], m_A[s, :, :], m_C[s, :, :], XX[s, :, :, :],
-                                                     WP[s, :, :], W, WP_Gamma_WP[s, :, :], H, G, Gamma)
+                AL[:, :, s] = vt2.maximization_drift_coeffs(Y[s, :, :], m_A[s, :, :], XX[s, :, :, :], H, Gamma, WP[s, :, :])
+                #AL[:, :, s] = vt.maximization_LA_asl(Y[s, :, :], m_A[s, :, :], m_C[s, :, :], XX[s, :, :, :], WP[s, :, :], W, WP_Gamma_WP[s, :, :], H, G, Gamma)
             PL = np.einsum('ijk,kli->ijl', WP, AL)
             y_tilde = Y - PL
 
         if ni > 0:
             free_energyLA = 0
             for s in xrange(n_sess):
-                free_energyLA += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma,
-                                                 H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                                 m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G,
-                                                 AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                                 gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W,
-                                                 J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
+                free_energyLA += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
             if free_energyLA < free_energyMP:
                 logger.info("free energy has decreased after drifts computation from %f to %f", free_energyMP, free_energyLA)
 
@@ -448,19 +397,14 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             #Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
             #Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             for m in xrange(0, M):
-                Beta[m], _ = vt.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
+                Beta[m], _ = vt2.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
 
                 #Beta[m] = vt.maximization_beta_m2_scipy_asl(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :], Qtilde[m, :, :], neighboursIndexes, maxNeighbours, gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
         if ni > 0:
             free_energyB = 0
             for s in xrange(n_sess):
-                free_energyB += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma,
-                                             H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG,
-                                             m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G,
-                                             AuxG, q_Z, neighboursIndexes, Beta, Gamma,
-                                             gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W,
-                                             J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
+                free_energyB += vt.Compute_FreeEnergy(y_tilde[s, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C[s, :, :], Sigma_C[:, :, :, s], mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps[s, :], XX[s, :, :, :], W, J, D, M, N, K, use_hyperprior, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], bold=True, S=n_sess)
             if free_energyB < free_energyLA:
                 logger.info("free energy has decreased after Beta computation from %f to %f", \
                                 free_energyLA, free_energyB)
@@ -471,10 +415,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 beta_plotting = np.zeros_like(range_b)
                 grad_plotting = np.zeros_like(range_b)
                 for ib, b in enumerate(range_b):
-                    beta_plotting[ib] = vt.fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
-                                                          neighboursIndexes, gamma)
-                    grad_plotting[ib] = vt.grad_fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :],
-                                                     neighboursIndexes, gamma)
+                    beta_plotting[ib] = vt.fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :], neighboursIndexes, gamma)
+                    grad_plotting[ib] = vt.grad_fun(b, q_Z[m, :, :], Qtilde_sumneighbour[m, :, :], neighboursIndexes, gamma)
                 #print beta_plotting
                 plt.figure(1)
                 plt.hold('on')
@@ -489,9 +431,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateNoise:
             logger.info("M sigma noise step ...")
             for s in xrange(n_sess):
-                sigma_eps[s, :] = vt.maximization_sigma_noise_asl(XX[s, :, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], H, m_C[s, :, :], Sigma_C[:, :, :, s], \
-                                                    G, Sigma_H, Sigma_G, W, y_tilde[s, :, :], Gamma, \
-                                                    Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], N)
+                #sigma_eps[s, :] = vt.maximization_sigma_noise_asl(XX[s, :, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], H, m_C[s, :, :], Sigma_C[:, :, :, s], G, Sigma_H, Sigma_G, W, y_tilde[s, :, :], Gamma, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], N)
+                sigma_eps[s, :] = vt2.maximization_noise_var(XX[s, :, :, :], H, Sigma_H, m_A[s, :, :], Sigma_A[:, :, :, s], Gamma, y_tilde[s, :, :], N)
+
 
         print 'HRF norm ', np.linalg.norm(H)
         print 'HRF ', H.mean(), H.var()
