@@ -17,7 +17,7 @@ import numpy as np
 
 import pyhrf
 import pyhrf.vbjde.vem_tools as vt
-import pyhrf.vbjde.vem_tools2 as vt2
+#import pyhrf.vbjde.vem_tools2 as vt2
 
 from pyhrf.boldsynth.hrf import getCanoHRF, genGaussianSmoothHRF, \
                                 genGaussianSmoothHRF_cust
@@ -245,7 +245,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateA:
             logger.info("E A step ...")
             #m_A, Sigma_A = vt.expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma, J, y_tilde, Sigma_H, sigma_eps_m, N, M, D, n_sess)
-            m_A, Sigma_A = vt2.nrls_expectation(
+            m_A, Sigma_A = vt.nrls_expectation(
             H, m_A[0, :, :], XX[s, :, :, :], Gamma, q_Z, mu_Ma, sigma_Ma, M, y_tilde[s, :, :], Sigma_A[:, :, :, 0], Sigma_H, sigma_eps[s, :])
             m_A = m_A[np.newaxis, ...]
             Sigma_A = Sigma_A[..., np.newaxis]
@@ -265,7 +265,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateZ:
             logger.info("E Q step ...")
             old_params = np.seterr(all='raise')
-            q_Z = vt2.labels_expectation(Sigma_A[:, :, :, 0], m_A[0, :, :], sigma_Ma, mu_Ma, Beta, q_Z, neighboursIndexes, M, K, J, parallel=True)
+            q_Z = vt.labels_expectation(Sigma_A[:, :, :, 0], m_A[0, :, :], sigma_Ma, mu_Ma, Beta, q_Z, neighboursIndexes, M, K, J, parallel=True)
             np.seterr(**old_params)
 
             cZ += [(np.linalg.norm(q_Z - q_Z1) / (np.linalg.norm(q_Z1) + eps)) ** 2]
@@ -283,7 +283,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateH:
             logger.info("E H step ...")
             #Ht, Sigma_H = vt.expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, y_tilde, cov_noise, matrix_covH, sigmaH, priorH_mean_term, priorH_cov_term, N, M, D, n_sess)
-            Ht, Sigma_H = vt2.hrf_expectation(Sigma_A[:, :, :, s], m_A[s, :, :], XX[s, :, :, :], Gamma, R_inv, sigmaH, J, y_tilde[s, :, :], sigma_eps[s, :])
+            Ht, Sigma_H = vt.hrf_expectation(Sigma_A[:, :, :, s], m_A[s, :, :], XX[s, :, :, :], Gamma, R_inv, sigmaH, J, y_tilde[s, :, :], sigma_eps[s, :])
             if constraint:
                 if not np.linalg.norm(Ht)==1:
                     logger.info("   constraint l2-norm = 1")
@@ -339,9 +339,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info("M sigma_H step ...")
             #sigmaH = vt.maximization_sigma_asl(D, Sigma_H, matrix_covH, AuxH, use_hyperprior, gamma_h)
             if use_hyperprior:
-                sigmaH = vt2.maximization_sigmaH_prior(D, Sigma_H, R_inv, H, gamma_h)
+                sigmaH = vt.maximization_sigmaH_prior(D, Sigma_H, R_inv, H, gamma_h)
             else:
-                sigmaH = vt2.maximization_sigmaH(D, Sigma_H, R_inv, H)
+                sigmaH = vt.maximization_sigmaH(D, Sigma_H, R_inv, H)
             logger.info('sigmaH = ' + str(sigmaH))
 
         if ni > 0:
@@ -355,7 +355,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # (mu,sigma)
         if estimateMP:
             logger.info("M (mu,sigma) a and c step ...")
-            mu_Ma, sigma_Ma = vt2.maximization_class_proba(q_Z, m_A[0, :, :], Sigma_A[:, :, :, 0])
+            mu_Ma, sigma_Ma = vt.maximization_class_proba(q_Z, m_A[0, :, :], Sigma_A[:, :, :, 0])
             #mu_Ma, sigma_Ma = vt.maximization_mu_sigma_ms(q_Z, m_A, Sigma_A, M, J, n_sess, K)
 
         if ni > 0:
@@ -370,7 +370,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateLA:
             logger.info("M L, alpha step ...")
             for s in xrange(n_sess):
-                AL[:, :, s] = vt2.maximization_drift_coeffs(Y[s, :, :], m_A[s, :, :], XX[s, :, :, :], H, Gamma, WP[s, :, :])
+                AL[:, :, s] = vt.maximization_drift_coeffs(Y[s, :, :], m_A[s, :, :], XX[s, :, :, :], H, Gamma, WP[s, :, :])
                 #AL[:, :, s] = vt.maximization_LA_asl(Y[s, :, :], m_A[s, :, :], m_C[s, :, :], XX[s, :, :, :], WP[s, :, :], W, WP_Gamma_WP[s, :, :], H, G, Gamma)
             PL = np.einsum('ijk,kli->ijl', WP, AL)
             y_tilde = Y - PL
@@ -397,7 +397,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             #Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
             #Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3)
             for m in xrange(0, M):
-                Beta[m], _ = vt2.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
+                Beta[m], _ = vt.beta_maximization(Beta[m].copy(), q_Z[m, :, :], neighboursIndexes, gamma)
 
                 #Beta[m] = vt.maximization_beta_m2_scipy_asl(Beta[m].copy(), q_Z[m, :, :], Qtilde_sumneighbour[m, :, :], Qtilde[m, :, :], neighboursIndexes, maxNeighbours, gamma, MaxItGrad, gradientStep)
             logger.info(Beta)
@@ -432,7 +432,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             logger.info("M sigma noise step ...")
             for s in xrange(n_sess):
                 #sigma_eps[s, :] = vt.maximization_sigma_noise_asl(XX[s, :, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], H, m_C[s, :, :], Sigma_C[:, :, :, s], G, Sigma_H, Sigma_G, W, y_tilde[s, :, :], Gamma, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], N)
-                sigma_eps[s, :] = vt2.maximization_noise_var(XX[s, :, :, :], H, Sigma_H, m_A[s, :, :], Sigma_A[:, :, :, s], Gamma, y_tilde[s, :, :], N)
+                sigma_eps[s, :] = vt.maximization_noise_var(XX[s, :, :, :], H, Sigma_H, m_A[s, :, :], Sigma_A[:, :, :, s], Gamma, y_tilde[s, :, :], N)
 
 
         print 'HRF norm ', np.linalg.norm(H)
@@ -447,6 +447,69 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         print 'beta ', Beta
         print 'drifts ', PL.mean(), PL.var()
         print 'noise_var ', sigma_eps.mean(), sigma_eps.var()
+
+        if 0:
+            print m_A.shape
+            print Sigma_A.shape
+            print q_Z.shape
+            print mu_Ma.shape
+            print sigma_Ma.shape
+
+            import matplotlib.pyplot as plt
+            import matplotlib.mlab as mlab
+            plt.close('all')
+            th = 0.9
+            nvoxels_activ = []
+            ppms = []
+            cond = ['motor_audio_right',  'motor_audio_left', 'visual']
+            for ic, cond_i in enumerate(cond):
+                l = (q_Z[ic, 1, :] > 0).astype(int)
+                hrl_mean = m_A[:, :, ic]
+                hrl_var = Sigma_A[ic, ic, :, :].T
+                class_mean = mu_Ma[np.newaxis, ic, :]
+                class_var = sigma_Ma[np.newaxis, ic, :]
+                ppm, ppm2 = vt.ppms_computation(hrl_mean, hrl_var, class_mean, class_var, threshold_a="intersect", threshold_g=0.9)
+                ppms.append(ppm)
+                vox_activ_cond = np.sum((ppm>th).astype(int))
+                nvoxels_activ.append(vox_activ_cond)
+
+                print vox_activ_cond, 'voxels active out of', l.sum(), 'for condition', cond_i
+                if (ppm2<0).all():
+                    print 'WARNING! Threshold to get probability > 0.9 is negative'
+            cond_act = np.argmax(nvoxels_activ)
+            crit = np.where(ppms[cond_act]>th)
+
+            f, ax = plt.subplots(2, 3, figsize=(15, 8))
+            ax[0, 2].hist(ppms)
+            ax[0, 2].set_title('histogram PPMs')
+            ax[0, 2].legend(cond)
+            ax[0, 2].axvline(0.9, color='k', linestyle='--')
+
+            ax[0, 1].hist(q_Z[:, 1, :].T)
+            ax[0, 1].set_title('histogram labels')
+            ax[0, 1].legend(cond)
+            ax[0, 1].axvline(0.5, color='k', linestyle='--')
+
+            for ic, cond_i in enumerate(cond):
+                l = (q_Z[ic, 1, :] > 0).astype(int)
+                hrl_mean = m_A[0, :, ic]
+                class1_mean = mu_Ma[ic, 1]
+                class0_mean = mu_Ma[ic, 0]
+                class1_var = sigma_Ma[ic, 1]
+                class0_var = sigma_Ma[ic, 0]
+                point0 = np.abs(class0_mean + np.sqrt(class0_var))
+                point1 = np.abs(class1_mean + np.sqrt(class1_var))
+                point = np.max([point0, point1])
+                x = np.linspace(-3 * point, 3 * point, 100)
+                a = mlab.normpdf(x, class1_mean, np.sqrt(class1_var))
+                b = mlab.normpdf(x, class0_mean, np.sqrt(class0_var))
+                axis = ax[1, ic]
+                axis.set_title('BOLD GMM condition ' + cond_i)
+                axis.hist(hrl_mean, color='green', normed=True, histtype='bar', alpha=0.5, label='BRLs')
+                axis.plot(x, a, 'r', linewidth=2, label='active')
+                axis.plot(x, b, 'k', linewidth=2, label='non-active')
+                axis.legend()
+            plt.show()
 
         if PLOT:
             for m in xrange(M):
