@@ -296,10 +296,10 @@ class JDEVEMAnalyser(JDEAnalyser):
 
         mixtpB = np.zeros((roiData.nbConditions, self.nbClasses, 2))
         mixtpB[:, :, 0] = mu_Ma
-        mixtpB[:, :, 1] = sigma_Ma ** 2
+        mixtpB[:, :, 1] = np.sqrt(sigma_Ma)
         mixtpP = np.zeros((roiData.nbConditions, self.nbClasses, 2))
         mixtpP[:, :, 0] = mu_Mc
-        mixtpP[:, :, 1] = sigma_Mc ** 2
+        mixtpP[:, :, 1] = np.sqrt(sigma_Mc)
         an = ['condition', 'Act_class', 'component']
         ad = {'Act_class': ['inactiv', 'activ'],
               'condition': cNames,
