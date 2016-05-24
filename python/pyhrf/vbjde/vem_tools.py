@@ -13,6 +13,7 @@ import scipy as sp
 from numpy.matlib import *
 from scipy.linalg import toeplitz
 from scipy.optimize import brentq
+from scipy.stats import norm
 
 import pyhrf
 import pyhrf.vbjde.UtilsC as UtilsC
@@ -2684,6 +2685,69 @@ def ppm_contrasts(contrasts_mean, contrasts_var, contrasts_class_mean,
     return (norm.sf(thresh, contrasts_mean, contrasts_var**.5),
             norm.isf(threshold_g, contrasts_mean, contrasts_var**.5))
 
+
+def ppms_computation(elements_mean, elements_var, class_mean, class_var, threshold_a="std_inact",
+                     threshold_g=0.9):
+    """Considering the `elements_mean` and `elements_var` from a gaussian distribution, comutes
+    the posterior probability maps considering for the alpha threshold, either
+    the standard deviation of the [all inactive conditions] class guassian or
+    the intersection of the [all (in)active conditions] classes guassians; and
+    for the gamma threshold 0.9 (default)
+    Be carefull, this computation considers the mean of the inactive class as zero.
+
+    Notes
+    -----
+    nb_elements refers either to the number of contrats (for the PPMs contrasts
+    computation) or for the number of conditions (for the PPMs nrls computation)
+
+    Parameters
+    ----------
+    elements_mean : ndarray, shape (nb_voxels, nb_elements)
+    elements_var : ndarray, shape (nb_voxels, nb_elements)
+    class_mean : ndarray, shape (nb_elements, nb_classes)
+    class_var : ndarray, shape (nb_elements, nb_classes)
+    threshold_a : str, optional
+        if "std_inact" (default) uses the standard deviation of the
+        [all inactive conditions] gaussian class as PPM_a threshold, if "intersect"
+        uses the intersection of the [all inactive/all active conditions]
+        gaussian classes
+    threshold_g : float, optional
+        the threshold of the PPM_g
+
+    Returns
+    -------
+    ppm_a: ndarray, shape (nb_voxels, nb_elements)
+    ppm_g: ndarray, shape (nb_voxels, nb_elements)
+    """
+
+    if threshold_a == "std_inact":
+        thresh = np.sqrt(class_var[:, 0])
+    elif threshold_a == "intersect":
+        intersect1 = class_mean[:, 1] * class_var[:, 0]
+        intersect2 = np.sqrt(
+            class_var.prod(axis=1) * (
+                class_mean[:, 1]**2
+                + 2*class_var[:, 0]*np.log(np.sqrt(class_var[:, 0]/class_var[:, 1]))
+                - 2*class_var[:, 1]*np.log(np.sqrt(class_var[:, 0]/class_var[:, 1]))
+            )
+        )
+        threshs = np.concatenate(((intersect1 - intersect2)[:, np.newaxis],
+                                  (intersect1 + intersect2)[:, np.newaxis]),
+                                 axis=1) / (class_var[:, 0] - class_var[:, 1])[:, np.newaxis]
+
+        mask = (
+            ((threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis]))
+            | (~((threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis])).any(axis=1)[:, np.newaxis]
+               & (threshs == threshs.max(axis=1)[:, np.newaxis])))
+        thresh = threshs[mask]
+        if len(thresh) < len(threshs):
+            logger.warning("The gaussians do not have one intersection between means."
+                           " Choosing the highest")
+            thresh = threshs.max(axis=1)
+            thresh = np.concatenate((thresh[:, np.newaxis], class_var[:, 0][:, np.newaxis]), axis=1).max(axis=1)
+
+    return (norm.sf(thresh, elements_mean, elements_var**.5),
+            norm.isf(threshold_g, elements_mean, elements_var**.5))
 
 
 # Plots
