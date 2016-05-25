@@ -2148,7 +2148,7 @@ def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
     noise_var_tmp = maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
                                            nrls_covar, noise_struct, data_drift, nb_scans)
     return - (nb_scans*nb_voxels*np.log(2*np.pi) - nb_voxels*np.log(np.linalg.det(noise_struct))
-              + 2*nb_scans*np.log(np.absolute(noise_var)).sum()
+              + nb_scans*np.log(np.absolute(noise_var)).sum()
               + nb_scans*(noise_var_tmp / noise_var).sum()) / 2.
 
 
@@ -2211,6 +2211,9 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
     total_entropy = (nrls_entropy(nrls_covar, nb_conditions) +
                      hrf_entropy(hrf_covar, hrf_len) +
                      labels_entropy(labels_proba))
+    print 'nrls_entropy = ', nrls_entropy(nrls_covar, nb_conditions)
+    print 'hrf_entropy = ', hrf_entropy(hrf_covar, hrf_len)
+    print 'labels_entropy = ', labels_entropy(labels_proba)
     total_expectation = (
         expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
                                       hrf_mean, hrf_covar, occurence_matrix,
@@ -2222,13 +2225,35 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
         + expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
                                  hrf_regu_prior_inv, hrf_len)
     )
+    print 'exp_likelihood = ', expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
+                                      hrf_mean, hrf_covar, occurence_matrix,
+                                      noise_var, noise_struct, nb_voxels, nb_scans)
+    print 'hrf = ', expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
+                                 hrf_regu_prior_inv, hrf_len)
+    print 'labels = ', expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
+                                    nb_conditions, nb_classes)
+    print 'nrls = ', expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
+                                  nrls_mean, nrls_covar)
+
+
 
     total_prior = 0
     if gamma:
-        total_prior += (nb_conditions*np.log(gamma) - gamma*beta).sum()
+        total_prior += nb_conditions*np.log(gamma) - gamma*beta.sum()
+        print beta
+        print gamma
+        print nb_conditions
+        print nb_conditions*np.log(gamma)
+        print - gamma*beta
+        print nb_conditions*np.log(gamma) - gamma*beta
+        print total_prior
     if hrf_hyperprior:
+        print log(hrf_hyperprior) - hrf_hyperprior*sigma_h
         total_prior += log(hrf_hyperprior) - hrf_hyperprior*sigma_h
 
+    print 'total_expectation: ', total_expectation
+    print 'total_entropy: ', total_entropy
+    print 'total_prior: ', total_prior
 
     return total_expectation + total_entropy + total_prior
 
