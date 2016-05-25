@@ -2120,10 +2120,10 @@ def computeFit(m_H, m_A, X, J, N):
     return stimIndSignal
 
 
-def expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar, hrf_mean,
+def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
                                   hrf_covar, occurence_matrix, noise_var,
                                   noise_struct, nb_voxels, nb_scans):
-    """likelyhood
+    """likelihood
     # TODO
 
     Parameters
@@ -2155,8 +2155,8 @@ def expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar, hrf_mean,
 def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
                            hrf_regu_prior_inv, hrf_len):
     #logger.info('Computing hrf_regu_priorF expectation Ptilde ...')
-    const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(2*sigma_h)
-             + np.log(np.linalg.det(hrf_regu_prior)))
+    const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(sigma_h)
+             + np.linalg.slogdet(hrf_regu_prior)[1])
     s = -(np.dot(np.dot(hrf_mean.T, hrf_regu_prior_inv), hrf_mean)
          + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
 
@@ -2186,8 +2186,8 @@ def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
     s = -labels_proba.transpose(2, 0, 1)* (
         np.log(2*np.pi*nrls_class_var)
         + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
-           + diag_nrls_covar) / (2*nrls_class_var[np.newaxis, :, :])
-    )
+           + diag_nrls_covar) / nrls_class_var[np.newaxis, :, :]
+    ) / 2
 
     return s.sum()
 
@@ -2212,7 +2212,7 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
                      hrf_entropy(hrf_covar, hrf_len) +
                      labels_entropy(labels_proba))
     total_expectation = (
-        expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar,
+        expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
                                       hrf_mean, hrf_covar, occurence_matrix,
                                       noise_var, noise_struct, nb_voxels, nb_scans)
         + expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
