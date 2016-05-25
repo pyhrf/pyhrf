@@ -226,7 +226,7 @@ def phy_integrate_euler(phy_params, tstep, stim, epsilon, Y0=None):
         if f_in < 0.:
             #raise Exception('Negative f_in (%f) at t=%f' %(f_in, ti))
             # HACK
-            print 'Warning: Negative f_in (%f) at t=%f' % (f_in, ti)
+            #print 'Warning: Negative f_in (%f) at t=%f' % (f_in, ti)
             f_in = 1e-4
 
         dest[0] = epsi * s - (N / tau_s) - ((f_in - 1) / tau_f)  # dNdt
