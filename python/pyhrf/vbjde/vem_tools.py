@@ -312,7 +312,7 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
 
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
-    lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    lgt = int((nbscans + 2) * osf)  # nb of scans if tr=dt
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
