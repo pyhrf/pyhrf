@@ -97,7 +97,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateLabels=True, LabelsFilename=None,
                  MFapprox=False, estimateMixtParam=True, constrained=False,
                  InitVar=0.5, InitMean=2.0, MiniVemFlag=False, NbItMiniVem=5,
-                 zero_constraint=True, output_drifts=False):
+                 zero_constraint=True, output_drifts=False, drifts_type="poly"):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_')
@@ -138,6 +138,7 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.constrained = constrained
         self.zero_constraint = zero_constraint
         self.output_drifts = output_drifts
+        self.drifts_type = drifts_type
 
 
         logger.info("VEM analyzer:")
@@ -186,7 +187,8 @@ class JDEVEMAnalyser(JDEAnalyser):
                  TR, self.beta, self.dt, self.estimateSigmaH, self.sigmaH, self.nItMax,
                  self.nItMin, self.estimateBeta, self.contrasts,
                  self.computeContrast, self.hyper_prior_sigma_H, self.estimateHRF,
-                 constrained=self.constrained, zero_constraint=self.zero_constraint
+                 constrained=self.constrained, zero_constraint=self.zero_constraint,
+                 drifts_type=self.drifts_type
              )
         else:
             # if not self.fast

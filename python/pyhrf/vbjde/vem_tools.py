@@ -11,7 +11,7 @@ from collections import OrderedDict
 import numpy as np
 import scipy
 
-from numpy.matlib import *
+from numpy.matlib import repmat
 from scipy.linalg import toeplitz
 from scipy.optimize import fmin_slsqp, brentq
 from scipy.stats import norm
@@ -94,7 +94,7 @@ def polyFit(signal, tr, order, p):
     return l
 
 
-def poly_fit(signal, drift_basis):
+def drifts_coeffs_fit(signal, drift_basis):
     """# TODO
 
     Parameters
@@ -125,18 +125,68 @@ def PolyMat(Nscans, paramLFD, tr):
     return lfdMat
 
 
-def CosMat(Nscans, paramLFD, tr):
-    n = np.arange(0, Nscans)
-    fctNb = np.fix(2. * (Nscans * tr) / paramLFD + 1.)  # +1 stands for the
-    # mean/cst regressor
-    lfdMat = np.zeros((Nscans, fctNb), dtype=float)
-    lfdMat[:, 0] = np.ones(Nscans, dtype=float) / sqrt(Nscans)
-    samples = 1. + np.arange(fctNb - 2)
+def poly_drifts_basis(nb_scans, param_lfd, tr):
+    """Build polynomial drifts basis
+
+    Parameters
+    ----------
+    nb_scans : int
+    param_lfd : int
+        TODO
+    tr : float
+
+    Returns
+    -------
+    drifts_basis : ndarray, shape (nb_scans, K)
+        K is determined by the scipy.linalg.orth function and corresponds to the
+        effective rank of the matrix it is applied to (see function's docstring)
+    """
+
+    regressors = tr * np.arange(0, nb_scans)
+    time_power = np.arange(0, param_lfd + 1, dtype=int)
+    reg_mat = np.zeros((len(regressors), param_lfd + 1), dtype=np.float64)
+
+    for v in xrange(param_lfd + 1):
+        reg_mat[:, v] = regressors[:]
+
+    time_power_mat = repmat(time_power, nb_scans, 1)
+    drifts_basis = np.power(reg_mat, time_power_mat)
+    drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
+
+    return drifts_basis
+
+
+def cosine_drifts_basis(nb_scans, param_lfd, tr):
+    """Build cosine drifts basis
+
+    Parameter
+    ---------
+    nb_scans : int
+    param_lfd : int
+        TODO
+    tr : float
+
+    Returns
+    -------
+    drifts_basis : ndarray, shape (nb_scans, K)
+        K is determined by the scipy.linalg.orth function and corresponds to the
+        effective rank of the matrix it is applied to (see function's docstring)
+    """
+
+    n = np.arange(0, nb_scans)
+    fct_nb = np.fix(2. * (nb_scans * tr) / param_lfd + 1.)  # +1 stands for the
+                                                            # mean/cst regressor
+    drifts_basis = np.zeros((nb_scans, fct_nb), dtype=float)
+    drifts_basis[:, 0] = np.ones(nb_scans, dtype=float) / np.sqrt(nb_scans)
+    samples = 1. + np.arange(fct_nb - 2)
+
     for k in samples:
-        lfdMat[:, k] = np.sqrt(2. / Nscans) \
-            * np.cos(np.pi * (2. * n + 1.) * k / (2. * Nscans))
-    lfdMat = np.array(sp.linalg.orth(lfdMat))
-    return lfdMat
+        drifts_basis[:, k] = np.sqrt(2. / nb_scans) \
+            * np.cos(np.pi * (2. * n + 1.) * k / (2. * nb_scans))
+
+    drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
+
+    return drifts_basis
 
 
 def covariance_matrix(order, D, dt):
@@ -909,7 +959,7 @@ def maximization_sigmaH(D, Sigma_H, R, m_H):
 def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
     alpha = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
     #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
-    sigmaH = (-D + sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
+    sigmaH = (-D + np.sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
 
     return sigmaH
 
@@ -2241,7 +2291,7 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
     if gamma:
         total_prior += nb_conditions*np.log(gamma) - gamma*beta.sum()
     if hrf_hyperprior:
-        total_prior += log(hrf_hyperprior) - hrf_hyperprior*sigma_h
+        total_prior += np.log(hrf_hyperprior) - hrf_hyperprior*sigma_h
 
     return total_expectation + total_entropy + total_prior
 

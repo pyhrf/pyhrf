@@ -44,7 +44,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
                  tr, beta, dt, estimate_sigma_h=True, sigma_h=0.05,
                  it_max=-1, it_min=0, estimate_beta=True, contrasts=None,
                  compute_contrasts=False, hrf_hyperprior=0, estimate_hrf=True,
-                 constrained=False, zero_constraint=True, seed=6537546):
+                 constrained=False, zero_constraint=True, drifts_type="poly",
+                 seed=6537546):
     """This is the main function that computes the VEM analysis on BOLD data.
     This function uses optimized python functions.
 
@@ -89,6 +90,9 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         if True, estimate the HRF for each parcel, if False use the canonical HRF
     constrained : bool, optional
         if True, add a constrains the l2 norm of the HRF to 1
+    drifts_type : str, optional
+        set the drifts basis type used. Can be "poly" for polynomial or "cos"
+        for cosine
     seed : int, optional
         seed used by numpy to initialize random generator number
 
@@ -222,8 +226,11 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     beta = beta * np.ones((nb_conditions), dtype=np.float64)
     beta_list = []
     beta_list.append(beta.copy())
-    drift_basis = vt.PolyMat(nb_scans, 4, tr)
-    drift_coeffs = vt.poly_fit(bold_data, drift_basis)
+    if drifts_type == "poly":
+        drift_basis = vt.poly_drifts_basis(nb_scans, 4, tr)
+    elif drifts_type == "cos":
+        drift_basis = vt.cosine_drifts_basis(nb_scans, 4, tr)
+    drift_coeffs = vt.drifts_coeffs_fit(bold_data, drift_basis)
     drift = drift_basis.dot(drift_coeffs)
     bold_data_drift = bold_data - drift
 
