@@ -2305,17 +2305,16 @@ def RF_expectation_Ptilde(m_X, Sigma_X, sigmaX, R, R_inv, D):
 
 
 def Q_expectation_Ptilde(q_Z, neighboursIndexes, Beta, gamma, K, M):
-    #Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
-    Qtilde_sumneighbour = q_Z[:, :, neighboursIndexes].sum(axis=3) # (M, K, J)
+    Qtilde = np.concatenate((q_Z, np.zeros((M, K, 1), dtype=q_Z.dtype)), axis=2)
+    Qtilde_sumneighbour = Qtilde[:, :, neighboursIndexes].sum(axis=3) # (M, K, J)
     beta_Qtilde_sumneighbour = Beta[:, np.newaxis, np.newaxis] * Qtilde_sumneighbour
 
     # Mean field approximation
     E = np.exp(beta_Qtilde_sumneighbour - beta_Qtilde_sumneighbour.max(axis=0)) # (K, J)
-    aux = E.sum(axis=0)
-    aux[np.where(aux==0)] = eps
-    p_Q_MF = E / aux
+    p_Q_MF = E / E.sum(axis=0)
 
     # sum_neighbours p_Q_MF(neighbour) according to new beta
+    #p_Q_MF_sumneighbour = np.concatenate((p_Q_MF, np.zeros((M, K, 1), dtype=p_Q_MF.dtype)), axis=2)
     p_Q_MF_sumneighbour = p_Q_MF[:, :, neighboursIndexes].sum(axis=3)  # (M, K, J)
 
     return - np.log(np.exp(beta_Qtilde_sumneighbour).sum(axis=1)).sum() \
@@ -2332,7 +2331,7 @@ def expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, H, Sigma_H, m_C,
                                            G, Sigma_H, Sigma_G, W, y_tilde, Gamma, \
                                            Gamma_X, Gamma_WX, N)
     return  - (N * J * np.log(2 * np.pi) - J * np.log(np.linalg.det(Gamma)) \
-            + N * np.log(sigma_eps).sum() + N * (sigma_eps_1 / sigma_eps).sum()) / 2.
+            + N * np.log(np.abs(sigma_eps)).sum() + N * (sigma_eps_1 / sigma_eps).sum()) / 2.
 
 
 def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, AuxH,
@@ -2358,6 +2357,7 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
     EPtildeG = RF_expectation_Ptilde(AuxG, Sigma_G, sigmaG, R, R_inv, D)
     EPtildeQ = Q_expectation_Ptilde(q_Z, neighboursIndexes, Beta, gamma, K, M)
     EPtildeBeta = M * np.log(gamma) - gamma * Beta.sum()
+
     if hyp:
         EPtildeVh = np.log(gamma_h) - gamma_h * sigmaH
         EPtildeVg = np.log(gamma_g) - gamma_g * sigmaG
