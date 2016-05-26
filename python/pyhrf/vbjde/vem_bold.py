@@ -229,7 +229,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     if drifts_type == "poly":
         drift_basis = vt.poly_drifts_basis(nb_scans, 4, tr)
     elif drifts_type == "cos":
-        drift_basis = vt.cosine_drifts_basis(nb_scans, 4, tr)
+        drift_basis = vt.cosine_drifts_basis(nb_scans, 64, tr)
     drift_coeffs = vt.drifts_coeffs_fit(bold_data, drift_basis)
     drift = drift_basis.dot(drift_coeffs)
     bold_data_drift = bold_data - drift
