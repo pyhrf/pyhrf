@@ -244,11 +244,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # A
         if estimateA:
             logger.info("E A step ...")
-            #m_A, Sigma_A = vt.expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma, J, y_tilde, Sigma_H, sigma_eps_m, N, M, D, n_sess)
-            m_A, Sigma_A = vt.nrls_expectation(
-            H, m_A[0, :, :], XX[s, :, :, :], Gamma, q_Z, mu_Ma, sigma_Ma, M, y_tilde[s, :, :], Sigma_A[:, :, :, 0], Sigma_H, sigma_eps[s, :])
-            m_A = m_A[np.newaxis, ...]
-            Sigma_A = Sigma_A[..., np.newaxis]
+            m_A, Sigma_A = vt.expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma, J, y_tilde, Sigma_H, sigma_eps_m, N, M, D, n_sess)
+            #m_A, Sigma_A = vt.nrls_expectation(H, m_A[0, :, :], XX[s, :, :, :], Gamma, q_Z, mu_Ma, sigma_Ma, M, y_tilde[s, :, :], Sigma_A[:, :, :, 0], Sigma_H, sigma_eps[s, :])
+            #m_A = m_A[np.newaxis, ...]
+            #Sigma_A = Sigma_A[..., np.newaxis]
 
             cA += [(np.linalg.norm(m_A - m_A1) / np.linalg.norm(m_A1)) ** 2]
             m_A1[:, :, :] = m_A[:, :, :]
@@ -337,12 +336,13 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Variance HRF: sigmaH
         if estimateSigmaH:
             logger.info("M sigma_H step ...")
-            #sigmaH = vt.maximization_sigma_asl(D, Sigma_H, matrix_covH, AuxH, use_hyperprior, gamma_h)
-            if use_hyperprior:
+            sigmaH = vt.maximization_sigma_asl(D, Sigma_H, matrix_covH, AuxH, use_hyperprior, gamma_h)
+            logger.info('sigmaH = ' + str(sigmaH))
+            """if use_hyperprior:
                 sigmaH = vt.maximization_sigmaH_prior(D, Sigma_H, R_inv, H, gamma_h)
             else:
                 sigmaH = vt.maximization_sigmaH(D, Sigma_H, R_inv, H)
-            logger.info('sigmaH = ' + str(sigmaH))
+            logger.info('sigmaH = ' + str(sigmaH))"""
 
         if ni > 0:
             free_energyVh = 0
@@ -370,8 +370,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateLA:
             logger.info("M L, alpha step ...")
             for s in xrange(n_sess):
-                AL[:, :, s] = vt.maximization_drift_coeffs(Y[s, :, :], m_A[s, :, :], XX[s, :, :, :], H, Gamma, WP[s, :, :])
-                #AL[:, :, s] = vt.maximization_LA_asl(Y[s, :, :], m_A[s, :, :], m_C[s, :, :], XX[s, :, :, :], WP[s, :, :], W, WP_Gamma_WP[s, :, :], H, G, Gamma)
+                #AL[:, :, s] = vt.maximization_drift_coeffs(Y[s, :, :], m_A[s, :, :], XX[s, :, :, :], H, Gamma, WP[s, :, :])
+                AL[:, :, s] = vt.maximization_LA_asl(Y[s, :, :], m_A[s, :, :], m_C[s, :, :], XX[s, :, :, :], WP[s, :, :], W, WP_Gamma_WP[s, :, :], H, G, Gamma)
             PL = np.einsum('ijk,kli->ijl', WP, AL)
             y_tilde = Y - PL
 
@@ -431,8 +431,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         if estimateNoise:
             logger.info("M sigma noise step ...")
             for s in xrange(n_sess):
-                #sigma_eps[s, :] = vt.maximization_sigma_noise_asl(XX[s, :, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], H, m_C[s, :, :], Sigma_C[:, :, :, s], G, Sigma_H, Sigma_G, W, y_tilde[s, :, :], Gamma, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], N)
-                sigma_eps[s, :] = vt.maximization_noise_var(XX[s, :, :, :], H, Sigma_H, m_A[s, :, :], Sigma_A[:, :, :, s], Gamma, y_tilde[s, :, :], N)
+                sigma_eps[s, :] = vt.maximization_sigma_noise_asl(XX[s, :, :, :], m_A[s, :, :], Sigma_A[:, :, :, s], H, m_C[s, :, :], Sigma_C[:, :, :, s], G, Sigma_H, Sigma_G, W, y_tilde[s, :, :], Gamma, Gamma_X[:, s, :, :], Gamma_WX[:, s, :, :], N)
+                #sigma_eps[s, :] = vt.maximization_noise_var(XX[s, :, :, :], H, Sigma_H, m_A[s, :, :], Sigma_A[:, :, :, s], Gamma, y_tilde[s, :, :], N)
 
 
         print 'HRF norm ', np.linalg.norm(H)
@@ -448,7 +448,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         print 'drifts ', PL.mean(), PL.var()
         print 'noise_var ', sigma_eps.mean(), sigma_eps.var()
 
-        if 0:
+        if ni>10:
             print m_A.shape
             print Sigma_A.shape
             print q_Z.shape

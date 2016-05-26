@@ -1420,34 +1420,48 @@ def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma,
 
     ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
     XH = np.zeros((S, N, M), dtype=np.float64)
-    XG = np.zeros((S, N, M), dtype=np.float64)
+    #XG = np.zeros((S, N, M), dtype=np.float64)
     Sigma_H_X = np.zeros((D, N, M, S), dtype=np.float64)
-    WXG = np.zeros((S, N, M), dtype=np.float64)
+    #WXG = np.zeros((S, N, M), dtype=np.float64)
 
+    print H
     for s in xrange(0, S):
         XH[s, :, :] = XX[s, :, :, :].dot(H).T                       # (S, N, M)
+        print XH.mean(), XH.var()
         Sigma_H_X[:, :, :, s] = XX[s, :, :, :].dot(Sigma_H.T).T     # (D, N, M, S)
-        XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
-        WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
+        #XG[s, :, :] = XX[s, :, :, :].dot(G).T                       # (S, N, M)
+        #WXG[s, :, :] = W.dot(XG[s, :, :])                           # (S, N, M)
 
         ## Sigma_A computation
         # first summand of Sigma_A: XH.T*Gamma*XH / sigma_eps
-        Sigma_A[:, :, :, s] = XH[s, :, :].T.dot(Gamma).dot(XH[s, :, :])[..., np.newaxis] / sigma_eps_m[s, :]
+        Sigma_A[:, :, :, s] = XH[s, :, :].T.dot(Gamma).dot(XH[s, :, :])[..., np.newaxis]
         # second summand of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
-        second_summand = np.einsum('ijk, jli', Sigma_H_X[:, :, :, s], Gamma_X[:, s, :, :])
-        Sigma_A[:, :, :, s] += second_summand[..., np.newaxis] / sigma_eps_m[s, :]
+        print Sigma_A.mean(), Sigma_A.var()
+        print Sigma_H_X[:, :, :, s].shape
+        print Gamma_X[:, s, :, :].shape
+        Sigma_A[:, :, :, s] += np.einsum('ijk, jli', Sigma_H_X[:, :, :, s], Gamma_X[:, s, :, :])[..., np.newaxis]
+        print Sigma_A.mean(), Sigma_A.var()
+        Sigma_A[:, :, :, s] /= sigma_eps_m[s, :]
+
+    print Sigma_A.mean(), Sigma_A.var()
+    print Sigma_A.shape
+
     # third summand of Sigma_A: part of p(a|q; theta_A)
     Delta_k = (q_Z / sigma_Ma[:, :, np.newaxis])
+    print q_Z.mean(), q_Z.var(), q_Z.shape
+    print sigma_Ma.mean(), sigma_Ma.var(), sigma_Ma.shape
     Delta = Delta_k.sum(axis=1)         # sum across classes K
+    print Delta.mean(), Delta.var()
     for s in xrange(0, S):
         for i in xrange(0, J):
             Sigma_A[:, :, i, s] = np.linalg.inv(Sigma_A[:, :, i, s] + \
                                              np.diag(Delta[:, i]))
+    print Sigma_A.mean(), Sigma_A.var()
 
     ## m_A computation
     # adding m_C*WXG to y_tilde
     for s in xrange(0, S):
-        y_tildeH = y_tilde[s, :, :] - WXG[s, :, :].dot(m_C[s, :, :].T)
+        y_tildeH = y_tilde[s, :, :] #- WXG[s, :, :].dot(m_C[s, :, :].T)
         Gamma_y_tildeH = Gamma.dot(y_tildeH).T
         X_tildeH = Gamma_y_tildeH.dot(XH[s, :, :]) / sigma_eps_m[s, :, np.newaxis] \
                    + (Delta_k * mu_Ma[:, :, np.newaxis]).sum(axis=1).T
