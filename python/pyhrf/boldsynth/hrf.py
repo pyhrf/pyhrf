@@ -120,14 +120,60 @@ def genExpHRF(timeAxis=np.arange(0,25,0.5), ttp=6, pa=1, pw=0.2,
     return pic-uShoot-valAtOrig
 
 
-def getCanoHRF(duration=25, dt=.6):
+import scipy
+def getCanoHRF(duration=25, dt=.6, hrf_from_spm=True, delay_of_response=6.,
+               delay_of_undershoot=16., dispersion_of_response=1.,
+               dispersion_of_undershoot=1., ratio_resp_under=6., delay=0.):
+    """Compute the canonical HRF.
 
-    tAxis = np.arange(0, duration+dt, dt)
-    h = resampleToGrid(tAxisHCano, hCano.copy(), tAxis)
-    h[-1] = 0.
-    assert len(h) == len(tAxis)
-    h /= (h**2).sum()**.5
-    return tAxis, h
+    Parameters
+    ----------
+    duration : int or float, optional
+        time lenght of the HRF in seconds
+    dt : float, optional
+        time resolution of the HRF in seconds
+    hrf_from_spm : bool, optional
+        if True, use the SPM formula to compute the HRF, if False, use the hard
+        coded values and resample if necessary. It is strongly advised to use
+        True.
+    delay_of_response : float, optional
+        delay of the first peak response in seconds
+    delay_of_undershoot : float, optional
+        delay of the second undershoot peak in seconds
+    dispersion_of_response : float, optional
+    dispersion_of_undershoot : float, optional
+    ratio_resp_under : float, optional
+        ratio between the response peak and the undershoot peak
+    delay : float, optional
+        delay of the HRF
+
+    Returns
+    -------
+    time_axis : ndarray, shape (round(duration/dt)+1,)
+        time axis of the HRF in seconds
+    HRF : ndarray, shape (round(duration/dt)+1,)
+
+    """
+
+    time_axis = np.arange(0, duration+dt, dt)
+    axis = np.arange(len(time_axis))
+
+    if hrf_from_spm:
+        hrf_cano = (scipy.stats.gamma.pdf(axis - delay/dt,
+                                          delay_of_response/dispersion_of_response, 0,
+                                          dispersion_of_response/dt) -
+                    scipy.stats.gamma.pdf(axis - delay/dt,
+                                          delay_of_undershoot/dispersion_of_undershoot,
+                                          0, dispersion_of_undershoot/dt)/ratio_resp_under)
+        hrf_cano[-1] = 0
+        hrf_cano /= np.linalg.norm(hrf_cano)
+    else:
+        hrf_cano = resampleToGrid(time_axisHCano, hCano.copy(), time_axis)
+        hrf_cano[-1] = 0.
+        assert len(hrf_cano) == len(time_axis)
+        hrf_cano /= (hrf_cano**2).sum()**.5
+
+    return time_axis, hrf_cano
 
 def getCanoHRF_tderivative(duration=25., dt=.5):
 
