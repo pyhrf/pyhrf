@@ -125,6 +125,20 @@ def PolyMat(Nscans, paramLFD, tr):
     return lfdMat
 
 
+def CosMat(Nscans, paramLFD, tr):
+    n = np.arange(0, Nscans)
+    fctNb = np.fix(2. * (Nscans * tr) / paramLFD + 1.)  # +1 stands for the
+    # mean/cst regressor
+    lfdMat = np.zeros((Nscans, fctNb), dtype=float)
+    lfdMat[:, 0] = np.ones(Nscans, dtype=float) / sqrt(Nscans)
+    samples = 1. + np.arange(fctNb - 2)
+    for k in samples:
+        lfdMat[:, k] = np.sqrt(2. / Nscans) \
+            * np.cos(np.pi * (2. * n + 1.) * k / (2. * Nscans))
+    lfdMat = np.array(sp.linalg.orth(lfdMat))
+    return lfdMat
+
+
 def covariance_matrix(order, D, dt):
     D2 = buildFiniteDiffMatrix_s(order, D)
     R = np.dot(D2, D2) / pow(dt, 2 * order)
