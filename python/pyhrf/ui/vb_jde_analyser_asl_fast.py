@@ -238,11 +238,11 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs['brls'] = xndarray(brls.T, value_label="BRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
-        outputs['ppm_a_brl'] = xndarray(ppm_a_brl, value_label="PPM_a_BRLs",
-                                   axes_names=['condition', 'voxel'],
+        outputs['ppm_a_brl'] = xndarray(ppm_a_brl, value_label="PPM BRL alpha",
+                                   axes_names=["voxel", "condition"],
                                    axes_domains=domCondition)
-        outputs['ppm_g_brl'] = xndarray(ppm_g_brl, value_label="PPM_g_BRLs",
-                                   axes_names=['condition', 'voxel'],
+        outputs['ppm_g_brl'] = xndarray(ppm_g_brl, value_label="PPM BRL gamma",
+                                   axes_names=["voxel", "condition"],
                                    axes_domains=domCondition)
         prf_time = np.arange(len(estimated_prf)) * self.dt
         outputs['prf'] = xndarray(estimated_prf, axes_names=['time'],
@@ -251,11 +251,11 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs['prls'] = xndarray(prls.T, value_label="PRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
-        outputs['ppm_a_prl'] = xndarray(ppm_a_brl, value_label="PPM_a_PRLs",
-                                   axes_names=['condition', 'voxel'],
+        outputs['ppm_a_prl'] = xndarray(ppm_a_brl, value_label="PPM PRL alpha",
+                                   axes_names=["voxel", "condition"],
                                    axes_domains=domCondition)
-        outputs['ppm_g_prl'] = xndarray(ppm_g_brl, value_label="PPM_g_PRLs",
-                                   axes_names=['condition', 'voxel'],
+        outputs['ppm_g_prl'] = xndarray(ppm_g_brl, value_label="PPM PRL gamma",
+                                   axes_names=["voxel", "condition"],
                                    axes_domains=domCondition)
 
         outputs['Sigma_brf'] = xndarray(Sigma_brf, value_label="Sigma_BRF")
@@ -348,7 +348,7 @@ class JDEVEMAnalyser(JDEAnalyser):
                                              value_label="Normalized Contrast C",
                                              axes_names=['voxel','contrast'],
                                              axes_domains=domContrast)
-        
+
 
         #######################################################################
         # CONVERGENCE
