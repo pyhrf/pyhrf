@@ -199,7 +199,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     d2 = vt.buildFiniteDiffMatrix(order, hrf_len, regularization)
     hrf_regu_prior_inv = d2.T.dot(d2) / pow(dt, 2 * order)
 
-    if zero_constraint:
+    if estimate_hrf and zero_constraint:
         hrf_len = hrf_len - 2
         hrf_regu_prior_inv = hrf_regu_prior_inv[1:-1, 1:-1]
         occurence_matrix = occurence_matrix[:, :, 1:-1]
@@ -373,7 +373,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         mahalanobis_prod = mahalanobis_cano * mahalanobis_zero
         variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
                                   /(hrf_mean.T.dot(hrf_mean))**2)
-    if zero_constraint:
+    if estimate_hrf and zero_constraint:
         hrf_mean = np.concatenate(([0], hrf_mean, [0]))
         # when using the zero constraint the hrf covariance is fill with
         # arbitrary zeros around the matrix, this is maybe a bad idea if we need
