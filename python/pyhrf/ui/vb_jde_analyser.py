@@ -96,7 +96,8 @@ class JDEVEMAnalyser(JDEAnalyser):
                  estimateBeta=True, contrasts=None, simulation=False,
                  estimateLabels=True, LabelsFilename=None,
                  MFapprox=False, estimateMixtParam=True, constrained=False,
-                 InitVar=0.5, InitMean=2.0, MiniVemFlag=False, NbItMiniVem=5):
+                 InitVar=0.5, InitMean=2.0, MiniVemFlag=False, NbItMiniVem=5,
+                 zero_constraint=True, output_drifts=False, drifts_type="poly"):
 
         XmlInitable.__init__(self)
         JDEAnalyser.__init__(self, outputPrefix='jde_vem_')
@@ -135,6 +136,9 @@ class JDEVEMAnalyser(JDEAnalyser):
         self.computeContrast = computeContrast
         self.hyper_prior_sigma_H = hyper_prior_sigma_H
         self.constrained = constrained
+        self.zero_constraint = zero_constraint
+        self.output_drifts = output_drifts
+        self.drifts_type = drifts_type
 
 
         logger.info("VEM analyzer:")
@@ -176,11 +180,15 @@ class JDEVEMAnalyser(JDEAnalyser):
              contrasts_mean, contrasts_var, _, _, nrls_covar, _, density_ratio,
              density_ratio_cano, density_ratio_diff, density_ratio_prod,
              ppm_a_nrl, ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts,
-             variation_coeff, free_energy, free_energy_crit, beta_list) = jde_vem_bold(
+             variation_coeff, free_energy, free_energy_crit, beta_list,
+             delay_of_response, delay_of_undershoot, dispersion_of_response,
+             dispersion_of_undershoot, ratio_resp_under, delay) = jde_vem_bold(
                  graph, data, Onsets, durations, self.hrfDuration, self.nbClasses,
                  TR, self.beta, self.dt, self.estimateSigmaH, self.sigmaH, self.nItMax,
                  self.nItMin, self.estimateBeta, self.contrasts,
-                 self.computeContrast, self.hyper_prior_sigma_H, self.estimateHRF
+                 self.computeContrast, self.hyper_prior_sigma_H, self.estimateHRF,
+                 constrained=self.constrained, zero_constraint=self.zero_constraint,
+                 drifts_type=self.drifts_type
              )
         else:
             # if not self.fast
@@ -272,14 +280,6 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                      value_label="Density Ratio to canonical",
                                                      axes_names=["voxel"])
 
-            outputs["ppm_a_nrl"] = xndarray(ppm_a_nrl, value_label="PPM NRL alpha fixed",
-                                            axes_names=["voxel", "condition"],
-                                            axes_domains=domCondition)
-
-            outputs["ppm_g_nrl"] = xndarray(ppm_g_nrl, value_label="PPM NRL gamma fixed",
-                                            axes_names=["voxel", "condition"],
-                                            axes_domains=domCondition)
-
             outputs["variation_coeff"] = xndarray(np.zeros(nbv)+variation_coeff,
                                                   value_label="Coefficient of variation of the HRF",
                                                   axes_names=["voxel"])
@@ -290,10 +290,25 @@ class JDEVEMAnalyser(JDEAnalyser):
                                               value_label="free energy",
                                               axes_names=["time", "voxel"])
 
-            #  beta_list = np.concatenate((np.asarray(beta_list), np.zeros((self.nItMax - len(beta_list), nbc))), axis=1)
-            #  outputs["beta_list"] = xndarray(beta_list,
-                                            #  value_label="free energy criteria",
-                                            #  axes_names=["condition", "time"])
+            if self.estimateHRF:
+                fitting_parameters = {
+                    "hrf_fit_delay_of_response":  delay_of_response,
+                    "hrf_fit_delay_of_undershoot":  delay_of_undershoot,
+                    "hrf_fit_dispersion_of_response":  dispersion_of_response,
+                    "hrf_fit_dispersion_of_undershoot":  dispersion_of_undershoot,
+                    "hrf_fit_ratio_response_undershoot": ratio_resp_under,
+                    "hrf_fit_delay": delay,
+                }
+                affine = np.eye(4)
+                for param_name in fitting_parameters:
+                    header = nibabel.Nifti1Header()
+                    description = param_name[8:].replace("_", " ").capitalize()
+                    outputs[param_name] = xndarray(
+                        np.zeros(nbv)+fitting_parameters[param_name],
+                        value_label=description + " of the fitted estimated HRF",
+                        axes_names=["voxel"], meta_data=(affine, header)
+                    )
+                    outputs[param_name].meta_data[1]["descrip"] = description
 
             h = hrf_mean
             nrls_mean = nrls_mean.transpose()
@@ -319,11 +334,28 @@ class JDEVEMAnalyser(JDEAnalyser):
                                          axes_domains=ad)
             outputs['noise_var'] = xndarray(noise_var,value_label="noise_var",
                                            axes_names=['voxel'])
-            if self.estimateDrifts:
+            if self.estimateDrifts and self.output_drifts:
                 outputs['drift_coeff'] = xndarray(drift_coeffs, value_label="Drift",
                                                   axes_names=['coeff', 'voxel'])
                 outputs['drift'] = xndarray(drift, value_label="Delta BOLD",
                                             axes_names=['time', 'voxel'])
+
+            affine = np.eye(4)
+            for condition_nb, condition_name in enumerate(cNames):
+                header = nibabel.Nifti1Header()
+                outputs["ppm_a_nrl_"+condition_name] = xndarray(ppm_a_nrl[:, condition_nb],
+                                                value_label="PPM NRL alpha fixed",
+                                                axes_names=["voxel"],
+                                                meta_data=(affine, header))
+                outputs["ppm_a_nrl_"+condition_name].meta_data[1]["descrip"] = condition_name
+
+
+                outputs["ppm_g_nrl_"+condition_name] = xndarray(ppm_g_nrl[:, condition_nb],
+                                                                value_label="PPM NRL gamma fixed",
+                                                                axes_names=["voxel"],
+                                                                meta_data=(affine, header))
+                outputs["ppm_g_nrl_"+condition_name].meta_data[1]["descrip"] = condition_name
+
             if (len(self.contrasts) > 0) and self.computeContrast:
                 #keys = list((self.contrasts[nc]) for nc in self.contrasts)
                 domContrast = {'contrast': self.contrasts.keys()}
@@ -343,35 +375,20 @@ class JDEVEMAnalyser(JDEAnalyser):
                                                  axes_names=['voxel', 'contrast'],
                                                  axes_domains=domContrast)
 
-                outputs["ppm_a_contrasts"] = xndarray(ppm_a_contrasts,
-                                                      value_label="PPM Contrasts alpha fixed",
-                                                      axes_names=["voxel", "contrast"],
-                                                      axes_domains=domContrast)
-
-                affine = np.eye(4)
                 for i, contrast in enumerate(self.contrasts.keys()):
                     header = nibabel.Nifti1Header()
-                    header['descrip'] = contrast
                     outputs["ppm_a_"+contrast] = xndarray(ppm_a_contrasts[:, i],
                                                           value_label="PPM Contrasts alpha fixed",
                                                           axes_names=["voxel"],
                                                           meta_data=(affine, header))
                     outputs["ppm_a_"+contrast].meta_data[1]["descrip"] = contrast
 
-                outputs["ppm_g_contrasts"] = xndarray(ppm_g_contrasts,
-                                                      value_label="PPM Contrasts alpha fixed",
-                                                      axes_names=["voxel", "contrast"],
-                                                      axes_domains=domContrast)
+                    outputs["ppm_g_"+contrast] = xndarray(ppm_g_contrasts[:, i],
+                                                          value_label="PPM Contrasts gamma fixed",
+                                                          axes_names=["voxel"],
+                                                          meta_data=(affine, header))
+                    outputs["ppm_g_"+contrast].meta_data[1]["descrip"] = contrast
 
-
-            ################################################################################
-            # CONVERGENCE
-            free_energy_crit = np.concatenate((np.asarray(free_energy_crit), np.zeros((self.nItMax - len(free_energy_crit)))))
-            free_energy_crit[free_energy_crit == 0.] = np.nan
-            free_energy_crit = np.repeat(free_energy_crit, nbv).reshape(-1, nbv)
-            outputs["free_energy_criteria"] = xndarray(free_energy_crit,
-                                              value_label="free energy criteria",
-                                              axes_names=["time", "voxel"])
 
         ################################################################################
         # SIMULATION

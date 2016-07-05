@@ -11,13 +11,14 @@ from collections import OrderedDict
 import numpy as np
 import scipy
 
-from numpy.matlib import *
+from numpy.matlib import repmat
 from scipy.linalg import toeplitz
 from scipy.optimize import fmin_slsqp, brentq
 from scipy.stats import norm
 from sympy.parsing.sympy_parser import parse_expr
 
 from pyhrf.paradigm import restarize_events
+from pyhrf.boldsynth.hrf import getCanoHRF
 
 
 np.seterr(under="ignore")
@@ -93,7 +94,7 @@ def polyFit(signal, tr, order, p):
     return l
 
 
-def poly_fit(signal, drift_basis):
+def drifts_coeffs_fit(signal, drift_basis):
     """# TODO
 
     Parameters
@@ -122,6 +123,70 @@ def PolyMat(Nscans, paramLFD, tr):
     lfdMat = np.power(regMat, tPowerMat)
     lfdMat = np.array(scipy.linalg.orth(lfdMat))
     return lfdMat
+
+
+def poly_drifts_basis(nb_scans, param_lfd, tr):
+    """Build polynomial drifts basis
+
+    Parameters
+    ----------
+    nb_scans : int
+    param_lfd : int
+        TODO
+    tr : float
+
+    Returns
+    -------
+    drifts_basis : ndarray, shape (nb_scans, K)
+        K is determined by the scipy.linalg.orth function and corresponds to the
+        effective rank of the matrix it is applied to (see function's docstring)
+    """
+
+    regressors = tr * np.arange(0, nb_scans)
+    time_power = np.arange(0, param_lfd + 1, dtype=int)
+    reg_mat = np.zeros((len(regressors), param_lfd + 1), dtype=np.float64)
+
+    for v in xrange(param_lfd + 1):
+        reg_mat[:, v] = regressors[:]
+
+    time_power_mat = repmat(time_power, nb_scans, 1)
+    drifts_basis = np.power(reg_mat, time_power_mat)
+    drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
+
+    return drifts_basis
+
+
+def cosine_drifts_basis(nb_scans, param_lfd, tr):
+    """Build cosine drifts basis
+
+    Parameter
+    ---------
+    nb_scans : int
+    param_lfd : int
+        TODO
+    tr : float
+
+    Returns
+    -------
+    drifts_basis : ndarray, shape (nb_scans, K)
+        K is determined by the scipy.linalg.orth function and corresponds to the
+        effective rank of the matrix it is applied to (see function's docstring)
+    """
+
+    n = np.arange(0, nb_scans)
+    fct_nb = np.fix(2. * (nb_scans * tr) / param_lfd + 1.)  # +1 stands for the
+                                                            # mean/cst regressor
+    drifts_basis = np.zeros((nb_scans, fct_nb), dtype=float)
+    drifts_basis[:, 0] = np.ones(nb_scans, dtype=float) / np.sqrt(nb_scans)
+    samples = 1. + np.arange(fct_nb - 2)
+
+    for k in samples:
+        drifts_basis[:, k] = np.sqrt(2. / nb_scans) \
+            * np.cos(np.pi * (2. * n + 1.) * k / (2. * nb_scans))
+
+    drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
+
+    return drifts_basis
 
 
 def covariance_matrix(order, D, dt):
@@ -196,6 +261,47 @@ def roc_curve(dvals, labels, rocN=None, normalize=True):
     return fpc, tpc, area
 
 
+def fit_hrf_two_gammas(hrf_mean, dt, duration):
+    """Fits the estimated HRF to the standard two gammas model.
+
+    Parameters
+    ----------
+    hrf_mean : ndarray, shape (hrf_len,)
+
+    Returns
+    -------
+    delay_of_response : float
+    delay_of_undershoot : float
+    dispersion_of_response : float
+    dispersion_of_undershoot : float
+    ratio_resp_under : float
+    delay : float
+    """
+
+    def two_gamma_hrf(params):
+
+        delay_of_response = params[0]
+        delay_of_undershoot = params[1]
+        dispersion_of_response = params[2]
+        dispersion_of_undershoot = params[3]
+        ratio_resp_under = params[4]
+        delay = params[5]
+
+        return getCanoHRF(duration, dt, True, delay_of_response,
+                          delay_of_undershoot, dispersion_of_response,
+                          dispersion_of_undershoot, ratio_resp_under, delay)[1] - hrf_mean
+
+    try:
+        from scipy.optimize import least_squares
+        res = least_squares(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]),
+                            bounds=(np.zeros(6), duration + np.zeros(6))).x
+    except ImportError as e:
+        from scipy.optimize import leastsq
+        res, cov_res = leastsq(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]))
+
+    return res
+
+
 def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
     if durations is None:  # assume spiked stimuli
         durations = np.zeros_like(onsets)
@@ -206,7 +312,7 @@ def compute_mat_X_2(nbscans, tr, lhrf, dt, onsets, durations=None):
 
     x = np.zeros((nbscans, lhrf), dtype=float)
     tmax = nbscans * tr  # total session duration
-    lgt = (nbscans + 2) * osf  # nb of scans if tr=dt
+    lgt = int((nbscans + 2) * osf)  # nb of scans if tr=dt
     paradigm_bins = restarize_events(onsets, durations, dt, tmax)
     firstcol = np.concatenate(
         (paradigm_bins, np.zeros(lgt - len(paradigm_bins))))
@@ -853,7 +959,7 @@ def maximization_sigmaH(D, Sigma_H, R, m_H):
 def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
     alpha = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
     #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
-    sigmaH = (-D + sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
+    sigmaH = (-D + np.sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
 
     return sigmaH
 
@@ -2078,10 +2184,10 @@ def computeFit(m_H, m_A, X, J, N):
     return stimIndSignal
 
 
-def expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar, hrf_mean,
+def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
                                   hrf_covar, occurence_matrix, noise_var,
                                   noise_struct, nb_voxels, nb_scans):
-    """likelyhood
+    """likelihood
     # TODO
 
     Parameters
@@ -2106,15 +2212,15 @@ def expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar, hrf_mean,
     noise_var_tmp = maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
                                            nrls_covar, noise_struct, data_drift, nb_scans)
     return - (nb_scans*nb_voxels*np.log(2*np.pi) - nb_voxels*np.log(np.linalg.det(noise_struct))
-              + 2*nb_scans*np.log(np.absolute(noise_var)).sum()
+              + nb_scans*np.log(np.absolute(noise_var)).sum()
               + nb_scans*(noise_var_tmp / noise_var).sum()) / 2.
 
 
 def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
                            hrf_regu_prior_inv, hrf_len):
     #logger.info('Computing hrf_regu_priorF expectation Ptilde ...')
-    const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(2*sigma_h)
-             + np.log(np.linalg.det(hrf_regu_prior)))
+    const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(sigma_h)
+             + np.linalg.slogdet(hrf_regu_prior)[1])
     s = -(np.dot(np.dot(hrf_mean.T, hrf_regu_prior_inv), hrf_mean)
          + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
 
@@ -2144,8 +2250,8 @@ def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
     s = -labels_proba.transpose(2, 0, 1)* (
         np.log(2*np.pi*nrls_class_var)
         + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
-           + diag_nrls_covar) / (2*nrls_class_var[np.newaxis, :, :])
-    )
+           + diag_nrls_covar) / nrls_class_var[np.newaxis, :, :]
+    ) / 2
 
     return s.sum()
 
@@ -2170,7 +2276,7 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
                      hrf_entropy(hrf_covar, hrf_len) +
                      labels_entropy(labels_proba))
     total_expectation = (
-        expectation_ptilde_likelyhood(data_drift, nrls_mean, nrls_covar,
+        expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
                                       hrf_mean, hrf_covar, occurence_matrix,
                                       noise_var, noise_struct, nb_voxels, nb_scans)
         + expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
@@ -2183,10 +2289,9 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
 
     total_prior = 0
     if gamma:
-        total_prior += (nb_conditions*np.log(gamma) - gamma*beta).sum()
+        total_prior += nb_conditions*np.log(gamma) - gamma*beta.sum()
     if hrf_hyperprior:
-        total_prior += log(hrf_hyperprior) - hrf_hyperprior*sigma_h
-
+        total_prior += np.log(hrf_hyperprior) - hrf_hyperprior*sigma_h
 
     return total_expectation + total_entropy + total_prior
 

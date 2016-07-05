@@ -17,7 +17,7 @@ TODO: add some refs?
 Attributes
 ----------
 eps : float
-    mimics the mechine epsilon to avoid zero values
+    mimics the machine epsilon to avoid zero values
 logger : logger
     logger instance identifying this module to log informations
 
@@ -44,7 +44,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
                  tr, beta, dt, estimate_sigma_h=True, sigma_h=0.05,
                  it_max=-1, it_min=0, estimate_beta=True, contrasts=None,
                  compute_contrasts=False, hrf_hyperprior=0, estimate_hrf=True,
-                 constrained=False, seed=6537546):
+                 constrained=False, zero_constraint=True, drifts_type="poly",
+                 seed=6537546):
     """This is the main function that computes the VEM analysis on BOLD data.
     This function uses optimized python functions.
 
@@ -89,6 +90,9 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         if True, estimate the HRF for each parcel, if False use the canonical HRF
     constrained : bool, optional
         if True, add a constrains the l2 norm of the HRF to 1
+    drifts_type : str, optional
+        set the drifts basis type used. Can be "poly" for polynomial or "cos"
+        for cosine
     seed : int, optional
         seed used by numpy to initialize random generator number
 
@@ -195,6 +199,11 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     d2 = vt.buildFiniteDiffMatrix(order, hrf_len, regularization)
     hrf_regu_prior_inv = d2.T.dot(d2) / pow(dt, 2 * order)
 
+    if estimate_hrf and zero_constraint:
+        hrf_len = hrf_len - 2
+        hrf_regu_prior_inv = hrf_regu_prior_inv[1:-1, 1:-1]
+        occurence_matrix = occurence_matrix[:, :, 1:-1]
+
     noise_struct = np.identity(nb_scans)
 
     free_energy = [1.]
@@ -217,8 +226,11 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     beta = beta * np.ones((nb_conditions), dtype=np.float64)
     beta_list = []
     beta_list.append(beta.copy())
-    drift_basis = vt.PolyMat(nb_scans, 4, tr)
-    drift_coeffs = vt.poly_fit(bold_data, drift_basis)
+    if drifts_type == "poly":
+        drift_basis = vt.poly_drifts_basis(nb_scans, 4, tr)
+    elif drifts_type == "cos":
+        drift_basis = vt.cosine_drifts_basis(nb_scans, 64, tr)
+    drift_coeffs = vt.drifts_coeffs_fit(bold_data, drift_basis)
     drift = drift_basis.dot(drift_coeffs)
     bold_data_drift = bold_data - drift
 
@@ -247,6 +259,14 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             hrf_covar, noise_var)
         logger.debug("After: nrls_mean = %s, nrls_covar = %s", nrls_mean, nrls_covar)
 
+        logger.info("Expectation Z step...")
+        logger.debug("Before: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
+        labels_proba = vt.labels_expectation(
+            nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta,
+            labels_proba, neighbours_indexes, nb_conditions, nb_classes,
+            nb_voxels, parallel=True)
+        logger.debug("After: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
+
         if estimate_hrf:
             logger.info("Expectation H step...")
             logger.debug("Before: hrf_mean = %s, hrf_covar = %s", hrf_mean, hrf_covar)
@@ -256,9 +276,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             if constrained:
                 hrf_mean = vt.norm1_constraint(hrf_mean, hrf_covar)
                 hrf_covar[:] = 0
-            else:
-                hrf_mean[0] = 0
-                hrf_mean[-1] = 0
             logger.debug("After: hrf_mean = %s, hrf_covar = %s", hrf_mean, hrf_covar)
             # Normalizing H at each nb_2_norm iterations:
             if not constrained and normalizing:
@@ -270,14 +287,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
                     hrf_covar /= hrf_norm ** 2
                     nrls_mean *= hrf_norm
                     nrls_covar *= hrf_norm ** 2
-
-        logger.info("Expectation Z step...")
-        logger.debug("Before: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
-        labels_proba = vt.labels_expectation(
-            nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta,
-            labels_proba, neighbours_indexes, nb_conditions, nb_classes,
-            nb_voxels, parallel=True)
-        logger.debug("After: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
 
         if estimate_hrf and estimate_sigma_h:
             logger.info("Maximization sigma_H step...")
@@ -342,10 +351,10 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     compute_time_mean = compute_time[-1] / loop
 
-    density_ratio = np.nan
-    density_ratio_cano = np.nan
-    density_ratio_diff = np.nan
-    density_ratio_prod = np.nan
+    mahalanobis_zero = np.nan
+    mahalanobis_cano = np.nan
+    mahalanobis_diff = np.nan
+    mahalanobis_prod = np.nan
     variation_coeff = np.nan
 
     if estimate_hrf and not constrained and not normalizing:
@@ -364,9 +373,33 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         mahalanobis_prod = mahalanobis_cano * mahalanobis_zero
         variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
                                   /(hrf_mean.T.dot(hrf_mean))**2)
+    if estimate_hrf and zero_constraint:
+        hrf_mean = np.concatenate(([0], hrf_mean, [0]))
+        # when using the zero constraint the hrf covariance is fill with
+        # arbitrary zeros around the matrix, this is maybe a bad idea if we need
+        # it for later computation...
+        hrf_covar = np.concatenate(
+            (np.zeros((hrf_covar.shape[0], 1)), hrf_covar, np.zeros((hrf_covar.shape[0], 1))),
+            axis=1
+        )
+        hrf_covar = np.concatenate(
+            (np.zeros((1, hrf_covar.shape[1])), hrf_covar, np.zeros((1, hrf_covar.shape[1]))),
+            axis=0
+        )
+
+    if estimate_hrf:
+        (delay_of_response, delay_of_undershoot, dispersion_of_response,
+         dispersion_of_undershoot, ratio_resp_under, delay) = vt.fit_hrf_two_gammas(
+             hrf_mean, dt, hrf_duration
+         )
+    else:
+        (delay_of_response, delay_of_undershoot, dispersion_of_response,
+         dispersion_of_undershoot, ratio_resp_under, delay) = (None, None, None,
+                                                               None, None, None)
 
     ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
-        nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var
+        nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var,
+        threshold_a="intersect"
     )
 
     #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
@@ -415,5 +448,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             nrls_covar, stimulus_induced_signal, mahalanobis_zero,
             mahalanobis_cano, mahalanobis_diff, mahalanobis_prod, ppm_a_nrl,
             ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, variation_coeff,
-            free_energy[1:], free_energy_crit[1:], beta_list[1:])
+            free_energy[1:], free_energy_crit[1:], beta_list[1:],
+            delay_of_response, delay_of_undershoot, dispersion_of_response,
+            dispersion_of_undershoot, ratio_resp_under, delay)
 
