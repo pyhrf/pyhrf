@@ -39,6 +39,7 @@ New
 - save contrasts in the same order that the xml configuration file
 - compute and save PPMs
 - Add multisession support for VEM BOLD and ASL
+- add cosine drifts to VEM
 
 -----------------------------------
 
