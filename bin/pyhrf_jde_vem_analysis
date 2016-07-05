@@ -26,10 +26,10 @@ from pyhrf.tools import format_duration
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("tr", type=float, help="Repetition time of the fMRI data")
-parser.add_argument("parcels_file", help="Nifti integer file which define the parcels")
+parser.add_argument("parcels_file", help="Nifti label file which defines the parcels")
 parser.add_argument("onsets_file", help="CSV onsets file")
 parser.add_argument("bold_data_file", nargs="*",
-                    help="list of Nifti file(s) of bold data")
+                    help="list of 4D-Nifti file(s) of bold data")
 parser.add_argument("-c", "--def_contrasts_file",
                     help="JSON file defining the contrasts")
 parser.add_argument("-d", "--dt", type=float,
@@ -38,29 +38,31 @@ parser.add_argument("-d", "--dt", type=float,
 parser.add_argument("-l", "--hrf-duration", type=float, default=25.,
                     help="time lenght of the HRF (in seconds, default: %(default)s)")
 parser.add_argument("-o", "--output", dest="output_dir", default=os.getcwd(),
-                    help="output directory (created if needed, default: %(default)s)")
-#  parser.add_argument("-s", "--spm", dest="spm_file", default=argparse.SUPPRESS)
+                    help=("output directory (created if needed,"
+                          " default: current folder: %(default)s)"))
 parser.add_argument("--nb-iter-min", type=int, default=5,
                     help=("minimum number of iterations of the VEM algorithm"
                           " (default: %(default)s)"))
 parser.add_argument("--nb-iter-max", type=int, default=100,
                     help=("maximum number of iterations of the VEM algorithm"
                           " (default: %(default)s)"))
-parser.add_argument("--beta", type=float, default=1.0, help="(default: %(default)s)")
+parser.add_argument("--beta", type=float, default=1.0,
+                    help=("intrinsic correlation parameter on latent variables"
+                          " (default: %(default)s)"))
 parser.add_argument("--hrf-hyperprior", type=int, default=1000,
                     help="(default: %(default)s)")
 parser.add_argument("--sigma-h", type=float, default=0.1,
-                    help="(default: %(default)s)")
+                    help="Prior variance on the HRF (default: %(default)s)")
 parser.add_argument("--estimate-hrf", action="store_true", default=True,
                     help="(default: %(default)s)")
 parser.add_argument("--no-estimate-hrf", action="store_false", dest="estimate_hrf",
                     help="explicitly disable HRFs estimation")
 parser.add_argument("--zero-constraint", action="store_true", default=True,
-                    help="(default: %(default)s)")
+                    help="zero constraint on the boundaries of the HRF (default: %(default)s)")
 parser.add_argument("--no-zero-constraint", action="store_false", dest="zero_constraint",
                     help="explicitly disable zero constraint (default enabled)")
 parser.add_argument("--drifts-type", type=str, default="poly",
-                    help="set the drifts type, can be 'poly' or 'cos' (default: %(default)s)")
+                    help="set the drift type, can be 'poly' or 'cos' (default: %(default)s)")
 parser.add_argument("-v", "--log-level", default="WARNING",
                     choices=("DEBUG", "10", "INFO", "20", "WARNING", "30",
                              "ERROR", "40", "CRITICAL", "50"),
