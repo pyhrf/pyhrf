@@ -40,6 +40,7 @@ New
 - compute and save PPMs
 - Add multisession support for VEM BOLD and ASL
 - add cosine drifts to VEM
+- add commandline for VEM
 
 -----------------------------------
 
