@@ -29,7 +29,7 @@ parser.add_argument("tr", type=float, help="Repetition time of the fMRI data")
 parser.add_argument("parcels_file", help="Nifti label file which defines the parcels")
 parser.add_argument("onsets_file", help="CSV onsets file")
 parser.add_argument("bold_data_file", nargs="*",
-                    help="list of 4D-Nifti file(s) of bold data")
+                    help="list of 4D-Nifti file(s) of BOLD data (one per run)")
 parser.add_argument("-c", "--def_contrasts_file",
                     help="JSON file defining the contrasts")
 parser.add_argument("-d", "--dt", type=float,
