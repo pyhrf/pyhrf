@@ -19,6 +19,9 @@ To use it check where it is installed by issuing::
 
 and check for ``stanford_willard_parcellation_3x3x3mm.nii.gz`` file.
 
+This parcellation mask has been created from the files distributed by Stanford (above website)
+with a voxel resolution of 3x3x3mm and a volume shape of 53x63x52 voxels.
+
 If you use this parcellation mask, please cite the following paper:
 
 The citation for the 499 fROI atlas, nicknamed the "Willard" atlas after the two
