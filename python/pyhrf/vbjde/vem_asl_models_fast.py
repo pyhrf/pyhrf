@@ -76,6 +76,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     # Conditions
     X, XX, condition_names = vt.create_conditions(Onsets, durations, M, N, D, TR, dt)
 
+    if not estimateH:
+        zc = False
+
     # Covariance matrix
     regularizing = False
     order = 2
@@ -129,11 +132,11 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     #estimateG = False
 
     #if prior=='balloon':
-    #    H = Hb.copy()
-    #    G = Gb.copy()
+    #H = Hb.copy()
+    #G = Gb.copy()
+    G1 = copy.deepcopy(G)
     Mu = Hb.copy()
     H1 = copy.deepcopy(H)
-    G1 = copy.deepcopy(G)
     if estimateH:
         Sigma_H = np.identity(D, dtype=np.float64)
     else:
@@ -142,8 +145,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         Sigma_G = np.identity(D, dtype=np.float64)
     else:
         Sigma_G = np.zeros((D, D), dtype=np.float64)
-    normOh = False
-    normg = False
+    normOh = True
+    normg = True
     if prior=='hierarchical' or prior=='omega':
         Omega = linear_rf_operator(len(H), phy_params, dt, calculating_brf=False)
     if prior=='omega':
@@ -154,7 +157,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
             Omega /= np.linalg.norm(OmegaH)
             OmegaH /=np.linalg.norm(OmegaH)
             G /= np.linalg.norm(G)
+    
 
+    
     # Initialize model parameters
     Beta = beta * np.ones((M), dtype=np.float64)
     P = vt.PolyMat(N, 4, TR)
