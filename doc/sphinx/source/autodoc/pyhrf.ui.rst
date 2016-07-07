@@ -18,5 +18,6 @@ Submodules
    pyhrf.ui.rfir_ui
    pyhrf.ui.treatment
    pyhrf.ui.vb_jde_analyser
-   pyhrf.ui.vb_jde_analyser_asl
+   pyhrf.ui.vb_jde_analyser_asl_fast
+   pyhrf.ui.vb_jde_analyser_bold_fast
 

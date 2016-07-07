@@ -1,7 +1,7 @@
-pyhrf.vbjde.vem_asl_constrained module
+pyhrf.sandbox.make_parcellation module
 ======================================
 
-.. automodule:: pyhrf.vbjde.vem_asl_constrained
+.. automodule:: pyhrf.sandbox.make_parcellation
     :members:
     :undoc-members:
     :show-inheritance:

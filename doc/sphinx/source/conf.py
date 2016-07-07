@@ -47,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pyhrf'
-copyright = u'2015, LNAO / Neurospin / CEA ...'
+copyright = u'2016, CEA/DRF/I2BM/NeuroSpin - INRIA/CEA Parietal - INRIA/MISTIS'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

@@ -7,17 +7,18 @@
 Scientific issues
 #################
 
-PyHRF aims to provide advanced tools for within-subject analysis of functional Magnetic Resonance Imaging (fMRI) data acquired
+PyHRF aims to provide advanced tools for single-subject analysis of functional Magnetic Resonance Imaging (fMRI) data acquired
 during an experimental paradigm (i.e. not resting-state). The core idea of PyHRF is to estimate the dynamics of brain activation by recovering the so-called Hemodynamic Response Function (HRF) in a spatially varying manner. To this end, PyHRF implements two
 different approaches: 
  (1) a voxel-wise and condition-wise HRF estimation [1];
  (2) a parcel-wise spatially adaptive joint detection-estimation (JDE) algorithm [2,3]. 
 
-The second approach is more powerful since it jointly addresses (i) the localization of evoked brain activity in response to external stimulation and (ii) 
-(ii) the estimation of the parcelwise hemodynamic filters. To this end, a parcellation (either functional or anatomical) has to be provided as input parameter.
+The second approach is more powerful since it jointly addresses (i) the localization of evoked brain activity in response to external stimulation and
+(ii) the estimation of parcelwise hemodynamic filters. To this end, a parcellation (either functional or anatomical) has to be provided as input parameter.
 
 
-This tool hence provides interesting perspectives for understanding the HRF differences between different populations (infants, children, adults, patients ...). Within the classical workflow of fMRI data analysis (preprocessings, estimation, statistical inference), PyHRF takes place at the estimation stage. However, we
+This tool hence provides interesting perspectives for understanding the HRF differences between brain regions and also between individuals and populations (infants, children, adults, patients ...).
+Within the classical workflow of fMRI data analysis (preprocessings, estimation, statistical inference), PyHRF takes place at the estimation stage. However, we
 have also implemented posterior probability maps (PPMs) to allow the user performing statistical inference at the subject-level.
 
 For the sake of computational efficiency, the variational expectation-maximization (VEM) [3] is used as default algorithm for computing the solution. The results
