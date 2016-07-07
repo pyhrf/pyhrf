@@ -4,6 +4,13 @@ Changelog
 Current development
 +++++++++++++++++++
 
+Fixes
+-----
+
+- Remove non-existing tests in devel mode
+- Correct typo in documentation
+- Correct list display in documentation
+- Fix bug for numpy >= 1.11.1 version
 
 -----------------------------------
 

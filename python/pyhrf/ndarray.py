@@ -1202,7 +1202,7 @@ class xndarray:
                 # %(str(k),str(other.axes_domains))
                 return False
             if isinstance(v, np.ndarray):
-                if not np.allclose(v, other.axes_domains[k]).all():
+                if not np.allclose(v, other.axes_domains[k]):
                     # print 'numpy array differ for %s' %str(k)
                     return False
             else:
