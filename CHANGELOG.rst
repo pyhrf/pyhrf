@@ -26,6 +26,7 @@ Enhancements
 - optimize some functions in vem_tools
 - rewrite and optimize all VEM steps
 - remove old calls to verbose module and replaced them by logging standard library module
+- update website documentation
 
 New
 ---
@@ -41,6 +42,7 @@ New
 - Add multisession support for VEM BOLD and ASL
 - add cosine drifts to VEM
 - add commandline for VEM
+- add `Stanford Willard Parcellation <http://findlab.stanford.edu/functional_ROIs.html>`_
 
 -----------------------------------
 

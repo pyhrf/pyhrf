@@ -5,14 +5,12 @@ Manual
 ######
 
     .. toctree::
-       :maxdepth: 1
+       :maxdepth: 2
 
-       volume_processing.rst
+       vem_analysis.rst
        paradigm.rst
-       surface_processing.rst
-       parallel_processing.rst
+       multiprocessing_computation.rst
        commands.rst
-       data_management.rst
-       demo_jde_jpde.rst  
-       gibbs_sampler.rst
-       
+       parcellation_mask.rst
+       pyhrf_configuration.rst
+       old.rst

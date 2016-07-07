@@ -1,9 +1,12 @@
 .. _manual_parallel:
 
-===============================
-Parallel computation with PyHRF
-===============================
+=============================
+Parallel computing with PyHRF
+=============================
 
+**WARNING**: this is an old documentation about unmaintained feature. Check
+:doc:`multiprocessing <multiprocessing_computation>` for local multiple core
+use.
 
 .. Local
 .. #####

@@ -15,8 +15,10 @@ Subpackages
     pyhrf.jde
     pyhrf.sandbox
     pyhrf.stats
+    pyhrf.test
     pyhrf.tools
     pyhrf.ui
+    pyhrf.validation
     pyhrf.vbjde
     pyhrf.xmliobak
 

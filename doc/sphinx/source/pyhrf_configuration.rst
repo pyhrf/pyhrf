@@ -1,3 +1,5 @@
+.. _pyhrf_configuration:
+
 Configuration
 #############
 
@@ -34,6 +36,9 @@ Package options are stored in ``$HOME/.pyhrf/config.cfg``, which is created afte
                                         ; the total number of CPU
                                         ; 'cat /proc/cpuinfo | grep processor | wc -l' on linux
                                         ; 'sysctl hw.ncpu' on MAC OS X
+                                        ; Set it to 0 if you want to auto-detect the number of
+                                        ; availables cpus and cores (taking into account the kernel
+                                        ; restrictions such as cgroups, ulimit, ...)
 
     [parallel-LAN]                      ; Distributed computation on a LAN
                                         ; Authentification by ssh keys must be
