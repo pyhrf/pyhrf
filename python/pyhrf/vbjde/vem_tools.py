@@ -388,7 +388,7 @@ def create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr, d
     condition_names = []
     X = OrderedDict()
     for condition, onset in onsets.iteritems():
-        duration = np.asarray(durations[condition]).squeeze()
+        duration = np.asarray(durations[condition]).flatten()
         X[condition] = compute_mat_X_2(nb_scans, tr, hrf_len, dt,
                                        onset, durations=duration)
         condition_names.append(condition)
