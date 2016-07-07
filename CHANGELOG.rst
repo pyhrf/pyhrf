@@ -4,6 +4,12 @@ Changelog
 Current development
 +++++++++++++++++++
 
+
+-----------------------------------
+
+Release 0.4.2
++++++++++++++
+
 Fixes
 -----
 
@@ -43,8 +49,6 @@ New
 - add cosine drifts to VEM
 - add commandline for VEM
 - add `Stanford Willard Parcellation <http://findlab.stanford.edu/functional_ROIs.html>`_
-
------------------------------------
 
 Release 0.4.1.post1
 +++++++++++++++++++
