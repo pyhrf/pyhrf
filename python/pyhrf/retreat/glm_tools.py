@@ -208,16 +208,16 @@ def make_design_matrix_asl(paradigm, n_scans, t_r, hrf_length=32., oversampling=
                                               prf_matrix=prf_matrix, con_id=condition_name, oversampling=16,
                                               normalize=True)
         #reg[0] = 0.
-        reg[::2] *= -0.5
-        reg[1::2] *= 0.5
+        reg[::2] *= 0.5
+        reg[1::2] *= -0.5
         add_regs.append(reg.squeeze())
         add_reg_names.append(reg_name[0] + '_' + condition_name)
 
     # Baseline ASL regressor
     reg = np.ones(n_scans)
     #reg[0] = 0.
-    reg[::2] *= -0.5
-    reg[1::2] *= 0.5
+    reg[::2] *= 0.5
+    reg[1::2] *= -0.5
     add_regs.append(reg)
     add_reg_names.append('perfusion_baseline')
 
