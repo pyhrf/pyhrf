@@ -11,6 +11,8 @@ Fixes
 - Correct typo in documentation
 - Correct list display in documentation
 - Fix bug for numpy >= 1.11.1 version
+- Fix bug in contrasts computation
+- clean tmp folders after some unitary tests
 
 -----------------------------------
 
