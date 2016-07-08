@@ -558,10 +558,11 @@ def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar
         for condition_name in condition_names:
             condition_nb = condition_names.index(condition_name)
             coeff = parsed_contrast.coeff(condition_name)
-            contrasts_mean[:, i] += float(coeff) * nrls_mean[:, condition_nb]
-            contrasts_var[:, i] += float(coeff)**2 * nrls_covar[condition_nb, condition_nb, :]
-            contrasts_class_mean[i, 1] += float(coeff) * nrls_class_mean[condition_nb, 1]
-            contrasts_class_var[i, :] += float(coeff)**2 * nrls_class_var[condition_nb, :]
+            if coeff:
+                contrasts_mean[:, i] += float(coeff) * nrls_mean[:, condition_nb]
+                contrasts_var[:, i] += float(coeff)**2 * nrls_covar[condition_nb, condition_nb, :]
+                contrasts_class_mean[i, 1] += float(coeff) * nrls_class_mean[condition_nb, 1]
+                contrasts_class_var[i, :] += float(coeff)**2 * nrls_class_var[condition_nb, :]
 
     return contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
 
