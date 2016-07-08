@@ -4,6 +4,14 @@ Changelog
 Current development
 +++++++++++++++++++
 
+
+-----------------------------------
+
+Release 0.4.3
++++++++++++++
+
+2016/07/08
+
 Fixes
 -----
 
@@ -14,8 +22,6 @@ Fixes
 - Fix bug in contrasts computation
 - clean tmp folders after some unitary tests
 - Fix VEM script example
-
------------------------------------
 
 Release 0.4.2
 +++++++++++++
