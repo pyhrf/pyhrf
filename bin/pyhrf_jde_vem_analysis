@@ -24,73 +24,6 @@ from pyhrf.ui.treatment import FMRITreatment
 from pyhrf.tools import format_duration
 
 
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("tr", type=float, help="Repetition time of the fMRI data")
-parser.add_argument("parcels_file", help="Nifti label file which defines the parcels")
-parser.add_argument("onsets_file", help="CSV onsets file")
-parser.add_argument("bold_data_file", nargs="*",
-                    help="list of 4D-Nifti file(s) of BOLD data (one per run)")
-parser.add_argument("-c", "--def_contrasts_file",
-                    help="JSON file defining the contrasts")
-parser.add_argument("-d", "--dt", type=float,
-                    help=("time resolution of the HRF (if not defined here or"
-                          " in the script, it is automatically computed)"))
-parser.add_argument("-l", "--hrf-duration", type=float, default=25.,
-                    help="time lenght of the HRF (in seconds, default: %(default)s)")
-parser.add_argument("-o", "--output", dest="output_dir", default=os.getcwd(),
-                    help=("output directory (created if needed,"
-                          " default: current folder: %(default)s)"))
-parser.add_argument("--nb-iter-min", type=int, default=5,
-                    help=("minimum number of iterations of the VEM algorithm"
-                          " (default: %(default)s)"))
-parser.add_argument("--nb-iter-max", type=int, default=100,
-                    help=("maximum number of iterations of the VEM algorithm"
-                          " (default: %(default)s)"))
-parser.add_argument("--beta", type=float, default=1.0,
-                    help=("intrinsic correlation parameter on latent variables"
-                          " (default: %(default)s)"))
-parser.add_argument("--hrf-hyperprior", type=int, default=1000,
-                    help="(default: %(default)s)")
-parser.add_argument("--sigma-h", type=float, default=0.1,
-                    help="Prior variance on the HRF (default: %(default)s)")
-parser.add_argument("--estimate-hrf", action="store_true", default=True,
-                    help="(default: %(default)s)")
-parser.add_argument("--no-estimate-hrf", action="store_false", dest="estimate_hrf",
-                    help="explicitly disable HRFs estimation")
-parser.add_argument("--zero-constraint", action="store_true", default=True,
-                    help="zero constraint on the boundaries of the HRF (default: %(default)s)")
-parser.add_argument("--no-zero-constraint", action="store_false", dest="zero_constraint",
-                    help="explicitly disable zero constraint (default enabled)")
-parser.add_argument("--drifts-type", type=str, default="poly",
-                    help="set the drift type, can be 'poly' or 'cos' (default: %(default)s)")
-parser.add_argument("-v", "--log-level", default="WARNING",
-                    choices=("DEBUG", "10", "INFO", "20", "WARNING", "30",
-                             "ERROR", "40", "CRITICAL", "50"),
-                    help="(default: %(default)s)")
-parser.add_argument("-p", "--parallel", action="store_true", default=True,
-                    help="(default: %(default)s)")
-parser.add_argument("--no-parallel", action="store_false", dest="parallel",
-                    help="explicitly disable parallel computation")
-parser.add_argument("--save-processing", action="store_true", default=True,
-                    help="(default: %(default)s)")
-parser.add_argument("--no-save-processing", action="store_false", dest="save_processing_config")
-args = parser.parse_args()
-
-
-if not args.dt:
-    possible_dts = args.tr/np.arange(int(args.tr)-1, int(args.tr)+2)
-    args.dt = possible_dts[np.abs(possible_dts-1.).argmin()]
-
-try:
-    pyhrf.logger.setLevel(args.log_level)
-except ValueError:
-    try:
-        pyhrf.logger.setLevel(int(args.log_level))
-    except ValueError:
-        print("Can't set log level to {}".format(args.log_level))
-        sys.exit(1)
-
-
 def load_contrasts_definitions(contrasts_file):
     """Loads contrasts from a json file defining the contrasts with linear
     combinations of conditions.
@@ -120,8 +53,21 @@ def load_contrasts_definitions(contrasts_file):
     return compute_contrasts, contrasts_def
 
 
-def main():
+def main(args):
     """Run when calling the script"""
+
+    if not args.dt:
+        possible_dts = args.tr/np.arange(int(args.tr)-1, int(args.tr)+2)
+        args.dt = possible_dts[np.abs(possible_dts-1.).argmin()]
+
+    try:
+        pyhrf.logger.setLevel(args.log_level)
+    except ValueError:
+        try:
+            pyhrf.logger.setLevel(int(args.log_level))
+        except ValueError:
+            print("Can't set log level to {}".format(args.log_level))
+            sys.exit(1)
 
     start_time = time.time()
 
@@ -185,4 +131,56 @@ def main():
     print("Total computation took: {} seconds".format(format_duration(time.time() - start_time)))
 
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("tr", type=float, help="Repetition time of the fMRI data")
+    parser.add_argument("parcels_file", help="Nifti label file which defines the parcels")
+    parser.add_argument("onsets_file", help="CSV onsets file")
+    parser.add_argument("bold_data_file", nargs="*",
+                        help="list of 4D-Nifti file(s) of BOLD data (one per run)")
+    parser.add_argument("-c", "--def_contrasts_file",
+                        help="JSON file defining the contrasts")
+    parser.add_argument("-d", "--dt", type=float,
+                        help=("time resolution of the HRF (if not defined here or"
+                              " in the script, it is automatically computed)"))
+    parser.add_argument("-l", "--hrf-duration", type=float, default=25.,
+                        help="time lenght of the HRF (in seconds, default: %(default)s)")
+    parser.add_argument("-o", "--output", dest="output_dir", default=os.getcwd(),
+                        help=("output directory (created if needed,"
+                              " default: current folder: %(default)s)"))
+    parser.add_argument("--nb-iter-min", type=int, default=5,
+                        help=("minimum number of iterations of the VEM algorithm"
+                              " (default: %(default)s)"))
+    parser.add_argument("--nb-iter-max", type=int, default=100,
+                        help=("maximum number of iterations of the VEM algorithm"
+                              " (default: %(default)s)"))
+    parser.add_argument("--beta", type=float, default=1.0,
+                        help=("intrinsic correlation parameter on latent variables"
+                              " (default: %(default)s)"))
+    parser.add_argument("--hrf-hyperprior", type=int, default=1000,
+                        help="(default: %(default)s)")
+    parser.add_argument("--sigma-h", type=float, default=0.1,
+                        help="Prior variance on the HRF (default: %(default)s)")
+    parser.add_argument("--estimate-hrf", action="store_true", default=True,
+                        help="(default: %(default)s)")
+    parser.add_argument("--no-estimate-hrf", action="store_false", dest="estimate_hrf",
+                        help="explicitly disable HRFs estimation")
+    parser.add_argument("--zero-constraint", action="store_true", default=True,
+                        help="zero constraint on the boundaries of the HRF (default: %(default)s)")
+    parser.add_argument("--no-zero-constraint", action="store_false", dest="zero_constraint",
+                        help="explicitly disable zero constraint (default enabled)")
+    parser.add_argument("--drifts-type", type=str, default="poly",
+                        help="set the drift type, can be 'poly' or 'cos' (default: %(default)s)")
+    parser.add_argument("-v", "--log-level", default="WARNING",
+                        choices=("DEBUG", "10", "INFO", "20", "WARNING", "30",
+                                 "ERROR", "40", "CRITICAL", "50"),
+                        help="(default: %(default)s)")
+    parser.add_argument("-p", "--parallel", action="store_true", default=True,
+                        help="(default: %(default)s)")
+    parser.add_argument("--no-parallel", action="store_false", dest="parallel",
+                        help="explicitly disable parallel computation")
+    parser.add_argument("--save-processing", action="store_true", default=True,
+                        help="(default: %(default)s)")
+    parser.add_argument("--no-save-processing", action="store_false", dest="save_processing_config")
+    parser_args = parser.parse_args()
+    main(parser_args)
