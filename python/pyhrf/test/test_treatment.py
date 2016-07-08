@@ -32,7 +32,7 @@ class CmdInputTest(unittest.TestCase):
         """
         Test parsing of option "-s SPM.mat" with given SPM version (int)
         """
-        spm_file = op.join(pyhrf.get_tmp_path(), 'SPM.mat')
+        spm_file = op.join(self.tmp_dir, 'SPM_v{}.mat'.format(spm_ver))
         tools._io._zip.gunzip(pyhrf.get_data_file_name('SPM_v%d.mat.gz' % spm_ver),
                               outFileName=spm_file)
 
