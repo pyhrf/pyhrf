@@ -69,8 +69,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     MaxItGrad = 200
     gradientStep = 0.005
     gamma = 7.5
-    #neighbours_indexes = vt.create_neighbours(graph)
-    maxNeighbours, neighbours_indexes = vt.create_neighbours(graph, J)
+    neighbours_indexes = vt.create_neighbours(graph)
+    #maxNeighbours, neighbours_indexes = vt.create_neighbours(graph, J)
 
     # Control-tag
     w = np.ones((N))
@@ -120,8 +120,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     if H_ini is not None:
         H = H_ini.copy()
     #H /= np.linalg.norm(H)
-    G = copy.deepcopy(H)
-    #print phy_params
+    #G = copy.deepcopy(H)
+    Omega = linear_rf_operator(len(H) + 6, phy_params, dt, calculating_brf=False)
+    G = np.dot(Omega, np.concatenate(([0],[0],[0], H, [0],[0],[0])))[3:-3]
+    G /= np.linalg.norm(G)
     Hb = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)
     Hb /= np.linalg.norm(Hb)
     Gb = create_physio_prf(phy_params, response_dt=dt, response_duration=Thrf)
@@ -149,8 +151,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
     normOh = False
     normg = False
-    if prior=='hierarchical' or prior=='omega':
-        Omega = linear_rf_operator(len(H) + 6, phy_params, dt, calculating_brf=False)
+
     if prior=='omega':
         Omega0 = Omega.copy()
         OmegaH = np.dot(Omega,
