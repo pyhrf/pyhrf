@@ -14,13 +14,8 @@ bold_data_file = [
 ]                  # /!\ MUST be a list of path(s) (for later multisession
                    # implementation)
 parcels_file = "./parcels.nii"  # path to the integer 3D Nifti parcellation file
-#  spm_file = None  # NOT YET IMPLEMENTED If not None, path to the SPM.mat file that configure the
-                 #  # GLM analysis else you need (at least) to give the csv
-                 #  # file of the # onsets and possibly the contrasts definition
-onsets_file = "./onsets.csv"  # csv file of the onsets ignored if spm_file is given
+onsets_file = "./onsets.csv"  # csv file of the onsets
 def_contrasts_file = None  # json file of the contrasts definition
-                           # ignored if spm_file if given and
-                           # contains contrasts definition
                            # /!\ Be aware that all conditions in
                            # contrasts definitions MUST match
                            # (with case sensitive) the conditions
@@ -91,7 +86,6 @@ parser.add_argument("-l", "--hrf-duration", default=argparse.SUPPRESS, type=floa
                     help="time lenght of the HRF (in seconds)")
 parser.add_argument("-o", "--output", dest="output_dir", default=argparse.SUPPRESS,
                     help="output directory (created if needed)")
-#  parser.add_argument("-s", "--spm", dest="spm_file", default=argparse.SUPPRESS)
 parser.add_argument("--nb-iter-max", default=argparse.SUPPRESS, type=int,
                     help="maximum number of iterations of the VEM algorithm")
 parser.add_argument("--nb-iter-min", default=argparse.SUPPRESS, type=int,
@@ -123,7 +117,6 @@ local_config = {
     "hrf_duration": hrf_duration,
     "bold_data_file": bold_data_file,
     "parcels_file": parcels_file,
-    "spm_file": spm_file,
     "onsets_file": onsets_file,
     "def_contrasts_file": def_contrasts_file,
     "output_dir": output_dir,
@@ -140,7 +133,7 @@ local_config = {
     "drifts_type": drifts_type,
 }
 
-del (tr, dt, hrf_duration, bold_data_file, parcels_file, spm_file, onsets_file,
+del (tr, dt, hrf_duration, bold_data_file, parcels_file, onsets_file,
      def_contrasts_file, output_dir, log_level, parallel, sigma_h, nb_iter_max,
      nb_iter_min, beta, estimate_hrf, hrf_hyperprior, zero_constraint,
      drifts_type)

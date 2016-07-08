@@ -415,10 +415,13 @@ class GiftiTest(unittest.TestCase):
 class SPMIOTest(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.tmp_dir = pyhrf.get_tmp_path()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
 
     def _test_load_regnames(self, spm_ver):
-        spm_file = op.join(pyhrf.get_tmp_path(), 'SPM.mat')
+        spm_file = op.join(self.tmp_dir, 'SPM_v{}.mat'.format(spm_ver))
         pio._zip.gunzip(pyhrf.get_data_file_name('SPM_v%d.mat.gz' % spm_ver),
                         outFileName=spm_file)
         expected = ['Sn(1) audio*bf(1)', 'Sn(1) video*bf(1)',

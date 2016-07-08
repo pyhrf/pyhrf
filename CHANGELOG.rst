@@ -4,6 +4,14 @@ Changelog
 Current development
 +++++++++++++++++++
 
+
+-----------------------------------
+
+Release 0.4.3
++++++++++++++
+
+2016/07/08
+
 Fixes
 -----
 
@@ -11,11 +19,14 @@ Fixes
 - Correct typo in documentation
 - Correct list display in documentation
 - Fix bug for numpy >= 1.11.1 version
-
------------------------------------
+- Fix bug in contrasts computation
+- clean tmp folders after some unitary tests
+- Fix VEM script example
 
 Release 0.4.2
 +++++++++++++
+
+2016/07/07
 
 Fixes
 -----
