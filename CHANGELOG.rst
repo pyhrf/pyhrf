@@ -13,6 +13,7 @@ Fixes
 - Fix bug for numpy >= 1.11.1 version
 - Fix bug in contrasts computation
 - clean tmp folders after some unitary tests
+- Fix VEM script example
 
 -----------------------------------
 
