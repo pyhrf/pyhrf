@@ -25,7 +25,7 @@ with a voxel resolution of 3x3x3mm and a volume shape of 53x63x52 voxels.
 If you use this parcellation mask, please cite the following paper:
 
 The citation for the 499 fROI atlas, nicknamed the "Willard" atlas after the two
-creators, **Will** iam Shirer and Bern **ard** Ng, is the following publication:
+creators, **Will**\ iam Shirer and Bern\ **ard** Ng, is the following publication:
 
 `Richiardi J, et al.: Correlated gene expression supports synchronous activity
 in brain networks. Science (2015). <http://science.sciencemag.org/content/348/6240/1241>`_
