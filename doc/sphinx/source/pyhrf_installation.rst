@@ -29,3 +29,22 @@ Then you can run the unit tests:
 .. code:: bash
 
      $ pyhrf_maketests
+
+PyHRF update
+############
+
+To update the package, use pip:
+
+.. code:: bash
+
+    $ pip install --upgrade --user pyhrf
+
+
+PyHRF uninstallation
+####################
+
+To remove pyhrf package, use pip:
+
+.. code:: bash
+
+    $ pip uninstall pyhrf

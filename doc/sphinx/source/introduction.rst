@@ -23,9 +23,9 @@ have also implemented posterior probability maps (PPMs) to allow the user perfor
 
 For the sake of computational efficiency, the variational expectation-maximization (VEM) [3] is used as default algorithm for computing the solution. The results
 that are generated in the context are the following:
- -- the 3D effect size maps associated with each experimental condition;
- -- the 3D contrast maps specified by the user;
- -- the time-series describing the HRFs for the set of all brain regions (4D volume). The analysis can also be performed on the cortical surface from projected BOLD signals and
+ - the 3D effect size maps associated with each experimental condition;
+ - the 3D contrast maps specified by the user;
+ - the time-series describing the HRFs for the set of all brain regions (4D volume). The analysis can also be performed on the cortical surface from projected BOLD signals and
 then produces functional textures to be displayed on the input cortical mesh. 
 
 [1] P. Ciuciu, J.-B. Poline, G. Marrelec, J. Idier, Ch. Pallier, and H. Benali, "Unsupervised robust non-parametric estimation of the
