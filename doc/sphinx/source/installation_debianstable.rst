@@ -44,4 +44,4 @@ If you plan to use our specific viewer (pyhrf_viewer), run:
 
     $ sudo apt-get install python-qt4
 
-.. inlude:: pyhrf_installation.rst
+.. include:: pyhrf_installation.rst
