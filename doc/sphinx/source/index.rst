@@ -23,7 +23,7 @@ To cite PyHRF and get a comprehensive description, please refer to `this paper <
 
     T. Vincent, S. Badillo, L. Risser, L. Chaari, C. Bakhous, F. Forbes and P.
     Ciuciu “Flexible multivariate hemodynamics fMRI data analyses and
-    simulations with PyHRF” Font. Neurosci., vol. 8, no. 67, 10 April 2014.
+    simulations with PyHRF” Front. Neurosci., vol. 8, no. 67, 10 April 2014.
 |
 
 .. Developpment status
@@ -57,8 +57,8 @@ People who have significantly contributed to the development are (by chronologic
          Thomas Vincent\ :sup:`(1,3)`, Philippe Ciuciu\ :sup:`(1,2)`, Lotfi Chaari\ :sup:`(3)`, Solveig Badillo\ :sup:`(1,2)`, Christine Bakhous\ :sup:`(3)`, Aina Frau-Pascual\ :sup:`(2,3)` and Thomas Perret\ :sup:`(3)`
 
          1. CEA/DRF/I2BM/NeuroSpin, Gif-Sur-Yvette, France
-         1. INRIA/CEA Parietal, Gif-Sur-Yvette, France
-         2. INRIA, MISTIS, Grenoble, France
+         2. INRIA/CEA Parietal, Gif-Sur-Yvette, France
+         3. INRIA, MISTIS, Grenoble, France
 
 Contacts
 ++++++++
