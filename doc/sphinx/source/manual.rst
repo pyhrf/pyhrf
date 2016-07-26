@@ -8,6 +8,7 @@ Manual
        :maxdepth: 2
 
        vem_analysis.rst
+       visualizer.rst
        paradigm.rst
        multiprocessing_computation.rst
        commands.rst

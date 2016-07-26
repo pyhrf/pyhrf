@@ -54,9 +54,4 @@ An articifial fMRI data generator is provided where the user can test the behavi
 paradigms (slow/fast event-related or bloc designs). 
 
 Concerning the analysis process, which can be computationally
-intensive, pyhrf handles parallel computing through the python software soma-workflow for the exploitation of
-cluster units as well as multiple core computers. 
-
-Finally, results can be browsed by a dedicated viewer based on
-PyQt and matplotib which handles n-dimensionnal images and provide suitable features for the exploration of
-whole brain hymodynamics results.
+intensive, pyhrf handles parallel computing through multiple core computers. 
