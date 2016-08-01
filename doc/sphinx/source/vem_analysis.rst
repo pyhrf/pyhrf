@@ -23,4 +23,17 @@ Then you can run::
 If you want to tune the parameters, check command line options (see :doc:`commands <commands>`).
 This is adviced to set the ``dt`` parameter (the temporal resolution of the HRF) and the output folder.
 
+**Example**:
+
+check out the path of the files ``subj0_bold_session0.nii.gz``, ``subj0_parcellation.nii.gz`` and ``paradigm_loc.csv`` using::
+
+    $ pyhrf_list_datafiles
+
+then run::
+
+    $ pyhrf_jde_vem_analysis 2.4 subj0_parcellation.nii.gz paradigm_loc.csv subj0_bold_session0.nii.gz
+
+replacing the files by their full path. This will create output files in the current folder.
+Check :doc:`visualizer` to check the outputs file.
+
 * The multirun extension is currently under development and testing
