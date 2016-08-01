@@ -35,13 +35,19 @@ Install the following packages:
 
 .. code:: bash
 
-    $ sudo yum install graphviz-python python-sphinx python-scikit-learn python-pillow python-joblib python-paramiko
+    $ sudo yum install graphviz-python python-scikit-learn python-pillow python-joblib python-paramiko
     $ pip install --user munkres
+
+This dependency is too old on the packages system manager::
+
+    $ pip install --user sphinx
+
+if you already installed sphinx with the packages manager, add the flag ``--upgrade`` to the previous command
 
 If you plan to use our specific viewer (pyhrf_viewer), run:
 
 .. code:: bash
 
-    $ sudo yum install PyQt4 python-matplotlib-qt4 
+    $ sudo yum install PyQt4 python-matplotlib-qt4
 
 .. include:: pyhrf_installation.rst

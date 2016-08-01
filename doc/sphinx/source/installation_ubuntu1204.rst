@@ -37,7 +37,14 @@ Install the following packages:
 
 .. code:: bash
 
-    $ sudo apt-get install python-scikits-learn python-joblib python-sphinx python-pygraph python-pygraphviz python-PIL python-munkres python-paramiko
+    $ sudo apt-get install python-scikits-learn python-joblib python-pygraph python-pygraphviz python-PIL python-munkres python-paramiko
+
+This dependency is too old on the packages system manager::
+
+    $ pip install --user sphinx
+
+if you already installed sphinx with the packages manager, add the flag ``--upgrade`` to the previous command
+
 
 If you plan to use our specific viewer (pyhrf_viewer), run:
 
