@@ -14,16 +14,6 @@ Website
 
 See `installation documentation website <http://www.pyhrf.org/installation.html>`_ for details
 
-Package documentation
----------------------
-
-Compile the documentation (`sphinx <http://sphinx-doc.org/>`_ required)::
-    
-    $ cd ./doc/sphinx/
-    $ make html
-    
-The documentation should be in ./doc/sphinx/build/html
-
 Code status:
 ************
 

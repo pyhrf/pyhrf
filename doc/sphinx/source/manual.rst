@@ -15,3 +15,4 @@ Manual
        parcellation_mask.rst
        pyhrf_configuration.rst
        old.rst
+       developer.rst
