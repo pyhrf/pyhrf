@@ -62,6 +62,9 @@ Please refer to the page corresponding to your distribution.
 :doc:`Ubuntu 14.04 <installation_ubuntu1404>`
 =============================================
 
+:doc:`Ubuntu 16.04 <installation_ubuntu1604>`
+=============================================
+
 :doc:`Debian stable (jessie) <installation_debianstable>`
 =========================================================
 
