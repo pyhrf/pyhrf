@@ -3,7 +3,7 @@
 PyHRF Installation
 ##################
 
-Install package from `PYPI <https://pypi.python.org/pypi/pyhrf>`_
+Install package from `PYPI <https://pypi.python.org/pypi/pyhrf>`_.
 It is recommended to install the package in user mode (the ``--user`` option).
 
 .. code:: bash

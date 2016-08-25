@@ -1,11 +1,11 @@
-.. _installation_ubuntu1404:
+.. _installation_ubuntu1604:
 
 
 ===============================
- Installation for Ubuntu 14.04
+ Installation for Ubuntu 16.04
 ===============================
 
-These instructions are specific to Ubuntu 14.04.
+These instructions are specific to Ubuntu 16.04.
 
 Required dependencies
 #####################
@@ -30,7 +30,7 @@ Install the following packages:
 
 .. code:: bash
 
-    $ sudo apt-get install python-scikits-learn python-joblib python-pygraph python-pygraphviz python-PIL python-munkres python-paramiko
+    $ sudo apt-get install python-scikits-learn python-joblib python-pygraph python-pygraphviz python-pil python-munkres python-paramiko
 
 This dependency is too old on the packages system manager::
 
