@@ -57,8 +57,7 @@ def main(args):
     """Run when calling the script"""
 
     if not args.dt:
-        possible_dts = args.tr/np.arange(int(args.tr)-1, int(args.tr)+2)
-        args.dt = possible_dts[np.abs(possible_dts-1.).argmin()]
+        args.dt = float(args.tr)/np.trunc(args.tr)
 
     try:
         pyhrf.logger.setLevel(args.log_level)
