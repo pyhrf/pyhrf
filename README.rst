@@ -11,13 +11,16 @@ PyHRF
 
 .. contents::
 
+What is PyHRF?
+**************
+
 PyHRF is a set of tools to analyze fMRI data and specifically study hemodynamics.
 
 
 Installation
 ************
 
-For installation instructions, see `installation documentation website <http://www.pyhrf.org/installation.html>`_.
+For installation instructions, see `installation website <http://www.pyhrf.org/installation.html>`_.
 
 Documentation
 *************
