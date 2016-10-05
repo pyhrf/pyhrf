@@ -1,13 +1,19 @@
 .. -*- mode: rst -*-
 
-.. image:: https://travis-ci.org/pyhrf/pyhrf.svg?branch=master
-    :target: https://travis-ci.org/pyhrf/pyhrf
-
-.. image:: https://coveralls.io/repos/pyhrf/pyhrf/badge.png?branch=master
-    :target: https://coveralls.io/r/pyhrf/pyhrf?branch=master
-
 PyHRF
 =====
+
+.. image:: https://img.shields.io/pypi/v/pyhrf.svg
+    :target: https://pypi.python.org/pypi/pyhrf
+
+.. image:: https://img.shields.io/travis/pyhrf/pyhrf/master.svg
+    :target: https://travis-ci.org/pyhrf/pyhrf
+
+.. image:: https://img.shields.io/coveralls/pyhrf/pyhrf/master.svg
+    :target: https://coveralls.io/r/pyhrf/pyhrf?branch=master
+
+.. image:: https://img.shields.io/gitter/room/pyhrf/pyhrf.svg
+    :target:  https://gitter.im/pyhrf/pyhrf
 
 .. contents::
 
