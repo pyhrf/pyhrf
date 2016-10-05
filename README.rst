@@ -1,13 +1,13 @@
 .. -*- mode: rst -*-
 
-PyHRF
-=====
-
 .. image:: https://travis-ci.org/pyhrf/pyhrf.svg?branch=master
     :target: https://travis-ci.org/pyhrf/pyhrf
 
 .. image:: https://coveralls.io/repos/pyhrf/pyhrf/badge.png?branch=master
     :target: https://coveralls.io/r/pyhrf/pyhrf?branch=master
+
+PyHRF
+=====
 
 .. contents::
 
