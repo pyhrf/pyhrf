@@ -1,29 +1,55 @@
 .. -*- mode: rst -*-
 
-pyhrf
+PyHRF
 =====
 
-pyhrf is a set of tools to analyze fMRI data and specifically study hemodynamics.
+.. image:: https://img.shields.io/pypi/v/pyhrf.svg
+    :target: https://pypi.python.org/pypi/pyhrf
+
+.. image:: https://img.shields.io/travis/pyhrf/pyhrf/master.svg
+    :target: https://travis-ci.org/pyhrf/pyhrf
+
+.. image:: https://img.shields.io/coveralls/pyhrf/pyhrf/master.svg
+    :target: https://coveralls.io/r/pyhrf/pyhrf?branch=master
+
+.. image:: https://img.shields.io/gitter/room/pyhrf/pyhrf.svg
+    :target:  https://gitter.im/pyhrf/pyhrf
+
+.. contents::
+
+What is PyHRF?
+**************
+
+PyHRF is a set of tools to analyze fMRI data and specifically study hemodynamics.
 
 
 Installation
 ************
 
+For installation instructions, see `installation website <http://www.pyhrf.org/installation.html>`_.
+
+Documentation
+*************
+
+PyHRF documentation is available on the web:
+
+    http://www.pyhrf.org/manual.html
+
 Website
--------
-
-See `installation documentation website <http://www.pyhrf.org/installation.html>`_ for details
-
-Code status:
-************
-
-.. image:: https://travis-ci.org/pyhrf/pyhrf.svg?branch=master
-    :target: https://travis-ci.org/pyhrf/pyhrf
-
-.. image:: https://coveralls.io/repos/pyhrf/pyhrf/badge.png?branch=master
-    :target: https://coveralls.io/r/pyhrf/pyhrf?branch=master
-
-Licence
 *******
 
-pyhrf is under the CeCILL v2 (see LICENCE for details)
+The PyHRF site is:
+
+    http://www.pyhrf.org/
+
+Bug reports
+***********
+
+To search for bugs or report them, please use the PyHRF Bug Tracker at:
+
+    https://github.com/pyhrf/pyhrf/issues
+
+License information
+*******************
+
+PyHRF is under the CeCILL v2. See the file ``LICENCE`` for details.
