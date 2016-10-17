@@ -1,79 +1,69 @@
 #! /usr/bin/env python2
-# -*- coding: utf-8 -*-
 
 import sys
+
+# The current version of pyhrf works with python 2.7
+if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2]:
+    raise RuntimeError("Python version 2.7 required.")
+
+# setuptools is used to build and distribute pyhrf
+from  ez_setup import use_setuptools
+use_setuptools()
+from setuptools import setup, find_packages, Extension
 
 from glob import glob
 from importlib import import_module
 
-install_requires = [("numpy", "1.6"),
-                    ("scipy", "0.9"),
-                    ("nibabel", "1.1"),
-                    ("sympy", "0.7"),
-                    ("nipy", "0.3.0")]
-missing_package = []
-for package in install_requires:
-    try:
-        import_module(package[0])
-    except ImportError:
-        missing_package.append(package)
-
-if missing_package != []:
-    print "Package(s) {0} must be installed prior PyHRF installation.".\
-            format(", ".join([">=".join(package) for package in missing_package]))
-    sys.exit(1)
+try:
+    import numpy
+except ImportError:
+   raise ImportError("PyHRF requires numpy")
 
 try:
-    import setuptools
+   import scipy
 except ImportError:
-    import ez_setup
-    ez_setup.use_setuptools()
+   raise ImportError("PyHRF requires scipy")
 
-from setuptools import setup, find_packages, Extension
+# Get the long description from the README file
+with open('README.rst') as f:
+    long_description = f.read()
 
-import numpy as np
+# Dependencies
+build_requires = ["numpy>=1.6",
+                  "scipy>=0.9",
+                  "nibabel>=1.1, <2.1.0",
+                  "sympy>=0.7",
+                  "nipy>=0.3.0"]
 
-
-cExtensions = [
-    Extension('pyhrf.jde.intensivecalc',
-              ['src/pyhrf/jde/intensivecalc.c'],
-              [np.get_include()]),
-    Extension('pyhrf.boldsynth.pottsfield.pottsfield_c',
-              ['src/pyhrf/boldsynth/pottsfield/pottsField.c'],
-              [np.get_include()]),
-    Extension('pyhrf.vbjde.UtilsC',
-              ['src/pyhrf/vbjde/utilsmodule.c'],
-              [np.get_include()]),
-    Extension('pyhrf.cparcellation',
-              ['src/pyhrf/cparcellation.c'],
-              [np.get_include()]),
-    ]
+# Including C code
+cExtensions = [Extension(ext_name,
+                         sources=['src/pyhrf/'+filepath],
+                         include_dirs=[numpy.get_include()])
+               for (ext_name,filepath) in [('pyhrf.jde.intensivecalc','jde/intensivecalc.c'),
+                                           ('pyhrf.boldsynth.pottsfield.pottsfield_c', 'boldsynth/pottsfield/pottsField.c'),
+                                           ('pyhrf.vbjde.UtilsC', 'vbjde/utilsmodule.c'),
+                                           ('pyhrf.cparcellation','cparcellation.c')]]
 
 setup(
-    name = "pyhrf",
-    version = "0.4.3",
-    description = ("PyHRF is a set of tools to analyze fMRI data and "
-                   "specifically study hemodynamics."),
-    long_description = open("README.rst").read(),
+    name = 'pyhrf',
+    version = '0.4.3',
+    description = 'Set of tools to analyze fMRI data focused on the study of hemodynamics',
+    long_description = long_description,
     author = ("Thomas VINCENT, Philippe CIUCIU, Solveig BADILLO, Florence "
               "FORBES, Aina FRAU, Thomas PERRET"),
     author_email = "thomas.tv.vincent@gmail.com",
-    maintainer = "Thomas PERRET",
-    maintainer_email = "thomas.perret@inria.fr",
-    url = "http://pyhrf.org",
+    maintainer = 'Jaime Arias',
+    maintainer_email = 'jaime.arias@inria.fr',
+    url = 'http://pyhrf.org',
+    license = 'CeCILLv2',
+    download_url = 'https://github.com/pyhrf/pyhrf',
+    package_dir = {'' : 'python'},
     packages = find_packages("python"),
-    setup_requires = ["numpy>=1.0",
-                      "scipy>=0.9",
-                      "nibabel>=1.1",
-                      "sympy>=0.7"],
     include_package_data = True,
     scripts = glob('./bin/*'),
-    install_requires = ["numpy>=1.6",
-                        "scipy>=0.9",
-                        "matplotlib>=1.1",
-                        "nibabel>=1.1",
-                        "sympy>=0.7",
-                        "nipy>=0.3.0"],
+    ext_modules = cExtensions,
+    setup_requires = build_requires,
+    install_requires = build_requires,
     extras_require = {"Ward": ["scikit-learn>=0.10"],
                       "parallel": ["joblib>=0.5"],
                       "cluster": ["soma-workflow"],
@@ -81,9 +71,6 @@ setup(
                       "parcellation": ["munkres>=1.0"],
                       "pipelines": ["pygraphviz>=1.1"],
                       "graph": ["python-graph-core>=1.8"]},
-    package_dir = {'' : 'python'},
-    # include_dirs = [np.get_include()],
-    ext_modules = cExtensions,
     classifiers = [
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
@@ -100,8 +87,7 @@ setup(
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Medical Science Apps.",
     ],
-    license = "CeCILLv2",
-    platforms = ["linux"],
+    platforms = ["Linux"],
     zip_safe = False,
     )
 
