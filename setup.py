@@ -2,9 +2,9 @@
 
 import sys
 
-# The current version of pyhrf works with python 2.7
-if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2]:
-    raise RuntimeError("Python version 2.7 required.")
+# The current version of pyhrf works with python 2.6 or 2.7
+if sys.version_info[:2] < (2, 6) or (3, 0) <= sys.version_info[:2]:
+    raise RuntimeError("Python version 2.7 or 2.6 required.")
 
 # setuptools is used to build and distribute pyhrf
 from  ez_setup import use_setuptools
@@ -12,45 +12,43 @@ use_setuptools()
 from setuptools import setup, find_packages, Extension
 
 from glob import glob
-from importlib import import_module
 
+# # Verify that numpy and scipy are installed to build C extensions
 try:
     import numpy
+    if numpy.__version__ < '1.6':
+            raise ImportError
 except ImportError:
-   raise ImportError("PyHRF requires numpy")
-
-try:
-   import scipy
-except ImportError:
-   raise ImportError("PyHRF requires scipy")
+    print 'Building C extensions of pyhrf requires numpy >= 1.6 and scipy >= 0.9. Installing them ...'
+    import pip
+    pip.main(['install', 'numpy', 'scipy'])
+    import numpy
 
 # Get the long description from the README file
 with open('README.rst') as f:
     long_description = f.read()
 
-# Dependencies
-build_requires = ["numpy>=1.6",
-                  "scipy>=0.9",
-                  "nibabel>=1.1, <2.1.0",
-                  "sympy>=0.7",
-                  "nipy>=0.3.0"]
-
 # Including C code
 cExtensions = [Extension(ext_name,
-                         sources=['src/pyhrf/'+filepath],
-                         include_dirs=[numpy.get_include()])
+                         sources=['src/pyhrf/'+filepath])
                for (ext_name,filepath) in [('pyhrf.jde.intensivecalc','jde/intensivecalc.c'),
                                            ('pyhrf.boldsynth.pottsfield.pottsfield_c', 'boldsynth/pottsfield/pottsField.c'),
                                            ('pyhrf.vbjde.UtilsC', 'vbjde/utilsmodule.c'),
                                            ('pyhrf.cparcellation','cparcellation.c')]]
+
+# Dependencies
+dependencies = ['numpy>=1.6',
+                'scipy>=0.9',
+                'nibabel>=1.1, <2.1.0',
+                'sympy>=0.7',
+                'nipy>=0.3.0']
 
 setup(
     name = 'pyhrf',
     version = '0.4.3',
     description = 'Set of tools to analyze fMRI data focused on the study of hemodynamics',
     long_description = long_description,
-    author = ("Thomas VINCENT, Philippe CIUCIU, Solveig BADILLO, Florence "
-              "FORBES, Aina FRAU, Thomas PERRET"),
+    author = 'Thomas Vincent, Philippe Ciuciu, Solveig Badillo, Florence Forbes, Aina Frau-Pascual, Thomas Perret',
     author_email = "thomas.tv.vincent@gmail.com",
     maintainer = 'Jaime Arias',
     maintainer_email = 'jaime.arias@inria.fr',
@@ -62,8 +60,8 @@ setup(
     include_package_data = True,
     scripts = glob('./bin/*'),
     ext_modules = cExtensions,
-    setup_requires = build_requires,
-    install_requires = build_requires,
+    setup_requires = dependencies,
+    install_requires = dependencies,
     extras_require = {"Ward": ["scikit-learn>=0.10"],
                       "parallel": ["joblib>=0.5"],
                       "cluster": ["soma-workflow"],
@@ -71,6 +69,7 @@ setup(
                       "parcellation": ["munkres>=1.0"],
                       "pipelines": ["pygraphviz>=1.1"],
                       "graph": ["python-graph-core>=1.8"]},
+    include_dirs=[numpy.get_include()],
     classifiers = [
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
@@ -88,10 +87,13 @@ setup(
         "Topic :: Scientific/Engineering :: Medical Science Apps.",
     ],
     platforms = ["Linux"],
+
+    # pyhrf has C/C++ extensions, so it's not zip safe.
     zip_safe = False,
     )
 
-if sys.argv[1] == "install":
+if 'install' in sys.argv[1]:
+
     # optional deps and description of associated feature:
     optional_deps = {
         "sklearn": "(scikit-learn) -- spatial ward parcellation",
