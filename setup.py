@@ -46,7 +46,8 @@ def setup_package():
                         'scipy>=0.9',
                         'nibabel>=1.1, <2.1.0',
                         'sympy>=0.7',
-                        'nipy>=0.3.0']
+                        'nipy>=0.3.0',
+                        'colorama']
 
         # Installing the required packages to build C extensions
         for package in dependencies:
@@ -69,7 +70,14 @@ def setup_package():
             ext_modules = cExtensions,
             include_dirs = [numpy.get_include()],
             setup_requires = dependencies,
-            install_requires = dependencies
+            install_requires = dependencies,
+            extras_require = {"Ward": ["scikit-learn>=0.10"],
+                              "parallel": ["joblib>=0.5"],
+                              "cluster": ["soma-workflow"],
+                              "simulation": ["Pillow>=2.3"],
+                              "parcellation": ["munkres>=1.0"],
+                              "pipelines": ["pygraphviz>=1.1"],
+                              "graph": ["python-graph-core>=1.8"]}
         )
 
     # Get the long description from the README file
@@ -114,45 +122,40 @@ def setup_package():
 if __name__ == '__main__':
     setup_package()
 
+    if 'install' in sys.argv[1]:
+        import colorama
+        colorama.init(autoreset=True)
+        def red(text): return "{}{}".format(colorama.Fore.RED, text)
+        def green(text): return "{}{}".format(colorama.Fore.GREEN, text)
+        def yellow(text): return "{}{}".format(colorama.Fore.YELLOW, text)
 
+        def check_opt_dep(dep_name, dep_descrip):
+            """
+            Return a message telling if dependency *dep_name* is available
+            with an import
+            """
+            try:
+                __import__(dep_name)
+            except ImportError:
+                return red("{} is *NOT IMPORTABLE*, {} will *NOT* be available".format(dep_name,
+                                                                                       dep_descrip))
+            
+            return green("{} is importable, {} will be available".format(dep_name, dep_descrip))
+        
+        # Optional deps and description of associated feature:
+        optional_deps = {
+            "sklearn": "(scikit-learn) -- spatial ward parcellation",
+            "joblib": "local parallel feature (eg pyhrf_jde_estim -x local)",
+            "soma_workflow": "cluster parallel feature (eg pyhrf_jde_estim -x cluster)",
+            "PIL": "loading of image file as simulation maps",
+            "munkres": "computation of distance between parcellations",
+            "pygraph": "(python-graph-core) -- save plot of simulation pipelines",
+            "pygraphviz": "optimized graph operations and outputs",
+        }
 
+        print yellow("\nOptional dependencies:")
+        print "\n".join(["- "+ check_opt_dep(dn, dd) for dn, dd in optional_deps.items()])
+        
+        print yellow("\nIf the installation was successfull, you may run pyhrf_maketests to run package tests.\n")
+                
 
-#     extras_require = {"Ward": ["scikit-learn>=0.10"],
-#                       "parallel": ["joblib>=0.5"],
-#                       "cluster": ["soma-workflow"],
-#                       "simulation": ["Pillow>=2.3"],
-#                       "parcellation": ["munkres>=1.0"],
-#                       "pipelines": ["pygraphviz>=1.1"],
-#                       "graph": ["python-graph-core>=1.8"]},
-
-# if 'install' in sys.argv[1]:
-
-#     # optional deps and description of associated feature:
-#     optional_deps = {
-#         "sklearn": "(scikit-learn) -- spatial ward parcellation",
-#         "joblib": "local parallel feature (eg pyhrf_jde_estim -x local)",
-#         "soma_workflow": "cluster parallel feature (eg pyhrf_jde_estim -x cluster)",
-#         "PIL": "loading of image file as simulation maps",
-#         "munkres": "computation of distance between parcellations",
-#         "pygraph": "(python-graph-core) -- save plot of simulation pipelines",
-#         "pygraphviz": "optimized graph operations and outputs",
-#         }
-
-#     def check_opt_dep(dep_name, dep_descrip):
-#         """
-#         Return a message telling if dependency *dep_name* is available
-#         with an import
-#         """
-#         try:
-#             __import__(dep_name)
-#         except ImportError:
-#             return "%s *NOT IMPORTABLE*, %s will *NOT* be available" %(dep_name,
-#                                                                        dep_descrip)
-#         return "%s is importable, %s will be available" %(dep_name, dep_descrip)
-
-#     print "Optional dependencies:"
-#     print "\n".join(["- "+ check_opt_dep(dn, dd) for dn, dd in optional_deps.items()])
-
-
-#     print ("\nIf the installation was successfull, you may run "
-#            '"pyhrf_maketests" to run package tests.\n')
