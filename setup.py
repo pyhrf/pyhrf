@@ -41,13 +41,12 @@ def setup_package():
         from glob import glob
         import pip
 
-        # Dependencies
+        # Dependencies for building C Extensions
         dependencies = ['numpy>=1.6',
                         'scipy>=0.9',
                         'nibabel>=1.1, <2.1.0',
                         'sympy>=0.7',
-                        'nipy>=0.3.0',
-                        'colorama']
+                        'nipy>=0.3.0']
 
         # Installing the required packages to build C extensions
         for package in dependencies:
@@ -61,6 +60,11 @@ def setup_package():
                                                    ('pyhrf.boldsynth.pottsfield.pottsfield_c', 'boldsynth/pottsfield/pottsField.c'),
                                                    ('pyhrf.vbjde.UtilsC', 'vbjde/utilsmodule.c'),
                                                    ('pyhrf.cparcellation','cparcellation.c')]]
+
+        # Dependencies of the package
+        dependencies.extend(['matplotlib>=1.1',
+                             'colorama'])
+        
         extra_setuptools_args = dict(
             package_dir = {'' : 'python'},
             packages = find_packages("python"),
