@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 
+"""Module designed to the BOLD signal synthesis according to the Linear and
+Time Invariant model described in:
 
-"""
-module designed to the BOLD signal synthesis according to the Linear and Time Invariant model described in Salima Makni's paper (2005). 
-It also provides a set of plotting function (based on matplotlib) - see L{bolsynth.plot}
+  - Makni, S., Ciuciu, P., Idier, J., & Poline, J.-B. (2005). Joint
+  detection-estimation of brain activity in functional MRI: a Multichannel
+  Deconvolution solution. IEEE Transactions on Signal Processing, 53(9),
+  3488–3502. http://doi.org/10.1109/TSP.2005.853303
 
+It also provides a set of plotting functions (based on matplotlib) - see
+L{bolsynth.plot}
 """
 # import pyhrf.boldsynth.base
 # import pyhrf.boldsynth.noise

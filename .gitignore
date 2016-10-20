@@ -45,3 +45,7 @@ nosetests.xml
 
 # configuration files
 .ackrc
+
+
+# pycharm configuration
+.idea

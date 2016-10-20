@@ -17,9 +17,14 @@ logger = logging.getLogger(__name__)
 ##########################################################
 class InhomogeneousNRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
     """
-    Class handling the Gibbs sampling of Neural Response Levels according to
-    Salima Makni's algorithm (IEEE SP 2005). Inherits the abstract class
-    C{GibbsSamplerVariable}.
+    Class handling the Gibbs sampling of Neural Response Levels according to:
+
+      - Makni, S., Ciuciu, P., Idier, J., & Poline, J.-B. (2005). Joint
+      detection-estimation of brain activity in functional MRI: a
+      Multichannel Deconvolution solution. IEEE Transactions on Signal
+      Processing, 53(9), 3488–3502. https://doi.org/10.1109/TSP.2005.853303
+
+    Inherits the abstract class C{GibbsSamplerVariable}.
     #TODO : comment attributes
     """
 
