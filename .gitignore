@@ -9,6 +9,7 @@ python/pyhrf/configuration.cfg
 # Packages
 *.egg
 *.egg-info
+*.eggs
 dist
 build
 eggs
