@@ -6,6 +6,16 @@
                                 '_static/css/font-awesome.css',
                                 '_static/style.css']  %}
 
+
+{% block header %}
+  {{ super() }}
+  <a href="https://github.com/pyhrf/pyhrf"
+     class="visible-desktop"><img
+    style="position: absolute; top: 45px; right: 0; border: 0;"
+    src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"
+    alt="Fork me on GitHub"></a>
+{% endblock %}
+
 {%- block footer %}
 <footer class="footer">
   <div class="container">
@@ -18,13 +28,14 @@
       <li class="pull-right"><a href="#">Back to top</a></li>
     </ul>
     <ul class="list-unstyled small">
-      <li>Copyright (c) 2016 CEA/DRF/I2BM/NeuroSpin - INRIA/CEA Parietal - INRIA/MISTIS</li>
+      <li>Copyright (c) 2016 CEA/DRF/I2BM/NeuroSpin - Inria/CEA Parietal - Inria/MISTIS</li>
       <li>Code licensed under
         <a href="https://opensource.org/licenses/CECILL-2.1">CeCILL v2</a>
       </li>
       <li>
         Made with <a href="http://sphinx-doc.org">sphinx</a> using
         <a href="https://github.com/ryan-roemer/sphinx-bootstrap-theme">bootstrap theme</a>
+        and inspired by <a href="http://vispy.org/">vispy</a>
       </li>
     </ul>
   </div>

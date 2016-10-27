@@ -1,20 +1,23 @@
 .. _installation_venv:
 
 
-=====================================
- Installation in virtual environment
-=====================================
+===================================
+Installation in virtual environment
+===================================
 
 Required dependencies
 #####################
 
-A ``pyhrf`` virtual environment. The procedure to install and configure a virtual environement are not described here. We recommend to use `virtualenvwrapper <https://virtualenvwrapper.readthedocs.org/en/latest/>`_.
+We need to create a ``pyhrf`` virtual environment. The procedure to install and
+configure a virtual environment are not described here. We recommend to use
+`virtualenvwrapper <https://virtualenvwrapper.readthedocs.org/en/latest/>`_.
 
-You also need to install developement header of the following libraries (refer to your distribution package manager):
-    - libopenblas
-    - liblapack
-    - libpng
-    - libfreetype
+You also need to install development header of the following libraries (refer to your distribution package manager):
+
+- libopenblas
+- liblapack
+- libpng
+- libfreetype
 
 Once your virtualenv is ready, activate it and run:
 

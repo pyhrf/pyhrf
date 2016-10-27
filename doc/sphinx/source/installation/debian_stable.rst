@@ -1,11 +1,10 @@
 .. _installation_debianstable:
 
+=======================================
+Installation for Debian stable (jessie)
+=======================================
 
-=========================================
- Installation for Debian stable (jessie)
-=========================================
-
-These instructions are specific to Debian 8.
+These instructions are specific to **Debian 8**.
 
 Required dependencies
 #####################
@@ -38,12 +37,14 @@ Install the following packages:
 
     $ sudo apt-get install python-scikits-learn python-joblib python-pygraph python-pygraphviz python-PIL python-munkres python-paramiko
 
-This dependency is too old on the packages system manager::
+This dependency is too old on the packages system manager:
+
+.. code:: bash
 
     $ pip install --user sphinx
 
-if you already installed sphinx with the packages manager, add the flag ``--upgrade`` to the previous command
-
+If you already installed sphinx with the packages manager, add the flag
+``--upgrade`` to the previous command
 
 If you plan to use our specific viewer (pyhrf_viewer), run:
 

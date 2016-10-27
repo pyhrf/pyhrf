@@ -3,14 +3,16 @@
 PyHRF Installation
 ##################
 
-Install package from `PYPI <https://pypi.python.org/pypi/pyhrf>`_.
+Install package from `PyPI <https://pypi.python.org/pypi/pyhrf>`_.
 It is recommended to install the package in user mode (the ``--user`` option).
 
 .. code:: bash
 
     $ pip install --user pyhrf
 
-If you install in user mode, you need to concatenate ``$HOME/.local/bin`` to your ``$PATH`` environment variable by adding the following to your ``$HOME/.bashrc`` file:
+If you install in user mode, you need to concatenate ``$HOME/.local/bin`` to
+your ``$PATH`` environment variable by adding the following to your
+``$HOME/.bashrc`` file:
 
 .. code:: bash
 

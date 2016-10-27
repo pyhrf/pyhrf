@@ -22,9 +22,11 @@ Fixes
 -----
 
 - Fix VEM algorithm
-    + Fix convergence criteria computation
-    + Fix underflow and overflow in labels expectation (set labels to previous
-      value if necessary)
+
+  + Fix convergence criteria computation
+  + Fix underflow and overflow in labels expectation (set labels to previous
+    value if necessary)
+
 - Continue to clean ``setup.py``
 - Fix some ``DeprecationWarning`` that will become ``Exceptions`` in the future
 - Fix detection of parcellation files
@@ -46,8 +48,10 @@ New
 ---
 
 - Updating documentation
-    + Updating theme
-    + Fixing some reST and display errors
+
+  + Updating theme
+  + Fixing some reST and display errors
+
 - Auto-detect CPUs number (mainly to use on cluster and not yet documented)
 - Add covariance regularization matrix
 - Load contrasts from ``SPM.mat``

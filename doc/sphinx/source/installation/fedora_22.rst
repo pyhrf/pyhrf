@@ -1,11 +1,11 @@
-.. _installation_fedora21:
+.. _installation_fedora22:
 
 
-============================
- Installation for Fedora 21
-============================
+==========================
+Installation for Fedora 22
+==========================
 
-These instructions are specific to Fedora 21.
+These instructions are specific to **Fedora 22**.
 
 Required dependencies
 #####################
@@ -23,7 +23,9 @@ Then install the following packages:
     $ sudo yum install python-devel numpy scipy python-matplotlib python-pip sympy gcc
 
 These dependencies are not available as system packages, they have to be installed
-by hand ::
+by hand:
+
+.. code:: bash
 
     $ pip install --user nibabel
     $ pip install --user nipy
@@ -35,14 +37,14 @@ Install the following packages:
 
 .. code:: bash
 
-    $ sudo yum install graphviz-python python-scikit-learn python-pillow python-joblib python-paramiko
+    $ sudo yum install graphviz-python python-sphinx python-scikit-learn python-pillow python-joblib python-paramiko
     $ pip install --user munkres
 
-This dependency is too old on the packages system manager::
+These dependencies are too old on the packages system manager:
 
-    $ pip install --user sphinx
+.. code:: bash
 
-if you already installed sphinx with the packages manager, add the flag ``--upgrade`` to the previous command
+    $ pip install --user --upgrade sphinx
 
 If you plan to use our specific viewer (pyhrf_viewer), run:
 
