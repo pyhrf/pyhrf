@@ -3,8 +3,12 @@
 Configuration
 #############
 
-Package options are stored in ``$HOME/.pyhrf/config.cfg``, which is created after the installation. It handles global package options and the setup of parallel processing. Here is the default content of this file (section order may change)::
+Package options are stored in ``$HOME/.pyhrf/config.cfg``, which is created
+after the installation. It handles global package options and the setup of
+parallel processing. Here is the default content of this file
+(section order may change):
 
+.. code:: bash
 
     [global]
     write_texture_minf = False          ; compatibility with Anatomist for texture file
@@ -51,5 +55,3 @@ Package options are stored in ``$HOME/.pyhrf/config.cfg``, which is created afte
     remote_path = None                  ; path readable from the machine where
                                         ; pyhrf is launched (to directly retrieve
                                         ; results)
-
-.. see :ref:`Parallel Computation <manual_parallel>`

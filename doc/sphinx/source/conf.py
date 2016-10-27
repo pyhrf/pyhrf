@@ -203,6 +203,7 @@ html_sidebars = {
     "documentation": ["localtoc.html", "searchbox.html"],
     "introduction": ["localtoc.html", "searchbox.html"],
     "installation**": ["localtoc.html", "searchbox.html"],
+    "manual/**": ["localtoc.html", "searchbox.html"],
 }
 
 # Additional templates that should be rendered to pages, maps page names to
