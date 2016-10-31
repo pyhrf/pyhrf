@@ -39,7 +39,7 @@ Site content
    introduction.rst
    installation.rst
    manual.rst
-   autodoc/pyhrf.rst
+   API Reference <autodoc/pyhrf.rst>
    changelog.rst
 
 Licence and authors

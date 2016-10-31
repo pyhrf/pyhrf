@@ -1,4 +1,4 @@
-API Reference
+PyHRF Package
 =============
 
 .. automodule:: pyhrf
