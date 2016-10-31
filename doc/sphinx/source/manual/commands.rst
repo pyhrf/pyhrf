@@ -12,20 +12,20 @@ pyhrf_jde_vem_analysis
 
 Usage:
 ^^^^^^
-::
+.. code-block:: none
 
     pyhrf_jde_vem_analysis [options] TR parcels_file onsets_file [bold_data_run1 [bold_data_run2 ...]]
 
 Description:
 ^^^^^^^^^^^^
 
-Run an fMRI analysis using the JDE-VEM framework All arguments (even
+Run an fMRI analysis using the JDE-VEM framework. All arguments (even
 positional ones) are optional and default values are defined in the beginning
-of the script
+of the script.
 
 Options:
 ^^^^^^^^
-::
+.. code-block:: none
 
     positional arguments:
       tr                    Repetition time of the fMRI data
@@ -83,49 +83,50 @@ pyhrf_parcellation_extract
 
 Usage:
 ^^^^^^
-::
+.. code-block:: none
 
-        pyhrf_parcellation_extract [options] PARCELLATION_FILE PARCEL_ID1 [PARCEL_ID2 ...]
-
+    pyhrf_parcellation_extract [options] PARCELLATION_FILE PARCEL_ID1 [PARCEL_ID2 ...]
 
 
 Description:
 ^^^^^^^^^^^^
 
-Extract a sub parcellation comprising only ``PARCEL_ID1``, ``PARCEL_ID2``, ... from the input parcellation ``PARCELLATION_FILE``.
+Extract a sub parcellation comprising only ``PARCEL_ID1``, ``PARCEL_ID2``, ...
+from the input parcellation ``PARCELLATION_FILE``.
 
 Options:
 ^^^^^^^^
-::
+.. code-block:: none
 
-  -h, --help            show this help message and exit
-  -v VERBOSELEVEL, --verbose=VERBOSELEVEL
+    -h, --help            show this help message and exit
+    -v VERBOSELEVEL, --verbose=VERBOSELEVEL
                         { 0 :    'no verbose' 1 :    'minimal verbose' 2 :
                         'main steps' 3 :    'main function calls' 4 :    'main
                         variable values' 5 :    'detailled variable values' 6
                         :    'debug (everything)' }
-  -o FILE, --output=FILE
+    -o FILE, --output=FILE
                         Output parcellation file. Default is
                         <input_file>_<PARCEL_IDS>.(nii|gii)
-  -c, --contiguous      Make output parcel ids be contiguous
+    -c, --contiguous      Make output parcel ids be contiguous
 
 Example
 ^^^^^^^
 
 The input parcellation ``parcellation.nii`` looks like:
 
-    .. image:: figs/pyhrf_parcellation_extract_input.png
-       :width: 100pt
+.. image:: ../figs/pyhrf_parcellation_extract_input.png
+    :width: 100pt
+    :align: center
 
-::
+.. code-block:: none
 
-        pyhrf_parcellation_extract parcellation.nii 36 136 -o parcellation_sub.nii
+    pyhrf_parcellation_extract parcellation.nii 36 136 -o parcellation_sub.nii
 
 The output parcellation ``parcellation_sub.nii`` will look like:
 
-    .. image:: figs/pyhrf_parcellation_extract_output.png
-       :width: 100pt
-
+.. image:: ../figs/pyhrf_parcellation_extract_output.png
+    :width: 100pt
+    :align: center
 
 Misc tools
 ==========
@@ -135,27 +136,28 @@ pyhrf_list_datafiles
 
 Usage:
 ^^^^^^
-::
+.. code-block:: none
 
-   pyhrf_list_datafiles [options]
+    pyhrf_list_datafiles [options]
 
 Description:
 ^^^^^^^^^^^^
-        This command lists all data files included in the package.
+
+This command lists all data files included in the package.
 
 Options
 ^^^^^^^
-::
+.. code-block:: none
 
-  -h, --help       show this help message and exit
-  -b, --base-name  Display only basenames
+    -h, --help       show this help message and exit
+    -b, --base-name  Display only basenames
 
 Examples:
 ^^^^^^^^^
 
-::
+.. code-block:: none
 
-   pyhrf_list_datafiles
+    pyhrf_list_datafiles
 
     /home/user/software/pyhrf/python/pyhrf/datafiles/SPM_v12.mat.gz
     /home/user/software/pyhrf/python/pyhrf/datafiles/SPM_v5.mat.gz
@@ -204,53 +206,53 @@ Examples:
     /home/user/software/pyhrf/python/pyhrf/datafiles/subj0_parcellation.nii.gz
     /home/user/software/pyhrf/python/pyhrf/datafiles/subj0_single_roi.nii.gz
 
-::
+.. code-block:: none
 
-   pyhrf_list_datafiles -b
+    pyhrf_list_datafiles -b
 
-       SPM_v12.mat.gz
-       SPM_v5.mat.gz
-       SPM_v8.mat.gz
-       cortex_occipital_hrf_territories_3mm.nii
-       cortex_occipital_hrf_territories_convex_hull.tgz
-       cortex_occipital_right_GWmask_3mm.nii.gz
-       cortex_occipital_white_surf.gii.gz
-       dummySmallBOLD.nii.gz
-       dummySmallMask.nii.gz
-       paradigm_V4.csv
-       paradigm_loc.csv
-       paradigm_loc_a.csv
-       paradigm_loc_av.csv
-       paradigm_loc_av_comma.csv
-       paradigm_loc_av_d.csv
-       paradigm_loc_c_only.csv
-       paradigm_loc_cp_only.csv
-       paradigm_loc_cpcd.csv
-       real_data_surf_tiny_bold.gii
-       real_data_surf_tiny_mesh.gii
-       real_data_surf_tiny_parcellation.gii
-       real_data_vol_4_regions_BOLD.nii.gz
-       real_data_vol_4_regions_anatomy.nii.gz
-       real_data_vol_4_regions_mask.nii.gz
-       simu.pck
-       simu_hrf_3_territories.png
-       simu_hrf_3_territories_8x8.png
-       simu_hrf_4_territories.png
-       simu_labels_activated.png
-       simu_labels_ghost.png
-       simu_labels_house_sun.png
-       simu_labels_icassp13.png
-       simu_labels_invader.png
-       simu_labels_pacman.png
-       simu_labels_small_spots_1.png
-       simu_labels_small_spots_2.png
-       simu_labels_stretched_1.png
-       simu_labels_template.png
-       simu_labels_tiny_1.png
-       simu_labels_tiny_2.png
-       simu_labels_tiny_3.png
-       stanford_willard_parcellation_3x3x3mm.nii.gz
-       subj0_anatomy.nii.gz
-       subj0_bold_session0.nii.gz
-       subj0_parcellation.nii.gz
-       subj0_single_roi.nii.gz
+    SPM_v12.mat.gz
+    SPM_v5.mat.gz
+    SPM_v8.mat.gz
+    cortex_occipital_hrf_territories_3mm.nii
+    cortex_occipital_hrf_territories_convex_hull.tgz
+    cortex_occipital_right_GWmask_3mm.nii.gz
+    cortex_occipital_white_surf.gii.gz
+    dummySmallBOLD.nii.gz
+    dummySmallMask.nii.gz
+    paradigm_V4.csv
+    paradigm_loc.csv
+    paradigm_loc_a.csv
+    paradigm_loc_av.csv
+    paradigm_loc_av_comma.csv
+    paradigm_loc_av_d.csv
+    paradigm_loc_c_only.csv
+    paradigm_loc_cp_only.csv
+    paradigm_loc_cpcd.csv
+    real_data_surf_tiny_bold.gii
+    real_data_surf_tiny_mesh.gii
+    real_data_surf_tiny_parcellation.gii
+    real_data_vol_4_regions_BOLD.nii.gz
+    real_data_vol_4_regions_anatomy.nii.gz
+    real_data_vol_4_regions_mask.nii.gz
+    simu.pck
+    simu_hrf_3_territories.png
+    simu_hrf_3_territories_8x8.png
+    simu_hrf_4_territories.png
+    simu_labels_activated.png
+    simu_labels_ghost.png
+    simu_labels_house_sun.png
+    simu_labels_icassp13.png
+    simu_labels_invader.png
+    simu_labels_pacman.png
+    simu_labels_small_spots_1.png
+    simu_labels_small_spots_2.png
+    simu_labels_stretched_1.png
+    simu_labels_template.png
+    simu_labels_tiny_1.png
+    simu_labels_tiny_2.png
+    simu_labels_tiny_3.png
+    stanford_willard_parcellation_3x3x3mm.nii.gz
+    subj0_anatomy.nii.gz
+    subj0_bold_session0.nii.gz
+    subj0_parcellation.nii.gz
+    subj0_single_roi.nii.gz
