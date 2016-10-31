@@ -1,5 +1,3 @@
-.. _pyhrf_installation:
-
 PyHRF Installation
 ##################
 

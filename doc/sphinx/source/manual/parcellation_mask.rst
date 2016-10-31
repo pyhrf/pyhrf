@@ -14,9 +14,8 @@ Willard atlas
 The Willard atlas comes from
 `Stanford <http://findlab.stanford.edu/functional_ROIs.html>`_.
 
-|
 .. image:: ../figs/willard_fROIs_image.jpg
-|
+
 
 To use it check where it is installed by using:
 
