@@ -126,7 +126,7 @@ class Initable(object):
 
     def check_init_obj(self, params=None):
         """ check if the function used for init can be used in this API
-        -> must allow **kwargs and *args.
+        -> must allow \*\*kwargs and \*args.
         All arguments must have a value: either a default one or specified in
         the input dict *params*
         """
@@ -291,13 +291,14 @@ XmlInitable = Initable  # just an alias
 
 
 class UiNode(object):
-
     """
     Store data hierarchically to be used in a Qt model/tree view setting.
     Also store additional node-specific data as attributes (in a dict).
     Attributes must only contain strings.
 
     The resulting data structure is:
+
+    .. code-block:: none
 
            col 0        | col 1
         |- <node_label> | <node_attributes>                   #row 0
@@ -311,16 +312,21 @@ class UiNode(object):
     This structure is similar to DOM.
 
     Features:
-    - can be instanciated from any python object that can
-      be serialized into human-readable strings: bool, int, float, string,
-      numpy scalars, numpy arrays.
-      It also support container types (list, dict, OrderedDict) as long as their
-      items are also serializabl into human-readable strings.
-      See static method *from_py_object*.
 
-      #TODO: set and tuple
-      #TODO: test unicode
+    - can be instantiated from any python object that can be serialized into
+      human-readable strings: bool, int, float, string, numpy scalars,
+      numpy arrays. It also support container types (list, dict, OrderedDict)
+      as long as their items are also serializable into human-readable strings.
 
+    See static method *from_py_object*.
+
+    .. todo::
+
+        set and tuple
+
+    .. todo::
+
+        test unicode
     """
 
     def __init__(self, label, parent=None, attributes=None):

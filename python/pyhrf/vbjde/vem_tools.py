@@ -57,14 +57,14 @@ def mult(v1, v2):
 def maximum(iterable):
     """Return the maximum and the indice of the maximum of an iterable.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     iterable : iterable or numpy array
 
     Returns
-    tuple :
-        iter_max : the maximum
-        iter_max_indice : the indice of the maximum
+    -------
+    iter_max : the maximum
+    iter_max_indice : the indice of the maximum
     """
 
     iter_max = max(iterable)
@@ -159,8 +159,8 @@ def poly_drifts_basis(nb_scans, param_lfd, tr):
 def cosine_drifts_basis(nb_scans, param_lfd, tr):
     """Build cosine drifts basis
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     nb_scans : int
     param_lfd : int
         TODO
@@ -404,8 +404,8 @@ def create_neighbours(graph):
     """Transforms the graph list in ndarray. This is for performances purposes.
     Sets the empty neighbours to -1.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     graph : ndarray of lists
         each graph[i] represents the list of neighbours of the ith voxel
     nb_voxels : int
@@ -790,8 +790,10 @@ def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
     """Computes the E-H step of the JDE-VEM algorithm.
 
     Expectation-H step:
-    p_H = argmax_h(E_pa[log p(h|y, a ; theta)])
-        \propto exp(E_pa[log p(y|h, a; theta) + log p(h; sigmaH)])
+
+    .. math::
+
+        p_H = argmax_h(E_pa[log p(h|y, a ; \theta)]) \propto exp(E_pa[log p(y|h, a; \theta) + log p(h; sigmaH)])
 
     Parameters
     ----------
@@ -1119,11 +1121,14 @@ def expectation_H_asl(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J,
                       cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term):
     """
     Expectation-H step:
-    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
-        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
 
-    Returns:
-    m_H, Sigma_H of probability distribution p_H of the current iteration
+    .. math::
+
+        p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)]) \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
+
+    Returns
+    -------
+        m_H, Sigma_H of probability distribution p_H of the current iteration
     """
 
     ## Precomputations
@@ -1170,11 +1175,13 @@ def expectation_H_ms_concat(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma
                   cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, S):
     """
     Expectation-H step:
-    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
-        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
 
-    Returns:
-    m_H, Sigma_H of probability distribution p_H of the current iteration
+    .. math::
+        p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)]) \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
+
+    Returns
+    -------
+        m_H, Sigma_H of probability distribution p_H of the current iteration
     """
 
     ## Precomputations
@@ -1225,11 +1232,13 @@ def expectation_H_ms(Sigma_A, m_A, m_C, G, XX, W, Gamma, Gamma_X, X_Gamma_X, J, 
                   cov_noise, R_inv, sigmaH, prior_mean_term, prior_cov_term, N, M, D, S):
     """
     Expectation-H step:
-    p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)])
-        \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
 
-    Returns:
-    m_H, Sigma_H of probability distribution p_H of the current iteration
+    .. math::
+        p_H = argmax_h(E_pa,pc,pg[log p(h|y, a, c, g; theta)]) \propto exp(E_pa,pc,pg[log p(y|h, a, c, g; theta) + log p(h; sigmaH)])
+
+    Returns
+    -------
+        m_H, Sigma_H of probability distribution p_H of the current iteration
     """
 
     ## Precomputations
@@ -1278,11 +1287,13 @@ def expectation_G_asl(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
                       prior_mean_term, prior_cov_term):
     """
     Expectation-G step:
-    p_G = argmax_g(E_pa,pc,ph[log p(g|y, a, c, h; theta)])
-        \propto exp(E_pa,pc,ph[log p(y|h, a, c, g; theta) + log p(g; sigmaG)])
 
-    Returns:
-    m_G, Sigma_G of probability distribution p_G of the current iteration
+    .. math::
+        p_G = argmax_g(E_pa,pc,ph[log p(g|y, a, c, h; theta)]) \propto exp(E_pa,pc,ph[log p(y|h, a, c, g; theta) + log p(g; sigmaG)])
+
+    Returns
+    -------
+        m_G, Sigma_G of probability distribution p_G of the current iteration
     """
 
     ## Precomputations
@@ -1326,11 +1337,13 @@ def expectation_G_ms(Sigma_C, m_C, m_A, H, XX, W, WX, Gamma, Gamma_WX,
                   prior_mean_term, prior_cov_term, N, M, D, S):
     """
     Expectation-G step:
-    p_G = argmax_g(E_pa,pc,ph[log p(g|y, a, c, h; theta)])
-        \propto exp(E_pa,pc,ph[log p(y|h, a, c, g; theta) + log p(g; sigmaG)])
 
-    Returns:
-    m_G, Sigma_G of probability distribution p_G of the current iteration
+    .. math::
+        p_G = argmax_g(E_pa,pc,ph[log p(g|y, a, c, h; theta)]) \propto exp(E_pa,pc,ph[log p(y|h, a, c, g; theta) + log p(g; sigmaG)])
+
+    Returns
+    -------
+        m_G, Sigma_G of probability distribution p_G of the current iteration
     """
 
     ## Precomputations
@@ -1377,12 +1390,13 @@ def expectation_A_asl(H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma, sigma_Ma,
                       J, y_tilde, Sigma_H, sigma_eps_m):
     """
     Expectation-A step:
-    p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
-        \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
-                  + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
 
-    Returns:
-    m_A, Sigma_A of probability distribution p_A of the current iteration
+    .. math::
+        p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)]) \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
+
+    Returns
+    -------
+        m_A, Sigma_A of probability distribution p_A of the current iteration
     """
 
     ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
@@ -1420,12 +1434,13 @@ def expectation_A_ms(m_A, Sigma_A, H, G, m_C, W, XX, Gamma, Gamma_X, q_Z, mu_Ma,
                   J, y_tilde, Sigma_H, sigma_eps_m, N, M, D, S):
     """
     Expectation-A step:
-    p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
-        \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
-                  + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
 
-    Returns:
-    m_A, Sigma_A of probability distribution p_A of the current iteration
+    .. math::
+        p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)]) \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
+
+    Returns
+    -------
+        m_A, Sigma_A of probability distribution p_A of the current iteration
     """
 
     ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
@@ -1471,12 +1486,13 @@ def expectation_C_asl(G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc, sigma_Mc,
                       J, y_tilde, Sigma_G, sigma_eps_m):
     """
     Expectation-C step:
-    p_C = argmax_h(E_pa,pq,ph,pg[log p(a|y, h, a, g, q; theta)])
-        \propto exp(E_pa,ph,pg[log p(y|h, a, c, g; theta)] \
-                  + E_pq[log p(c|q; mu_Mc, sigma_Mc)])
 
-    Returns:
-    m_C, Sigma_C of probability distribution p_C of the current iteration
+    .. math::
+        p_C = argmax_h(E_pa,pq,ph,pg[log p(a|y, h, a, g, q; theta)]) \propto exp(E_pa,ph,pg[log p(y|h, a, c, g; theta)] + E_pq[log p(c|q; mu_Mc, sigma_Mc)])
+
+    Returns
+    -------
+        m_C, Sigma_C of probability distribution p_C of the current iteration
     """
 
     ## Pre-compute XH, X*Sigma_H, XG, WXG, Gamma*X
@@ -1514,12 +1530,13 @@ def expectation_C_ms(m_C, Sigma_C, G, H, m_A, W, XX, Gamma, Gamma_X, q_Z, mu_Mc,
                   J, y_tilde, Sigma_G, sigma_eps_m, N, M, D, S):
     """
     Expectation-C step:
-    p_C = argmax_h(E_pa,pq,ph,pg[log p(a|y, h, a, g, q; theta)])
-        \propto exp(E_pa,ph,pg[log p(y|h, a, c, g; theta)] \
-                  + E_pq[log p(c|q; mu_Mc, sigma_Mc)])
 
-    Returns:
-    m_C, Sigma_C of probability distribution p_C of the current iteration
+    .. math::
+        p_C = argmax_h(E_pa,pq,ph,pg[log p(a|y, h, a, g, q; theta)]) \propto exp(E_pa,ph,pg[log p(y|h, a, c, g; theta)] + E_pq[log p(c|q; mu_Mc, sigma_Mc)])
+
+    Returns
+    -------
+        m_C, Sigma_C of probability distribution p_C of the current iteration
     """
 
     ## Pre-compute XH, X*Sigma_G, XG, WXG, Gamma*X

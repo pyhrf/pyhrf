@@ -20,7 +20,7 @@ the two following methods:
   a temporal regularization on the HRF shapes, but proceeds independently across
   voxels (no spatial model).
 
-Check `website <http://www.pyhrf.org>`_ for details.
+Check the PyHRF `website <http://www.pyhrf.org>`_ for details.
 """
 
 import os
