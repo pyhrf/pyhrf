@@ -1,24 +1,41 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import os.path as op
-from optparse import OptionParser
-import pyhrf
+# import os.path as op
+# from optparse import OptionParser
+from __future__ import print_function
+from pyhrf import core
+import click
 
-usage = 'usage: %%prog [options]'
+# usage = 'usage: %%prog [options]'
+#
+# description = 'List all data file names shipped with pyhrf'
+#
+# parser = OptionParser(usage=usage, description=description)
+#
+# parser.add_option('-b','--base-name',dest='base_name', default=False,
+#                   action='store_true',
+#                   help='Display only basenames')
+#
+# (options,args) = parser.parse_args()
 
-description = 'List all data file names shipped with pyhrf'
+# for f in core.list_data_file_names():
+#     if options.base_name:
+#         print f
+#     else:
+#         print core.get_data_file_name(f)
 
-parser = OptionParser(usage=usage, description=description)
 
-parser.add_option('-b','--base-name',dest='base_name', default=False,
-                  action='store_true',
-                  help='Display only basenames')
+@click.command()
+@click.option('--base-name', is_flag=True, default=False, help='Display only basenames')
+def list_datafiles(base_name):
+    """List all data file names shipped with pyhrf"""
+    for f in core.list_data_file_names():
+        if base_name:
+            print(f)
+        else:
+            print(core.get_data_file_name(f))
 
-(options,args) = parser.parse_args()
 
-for f in pyhrf.list_data_file_names():
-    if options.base_name:
-        print f
-    else:
-        print pyhrf.get_data_file_name(f)
+if __name__ == '__main__':
+    list_datafiles()

@@ -71,7 +71,8 @@ def setup_package():
 
         # Dependencies of the package
         dependencies.extend(['matplotlib>=1.1',
-                             'colorama'])
+                             'colorama',
+                             'click'])
 
         extra_setuptools_args = dict(
             package_dir={'': 'python'},
