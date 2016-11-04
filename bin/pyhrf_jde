@@ -1,0 +1,67 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+
+import click
+import os
+
+
+@click.command()
+@click.argument('tr', nargs=1, type=float)
+@click.argument('parcels_file', nargs=1)
+@click.argument('onsets_file', nargs=1)
+@click.argument('bold_data_file', nargs=-1)
+@click.option('-c', '--contrasts-file', help='JSON file defining the contrasts')
+@click.option('--dt', type=float, help='time resolution of the HRF (if not defined here or in the script, it is automatically computed)')
+@click.option('-l', '--hrf-duration', type=float, default=25.0, show_default=True, help='time length of the HRF (in seconds)')
+@click.option('-o', '--output-dir', default=os.getcwd(), show_default=True, help='output directory (created if needed)')
+@click.option('--nb-iter-min', type=int, default=5, show_default=True, help='minimum number of iterations of the VEM algorithm')
+def jde(tr, parcels_file, onsets_file):
+    """Run an fMRI analysis using the JDE-VEM framework.
+
+    All arguments (even positional ones) are optional and default values are
+    defined in the beginning of the script
+    """
+    click.echo('{}{}{}'.format(tr, parcels_file, onsets_file))
+
+
+if __name__ == '__main__':
+    jde()
+
+
+
+
+
+    # @click.option("--nb-iter-max", type=int, default=100,
+    #                     help=("maximum number of iterations of the VEM algorithm"
+    #                           " (default: %(default)s)"))
+    # @click.option("--beta", type=float, default=1.0,
+    #                     help=("intrinsic correlation parameter on latent variables"
+    #                           " (default: %(default)s)"))
+    # @click.option("--hrf-hyperprior", type=int, default=1000,
+    #                     help="(default: %(default)s)")
+    # @click.option("--sigma-h", type=float, default=0.1,
+    #                     help="Prior variance on the HRF (default: %(default)s)")
+    # @click.option("--estimate-hrf", action="store_true", default=True,
+    #                     help="(default: %(default)s)")
+    # @click.option("--no-estimate-hrf", action="store_false",
+    #                     dest="estimate_hrf",
+    #                     help="explicitly disable HRFs estimation")
+    # @click.option"--zero-constraint", action="store_true", default=True,
+    #                     help="zero constraint on the boundaries of the HRF (default: %(default)s)")
+    # @click.option("--no-zero-constraint", action="store_false",
+    #                     dest="zero_constraint",
+    #                     help="explicitly disable zero constraint (default enabled)")
+    # @click.option("--drifts-type", type=str, default="poly",
+    #                     help="set the drift type, can be 'poly' or 'cos' (default: %(default)s)")
+    # @click.option("-v", "--log-level", default="WARNING",
+    #                     choices=("DEBUG", "10", "INFO", "20", "WARNING", "30",
+    #                              "ERROR", "40", "CRITICAL", "50"),
+    #                     help="(default: %(default)s)")
+    # @click.option("-p", "--parallel", action="store_true", default=True,
+    #                     help="(default: %(default)s)")
+    # @click.option("--no-parallel", action="store_false", dest="parallel",
+    #                     help="explicitly disable parallel computation")
+    # @click.option("--save-processing", action="store_true", default=True,
+    #                     help="(default: %(default)s)")
+    # @click.option("--no-save-processing", action="store_false",
+    #                     dest="save_processing_config")
