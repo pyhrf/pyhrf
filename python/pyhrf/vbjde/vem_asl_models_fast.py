@@ -55,7 +55,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     D, M = np.int(np.ceil(Thrf / dt)) + 1, len(Onsets)
     #D, M = np.int(np.ceil(Thrf / dt)), len(Onsets)
     N, J = Y.shape[0], Y.shape[1]
-    Crit_AH, Crit_CG, cTime, rerror, FE = 1, 1, [], [], []
+    Crit_AH, Crit_CG, cTime, rerror, FE, logL = 1, 1, [], [], [], []
     EP, EPlh, Ent = [],[],[]
     Crit_H, Crit_G, Crit_Z, Crit_A, Crit_C = 1, 1, 1, 1, 1
     cAH, cCG, AH1, CG1 = [], [], [], []
@@ -69,8 +69,8 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     MaxItGrad = 200
     gradientStep = 0.005
     gamma = 7.5
-    #neighbours_indexes = vt.create_neighbours(graph)
-    maxNeighbours, neighbours_indexes = vt.create_neighbours(graph, J)
+    neighbours_indexes = vt.create_neighbours(graph)
+    #maxNeighbours, neighbours_indexes = vt.create_neighbours(graph, J)
 
     # Control-tag
     w = np.ones((N))
@@ -123,8 +123,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     if H_ini is not None:
         H = H_ini.copy()
     #H /= np.linalg.norm(H)
-    G = copy.deepcopy(H)
-    #print phy_params
+    #G = copy.deepcopy(H)
+    Omega = linear_rf_operator(len(H) + 6, phy_params, dt, calculating_brf=False)
+    G = np.dot(Omega, np.concatenate(([0],[0],[0], H, [0],[0],[0])))[3:-3]
+    G /= np.linalg.norm(G)
     Hb = create_physio_brf(phy_params, response_dt=dt, response_duration=Thrf)
     Hb /= np.linalg.norm(Hb)
     Gb = create_physio_prf(phy_params, response_dt=dt, response_duration=Thrf)
@@ -153,8 +155,6 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     normOh = False
     normg = False
 
-    if prior=='hierarchical' or prior=='omega':
-        Omega = linear_rf_operator(len(H) + 6, phy_params, dt, calculating_brf=False)
     if prior=='omega':
         Omega0 = Omega.copy()
         OmegaH = np.dot(Omega,
@@ -226,6 +226,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
 
         # Managing types of prior
+        logger.info("Prior being used: " + prior)
         priorH_cov_term = np.zeros_like(R_inv)
         priorG_cov_term = np.zeros_like(R_inv)
         matrix_covH = R_inv.copy()
@@ -421,7 +422,15 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
         # Variance PRF: sigmaG
         if estimateSigmaG:
             logger.info("M sigma_G step ...")
-            sigmaG = vt.maximization_sigma_asl(D, Sigma_G, matrix_covG, AuxG, use_hyperprior, gamma_g)
+            print Sigma_H.shape
+            print Omega0[3:-3, 3:-3].shape
+            print Omega0.shape
+            print Omega.shape
+            print matrix_covG.shape
+            haux = np.dot(np.dot(np.dot(Sigma_H, Omega0[3:-3, 3:-3].T), 
+                np.linalg.inv(matrix_covG)), Omega0[3:-3, 3:-3])
+            sigmaG = vt.maximization_sigma_asl(D, Sigma_G, matrix_covG, AuxG, 
+                use_hyperprior, gamma_g, haux=haux)
             logger.info('sigmaG = ' + str(sigmaG))
 
         if ni > 0 and free_energy_step:
@@ -494,6 +503,9 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
 
 
         free_energy = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighbours_indexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps, XX, W, J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX, plot=True)
+        loglklh = vt.expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, H, Sigma_H, m_C,
+                                                      Sigma_C, G, Sigma_G, XX, W, sigma_eps,
+                                                      Gamma, J, D, M, N, Gamma_X, Gamma_WX)
         if ni > 0 and free_energy_step:
             if free_energy < free_energyB:
                 logger.info("free energy has decreased after Noise computation from %f to %f", free_energyB, free_energy)
@@ -503,6 +515,7 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 logger.info("WARNING! free energy has decreased in this iteration from %f to %f", FE[-1], free_energy)
 
         FE += [free_energy]
+        logL += [loglklh]
 
         if ni > 5:
             #Crit_FE = np.abs((FE[-1] - FE[-2]) / FE[-2])
@@ -555,9 +568,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     else:
         CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C = 0, 0, 0, 0
 
-
-    ppm_a_brl, ppm_g_brl = vt.ppms_computation(m_A, np.diagonal(Sigma_A), mu_Ma, sigma_Ma, threshold_a="intersect")
-    ppm_a_prl, ppm_g_prl = vt.ppms_computation(m_C, np.diagonal(Sigma_C), mu_Mc, sigma_Mc, threshold_a="intersect")
+    #pl_mean = np.mean(WP[:,1:].dot(AL[1:,:]))
+    ppm_a_brl, ppm_g_brl, th_ppm_a = vt.ppms_computation(m_A, np.diagonal(Sigma_A), mu_Ma, sigma_Ma, threshold_a="intersect")
+    th_ppm_c = 0.05 * np.mean(AL[0, :])
+    ppm_a_prl, ppm_g_prl, _ = vt.ppms_computation(m_C, np.diagonal(Sigma_C), mu_Mc, sigma_Mc, threshold_a="bla", threshold_g=th_ppm_c)
 
     ###########################################################################
     ##########################################    PLOTS and SNR computation
@@ -573,16 +587,16 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
     logger.info("Iteration time = %s min %s s",
                 str(np.int((CompTime // ni) // 60)), str(np.int((CompTime / ni) % 60)))
 
-    logger.info("perfusion baseline mean = %f", np.mean(AL[0, :]))
-    logger.info("perfusion baseline var = %f", np.var(AL[0, :]))
-    logger.info("drifts mean = %f", np.mean(AL[1:, :]))
-    logger.info("drifts var = %f", np.var(AL[1:, :]))
-    logger.info("noise mean = %f", np.mean(sigma_eps))
-    logger.info("noise var = %f", np.var(sigma_eps))
+    #logger.info("perfusion baseline mean = %f", np.mean(AL[0, :]))
+    #logger.info("perfusion baseline var = %f", np.var(AL[0, :]))
+    #logger.info("drifts mean = %f", np.mean(AL[1:, :]))
+    #logger.info("drifts var = %f", np.var(AL[1:, :]))
+    #logger.info("noise mean = %f", np.mean(sigma_eps))
+    #logger.info("noise var = %f", np.var(sigma_eps))
 
     SNR10 = 20 * (np.log10(np.linalg.norm(Y) / \
                 np.linalg.norm(Y - StimulusInducedSignal - WP.dot(AL))))
-    logger.info("SNR = %d",  SNR10)
+    logger.info("SNR = %f",  SNR10)
 
     return ni, m_A, H, m_C, G, q_Z, sigma_eps, \
            mu_Ma, sigma_Ma, mu_Mc, sigma_Mc, Beta, AL[1:, :], np.dot(P, AL[1:, :]), \
@@ -590,5 +604,5 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
            CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
            ppm_a_brl, ppm_g_brl, ppm_a_prl, ppm_g_prl, \
            cA[:], cH[2:], cC[2:], cG[2:], cZ[2:], cAH[2:], cCG[2:], \
-           cTime, FE
+           cTime, FE, logL, th_ppm_a, th_ppm_c
 
