@@ -3753,7 +3753,7 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
                        m_G, Sigma_G, AuxG, q_Z, neighboursIndexes, Beta, Gamma,
                        gamma, gamma_h, gamma_g, sigma_eps, XX, W,
                        J, D, M, N, K, hyp, Gamma_X, Gamma_WX, plot=False,
-                       bold=False, S=1):
+                       bold=False, S=1, estimateH=True, estimateG=True):
     # Entropy
     EntropyA = RL_Entropy(Sigma_A, M, J)
     EntropyC = RL_Entropy(Sigma_C, M, J)
@@ -3778,6 +3778,14 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
     else:
         EPtildeVh = 0.
         EPtildeVg = 0.
+
+    if not estimateH:
+        EntropyH = 0.
+        EPtildeH = 0.
+
+    if not estimateG:
+        EntropyG = 0.
+        EPtildeG = 0.
 
     if bold:
         Total_Entropy = EntropyA + EntropyH / S + EntropyQ / S

@@ -502,7 +502,10 @@ def Main_vbjde_physio(graph, Y, Onsets, durations, Thrf, K, TR, beta, dt,
                 muc1[m] += [mu_Mc[m, 1]]
 
 
-        free_energy = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, H, Sigma_H, AuxH, R, R_inv, sigmaH, sigmaG, m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G, AuxG, q_Z, neighbours_indexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps, XX, W, J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX, plot=True)
+        free_energy = vt.Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, H, Sigma_H, 
+                AuxH, R, R_inv, sigmaH, sigmaG, m_C, Sigma_C, mu_Mc, sigma_Mc, G, Sigma_G, AuxG, 
+                q_Z, neighbours_indexes, Beta, Gamma, gamma, gamma_h, gamma_g, sigma_eps, XX, W, 
+                J, D, M, N, K, use_hyperprior, Gamma_X, Gamma_WX, plot=True, estimateH=estimateH, estimateG=estimateG)
         loglklh = vt.expectation_Ptilde_Likelihood(y_tilde, m_A, Sigma_A, H, Sigma_H, m_C,
                                                       Sigma_C, G, Sigma_G, XX, W, sigma_eps,
                                                       Gamma, J, D, M, N, Gamma_X, Gamma_WX)
