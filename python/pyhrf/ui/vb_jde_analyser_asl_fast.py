@@ -194,7 +194,8 @@ class JDEVEMAnalyser(JDEAnalyser):
             Sigma_brls, Sigma_prls, Sigma_brf, Sigma_prf, rerror, \
             CONTRAST_A, CONTRASTVAR_A, CONTRAST_C, CONTRASTVAR_C, \
             ppm_a_brl, ppm_g_brl, ppm_a_prl, ppm_g_prl, \
-            cA, cH, cC, cG, cZ, cAH, cCG, cTime, FE = Main_vbjde_physio(
+            cA, cH, cC, cG, cZ, cAH, cCG, cTime, \
+            FE, logL, th_ppm_a, th_ppm_c = Main_vbjde_physio(
                                        graph, data, Onsets, durations,
                                        self.hrfDuration, self.nbClasses, TR,
                                        beta, self.dt, scale=scale,
@@ -251,10 +252,10 @@ class JDEVEMAnalyser(JDEAnalyser):
         outputs['prls'] = xndarray(prls.T, value_label="PRLs",
                                    axes_names=['condition', 'voxel'],
                                    axes_domains=domCondition)
-        outputs['ppm_a_prl'] = xndarray(ppm_a_brl, value_label="PPM PRL alpha",
+        outputs['ppm_a_prl'] = xndarray(ppm_a_prl, value_label="PPM PRL alpha",
                                    axes_names=["voxel", "condition"],
                                    axes_domains=domCondition)
-        outputs['ppm_g_prl'] = xndarray(ppm_g_brl, value_label="PPM PRL gamma",
+        outputs['ppm_g_prl'] = xndarray(ppm_g_prl, value_label="PPM PRL gamma",
                                    axes_names=["voxel", "condition"],
                                    axes_domains=domCondition)
 
@@ -312,6 +313,10 @@ class JDEVEMAnalyser(JDEAnalyser):
               'condition': cNames}
         outputs['labels'] = xndarray(labels, value_label="Labels",
                                      axes_names=an, axes_domains=ad)
+        outputs['th_ppm_a'] = xndarray(noiseVar, value_label="thres_PPM_a",
+                                       axes_names=['voxel'])
+        outputs['th_ppm_c'] = xndarray(noiseVar, value_label="thres_PPM_c",
+                                       axes_names=['voxel'])
         outputs['noiseVar'] = xndarray(noiseVar, value_label="noiseVar",
                                        axes_names=['voxel'])
 
@@ -400,7 +405,14 @@ class JDEVEMAnalyser(JDEAnalyser):
             c[:len(FE)] = FE
             outputs[outName] = xndarray(c, axes_names=axes_names,
                                         value_label='Conv_Criterion_FE')
+
+            outName = 'convergence_L'
+            c = np.zeros(self.nItMax)  # -.001 #
+            c[:len(logL)] = logL
+            outputs[outName] = xndarray(c, axes_names=axes_names,
+                                        value_label='Conv_Criterion_L')
             logger.info("Convergence saved ")
+
 
         #######################################################################
         # SIMULATION
