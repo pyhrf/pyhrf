@@ -4088,7 +4088,7 @@ def ppm_contrasts(contrasts_mean, contrasts_var, contrasts_class_mean,
             thresh = np.concatenate((thresh[:, np.newaxis], contrasts_class_var[:, 0][:, np.newaxis]), axis=1).max(axis=1)
 
     return (norm.sf(thresh, contrasts_mean, contrasts_var**.5),
-            norm.isf(threshold_g, contrasts_mean, contrasts_var**.5))
+            norm.isf(threshold_g, contrasts_mean, contrasts_var**.5), thresh)
 
 
 def ppms_computation(elements_mean, elements_var, class_mean, class_var, threshold_a="std_inact",
@@ -4154,7 +4154,7 @@ def ppms_computation(elements_mean, elements_var, class_mean, class_var, thresho
         thresh = threshold_g
 
     return (norm.sf(thresh, elements_mean, elements_var**.5),
-            norm.isf(threshold_g, elements_mean, elements_var**.5))
+            norm.isf(threshold_g, elements_mean, elements_var**.5), thresh)
 
 
 # Plots
