@@ -50,3 +50,7 @@ nosetests.xml
 
 # pycharm configuration
 .idea
+
+# Documentation
+doc/_build
+doc/api
