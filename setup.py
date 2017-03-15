@@ -74,6 +74,10 @@ def setup_package():
                              'colorama',
                              'click'])
 
+        # Dependencies for the documentation
+        dependencies.extend(['Sphinx',
+                             'sphinx_bootstrap_theme'])
+
         extra_setuptools_args = dict(
             package_dir={'': 'python'},
             packages=find_packages("python"),
