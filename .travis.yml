@@ -35,6 +35,8 @@ before_install:
     - pip install coveralls
     - pip install sphinx
     - pip install sphinx_bootstrap_theme
+    - pip click
+    - pip colorama
 
 install:
     - pip install -e .

@@ -74,10 +74,6 @@ def setup_package():
                              'colorama',
                              'click'])
 
-        # Dependencies for the documentation
-        dependencies.extend(['Sphinx',
-                             'sphinx_bootstrap_theme'])
-
         extra_setuptools_args = dict(
             package_dir={'': 'python'},
             packages=find_packages("python"),
@@ -94,8 +90,9 @@ def setup_package():
                             "simulation": ["Pillow>=2.3"],
                             "parcellation": ["munkres>=1.0"],
                             "pipelines": ["pygraphviz>=1.1"],
-                            "graph": ["python-graph-core>=1.8"]}
-        )
+                            "graph": ["python-graph-core>=1.8"],
+                            'docs': ['Sphinx',
+                                     'sphinx_bootstrap_theme']})
 
     # Get the long description from the README file
     with open('README.rst') as readme_file:
