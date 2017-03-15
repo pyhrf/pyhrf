@@ -33,6 +33,8 @@ before_install:
     - pip install Pillow
     - pip install coverage
     - pip install coveralls
+    - pip install sphinx
+    - pip install sphinx_bootstrap_theme
 
 install:
     - pip install -e .
