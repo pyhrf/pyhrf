@@ -72,7 +72,9 @@ def setup_package():
         # Dependencies of the package
         dependencies.extend(['matplotlib>=1.1',
                              'colorama',
-                             'click'])
+                             'click',
+                             'Sphinx',
+                             'sphinx_bootstrap_theme'])
 
         extra_setuptools_args = dict(
             package_dir={'': 'python'},
@@ -90,9 +92,7 @@ def setup_package():
                             "simulation": ["Pillow>=2.3"],
                             "parcellation": ["munkres>=1.0"],
                             "pipelines": ["pygraphviz>=1.1"],
-                            "graph": ["python-graph-core>=1.8"],
-                            'docs': ['Sphinx',
-                                     'sphinx_bootstrap_theme']})
+                            "graph": ["python-graph-core>=1.8"]})
 
     # Get the long description from the README file
     with open('README.rst') as readme_file:
