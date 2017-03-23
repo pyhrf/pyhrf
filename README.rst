@@ -9,6 +9,9 @@ PyHRF
 .. image:: https://img.shields.io/travis/pyhrf/pyhrf/master.svg
     :target: https://travis-ci.org/pyhrf/pyhrf
 
+.. image:: https://readthedocs.org/projects/pyhrf/badge/?version=latest
+    :target: http://pyhrf.readthedocs.io/en/latest
+
 .. image:: https://img.shields.io/coveralls/pyhrf/pyhrf/master.svg
     :target: https://coveralls.io/r/pyhrf/pyhrf?branch=master
 
