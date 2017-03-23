@@ -1,0 +1,16 @@
+# Don't build any extra formats
+formats:
+    - none
+
+# Python version
+python:
+   version: 2.7
+
+# Install the project
+python:
+   pip_install: true
+
+# Installing requirements to build the documentation
+python:
+    extra_requirements:
+        - docs

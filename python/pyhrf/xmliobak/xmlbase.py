@@ -285,44 +285,69 @@ class XMLable:
 
 
 class TypedXMLHandler:
-    """
-    Class handling the xml format with the following generic document structure :
-          <root>
+    """Class handling the xml format with the following generic document
+    structure:
+
+    .. code-block:: none
+
+        <root>
             <tagName 'type'=tagType>
-            tagContent
+                tagContent
             </tagName>
-          </root>
-    The root tag is mandatory, so is the 'type' attribute for every other tag. This class can parse an xml string and build a dictionnary of python objects according to each tag (see parseXMLString()). Conversely, it can build the xml string corresponding to a list or dictionnary of objects (see to_xml()).
-    This class is based on the xml.dom python module and relies on the DOM structure to parse XML.
-    XML input/output is handled via a mapping between a type attribute of a tag and a static handling function. This class handles the following basic python types : string, int, float, array.array, list, dict. One can add other type-specific read or write handlers with the functions addDOMTagReader() and addDOMWriter().
+        </root>
+
+    The root tag is mandatory, so is the 'type' attribute for every other
+    tag. This class can parse an xml string and build a dictionary of python
+    objects according to each tag (see parseXMLString()). Conversely, it can
+    build the xml string corresponding to a list or dictionary of objects (
+    see to_xml()). This class is based on the xml.dom python module and
+    relies on the DOM structure to parse XML. XML input/output is handled via
+    a mapping between a type attribute of a tag and a static handling
+    function. This class handles the following basic python types: string,
+    int, float, array.array, list, dict. One can add other type-specific read
+    or write handlers with the functions addDOMTagReader() and addDOMWriter().
 
     Reading XML:
-        - specific handlers are added with method addDOMTagReader(stype, myReadHandler) which maps the function myReadHandler to the string stype.
-        - a tag reading handler must have the following prototype :
-            myReadHandler(domTreeWalker):
-                # interpret and process tag content
-                # return built python object
-            , where domTreeWalker is an instance of the _xmlplus.dom.TreeWalker.TreeWalker class.
-        - usefull things to use the domTreeWalker and implement a handler:
-            * node = domTreeWalker.currentNode -> current node in the tree parsing, of class Node, corresponding to the current tag.
-            * node.getAttribute('my attribute') -> return the string corresponding to 'my attribute' in the tag definition
-            * node.childNodes[0].data -> the tag content data (string type), to be parse and build the python object from
-            * node.tagName -> the name of the tag
-            * node.parentNode -> the parent tag node
 
-    Writing XML :
-        - handlers are added with method addDOMTagWriter(pythonType, myWriteHandler), where pythonType is of python type 'type' and myWriteHandler a function.
-        - a tag writing handler must have the following prototype :
-            myWriteHandler(domDocument, node, pyObj):
-                where :
-                    - domDocument is overall incapsulating structure (_xmlplus.dom.Document instance)
-                    - node (Node instance) is the current tag node to append data to
-                    - pyObj is the python object to convert into a 'human-readable' string.
-        - usefull things to write handlers :
+    - specific handlers are added with method addDOMTagReader(stype, myReadHandler)
+      which maps the function myReadHandler to the string stype.
+    - a tag reading handler must have the following prototype:
 
+      .. code-block:: python
 
+        myReadHandler(domTreeWalker):
+            # interpret and process tag content
+            # return built python object
 
+      , where domTreeWalker is an instance of the
+      _xmlplus.dom.TreeWalker.TreeWalker class.
+    - useful things to use the domTreeWalker and implement a handler:
 
+      * node = domTreeWalker.currentNode -> current node in the tree parsing,
+        of class Node, corresponding to the current tag.
+      * node.getAttribute('my attribute') -> return the string corresponding
+        to 'my attribute' in the tag definition
+      * node.childNodes[0].data -> the tag content data (string type), to be
+        parse and build the python object from
+      * node.tagName -> the name of the tag
+      * node.parentNode -> the parent tag node
+
+    Writing XML:
+
+    - handlers are added with method addDOMTagWriter(pythonType, myWriteHandler),
+      where pythonType is of python type 'type' and myWriteHandler a function.
+    - a tag writing handler must have the following prototype:
+
+      .. code-block:: python
+
+        myWriteHandler(domDocument, node, pyObj):
+
+      where:
+
+      - domDocument is overall encapsulating structure (_xmlplus.dom.Document instance)
+      - node (Node instance) is the current tag node to append data to
+      - pyObj is the python object to convert into a 'human-readable' string.
+    - useful things to write handlers :
     """
     TYPE_LABEL_NONE = 'none'
     TYPE_LABEL_BOOL = 'bool'

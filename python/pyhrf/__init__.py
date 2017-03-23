@@ -2,29 +2,25 @@
 """PyHRF is a set of tools for within-subject fMRI data analysis,
 which focuses on the characterization of the hemodynamics.
 
-Within the chain of fMRI data processing, these tools provide alternatives
-to the classical within-subject GLM estimation step.
-The inputs are preprocessed within-subject data and the outputs are
-statistical maps and/or fitted HRFs.
+Within the chain of fMRI data processing, these tools provide alternatives to
+the classical within-subject GLM estimation step. The inputs are preprocessed
+within-subject data and the outputs are statistical maps and/or fitted HRFs.
 
-The package is mainly written in Python and provides the
-implementation of the two following methods:
+The package is mainly written in Python and provides the implementation of
+the two following methods:
 
 - The joint-detection estimation (JDE) approach, which divides the brain
-  into functionnaly homogeneous regions and provides one HRF estimate per
+  into functionally homogeneous regions and provides one HRF estimate per
   region as well as response levels specific to each voxel and each experimental
   condition. This method embeds a temporal regularization on the estimated HRFs
   and an adaptive spatial regularization on the response levels.
-
 
 - The Regularized Finite Impulse Response (RFIR) approach, which provides
   HRF estimates for each voxel and experimental conditions. This method embeds
   a temporal regularization on the HRF shapes, but proceeds independently across
   voxels (no spatial model).
 
-
-Check website for details: www.pyhrf.org
-
+Check the PyHRF `website <http://www.pyhrf.org>`_ for details.
 """
 
 import os
@@ -89,7 +85,6 @@ class Verbose(pyhrf._verbose.Verbose):
 
     This is only to be able to raise a warning when one uses this old
     implementation.
-
     """
 
     old_to_new_log_dict = {

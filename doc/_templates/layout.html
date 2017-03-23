@@ -1,0 +1,55 @@
+{# Import the theme's layout. #}
+{% extends "!layout.html" %}
+
+{# Custom CSS overrides #}
+{% set bootswatch_css_custom = ['_static/css/font-mfizz.css',
+                                '_static/css/font-awesome.css',
+                                '_static/style.css']  %}
+
+
+{% block header %}
+  {{ super() }}
+  <a href="https://github.com/pyhrf/pyhrf"
+     class="visible-desktop"><img
+    style="position: absolute; top: 45px; right: 0; border: 0;"
+    src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"
+    alt="Fork me on GitHub"></a>
+
+    <script>
+        // Adjust banner height.
+        $(function () {
+            var html_file = window.location.pathname.split('/').slice(-1);
+            if (html_file == '' || html_file == 'index.html') {
+                var main_container = $(".container .row")[0];
+                main_container.classList.add('middle');
+            }
+        });
+    </script>
+
+{% endblock %}
+
+{%- block footer %}
+<footer class="footer">
+  <div class="container">
+    <ul class="list-inline">
+      <li><a href="https://github.com/pyhrf/pyhrf">GitHub</a></li>
+      <li>·</li>
+      <li><a href="https://github.com/pyhrf/pyhrf/issues">Issues</a></li>
+      <li>·</li>
+      <li><a href="https://github.com/pyhrf/pyhrf/releases">Releases</a></li>
+      <li class="pull-right"><a href="#">Back to top</a></li>
+    </ul>
+    <ul class="list-unstyled small">
+      <li>Copyright (c) 2016 CEA/DRF/I2BM/NeuroSpin - Inria/CEA Parietal - Inria/MISTIS</li>
+      <li>Code licensed under
+        <a href="https://opensource.org/licenses/CECILL-2.1">CeCILL v2</a>
+      </li>
+      <li>
+        Made with <a href="http://sphinx-doc.org">sphinx</a> using
+        <a href="https://github.com/ryan-roemer/sphinx-bootstrap-theme">bootstrap theme</a>
+        and inspired by <a href="http://vispy.org/">vispy</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+{%- endblock %}

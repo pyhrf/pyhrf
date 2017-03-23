@@ -19,8 +19,10 @@ addons:
             - libatlas-base-dev
             - gfortran
             - libpng-dev
+            - python-pip
 
 before_install:
+    - pip install -U setuptools
     - pip install --no-index --trusted-host nipy.bic.berkeley.edu -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
     - pip install 'nibabel<2.1.0'
     - pip install sympy
@@ -31,6 +33,10 @@ before_install:
     - pip install Pillow
     - pip install coverage
     - pip install coveralls
+    - pip install sphinx
+    - pip install sphinx_bootstrap_theme
+    - pip install click
+    - pip install colorama
 
 install:
     - pip install -e .

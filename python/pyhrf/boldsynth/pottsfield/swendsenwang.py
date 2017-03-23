@@ -131,36 +131,40 @@ def SwendsenWangSampler_graph(RefGraph,GraphNodesLabels,beta,NbLabels,
                               weights=None):
     """
     image sampling with Swendsen-Wang algorithm
+
     input:
-        * RefGraph: 
-            List which contains the connectivity graph. Each entry represents
-            a node of the graph and contains the list of its neighbors entry
-            location in the graph.
-            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is 
-            the 10th node.
-            => There exists i such that RefGraph[10][i]=2
-        * GraphNodesLabels: 
-            list containing the nodes labels. The sampler aims to modify 
-            its values in function of beta and NbLabels.
-        * beta: 
-            normalization constant
-        * NbLabels: 
-            number of labels (connected voxel pairs are considered if their
-            labels are equal)
-        * GraphLinks:
-            Same shape as RefGraph. Each entry indicates if the link of the
-            corresponding edge in RefGraph is considered 
-            (if yes ...=1 else ...=0).
-            This optional list is used as a temporary variable and will be
-            modified ! Defining it makes the algorithm faster (no memory
-            allocation).
-        * RefGrphNgbhPosi:
-            Same shape as RefGraph. RefGrphNgbhPosi[i][j] indicates for which
-            k is the link to i in RefGraph[RefGraph[i][j]][k]
-            This optional list is never modified.
+
+    * RefGraph:
+      List which contains the connectivity graph. Each entry represents
+      a node of the graph and contains the list of its neighbors entry
+      location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is
+      the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+    * GraphNodesLabels:
+      list containing the nodes labels. The sampler aims to modify
+      its values in function of beta and NbLabels.
+    * beta:
+      normalization constant
+    * NbLabels:
+      number of labels (connected voxel pairs are considered if their
+      labels are equal)
+    * GraphLinks:
+      Same shape as RefGraph. Each entry indicates if the link of the
+      corresponding edge in RefGraph is considered
+      (if yes ...=1 else ...=0).
+      This optional list is used as a temporary variable and will be
+      modified ! Defining it makes the algorithm faster (no memory
+      allocation).
+    * RefGrphNgbhPosi:
+      Same shape as RefGraph. RefGrphNgbhPosi[i][j] indicates for which
+      k is the link to i in RefGraph[RefGraph[i][j]][k]
+      This optional list is never modified.
+
     output:
-        * GraphNodesLabels:
-            resampled nodes labels. (not returned but modified)
+
+    * GraphNodesLabels:
+      resampled nodes labels. (not returned but modified)
     """
     
     #initializations...
@@ -209,16 +213,20 @@ def SwendsenWangSampler_graph(RefGraph,GraphNodesLabels,beta,NbLabels,
 def Cpt_U_graph(RefGraph,GraphNodesLabels,GraphWeight=None):
     """
     Computes an estimation of U(Graph)
-  inputs:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
-        * GraphNodesLabels: list containing the nodes labels.
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                            edge in RefGraph. If not defined the weights are set to 1.0.
+
+    inputs:
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+    * GraphNodesLabels: list containing the nodes labels.
+    * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
+      edge in RefGraph. If not defined the weights are set to 1.0.
+
     output:
-        * U value 
+
+    * U value
     """
     if GraphWeight==None:
         GraphWeight=CptDefaultGraphWeight(RefGraph)
@@ -238,29 +246,33 @@ def Cpt_Vec_U_graph(RefGraph,beta,LabelsNb,SamplesNb,
                     GraphWeight=None,GraphNodesLabels=None,
                     GraphLinks=None,RefGrphNgbhPosi=None):
     """
-    Computes a given number of U for fields generated according to a given normalization constant Beta.
-    Swendsen-Wang sampling is used to generate fields.
+    Computes a given number of U for fields generated according to a given
+    normalization constant Beta. Swendsen-Wang sampling is used to generate fields.
+
     input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
-        * beta: normalization constant
-        * LabelsNb: Labels number
-        * SamplesNb: Samples number for the U estimations
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                       edge in RefGraph. If not defined the weights are set to 1.0.
-        * GraphNodesLabels: Optional list containing the nodes labels. The sampler aims to modify its values in function of 
-                            beta and NbLabels. At this level this variable is seen as temporary and will be modified. Defining 
-                            it slightly increases the calculation times.
-        * GraphLinks: Same shape as RefGraph. Each entry indicates if the link of the corresponding
-                           edge in RefGraph is considered (if yes ...=1 else ...=0).
-                            At this level this variable is seen as temporary and will be modified. Defining 
-                            it slightly increases the calculation times.
-        * RefGrphNgbhPosi: Same shape as RefGraph. RefGrphNgbhPosi[i][j] indicates for which k is the link to i in 
-                           RefGraph[RefGraph[i][j]][k]. This optional list is never modified. 
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+    * beta: normalization constant
+    * LabelsNb: Labels number
+    * SamplesNb: Samples number for the U estimations
+    * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
+      edge in RefGraph. If not defined the weights are set to 1.0.
+    * GraphNodesLabels: Optional list containing the nodes labels. The sampler aims to modify its values in function of
+      beta and NbLabels. At this level this variable is seen as temporary and will be modified. Defining
+      it slightly increases the calculation times.
+    * GraphLinks: Same shape as RefGraph. Each entry indicates if the link of the corresponding
+      edge in RefGraph is considered (if yes ...=1 else ...=0).
+      At this level this variable is seen as temporary and will be modified. Defining
+      it slightly increases the calculation times.
+    * RefGrphNgbhPosi: Same shape as RefGraph. RefGrphNgbhPosi[i][j] indicates for which k is the link to i in
+      RefGraph[RefGraph[i][j]][k]. This optional list is never modified.
+
     output:
-        * VecU: Vector of size SamplesNb containing the U computations
+
+    * VecU: Vector of size SamplesNb containing the U computations
     """
     #initialization
     if GraphWeight is None:
@@ -301,15 +313,18 @@ def Cpt_Vec_U_graph(RefGraph,beta,LabelsNb,SamplesNb,
 def CptRefGrphNgbhPosi(RefGraph):
     """
     computes the critical list CptRefGrphNgbhPosi from RefGraph
+
     imput:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
     output:
-        * RefGrphNgbhPosi: Same shape as RefGraph. RefGrphNgbhPosi[i][j] indicates for which k is the link to i in 
-                           RefGraph[RefGraph[i][j]][k]. It makes algorithms which run through the graph much faster
-                           since it avoids a critical loop.
+
+    * RefGrphNgbhPosi: Same shape as RefGraph. RefGrphNgbhPosi[i][j] indicates for which k is the link to i in
+      RefGraph[RefGraph[i][j]][k]. It makes algorithms which run through the graph much faster
+      since it avoids a critical loop.
     """
     
     RefGrphNgbhPosi=[]
@@ -330,14 +345,18 @@ def CptRefGrphNgbhPosi(RefGraph):
 def CptDefaultGraphNodesLabels(RefGraph):
     """
     computes a default list GraphNodesLabels from RefGraph
-    imput:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
+
+    input:
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+
     output:
-        * GraphNodesLabels: List containing the nodes labels (consiedered for the computation of U). The sampler 
-          aims to modify its values in function of beta and NbLabels.
+
+    * GraphNodesLabels: List containing the nodes labels (consiedered for the computation of U). The sampler
+      aims to modify its values in function of beta and NbLabels.
     """
     
     GraphNodesLabels=[]
@@ -350,15 +369,19 @@ def CptDefaultGraphNodesLabels(RefGraph):
 def CptDefaultGraphLinks(RefGraph):
     """
     computes a default list GraphLinks from RefGraph
-    imput:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
+
+    input:
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+
     output:
-        * GraphLinks: Same shape as RefGraph. Each entry indicates whether the link of the corresponding
-                      edge in RefGraph is considered or not in Swensdsen-Wang Sampling (1 -> yes / 0 -> no).
-            """
+
+    * GraphLinks: Same shape as RefGraph. Each entry indicates whether the link of the corresponding
+      edge in RefGraph is considered or not in Swensdsen-Wang Sampling (1 -> yes / 0 -> no).
+    """
     
     GraphLinks=[]
     for i in xrange(len(RefGraph)):
@@ -372,14 +395,17 @@ def CptDefaultGraphLinks(RefGraph):
 def CptDefaultGraphWeight(RefGraph):
     """
     computes a default list GraphWeight from RefGraph. Each edge weight is set to 1.0.
-    imput:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
+
+    input:
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
     output:
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding edge in RefGraph
-            """
+
+    * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding edge in RefGraph
+    """
     GraphWeight = range(len(RefGraph))
     for i in xrange(len(RefGraph)):
         GraphWeight[i] = [1.] * len(RefGraph[i])
@@ -389,17 +415,21 @@ def CptDefaultGraphWeight(RefGraph):
 def GraphBetaMix(RefGraph,GraphNodesLabels,beta=0.5,NbLabels=2,NbIt=5,weights=None):
     """
     Generate a partition in GraphNodesLabels with respect to beta.
+
     input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
-        * GraphNodesLabels: list containing the nodes labels.
-        * beta: correlation factor for all conditions
-        * NbLabels: number of labels in all site conditions
-        * NbIt: number of sampling steps with SwendsenWangSampler_graph
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+    * GraphNodesLabels: list containing the nodes labels.
+    * beta: correlation factor for all conditions
+    * NbLabels: number of labels in all site conditions
+    * NbIt: number of sampling steps with SwendsenWangSampler_graph
+
     output:
-        * GraphNodesLabels: sampled GraphNodesLabels (not returned but modified)
+
+    * GraphNodesLabels: sampled GraphNodesLabels (not returned but modified)
     """
     
     for i in xrange(NbIt):
@@ -410,23 +440,27 @@ def GraphBetaMix(RefGraph,GraphNodesLabels,beta=0.5,NbLabels=2,NbIt=5,weights=No
 def ImageToGraph(Image,Mask,LabelOI=1,ConnectivityType=6):
     """
     Computes the connectivity graph of an image under a 3D mask voxels.
+
     inputs:
-        * Image: the 3D image (label field).
-        * Mask: corresponding 3D mask.
-        * LabelOI: Voxels of Mask containing the label LabelOI are those considered.
-        * ConnectivityType: controles the connectivity considered in the graph.
-                            ConnectivityType=26 : 26-connectivity
-                            ConnectivityType=18 : 18-connectivity
-                            ConnectivityType=6 : 6-connectivity
+
+    * Image: the 3D image (label field).
+    * Mask: corresponding 3D mask.
+    * LabelOI: Voxels of Mask containing the label LabelOI are those considered.
+    * ConnectivityType: controles the connectivity considered in the graph.
+      ConnectivityType=26 : 26-connectivity
+      ConnectivityType=18 : 18-connectivity
+      ConnectivityType=6 : 6-connectivity
+
     outputs:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                                  ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                       => There exists i such that RefGraph[10][i]=2
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                            edge in RefGraph
-        * GraphNodesCoord: Coordinates of each node in Mask
-        * GraphNodesLabels: list containing the nodes labels.
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+    * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
+      edge in RefGraph
+    * GraphNodesCoord: Coordinates of each node in Mask
+    * GraphNodesLabels: list containing the nodes labels.
     """
     
     #initialization
@@ -591,21 +625,25 @@ def ImageToGraph(Image,Mask,LabelOI=1,ConnectivityType=6):
 def MaskToGraph(Mask,LabelOI=1,ConnectivityType=6):
     """
     Computes the connectivity graph of in 3D mask voxels.
+
     inputs:
-        * Mask: 3D mask.
-        * LabelOI: Voxels of Mask containing the label LabelOI are those considered.
-        * ConnectivityType: controles the connectivity considered in the graph.
-                            ConnectivityType=26 : 26-connectivity
-                            ConnectivityType=18 : 18-connectivity
-                            ConnectivityType=6 : 6-connectivity
+
+    * Mask: 3D mask.
+    * LabelOI: Voxels of Mask containing the label LabelOI are those considered.
+    * ConnectivityType: controles the connectivity considered in the graph.
+      ConnectivityType=26 : 26-connectivity
+      ConnectivityType=18 : 18-connectivity
+      ConnectivityType=6 : 6-connectivity
+
     outputs:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                                  ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                       => There exists i such that RefGraph[10][i]=2
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                            edge in RefGraph
-        * GraphNodesCoord: Coordinates of each node in Mask
+
+    * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
+      and contains the list of its neighbors entry location in the graph.
+      ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
+      => There exists i such that RefGraph[10][i]=2
+    * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
+      edge in RefGraph
+    * GraphNodesCoord: Coordinates of each node in Mask
     """
     
     #initialization
@@ -764,15 +802,19 @@ def MaskToGraph(Mask,LabelOI=1,ConnectivityType=6):
 def GraphToImage(GraphNodesCoord,GraphNodesLabels,NBZ,NBY,NBX):
     """
     Computes a 3D image from a connectivity graph.
+
     input:
-        * GraphNodesCoord: Coordinates of each node in Mask
-        * GraphNodesLabels: Nodes labels. For example, GraphNodesLabels[i] is the label of node i.
-        * NBZ: image size on Z axis
-        * NBY: image size on Y axis
-        * NBX: image size on X axis
+
+    * GraphNodesCoord: Coordinates of each node in Mask
+    * GraphNodesLabels: Nodes labels. For example, GraphNodesLabels[i] is the label of node i.
+    * NBZ: image size on Z axis
+    * NBY: image size on Y axis
+    * NBX: image size on X axis
+
     output:
-        * Image
-    g"""
+
+    * Image
+    """
     
     Image=_np.zeros((NBZ,NBY,NBX),dtype=int)
     
