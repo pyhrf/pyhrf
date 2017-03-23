@@ -4,9 +4,9 @@
 Time Invariant model described in:
 
   - Makni, S., Ciuciu, P., Idier, J., & Poline, J.-B. (2005). Joint
-  detection-estimation of brain activity in functional MRI: a Multichannel
-  Deconvolution solution. IEEE Transactions on Signal Processing, 53(9),
-  3488–3502. http://doi.org/10.1109/TSP.2005.853303
+    detection-estimation of brain activity in functional MRI: a Multichannel
+    Deconvolution solution. IEEE Transactions on Signal Processing, 53(9),
+    3488–3502. http://doi.org/10.1109/TSP.2005.853303
 
 It also provides a set of plotting functions (based on matplotlib) - see
 L{bolsynth.plot}
