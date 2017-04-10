@@ -11,7 +11,7 @@ import nibabel
 from pyhrf.ndarray import xndarray
 from pyhrf.vbjde.vem_tools import roc_curve
 from pyhrf.vbjde.vem_bold import jde_vem_bold
-from pyhrf.vbjde.vem_bold_constrained import  Main_vbjde_Python_constrained
+from pyhrf.vbjde.vem_bold_constrained import Main_vbjde_Python_constrained
 from pyhrf.xmlio import XmlInitable
 from pyhrf.tools import format_duration
 
@@ -40,6 +40,43 @@ def change_dim(labels):
 
 from pyhrf.ui.jde import JDEAnalyser
 class JDEVEMAnalyser(JDEAnalyser):
+    """Class that handles parcelwise which is done according to the input data parcellation by default, and also takes
+    care of merging parcel-specific outputs at the end of the JDE analysis.
+        
+    Args:
+        hrfDuration (float): duration of the HRF in seconds.
+        sigmaH (float): initial HRF variance.
+        fast (bool): running fast VEM with C extensions. 
+        computeContrast (bool): compute the contrasts defined in contrasts
+        nbClasses (int): number of classes for the response levels. 
+        PLOT (bool): plotting flag for convergence curves.
+        nItMax (int): maximum iteration number.
+        nItMin (int): minimum iteration number.
+        scale (bool): divide the data fidelity term during m_h step by the number of voxels. 
+        beta (float): initial value of spatial Potts regularization parameter. 
+        estimateSigmaH (bool): estimate or not the HRF variance. 
+        estimateHRF (bool): estimate or not the HRF. 
+        TrueHrfFlag (bool): if true, HRF will be fixed to the simulated value. 
+        HrfFilename (str): filename of the output hrf. 
+        estimateDrifts (bool): if true drifts are estimated, otherwise drifts are marginalized. 
+        hyper_prior_sigma_H (int): hyper-prior on sigma_H. If zero, no prior is applied.
+        dt (float): time resolution of the estimated HRF in seconds. 
+        estimateBeta (bool): estimate or not the Potts spatial regularization parameter. 
+        contrasts (`obj:OrderedDict`): contrasts to be evaluated. 
+        simulation (bool): indicates whether the run corresponds to a simulation example or not. 
+        estimateLabels (bool): estimated or not the labels.
+        LabelsFilename (str): filename containing the label.
+        MFapprox (bool): using the Mean Field approximation in labels estimation.  
+        estimateMixtParam (bool): estimated or not the mixture parameters. 
+        constrained (bool): adding constraints: positivity and norm = 1.
+        InitVar (float): initial value of active and inactive gaussian variances.
+        InitMean (float): initial value of active gaussian means. 
+        MiniVemFlag (bool): choosing the best initialization of MixtParam and gamma_h. 
+        NbItMiniVem (int): number of iterations in Mini VEM algorithm 
+        zero_constraint (bool): 
+        output_drifts (bool): 
+        drifts_type (str): type of the drift basis (polynomial or cosine). 
+    """
 
     parametersComments = {
         'dt': 'time resolution of the estimated HRF in seconds',
