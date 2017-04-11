@@ -1,2 +1,4 @@
+:orphan:
+
 .. include:: ../CHANGELOG.rst
 

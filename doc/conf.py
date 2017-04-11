@@ -31,6 +31,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.imgmath',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.todo'  # Support for todo items
 ]
 
@@ -118,9 +119,9 @@ html_theme_options = {
     # Note the "1" or "True" value above as the third argument to indicate
     # an arbitrary url.
     'navbar_links': [
-        ("Documentation", "http://www.pyhrf.org/documentation"),
-        ("Community", "http://www.pyhrf.org/community"),
-        ("News", "http://www.pyhrf.org/news"),
+        ("Documentation", "http://www.pyhrf.org/documentation", True),
+        ("Community", "http://www.pyhrf.org/community", True),
+        ("News", "http://www.pyhrf.org/news", True),
     ],
 
     # Render the next and previous page links in navbar. (Default: true)
@@ -285,3 +286,10 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = []
+
+# -- Configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {
+    'matplotlib': ('http://matplotlib.org/', None),
+    'python': ('https://docs.python.org/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None)
+}
