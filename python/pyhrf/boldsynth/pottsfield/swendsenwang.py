@@ -320,6 +320,7 @@ def CptRefGrphNgbhPosi(RefGraph):
       and contains the list of its neighbors entry location in the graph.
       ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
       => There exists i such that RefGraph[10][i]=2
+      
     output:
 
     * RefGrphNgbhPosi: Same shape as RefGraph. RefGrphNgbhPosi[i][j] indicates for which k is the link to i in
@@ -402,6 +403,7 @@ def CptDefaultGraphWeight(RefGraph):
       and contains the list of its neighbors entry location in the graph.
       ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
       => There exists i such that RefGraph[10][i]=2
+      
     output:
 
     * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding edge in RefGraph

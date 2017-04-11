@@ -508,10 +508,11 @@ class JDEVEMAnalyser(JDEAnalyser):
 
 # Function to use directly in parallel computation
 def run_analysis(**params):
+    """Function to run the JDE VEM analyzer with parallel computation"""
     # pyhrf.verbose.set_verbosity(1)
     # pyhrf.logger.setLevel(logging.INFO)
     fdata = params.pop('roi_data')
     # print 'doing params:'
     # print params
     vem_analyser = JDEVEMAnalyser(**params)
-    return (dict([('ROI', fdata.get_roi_id())] + params.items()), vem_analyser.analyse_roi(fdata))
+    return dict([('ROI', fdata.get_roi_id())] + params.items()), vem_analyser.analyse_roi(fdata)

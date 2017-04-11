@@ -854,20 +854,23 @@ class FmriData(XmlInitable):
         'mask_file' is a path to a functional mask file.
 
         This represents the following hierarchy:
-           - FMRIData:
-              - list of session data:
-                  [ * data for session 1:
-                           - onsets for session 1,
-                           - durations for session 1,
-                           - fmri data file for session 1 (gii)
-                    * data for session 2:
-                           - onsets for session 2,
-                           - durations for session 2,
-                           - fmri data file for session 2 (gii)
-                  ],
-              - time of repetition
-              - mask file
-              - mesh file
+        
+        .. code:: 
+        
+            - FMRIData:
+               - list of session data:
+                   [ * data for session 1:
+                            - onsets for session 1,
+                            - durations for session 1,
+                            - fmri data file for session 1 (gii)
+                     * data for session 2:
+                            - onsets for session 2,
+                            - durations for session 2,
+                            - fmri data file for session 2 (gii)
+                   ],
+               - time of repetition
+               - mask file
+               - mesh file
         """
 
         if sessions_data is None:

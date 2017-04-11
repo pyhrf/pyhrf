@@ -617,7 +617,7 @@ def create_bold_stim_induced_signal(brls, rastered_paradigm, brf, condition_defs
                                     dt, hrf_territories=None):
     """
     Create a stimulus induced signal for ASL from BOLD response levels,
-     paradigm and BRF
+    paradigm and BRF
     (sum_{m=1}^M a^m X^m h + sum_{m=1}^M c^m W X^m g)
     For each condition, compute the convolution of the paradigm binary sequence
     'rastered_paradigm' with the given BRF and multiply by brls.
@@ -651,7 +651,7 @@ def create_perf_stim_induced_signal(prls, rastered_paradigm, prf, condition_defs
                                     dt, hrf_territories=None):
     """
     Create a stimulus induced signal for ASL from perfusion response levels,
-     paradigm and PRF
+    paradigm and PRF
     (sum_{m=1}^M c^m X^m g)
     For each condition, compute the convolution of the paradigm binary sequence
     'rastered_paradigm' with the given PRF and multiply by prls.
