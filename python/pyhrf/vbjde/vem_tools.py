@@ -174,11 +174,11 @@ def cosine_drifts_basis(nb_scans, param_lfd, tr):
     """
 
     n = np.arange(0, nb_scans)
-    fct_nb = np.fix(2. * (nb_scans * tr) / param_lfd + 1.)  # +1 stands for the
-                                                            # mean/cst regressor
+    fct_nb = int(np.fix(2. * (nb_scans * tr) / param_lfd + 1.))  # +1 stands for the
+                                                                 # mean/cst regressor
     drifts_basis = np.zeros((nb_scans, fct_nb), dtype=float)
     drifts_basis[:, 0] = np.ones(nb_scans, dtype=float) / np.sqrt(nb_scans)
-    samples = 1. + np.arange(fct_nb - 2)
+    samples = 1 + np.arange(fct_nb - 2)
 
     for k in samples:
         drifts_basis[:, k] = np.sqrt(2. / nb_scans) \
