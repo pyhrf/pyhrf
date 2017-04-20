@@ -49,7 +49,7 @@ def setup_package():
         import pip
 
         # Dependencies for building C Extensions
-        dependencies = ['numpy>=1.6',
+        dependencies = ['numpy>=1.6, <1.12',
                         'scipy>=0.9',
                         'nibabel>=1.1, <2.1.0',
                         'sympy>=0.7',

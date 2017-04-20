@@ -23,6 +23,7 @@ addons:
 
 before_install:
     - pip install -U setuptools
+    - pip install 'numpy<1.12'
     - pip install --no-index --trusted-host nipy.bic.berkeley.edu -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
     - pip install 'nibabel<2.1.0'
     - pip install sympy
