@@ -123,16 +123,14 @@ class FMRIAnalyser(xmlio.XmlInitable):
         Launch the wrapped analyser onto the given data
 
         Args:
-            - data (pyhrf.core.FmriData): the input fMRI data set (there may be
-                                          multi parcels)
-            - output_dir (str): the path where to store parcel-specific fMRI data
-                                sets (after splitting according to the
-                                parcellation mask)
+            data (~pyhrf.core.FmriData): the input fMRI data set (there may be multi parcels)
+            output_dir (str): the path where to store parcel-specific fMRI data sets (after splitting according to
+                the parcellation mask)
 
         Return:
             a list of analysis results
-               ->  (list of tuple(FmriData, None|output of analyse_roi, str))
-               =   (list of tuple(parcel data, analysis results, analysis report))
+            ->  (list of tuple(FmriData, None|output of analyse_roi, str))
+            =   (list of tuple(parcel data, analysis results, analysis report))
             See method analyse_roi_wrap
         """
         logger.info("Split data ...")

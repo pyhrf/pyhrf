@@ -25,20 +25,19 @@ from pyhrf.tools import format_duration
 
 
 def load_contrasts_definitions(contrasts_file):
-    """Loads contrasts from a json file defining the contrasts with linear
-    combinations of conditions.
+    """Loads contrasts from a json file defining the contrasts with linear combinations of conditions.
 
     Parameters
     ----------
     contrasts_file : str
         the path to the json file
+        
     Returns
     -------
     compute_contrasts : bool
         if everything gone well, tell the JDEVEMAnalyser to compute the contrasts
     contrasts_def : dict
-        each key is a contrast and each corresponding value is the contrast
-        definition
+        each key is a contrast and each corresponding value is the contrast definition
 
     """
 
@@ -74,8 +73,7 @@ def main(args):
         try:
             os.makedirs(args.output_dir)
         except OSError as e:
-            print("Ouput directory could not be created.\n"
-                  "Error was: {}".format(e.strerror))
+            print("Output directory could not be created.\nError was: {}".format(e.strerror))
             sys.exit(1)
 
     bold_data = FmriData.from_vol_files(
@@ -108,26 +106,27 @@ def main(args):
     else:
         processing_jde_vem.run(parallel="local")
 
-
     if args.save_processing_config:
         # Let's canonicalize all paths
         config_save = vars(args)
+
         for file_nb, bold_file in enumerate(config_save["bold_data_file"]):
             config_save["bold_data_file"][file_nb] = os.path.abspath(bold_file)
+
         config_save["parcels_file"] = os.path.abspath(config_save["parcels_file"])
         config_save["onsets_file"] = os.path.abspath(config_save["onsets_file"])
+
         if config_save["def_contrasts_file"]:
             config_save["def_contrasts_file"] = os.path.abspath(config_save["def_contrasts_file"])
+
         config_save["output_dir"] = os.path.abspath(config_save["output_dir"])
-        config_save_filename = "{}_processing.json".format(
-            datetime.datetime.today()
-        ).replace(" ", "_")
+        config_save_filename = "{}_processing.json".format(datetime.datetime.today()).replace(" ", "_")
         config_save_path = os.path.join(args.output_dir, config_save_filename)
+
         with open(config_save_path, 'w') as json_file:
             json.dump(config_save, json_file, sort_keys=True, indent=4)
 
-    print("")
-    print("Total computation took: {} seconds".format(format_duration(time.time() - start_time)))
+    print("\nTotal computation took: {} seconds".format(format_duration(time.time() - start_time)))
 
 if __name__ == "__main__":
 
