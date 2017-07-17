@@ -57,8 +57,8 @@ def setup_package():
                         'matplotlib>=1.1',
                         'colorama',
                         'click',
-                        'sphinx_bootstrap_theme',
-                        'Sphinx']
+                        'Sphinx',
+                        'sphinx_bootstrap_theme']
 
         # Installing the required packages to build C extensions
         for package in dependencies:
