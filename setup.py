@@ -53,7 +53,12 @@ def setup_package():
                         'scipy>=0.9',
                         'nibabel>=1.1, <2.1.0',
                         'sympy>=0.7',
-                        'nipy>=0.3.0']
+                        'nipy>=0.3.0',
+                        'matplotlib>=1.1',
+                        'colorama',
+                        'click',
+                        'sphinx_bootstrap_theme',
+                        'Sphinx']
 
         # Installing the required packages to build C extensions
         for package in dependencies:
@@ -68,13 +73,6 @@ def setup_package():
                           'boldsynth/pottsfield/pottsField.c'),
                          ('pyhrf.vbjde.UtilsC', 'vbjde/utilsmodule.c'),
                          ('pyhrf.cparcellation', 'cparcellation.c')]]
-
-        # Dependencies of the package
-        dependencies.extend(['matplotlib>=1.1',
-                             'colorama',
-                             'click',
-                             'sphinx_bootstrap_theme',
-                             'Sphinx'])
 
         extra_setuptools_args = dict(
             package_dir={'': 'python'},
