@@ -73,8 +73,8 @@ def setup_package():
         dependencies.extend(['matplotlib>=1.1',
                              'colorama',
                              'click',
-                             'Sphinx',
-                             'sphinx_bootstrap_theme'])
+                             'sphinx_bootstrap_theme',
+                             'Sphinx'])
 
         extra_setuptools_args = dict(
             package_dir={'': 'python'},
