@@ -1997,8 +1997,12 @@ def hrf_entropy(hrf_covar, hrf_len):
     """
 
     const = (2*np.pi)**hrf_len * np.exp(hrf_len)
+    det_hrf_covar = np.linalg.det(hrf_covar)
 
-    return np.log(np.sqrt(const*np.linalg.det(hrf_covar)))
+    if det_hrf_covar == 0:
+        return 0
+    else:
+        return np.log(np.sqrt(const*det_hrf_covar))
 
 def H_Entropy(Sigma_H, D):
     import warnings
