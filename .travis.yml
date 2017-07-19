@@ -1,6 +1,5 @@
-sudo: required
-
 language: python
+sudo: required
 
 python:
   - "2.7"
@@ -10,8 +9,14 @@ services:
 
 before_install:
   - docker pull pyhrf/pyhrf
-  - docker run --rm pyhrf/pyhrf /bin/sh -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf"
 
-install: "pip install coveralls"
+install:
+  - pip install coveralls
 
-script: coveralls
+script:
+  - docker run --name pyhrf -d pyhrf/pyhrf sleep 300
+  - docker exec pyhrf /bin/sh -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf"
+  - docker exec pyhrf cat .coverage > .coverage
+
+after_success:
+  - coveralls
