@@ -19,6 +19,6 @@ script:
 
 after_success:
   - docker exec pyhrf cat .coverage > .coverage
-  - sed -i "s/\"\//\"$(echo ${TRAVIS_BUILD_DIR} | sed 's/\//\\\//g')/g" .coverage
+  - sed -i "s/\"\/pyhrf/\"$(echo ${TRAVIS_BUILD_DIR} | sed 's/\//\\\//g')/g" .coverage
   - cat .coverage
   - coveralls
