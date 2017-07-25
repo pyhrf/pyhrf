@@ -364,19 +364,24 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
 
 
 def create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr, dt):
-    """Generate the occurences matrix
+    """Generate the occurrences matrix.
 
     Parameters
     ----------
     onsets : dict
-        dictionary of onsets
+        dictionary of onsets for each condition.
     durations : dict
-        # TODO
+        dictionary of durations for each condition.
     nb_conditions : int
+        number of experimental conditions.
     nb_scans : int
+        number of scans.
     hrf_len : int
+        number of points of the hrf
     tr : float
+        time of repetition
     dt : float
+        hrf temporal precision
 
     Returns
     -------
@@ -386,18 +391,19 @@ def create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr, d
     condition_names : list
     """
     condition_names = []
-    X = OrderedDict()
-    for condition, onset in onsets.iteritems():
+    matrix_x = OrderedDict()
+    occurrence_matrix = np.zeros((nb_conditions, nb_scans, hrf_len), dtype=np.int32)
+
+    for nc, (condition, onset) in enumerate(onsets.iteritems()):
         duration = np.asarray(durations[condition]).flatten()
-        X[condition] = compute_mat_X_2(nb_scans, tr, hrf_len, dt,
-                                       onset, durations=duration)
+        mat_x_2 = compute_mat_X_2(nb_scans, tr, hrf_len, dt, onset, durations=duration)
+
+        matrix_x[condition] = mat_x_2
+        occurrence_matrix[nc, :, :] = mat_x_2
+
         condition_names.append(condition)
-    occurence_matrix = np.zeros((nb_conditions, nb_scans, hrf_len), dtype=np.int32)
-    nc = 0
-    for condition, onset in onsets.iteritems():
-        occurence_matrix[nc, :, :] = X[condition]
-        nc += 1
-    return X, occurence_matrix, condition_names
+
+    return matrix_x, occurrence_matrix, condition_names
 
 
 def create_neighbours(graph):
