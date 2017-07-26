@@ -21,6 +21,7 @@ addons:
             - libpng-dev
             - python-pip
             - tk-dev
+            - tcl-dev
 
 before_install:
     - pip install -U setuptools
