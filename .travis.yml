@@ -20,6 +20,7 @@ addons:
             - gfortran
             - libpng-dev
             - python-pip
+            - tk-dev
 
 before_install:
     - pip install -U setuptools
