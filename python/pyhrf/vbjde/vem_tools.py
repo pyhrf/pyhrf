@@ -126,7 +126,7 @@ def PolyMat(Nscans, paramLFD, tr):
 
 
 def poly_drifts_basis(nb_scans, param_lfd, tr):
-    """Build polynomial drifts basis
+    """Build polynomial drifts basis.
 
     Parameters
     ----------
@@ -156,7 +156,7 @@ def poly_drifts_basis(nb_scans, param_lfd, tr):
 
 
 def cosine_drifts_basis(nb_scans, param_lfd, tr):
-    """Build cosine drifts basis
+    """Build cosine drifts basis.
 
     Parameters
     ----------
@@ -172,16 +172,18 @@ def cosine_drifts_basis(nb_scans, param_lfd, tr):
         effective rank of the matrix it is applied to (see function's docstring)
     """
 
-    n = np.arange(0, nb_scans)
-    fct_nb = int(np.fix(2. * (nb_scans * tr) / param_lfd + 1.))  # +1 stands for the
-                                                                 # mean/cst regressor
+    fct_nb = int(np.fix(2. * (nb_scans * tr) / param_lfd + 1.))  # +1 stands for the mean/cst regressor
+
     drifts_basis = np.zeros((nb_scans, fct_nb), dtype=float)
     drifts_basis[:, 0] = np.ones(nb_scans, dtype=float) / np.sqrt(nb_scans)
-    samples = 1 + np.arange(fct_nb - 2)
 
+    amplitude = np.sqrt(2. / nb_scans)
+    n = np.arange(0, nb_scans)
+    omega = np.pi * (2. * n + 1.) / (2. * nb_scans)
+
+    samples = np.arange(1, fct_nb - 1)
     for k in samples:
-        drifts_basis[:, k] = np.sqrt(2. / nb_scans) \
-            * np.cos(np.pi * (2. * n + 1.) * k / (2. * nb_scans))
+        drifts_basis[:, k] = amplitude * np.cos(omega*k)
 
     drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
 
