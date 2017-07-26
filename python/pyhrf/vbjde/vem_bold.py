@@ -210,7 +210,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     free_energy = [1.]
     free_energy_crit = [1.]
-    compute_time = []
 
     noise_var = np.ones(nb_voxels)
 
@@ -240,14 +239,16 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     bold_data_drift = bold_data - drift
 
     # Parameters Gaussian mixtures
-    nrls_class_mean = 2 * np.ones((nb_conditions, nb_classes))
-    nrls_class_mean[:, 0] = 0
+    nrls_class_mean = np.zeros((nb_conditions, nb_classes))
+    nrls_class_mean[:, 1] = 2
+
     nrls_class_var = 0.3 * np.ones((nb_conditions, nb_classes), dtype=np.float64)
 
     nrls_mean = (np.random.normal(
         nrls_class_mean, nrls_class_var)[:, :, np.newaxis] * labels_proba).sum(axis=1).T
     nrls_covar = (np.identity(nb_conditions)[:, :, np.newaxis] + np.zeros((1, 1, nb_voxels)))
 
+    compute_time = []
     start_time = time.time()
     loop = 0
     while (loop <= it_min or
