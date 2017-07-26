@@ -407,20 +407,20 @@ def create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr, d
 
 
 def create_neighbours(graph):
-    """Transforms the graph list in ndarray. This is for performances purposes.
-    Sets the empty neighbours to -1.
+    """Transforms the graph list in ndarray. This is for performances purposes. Sets the empty neighbours to -1.
 
     Parameters
     ----------
-    graph : ndarray of lists
+    graph : list of ndarray
         each graph[i] represents the list of neighbours of the ith voxel
-    nb_voxels : int
 
     Returns
     -------
     neighbours_indexes : ndarray
     """
-    max_neighbours = max([len(nl) for nl in graph])
+
+    max_neighbours = len(max(graph, key=len))
+
     neighbours_indexes = [np.concatenate((arr, np.zeros(max_neighbours-len(arr))-1))
                           for arr in graph]
 
