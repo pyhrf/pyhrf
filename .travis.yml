@@ -1,51 +1,23 @@
-# vim ft=yaml
-# travis-ci.org definition for PyHRF build (based on nipy)
-
-# Multiple lines can be made a single "virtual line" because of the way that
-# Travis munges each line before executing it to print out the exit status.
-# It's okay for it to be on multiple physical lines, so long as you remember:
-# - There can't be any leading "-"s - All newlines will be removed, so use
-# ";"s
 language: python
+sudo: required
+
 python:
-    - 2.7
+  - "2.7"
 
-sudo: false
-
-addons:
-    apt:
-        packages:
-            - libatlas-dev
-            - libatlas-base-dev
-            - gfortran
-            - libpng-dev
-            - python-pip
-            - tk-dev
-            - tcl-dev
+services:
+  - docker
 
 before_install:
-    - pip install -U setuptools
-    - pip install 'numpy<1.12'
-    - pip install --no-index --trusted-host nipy.bic.berkeley.edu -f https://nipy.bic.berkeley.edu/scipy_installers/travis scipy matplotlib;
-    - pip install 'nibabel<2.1.0'
-    - pip install sympy
-    - pip install nipy
-    - pip install joblib
-    - pip install scikit-learn
-    - pip install munkres
-    - pip install Pillow
-    - pip install coverage
-    - pip install coveralls
-    - pip install sphinx
-    - pip install sphinx_bootstrap_theme
-    - pip install click
-    - pip install colorama
+  - docker pull pyhrf/pyhrf
 
 install:
-    - pip install -e .
+  - pip install coveralls
 
 script:
-    - nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf
+  - docker run --name pyhrf -d pyhrf/pyhrf sleep 300
+  - docker exec pyhrf /bin/sh -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf"
 
 after_success:
-    - coveralls
+  - docker exec pyhrf cat .coverage > .coverage
+  - sed -i "s/\"\/pyhrf/\"$(echo ${TRAVIS_BUILD_DIR} | sed 's/\//\\\//g')/g" .coverage
+  - coveralls
