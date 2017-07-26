@@ -144,13 +144,12 @@ def poly_drifts_basis(nb_scans, param_lfd, tr):
 
     regressors = tr * np.arange(0, nb_scans)
     time_power = np.arange(0, param_lfd + 1, dtype=int)
-    reg_mat = np.zeros((len(regressors), param_lfd + 1), dtype=np.float64)
+    reg_mat = np.zeros((nb_scans, param_lfd + 1), dtype=np.float64)
 
     for v in xrange(param_lfd + 1):
         reg_mat[:, v] = regressors[:]
 
-    time_power_mat = repmat(time_power, nb_scans, 1)
-    drifts_basis = np.power(reg_mat, time_power_mat)
+    drifts_basis = np.power(reg_mat, time_power)
     drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
 
     return drifts_basis
@@ -348,6 +347,7 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
                 n=order)
     b = a[len(a)//2:]
     diffMat = toeplitz(np.concatenate((b, np.zeros(size - len(b)))))
+
     if regularization is not None:
         regularization = np.array(regularization)
         if regularization.shape != (size,):
@@ -360,6 +360,7 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
         # diffMat = (np.triu(diffMat, 1) + np.tril(diffMat, -1) +
                    # np.diag(diffMat.diagonal() * regularization))
         # diffMat = diffMat * regularization
+
     return diffMat
 
 

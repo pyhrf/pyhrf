@@ -184,6 +184,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     X, occurence_matrix, condition_names = vt.create_conditions(
         onsets, durations, nb_conditions, nb_scans, hrf_len, tr, dt
     )
+
     neighbours_indexes = vt.create_neighbours(graph)
 
     order = 2
@@ -196,6 +197,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         # regularization[hrf_len//2:] = 10
     else:
         regularization = None
+
     d2 = vt.buildFiniteDiffMatrix(order, hrf_len, regularization)
     hrf_regu_prior_inv = d2.T.dot(d2) / pow(dt, 2 * order)
 
@@ -218,6 +220,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     m_h = getCanoHRF(hrf_duration, dt)[1][:hrf_len]
     hrf_mean = np.array(m_h).astype(np.float64)
+
     if estimate_hrf:
         hrf_covar = np.identity(hrf_len, dtype=np.float64)
     else:
@@ -226,10 +229,12 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     beta = beta * np.ones((nb_conditions), dtype=np.float64)
     beta_list = []
     beta_list.append(beta.copy())
+
     if drifts_type == "poly":
         drift_basis = vt.poly_drifts_basis(nb_scans, 4, tr)
     elif drifts_type == "cos":
         drift_basis = vt.cosine_drifts_basis(nb_scans, 64, tr)
+
     drift_coeffs = vt.drifts_coeffs_fit(bold_data, drift_basis)
     drift = drift_basis.dot(drift_coeffs)
     bold_data_drift = bold_data - drift
