@@ -173,8 +173,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     if it_max <= 0:
         it_max = 100
+
     gamma = 7.5
-    thresh_free_energy = 1e-4
 
     # Initialize sizes vectors
     hrf_len = np.int(np.ceil(hrf_duration / dt)) + 1
@@ -208,9 +208,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     noise_struct = np.identity(nb_scans)
 
-    free_energy = [1.]
-    free_energy_crit = [1.]
-
     noise_var = np.ones(nb_voxels)
 
     labels_proba = np.zeros((nb_conditions, nb_classes, nb_voxels), dtype=np.float64)
@@ -239,14 +236,21 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     bold_data_drift = bold_data - drift
 
     # Parameters Gaussian mixtures
-    nrls_class_mean = np.zeros((nb_conditions, nb_classes))
-    nrls_class_mean[:, 1] = 2
+    if nb_conditions != 2:
+        logger.warn('The number of conditions is different to two.')
+
+    nrls_class_mean = 2 * np.ones((nb_conditions, nb_classes))
+    nrls_class_mean[:, 0] = 0
 
     nrls_class_var = 0.3 * np.ones((nb_conditions, nb_classes), dtype=np.float64)
 
     nrls_mean = (np.random.normal(
         nrls_class_mean, nrls_class_var)[:, :, np.newaxis] * labels_proba).sum(axis=1).T
     nrls_covar = (np.identity(nb_conditions)[:, :, np.newaxis] + np.zeros((1, 1, nb_voxels)))
+
+    thresh_free_energy = 1e-4
+    free_energy = [1.]
+    free_energy_crit = [1.]
 
     compute_time = []
     start_time = time.time()
@@ -347,6 +351,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             nb_voxels, nb_scans, nb_classes, nrls_class_mean, nrls_class_var, neighbours_indexes,
             beta, sigma_h, np.linalg.inv(hrf_regu_prior_inv), hrf_regu_prior_inv, gamma, hrf_hyperprior
         ))
+
         free_energy_crit.append(abs((free_energy[-2] - free_energy[-1]) /
                                     free_energy[-2]))
 
@@ -379,6 +384,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         mahalanobis_prod = mahalanobis_cano * mahalanobis_zero
         variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
                                   /(hrf_mean.T.dot(hrf_mean))**2)
+
     if estimate_hrf and zero_constraint:
         hrf_mean = np.concatenate(([0], hrf_mean, [0]))
         # when using the zero constraint the hrf covariance is fill with
@@ -447,6 +453,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     )
     snr /= np.log(10.)
     logger.info('snr comp = %f', snr)
+
     # ,FreeEnergyArray
     return (loop, nrls_mean, hrf_mean, hrf_covar, labels_proba, noise_var,
             nrls_class_mean, nrls_class_var, beta, drift_coeffs, drift,

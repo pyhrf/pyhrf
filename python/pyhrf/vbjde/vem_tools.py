@@ -709,18 +709,21 @@ def norm1_constraint(function, variance):
     else:
         disp = 2
 
-    def minimized_function(fct):
+    def objective_function(fct):
         """Function to minimize"""
-        return np.dot(np.dot((fct - function).T, variance_inv), (fct - function))
+        diff = fct - function
+        return np.dot(np.dot(diff.T, variance_inv), diff)
 
     def norm1_constraint_equation(fct):
         """Norm2(fct) == 1"""
         return np.linalg.norm(fct, 2) - 1
 
+    minimized_function = fmin_slsqp(objective_function, function,
+                                    eqcons=[norm1_constraint_equation],
+                                    bounds=[(None, None)] * len(function),
+                                    disp=disp)
 
-    return fmin_slsqp(minimized_function, function,
-                      eqcons=[norm1_constraint_equation],
-                      bounds=[(None, None)] * (len(function)), disp=disp)
+    return minimized_function
 
 
 # Expectation functions
@@ -731,13 +734,13 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
                      labels_proba, nrls_class_mean, nrls_class_var,
                      nb_conditions, y_tilde, nrls_covar,
                      hrf_covar, noise_var):
-    """Computes the E-A step of the JDE-VEM algorithm.
+    """Computes the VE-A step of the JDE-VEM algorithm.
 
-    p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
-        \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
-                  + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
+    .. math::
 
-    # TODO: add formulas using reST
+        p_{A} = \underset{a}{\operatorname{arg\,max}}(E_pc,pq,ph,pg[\log p(a|y, h, c, g, q; \\theta)])
+            \propto exp(E_pc,ph,pg[\log p(y|h, a, c, g; \\theta)] \
+                      + E_pq[\log p(a|q; \\mu_{Ma}, \\sigma_{Ma})])
 
     Parameters
     ----------
@@ -748,10 +751,7 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
     labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
     nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
     nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
-    hrf_len : int
-    nb_voxels : int
     nb_conditions : int
-    nb_classes : int
     y_tilde : ndarray, shape (nb_scans, nb_voxels)
         BOLD data minus drifts
     nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
@@ -766,14 +766,15 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
 
     # Pre-compute some matrix products
     om_hm_prod = occurence_matrix.dot(hrf_mean).T
-    hc_om_prod = occurence_matrix.dot(hrf_covar.T)
-    ns_om_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
+    om_hc_prod = occurence_matrix.dot(hrf_covar.T)
+    om_ns_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
 
     ## nrls_covar computation
     # first term of Sigma_A: XH.T*Gamma*XH / sigma_eps
     nrls_covar = om_hm_prod.T.dot(noise_struct).dot(om_hm_prod)[..., np.newaxis]
+
     # second term of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
-    nrls_covar += np.einsum('ijk, jlk', hc_om_prod, ns_om_prod)[..., np.newaxis]
+    nrls_covar += np.einsum('ijk, jlk', om_hc_prod, om_ns_prod)[..., np.newaxis]
     nrls_covar = nrls_covar / noise_var
 
     # third term of nrls_covar: part of p(a|q; theta_A)
@@ -786,6 +787,7 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
     ns_yt_prod = noise_struct.dot(y_tilde).T
     x_tilde = (ns_yt_prod.dot(om_hm_prod) / noise_var[:, np.newaxis]
                + (delta_k * nrls_class_mean[:, :, np.newaxis]).sum(axis=1).T)
+
     # dot product across voxels of nrls_covar and x_tilde
     nrls_mean = np.einsum('ijk,kj->ki', nrls_covar, x_tilde)
 
@@ -796,13 +798,11 @@ def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
                     hrf_regu_prior_inv, sigmaH, nb_voxels, y_tilde, noise_var,
                     prior_mean_term=0., prior_cov_term=0.):
 
-    """Computes the E-H step of the JDE-VEM algorithm.
-
-    Expectation-H step:
+    """Computes the VE-H step of the JDE-VEM algorithm.
 
     .. math::
 
-        p_H = argmax_h(E_pa[log p(h|y, a ; \theta)]) \propto exp(E_pa[log p(y|h, a; \theta) + log p(h; sigmaH)])
+        p_{H} = \underset{h}{\operatorname{arg\,max}} (E_{pa}[\log p(h|y, a ; \\theta)]) \propto exp(E_{pa}[\log p(y|h, a; \\theta) + \log p(h; sigmaH)])
 
     Parameters
     ----------
