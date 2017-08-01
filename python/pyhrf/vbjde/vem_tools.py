@@ -1977,14 +1977,20 @@ eps_freeenergy = 0.00000001
 
 
 def nrls_entropy(nrls_covar, nb_conditions):
-    """Compute the entropy of neural response levels.
+    r"""Compute the entropy of neural response levels. The entropy of a multivariate normal distribution is
+
+    .. math::
+
+        \ln\left( \sqrt{(2\pi e)^{n} \left|\Sigma \right|} \right)
+
+    where *n* is the dimensionality of the vector space and :math:`\left|\Sigma \right|` is the determinant of the
+    covariance matrix.
 
     Parameters
     ----------
     nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
         Covariance of the NRLs
     nb_conditions : int
-    nb_voxels : int
 
     Returns
     -------
@@ -2015,7 +2021,14 @@ def A_Entropy(Sigma_A, M, J):
 
 
 def hrf_entropy(hrf_covar, hrf_len):
-    """Compute the entropy of the heamodynamic response function.
+    r"""Compute the entropy of the hemodynamic response function. The entropy of a multivariate normal distribution is
+
+    .. math::
+
+        \ln\left( \sqrt{(2\pi e)^{n} \left|\Sigma \right|} \right)
+
+    where *n* is the dimensionality of the vector space and :math:`\left|\Sigma \right|` is the determinant of the
+    covariance matrix.
 
     Parameters
     ----------
@@ -2029,13 +2042,14 @@ def hrf_entropy(hrf_covar, hrf_len):
     entropy : float
     """
 
-    const = (2*np.pi)**hrf_len * np.exp(hrf_len)
     det_hrf_covar = np.linalg.det(hrf_covar)
 
     if det_hrf_covar == 0:
         return 0
-    else:
-        return np.log(np.sqrt(const*det_hrf_covar))
+
+    const = (2 * np.pi) ** hrf_len * np.exp(hrf_len)
+    return np.log(np.sqrt(const*det_hrf_covar))
+
 
 def H_Entropy(Sigma_H, D):
     import warnings
@@ -2057,14 +2071,16 @@ def H_Entropy(Sigma_H, D):
 
 
 def labels_entropy(labels_proba):
-    """Compute the labels entropy.
+    r"""Compute the labels entropy.
+
+    .. math::
+
+        -E_{q}[\log q(A, H, Z)]
 
     Parameters
     ----------
     labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
         Probability of each voxel to be in one class
-    nb_conditions : int
-    nb_voxels : int
 
     Returns
     -------
@@ -2074,7 +2090,8 @@ def labels_entropy(labels_proba):
     # To prevent log of zero we put in another variable the zeros to epsilon
     # This doesn't change the results since the log is multiplied by zero
     labels_proba_log = labels_proba.copy()
-    labels_proba_log[labels_proba_log==0] = eps
+    labels_proba_log[labels_proba_log == 0] = eps
+
     return -(labels_proba * np.log(labels_proba_log)).sum()
 
 
@@ -2317,7 +2334,14 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
                             nrls_class_mean, nrls_class_var, neighbours_indexes,
                             beta, sigma_h, hrf_regu_prior, hrf_regu_prior_inv,
                             gamma, hrf_hyperprior):
-    """Compute the free energy.
+    r"""Compute the free energy functional.
+
+    .. math::
+
+        \mathcal{F}(q, \theta) = \mathrm{E}_{q}\left[ \log p(y, A, H, Z ; \theta) \right] +  \mathcal{G}(q)
+
+    where :math:`E_{q}[\cdot]` denotes the expectation with respect to *q* and
+    :math:`\mathcal{G}(q)` is the entropy of *q*.
 
     Parameters
     ----------
@@ -2330,6 +2354,7 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
     total_entropy = (nrls_entropy(nrls_covar, nb_conditions) +
                      hrf_entropy(hrf_covar, hrf_len) +
                      labels_entropy(labels_proba))
+
     total_expectation = (
         expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
                                       hrf_mean, hrf_covar, occurence_matrix,
@@ -2343,8 +2368,10 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
     )
 
     total_prior = 0
+
     if gamma:
         total_prior += nb_conditions*np.log(gamma) - gamma*beta.sum()
+
     if hrf_hyperprior:
         total_prior += np.log(hrf_hyperprior) - hrf_hyperprior*sigma_h
 
