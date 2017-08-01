@@ -524,6 +524,7 @@ def sum_over_neighbours(neighbours_indexes, array_to_sum):
          np.zeros(array_to_sum.shape[:-1]+(1,), dtype=array_to_sum.dtype)),
         axis=-1
     )
+
     return array_cat_zero[..., neighbours_indexes].sum(axis=-1)
 
 
@@ -937,32 +938,55 @@ def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
 ##############################################################
 
 def maximization_class_proba(labels_proba, nrls_mean, nrls_covar):
+    r"""Computes the M-(mu, sigma) step of the JDE-VEM algorithm.
+
+    .. math::
+
+        \bar{q}^{(r)}_{mk}   & = \sum \limits_{i \in \mathcal{P}} q^{(r)}_{Z_{mi}} (k) \\
+        \mu^{(r+1)}_{mk}     & = \frac{\sum \limits_{i \in \mathcal{P}} q^{(r)}_{Z_{mi}} (k) m^{(r)}_{A_{mi}}}{\bar{q}^{(r)}_{mk}} \\
+        \sigma^{2(r+1)}_{mk} &= \frac{\sum \limits_{i \in \mathcal{P}} q^{(r)}_{Z_{mi}} (k) \left(\left(m^{(r)}_{A_{mi}} - \mu^{(r+1)}_{mk}\right)^{2} + \sigma^{(r)}_{A_{im}A_{im}} \right)}{\bar{q}^{(r)}_{mk}}
+
+    """
 
     labels_proba_sum = labels_proba.sum(axis=2)
+
     nrls_class_mean = np.zeros_like(labels_proba_sum)
-    nrls_class_mean[:, 1] = ((labels_proba[:, 1, :] * nrls_mean.T).sum(axis=1)
-                             / labels_proba_sum[:, 1])
-    nm_minus_ncm = (nrls_mean[..., np.newaxis]
-                    - nrls_class_mean[np.newaxis, ...]).transpose(1, 2, 0)**2
+    nrls_class_mean[:, 1] = (labels_proba[:, 1, :] * nrls_mean.T).sum(axis=1) / labels_proba_sum[:, 1]
+
+    nm_minus_ncm = (nrls_mean[..., np.newaxis] - nrls_class_mean[np.newaxis, ...]).transpose(1, 2, 0)**2
+
     nrls_covar_diag = np.diagonal(nrls_covar).T
-    nrls_class_var = (
-        (labels_proba* (nm_minus_ncm + nrls_covar_diag[:, np.newaxis, :])).sum(axis=2)
-        /labels_proba_sum
-    )
+
+    nrls_class_var = (labels_proba * (nm_minus_ncm + nrls_covar_diag[:, np.newaxis, :])).sum(axis=2) / labels_proba_sum
 
     return nrls_class_mean, nrls_class_var
 
 
-def maximization_drift_coeffs(data, nrls_mean, occurence_matrix, hrf_mean,
-                              noise_struct, drift_basis):
+def maximization_drift_coeffs(data, nrls_mean, occurence_matrix, hrf_mean, noise_struct, drift_basis):
+    r"""Computes the M-(l, Gamma) step of the JDE-VEM algorithm. In the AR(1) case:
+
+    .. math::
+
+        \ell^{(r)}_{j} = \left( \bm{P}^{\intercal} \bm{\Lambda}^{(r)}_{j} \bm{P} \right)^{-1} \bm{P}^{\intercal} \bm{\Lambda}^{(r)}_{j} \left( y_{j} - \bm{\widetilde{S}}_{j} m^{(r)}_{H} \right)
+
+    """
+
     # Precomputations
     db_ns_db = drift_basis.T.dot(noise_struct).dot(drift_basis)
 
     data_s = data - nrls_mean.dot(occurence_matrix.dot(hrf_mean)).T
+
     return np.linalg.inv(db_ns_db).dot(drift_basis.T).dot(noise_struct).dot(data_s)
 
 
 def maximization_sigmaH(D, Sigma_H, R, m_H):
+    """Computes the M-sigma_h step of the JDE-VEM algorithm.
+
+    .. math::
+
+        \sigma^{2(r+1)}_{h} = \\frac{\mathrm{tr} ((\Sigma^{(r)}_{H} + m^{(r)}_{H} (m^{(r)}_{H})^{t})\mathbf{R}^{-1})}{D-1}
+
+    """
     sigmaH = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
     sigmaH /= D
     return sigmaH
@@ -978,9 +1002,7 @@ def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
 
 def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
                            nrls_covar, noise_struct, data_drift, nb_scans):
-    """Computes the M-sigma_epsilone step of the JDE-VEM algorithm.
-
-    """
+    """Computes the M-sigma_epsilon step of the JDE-VEM algorithm."""
 
     # Precomputations
     om_hm = occurence_matrix.dot(hrf_mean)
@@ -1007,8 +1029,7 @@ def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
             df_ns_df - 2 * nm_om_hm_ns_df) / nb_scans
 
 
-def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma,
-                  gradient_method="m1"):
+def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma, gradient_method="m1"):
     """Computes the gradient of the beta function
 
     Parameters
@@ -1038,6 +1059,8 @@ def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma,
     elif gradient_method == "m2":
         return (gamma*np.ones_like(beta)
                 + ((energy - labels_proba)*labels_neigh).sum()/2.)
+    else:
+        raise NotImplemented
 
 
 def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
@@ -1060,6 +1083,7 @@ def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
     """
 
     labels_neigh = sum_over_neighbours(neighbours_indexes, labels_proba)
+
     try:
         beta_new, res = brentq(
             beta_gradient, 0., 10, args=(labels_proba, labels_neigh, neighbours_indexes, gamma),
