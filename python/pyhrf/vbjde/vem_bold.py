@@ -287,6 +287,7 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
                 hrf_mean = vt.norm1_constraint(hrf_mean, hrf_covar)
                 hrf_covar[:] = 0
             logger.debug("After: hrf_mean = %s, hrf_covar = %s", hrf_mean, hrf_covar)
+
             # Normalizing H at each nb_2_norm iterations:
             if not constrained and normalizing:
                 # Normalizing is done before sigma_h, nrls_class_mean and nrls_class_var estimation
@@ -383,31 +384,30 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         mahalanobis_diff = mahalanobis_cano - mahalanobis_zero
         mahalanobis_prod = mahalanobis_cano * mahalanobis_zero
         variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
-                                  /(hrf_mean.T.dot(hrf_mean))**2)
+                                  / (hrf_mean.T.dot(hrf_mean))**2)
 
     if estimate_hrf and zero_constraint:
         hrf_mean = np.concatenate(([0], hrf_mean, [0]))
+
         # when using the zero constraint the hrf covariance is fill with
         # arbitrary zeros around the matrix, this is maybe a bad idea if we need
         # it for later computation...
-        hrf_covar = np.concatenate(
-            (np.zeros((hrf_covar.shape[0], 1)), hrf_covar, np.zeros((hrf_covar.shape[0], 1))),
-            axis=1
-        )
-        hrf_covar = np.concatenate(
-            (np.zeros((1, hrf_covar.shape[1])), hrf_covar, np.zeros((1, hrf_covar.shape[1]))),
-            axis=0
-        )
+        hrf_covar = np.concatenate((np.zeros((hrf_covar.shape[0], 1)),
+                                    hrf_covar,
+                                    np.zeros((hrf_covar.shape[0], 1))),
+                                   axis=1)
+
+        hrf_covar = np.concatenate((np.zeros((1, hrf_covar.shape[1])),
+                                    hrf_covar,
+                                    np.zeros((1, hrf_covar.shape[1]))),
+                                   axis=0)
 
     if estimate_hrf:
         (delay_of_response, delay_of_undershoot, dispersion_of_response,
-         dispersion_of_undershoot, ratio_resp_under, delay) = vt.fit_hrf_two_gammas(
-             hrf_mean, dt, hrf_duration
-         )
+         dispersion_of_undershoot, ratio_resp_under, delay) = vt.fit_hrf_two_gammas(hrf_mean, dt, hrf_duration)
     else:
         (delay_of_response, delay_of_undershoot, dispersion_of_response,
-         dispersion_of_undershoot, ratio_resp_under, delay) = (None, None, None,
-                                                               None, None, None)
+         dispersion_of_undershoot, ratio_resp_under, delay) = (None, None, None, None, None, None)
 
     ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
         nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var,

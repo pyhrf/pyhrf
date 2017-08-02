@@ -13,7 +13,7 @@ import scipy
 
 from numpy.matlib import repmat
 from scipy.linalg import toeplitz
-from scipy.optimize import fmin_slsqp, brentq
+from scipy.optimize import fmin_slsqp, brentq, least_squares, leastsq
 from scipy.stats import norm
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -288,17 +288,18 @@ def fit_hrf_two_gammas(hrf_mean, dt, duration):
         ratio_resp_under = params[4]
         delay = params[5]
 
-        return getCanoHRF(duration, dt, True, delay_of_response,
-                          delay_of_undershoot, dispersion_of_response,
-                          dispersion_of_undershoot, ratio_resp_under, delay)[1] - hrf_mean
+        canonical_hrf = getCanoHRF(duration, dt, True, delay_of_response,
+                                   delay_of_undershoot, dispersion_of_response,
+                                   dispersion_of_undershoot, ratio_resp_under, delay)[1]
 
+        return canonical_hrf - hrf_mean
+
+    x0 = np.asarray([6., 16., 1., 1., 6., 0.])
     try:
-        from scipy.optimize import least_squares
-        res = least_squares(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]),
+        res = least_squares(two_gamma_hrf, x0,
                             bounds=(np.zeros(6), duration + np.zeros(6))).x
     except ImportError as e:
-        from scipy.optimize import leastsq
-        res, cov_res = leastsq(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]))
+        res = leastsq(two_gamma_hrf, x0).x
 
     return res
 
@@ -980,11 +981,11 @@ def maximization_drift_coeffs(data, nrls_mean, occurence_matrix, hrf_mean, noise
 
 
 def maximization_sigmaH(D, Sigma_H, R, m_H):
-    """Computes the M-sigma_h step of the JDE-VEM algorithm.
+    r"""Computes the M-sigma_h step of the JDE-VEM algorithm.
 
     .. math::
 
-        \sigma^{2(r+1)}_{h} = \\frac{\mathrm{tr} ((\Sigma^{(r)}_{H} + m^{(r)}_{H} (m^{(r)}_{H})^{t})\mathbf{R}^{-1})}{D-1}
+        \sigma^{2(r+1)}_{h} = \frac{\mathrm{tr} ((\Sigma^{(r)}_{H} + m^{(r)}_{H} (m^{(r)}_{H})^{\intercal})\mathbf{R}^{-1})}{D-1}
 
     """
     sigmaH = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
@@ -993,8 +994,22 @@ def maximization_sigmaH(D, Sigma_H, R, m_H):
 
 
 def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
+    r"""Computes the M-sigma_h step of the JDE-VEM algorithm with a prior.
+
+    .. math::
+
+        \sigma_{h}^{(r)} = \frac{(D-1) + \sqrt{8 \lambda_{\sigma_{h}} C + (D-1)^{2}}}{4\lambda_{\sigma_{h}}}
+
+    where
+
+    .. math::
+
+        C = \mathrm{tr}\left( \left( \Sigma^{(r)}_{H} + m^{(r)}_{H} (m^{(r)}_{H})^{\intercal} \right) \mathbf{R}^{-1} \right)
+    """
+
     alpha = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
-    #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
+
+    # sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
     sigmaH = (-D + np.sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
 
     return sigmaH
@@ -2278,11 +2293,12 @@ def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
 
     Returns
     -------
-    ptilde_likelyhood : float
+    ptilde_likelihood : float
     """
 
     noise_var_tmp = maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
                                            nrls_covar, noise_struct, data_drift, nb_scans)
+
     return - (nb_scans*nb_voxels*np.log(2*np.pi) - nb_voxels*np.log(np.linalg.det(noise_struct))
               + nb_scans*np.log(np.absolute(noise_var)).sum()
               + nb_scans*(noise_var_tmp / noise_var).sum()) / 2.
@@ -2290,17 +2306,18 @@ def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
 
 def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
                            hrf_regu_prior_inv, hrf_len):
-    #logger.info('Computing hrf_regu_priorF expectation Ptilde ...')
+
     const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(sigma_h)
              + np.linalg.slogdet(hrf_regu_prior)[1])
+
     s = -(np.dot(np.dot(hrf_mean.T, hrf_regu_prior_inv), hrf_mean)
          + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
 
     return (const + s) / 2.
 
 
-def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
-                              nb_conditions, nb_classes):
+def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta, nb_conditions, nb_classes):
+
     labels_neigh = np.concatenate((labels_proba, np.zeros((nb_conditions, nb_classes, 1), dtype=labels_proba.dtype)), axis=2)
     labels_neigh = labels_neigh[:, :, neighbours_indexes].sum(axis=3)
     beta_labels_neigh = beta[:, np.newaxis, np.newaxis] * labels_neigh
@@ -2308,7 +2325,7 @@ def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
     energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
     energy /= energy.sum(axis=0)
 
-    energy_neigh = np.concatenate((energy, np.zeros((nb_conditions, nb_classes, 1), dtype=energy.dtype)), axis=2)
+    # energy_neigh = np.concatenate((energy, np.zeros((nb_conditions, nb_classes, 1), dtype=energy.dtype)), axis=2)
     energy_neigh = energy[:, :, neighbours_indexes].sum(axis=3)
 
     return (-np.log(np.exp(beta_labels_neigh).sum(axis=1)).sum()
@@ -2318,8 +2335,10 @@ def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
 
 def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
                             nrls_mean, nrls_covar):
+
     diag_nrls_covar = np.diagonal(nrls_covar)[:, :, np.newaxis]
-    s = -labels_proba.transpose(2, 0, 1)* (
+
+    s = -labels_proba.transpose(2, 0, 1) * (
         np.log(2*np.pi*nrls_class_var)
         + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
            + diag_nrls_covar) / nrls_class_var[np.newaxis, :, :]
