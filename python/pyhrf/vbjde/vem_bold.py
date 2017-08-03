@@ -40,11 +40,9 @@ logger = logging.getLogger(__name__)
 eps = np.spacing(1)
 
 
-def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
-                 tr, beta, dt, estimate_sigma_h=True, sigma_h=0.05,
-                 it_max=-1, it_min=0, estimate_beta=True, contrasts=None,
-                 compute_contrasts=False, hrf_hyperprior=0, estimate_hrf=True,
-                 constrained=False, zero_constraint=True, drifts_type="poly",
+def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes, tr, beta, dt, estimate_sigma_h=True,
+                 sigma_h=0.05, it_max=-1, it_min=0, estimate_beta=True, contrasts=None, compute_contrasts=False,
+                 hrf_hyperprior=0, estimate_hrf=True, constrained=False, zero_constraint=True, drifts_type="poly",
                  seed=6537546):
     """This is the main function that computes the VEM analysis on BOLD data.
     This function uses optimized python functions.
@@ -90,6 +88,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         if True, estimate the HRF for each parcel, if False use the canonical HRF
     constrained : bool, optional
         if True, add a constrains the l2 norm of the HRF to 1
+    zero_constraint : bool, optional
+        if True, add zeros to the beginning and the end of the estimated HRF.
     drifts_type : str, optional
         set the drifts basis type used. Can be "poly" for polynomial or "cos"
         for cosine
@@ -178,22 +178,25 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
 
     # Initialize sizes vectors
     hrf_len = np.int(np.ceil(hrf_duration / dt)) + 1
+
     nb_conditions = len(onsets)
+    if nb_conditions != 2:
+        logger.warn('The number of conditions is different to two.')
+
     nb_scans = bold_data.shape[0]
     nb_voxels = bold_data.shape[1]
-    X, occurence_matrix, condition_names = vt.create_conditions(
-        onsets, durations, nb_conditions, nb_scans, hrf_len, tr, dt
-    )
+    X, occurence_matrix, condition_names = vt.create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr,
+                                                                dt)
 
     neighbours_indexes = vt.create_neighbours(graph)
 
     order = 2
     if regularizing:
         regularization = np.ones(hrf_len)
-        regularization[hrf_len//3:hrf_len//2] = 2
-        regularization[hrf_len//2:2*hrf_len//3] = 5
-        regularization[2*hrf_len//3:3*hrf_len//4] = 7
-        regularization[3*hrf_len//4:] = 10
+        regularization[hrf_len // 3:hrf_len // 2] = 2
+        regularization[hrf_len // 2:2 * hrf_len // 3] = 5
+        regularization[2 * hrf_len // 3:3 * hrf_len // 4] = 7
+        regularization[3 * hrf_len // 4:] = 10
         # regularization[hrf_len//2:] = 10
     else:
         regularization = None
@@ -211,8 +214,8 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     noise_var = np.ones(nb_voxels)
 
     labels_proba = np.zeros((nb_conditions, nb_classes, nb_voxels), dtype=np.float64)
-    logger.info("Labels are initialized by setting everything to {}".format(1./nb_classes))
-    labels_proba[:, :, :] = 1./nb_classes
+    logger.info("Labels are initialized by setting everything to {}".format(1. / nb_classes))
+    labels_proba[:, :, :] = 1. / nb_classes
 
     m_h = getCanoHRF(hrf_duration, dt)[1][:hrf_len]
     hrf_mean = np.array(m_h).astype(np.float64)
@@ -222,31 +225,29 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     else:
         hrf_covar = np.zeros((hrf_len, hrf_len), dtype=np.float64)
 
-    beta = beta * np.ones((nb_conditions), dtype=np.float64)
-    beta_list = []
-    beta_list.append(beta.copy())
+    beta = beta * np.ones(nb_conditions, dtype=np.float64)
+    beta_list = [beta.copy()]
 
     if drifts_type == "poly":
         drift_basis = vt.poly_drifts_basis(nb_scans, 4, tr)
     elif drifts_type == "cos":
         drift_basis = vt.cosine_drifts_basis(nb_scans, 64, tr)
+    else:
+        raise Exception('drift type "%s" is not supported' % drifts_type)
 
     drift_coeffs = vt.drifts_coeffs_fit(bold_data, drift_basis)
     drift = drift_basis.dot(drift_coeffs)
     bold_data_drift = bold_data - drift
 
     # Parameters Gaussian mixtures
-    if nb_conditions != 2:
-        logger.warn('The number of conditions is different to two.')
-
     nrls_class_mean = 2 * np.ones((nb_conditions, nb_classes))
     nrls_class_mean[:, 0] = 0
 
     nrls_class_var = 0.3 * np.ones((nb_conditions, nb_classes), dtype=np.float64)
 
-    nrls_mean = (np.random.normal(
-        nrls_class_mean, nrls_class_var)[:, :, np.newaxis] * labels_proba).sum(axis=1).T
-    nrls_covar = (np.identity(nb_conditions)[:, :, np.newaxis] + np.zeros((1, 1, nb_voxels)))
+    nrls_mean = (np.random.normal(nrls_class_mean, nrls_class_var)[:, :, np.newaxis] * labels_proba).sum(axis=1).T
+
+    nrls_covar = np.identity(nb_conditions)[:, :, np.newaxis] + np.zeros((1, 1, nb_voxels))
 
     thresh_free_energy = 1e-4
     free_energy = [1.]
@@ -255,37 +256,34 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
     compute_time = []
     start_time = time.time()
     loop = 0
-    while (loop <= it_min or
-           ((np.asarray(free_energy_crit[-5:]) > thresh_free_energy).any()
-            and loop < it_max)):
+    while (loop <= it_min
+           or ((np.asarray(free_energy_crit[-5:]) > thresh_free_energy).any() and loop < it_max)):
 
-        logger.info("{:-^80}".format(" Iteration n°"+str(loop+1)+" "))
+        logger.info("{:-^80}".format(" Iteration n°" + str(loop + 1) + " "))
 
         logger.info("Expectation A step...")
         logger.debug("Before: nrls_mean = %s, nrls_covar = %s", nrls_mean, nrls_covar)
-        nrls_mean, nrls_covar = vt.nrls_expectation(
-            hrf_mean, nrls_mean, occurence_matrix, noise_struct, labels_proba,
-            nrls_class_mean, nrls_class_var, nb_conditions, bold_data_drift, nrls_covar,
-            hrf_covar, noise_var)
+        nrls_mean, nrls_covar = vt.nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct, labels_proba,
+                                                    nrls_class_mean, nrls_class_var, nb_conditions, bold_data_drift,
+                                                    nrls_covar, hrf_covar, noise_var)
         logger.debug("After: nrls_mean = %s, nrls_covar = %s", nrls_mean, nrls_covar)
 
         logger.info("Expectation Z step...")
         logger.debug("Before: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
-        labels_proba = vt.labels_expectation(
-            nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta,
-            labels_proba, neighbours_indexes, nb_conditions, nb_classes,
-            nb_voxels, parallel=True)
+        labels_proba = vt.labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta, labels_proba,
+                                             neighbours_indexes, nb_conditions, nb_classes, nb_voxels, parallel=True)
         logger.debug("After: labels_proba = %s, labels_proba = %s", labels_proba, labels_proba)
 
         if estimate_hrf:
             logger.info("Expectation H step...")
             logger.debug("Before: hrf_mean = %s, hrf_covar = %s", hrf_mean, hrf_covar)
-            hrf_mean, hrf_covar = vt.hrf_expectation(
-                nrls_covar, nrls_mean, occurence_matrix, noise_struct,
-                hrf_regu_prior_inv, sigma_h, nb_voxels, bold_data_drift, noise_var)
+            hrf_mean, hrf_covar = vt.hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
+                                                     hrf_regu_prior_inv, sigma_h, nb_voxels, bold_data_drift, noise_var)
+
             if constrained:
                 hrf_mean = vt.norm1_constraint(hrf_mean, hrf_covar)
                 hrf_covar[:] = 0
+
             logger.debug("After: hrf_mean = %s, hrf_covar = %s", hrf_mean, hrf_covar)
 
             # Normalizing H at each nb_2_norm iterations:
@@ -303,28 +301,20 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
             logger.info("Maximization sigma_H step...")
             logger.debug("Before: sigma_h = %s", sigma_h)
             if hrf_hyperprior > 0:
-                sigma_h = vt.maximization_sigmaH_prior(hrf_len, hrf_covar,
-                                                       hrf_regu_prior_inv,
-                                                       hrf_mean, hrf_hyperprior)
+                sigma_h = vt.maximization_sigmaH_prior(hrf_len, hrf_covar, hrf_regu_prior_inv, hrf_mean, hrf_hyperprior)
             else:
-                sigma_h = vt.maximization_sigmaH(hrf_len, hrf_covar,
-                                                 hrf_regu_prior_inv, hrf_mean)
+                sigma_h = vt.maximization_sigmaH(hrf_len, hrf_covar, hrf_regu_prior_inv, hrf_mean)
             logger.debug("After: sigma_h = %s", sigma_h)
 
         logger.info("Maximization (mu,sigma) step...")
-        logger.debug("Before: nrls_class_mean = %s, nrls_class_var = %s",
-                     nrls_class_mean, nrls_class_var)
-        nrls_class_mean, nrls_class_var = vt.maximization_class_proba(
-            labels_proba, nrls_mean, nrls_covar
-        )
-        logger.debug("After: nrls_class_mean = %s, nrls_class_var = %s",
-                     nrls_class_mean, nrls_class_var)
+        logger.debug("Before: nrls_class_mean = %s, nrls_class_var = %s", nrls_class_mean, nrls_class_var)
+        nrls_class_mean, nrls_class_var = vt.maximization_class_proba(labels_proba, nrls_mean, nrls_covar)
+        logger.debug("After: nrls_class_mean = %s, nrls_class_var = %s", nrls_class_mean, nrls_class_var)
 
         logger.info("Maximization L step...")
         logger.debug("Before: drift_coeffs = %s", drift_coeffs)
-        drift_coeffs = vt.maximization_drift_coeffs(
-            bold_data, nrls_mean, occurence_matrix, hrf_mean, noise_struct, drift_basis
-        )
+        drift_coeffs = vt.maximization_drift_coeffs(bold_data, nrls_mean, occurence_matrix, hrf_mean, noise_struct,
+                                                    drift_basis)
         logger.debug("After: drift_coeffs = %s", drift_coeffs)
 
         drift = drift_basis.dot(drift_coeffs)
@@ -332,32 +322,26 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         if estimate_beta:
             logger.info("Maximization beta step...")
             for cond_nb in xrange(0, nb_conditions):
-                beta[cond_nb], success = vt.beta_maximization(
-                    beta[cond_nb]*np.ones((1,)), labels_proba[cond_nb, :, :],
-                    neighbours_indexes, gamma
-                )
+                beta[cond_nb], success = vt.beta_maximization(beta[cond_nb] * np.ones((1,)),
+                                                              labels_proba[cond_nb, :, :], neighbours_indexes, gamma)
             beta_list.append(beta.copy())
             logger.debug("beta = %s", str(beta))
 
         logger.info("Maximization sigma noise step...")
-        noise_var = vt.maximization_noise_var(
-            occurence_matrix, hrf_mean, hrf_covar, nrls_mean, nrls_covar,
-            noise_struct, bold_data_drift, nb_scans
-        )
+        noise_var = vt.maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean, nrls_covar,
+                                              noise_struct, bold_data_drift, nb_scans)
 
-        #### Computing Free Energy ####
-        free_energy.append(vt.free_energy_computation(
-            nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len, labels_proba,
-            bold_data_drift, occurence_matrix, noise_var, noise_struct, nb_conditions,
-            nb_voxels, nb_scans, nb_classes, nrls_class_mean, nrls_class_var, neighbours_indexes,
-            beta, sigma_h, np.linalg.inv(hrf_regu_prior_inv), hrf_regu_prior_inv, gamma, hrf_hyperprior
-        ))
+        # Computing Free Energy
+        free_energy.append(vt.free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len, labels_proba,
+                                                      bold_data_drift, occurence_matrix, noise_var, noise_struct,
+                                                      nb_conditions, nb_voxels, nb_scans, nb_classes, nrls_class_mean,
+                                                      nrls_class_var, neighbours_indexes, beta, sigma_h,
+                                                      np.linalg.inv(hrf_regu_prior_inv), hrf_regu_prior_inv, gamma,
+                                                      hrf_hyperprior))
 
-        free_energy_crit.append(abs((free_energy[-2] - free_energy[-1]) /
-                                    free_energy[-2]))
+        free_energy_crit.append(abs((free_energy[-2] - free_energy[-1]) / free_energy[-2]))
 
-        logger.info("Convergence criteria: %f (Threshold = %f)",
-                    free_energy_crit[-1], thresh_free_energy)
+        logger.info("Convergence criteria: %f (Threshold = %f)", free_energy_crit[-1], thresh_free_energy)
         loop += 1
         compute_time.append(time.time() - start_time)
 
@@ -378,13 +362,11 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         nrls_covar *= hrf_norm ** 2
         nrls_class_mean *= hrf_norm
         nrls_class_var *= hrf_norm ** 2
-        mahalanobis_zero = mahalanobis(hrf_mean, np.zeros_like(hrf_mean),
-                                       np.linalg.inv(hrf_covar))
+        mahalanobis_zero = mahalanobis(hrf_mean, np.zeros_like(hrf_mean), np.linalg.inv(hrf_covar))
         mahalanobis_cano = mahalanobis(hrf_mean, m_h, np.linalg.inv(hrf_covar))
         mahalanobis_diff = mahalanobis_cano - mahalanobis_zero
         mahalanobis_prod = mahalanobis_cano * mahalanobis_zero
-        variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean))
-                                  / (hrf_mean.T.dot(hrf_mean))**2)
+        variation_coeff = np.sqrt((hrf_mean.T.dot(hrf_covar).dot(hrf_mean)) / (hrf_mean.T.dot(hrf_mean)) ** 2)
 
     if estimate_hrf and zero_constraint:
         hrf_mean = np.concatenate(([0], hrf_mean, [0]))
@@ -392,76 +374,54 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes,
         # when using the zero constraint the hrf covariance is fill with
         # arbitrary zeros around the matrix, this is maybe a bad idea if we need
         # it for later computation...
-        hrf_covar = np.concatenate((np.zeros((hrf_covar.shape[0], 1)),
-                                    hrf_covar,
-                                    np.zeros((hrf_covar.shape[0], 1))),
+        hrf_covar = np.concatenate((np.zeros((hrf_covar.shape[0], 1)), hrf_covar, np.zeros((hrf_covar.shape[0], 1))),
                                    axis=1)
 
-        hrf_covar = np.concatenate((np.zeros((1, hrf_covar.shape[1])),
-                                    hrf_covar,
-                                    np.zeros((1, hrf_covar.shape[1]))),
+        hrf_covar = np.concatenate((np.zeros((1, hrf_covar.shape[1])), hrf_covar, np.zeros((1, hrf_covar.shape[1]))),
                                    axis=0)
 
     if estimate_hrf:
-        (delay_of_response, delay_of_undershoot, dispersion_of_response,
-         dispersion_of_undershoot, ratio_resp_under, delay) = vt.fit_hrf_two_gammas(hrf_mean, dt, hrf_duration)
+        (delay_of_response, delay_of_undershoot, dispersion_of_response, dispersion_of_undershoot, ratio_resp_under,
+         delay) = vt.fit_hrf_two_gammas(hrf_mean, dt, hrf_duration)
     else:
-        (delay_of_response, delay_of_undershoot, dispersion_of_response,
-         dispersion_of_undershoot, ratio_resp_under, delay) = (None, None, None, None, None, None)
+        (delay_of_response, delay_of_undershoot, dispersion_of_response, dispersion_of_undershoot, ratio_resp_under,
+         delay) = (None, None, None, None, None, None)
 
-    ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(
-        nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var,
-        threshold_a="intersect"
-    )
+    ppm_a_nrl, ppm_g_nrl = vt.ppms_computation(nrls_mean, np.diagonal(nrls_covar), nrls_class_mean, nrls_class_var,
+                                               threshold_a="intersect")
 
-    #+++++++++++++++++++++++  calculate contrast maps and variance +++++++++++++++++++++++#
-
+    # Calculate contrast maps and variance
     nb_contrasts = len(contrasts)
     if compute_contrasts and nb_contrasts > 0:
         logger.info('Computing contrasts ...')
-        (contrasts_mean,
-         contrasts_var,
-         contrasts_class_mean,
-         contrasts_class_var) = vt.contrasts_mean_var_classes(
-             contrasts, condition_names, nrls_mean, nrls_covar,
-             nrls_class_mean, nrls_class_var, nb_contrasts, nb_classes, nb_voxels
-         )
-        ppm_a_contrasts, ppm_g_contrasts = vt.ppms_computation(
-            contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var
-        )
+        (contrasts_mean, contrasts_var, contrasts_class_mean,
+         contrasts_class_var) = vt.contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar,
+                                                              nrls_class_mean, nrls_class_var, nb_contrasts,
+                                                              nb_classes, nb_voxels)
+
+        ppm_a_contrasts, ppm_g_contrasts = vt.ppms_computation(contrasts_mean, contrasts_var, contrasts_class_mean,
+                                                               contrasts_class_var)
         logger.info('Done computing contrasts.')
     else:
-        (contrasts_mean, contrasts_var, contrasts_class_mean,
-         contrasts_class_var, ppm_a_contrasts, ppm_g_contrasts) = (None, None,
-                                                                   None, None,
-                                                                   None, None)
+        (contrasts_mean, contrasts_var, contrasts_class_mean, contrasts_class_var, ppm_a_contrasts,
+         ppm_g_contrasts) = (None, None, None, None, None, None)
 
-    #+++++++++++++++++++++++  calculate contrast maps and variance  +++++++++++++++++++++++#
-
-    logger.info("Nb iterations to reach criterion: %d", loop)
-    logger.info("Computational time = %s min %s s",
-                *(str(int(x)) for x in divmod(compute_time[-1], 60)))
+    logger.info("Number of iterations to reach criterion: %d", loop)
+    logger.info("Computational time = {t[0]:.0f} min {t[1]:.0f} s".format(t=divmod(compute_time[-1], 60)))
     logger.debug('nrls_class_mean: %s', nrls_class_mean)
     logger.debug('nrls_class_var: %s', nrls_class_var)
     logger.debug("sigma_H = %s", str(sigma_h))
     logger.debug("beta = %s", str(beta))
 
     stimulus_induced_signal = vt.computeFit(hrf_mean, nrls_mean, X, nb_voxels, nb_scans)
-    snr = 20 * np.log(
-        np.linalg.norm(bold_data.astype(np.float))
-        / np.linalg.norm((bold_data - stimulus_induced_signal - drift).astype(np.float))
-    )
+    snr = 20 * np.log(np.linalg.norm(bold_data.astype(np.float)) / np.linalg.norm(
+        (bold_data - stimulus_induced_signal - drift).astype(np.float)))
     snr /= np.log(10.)
-    logger.info('snr comp = %f', snr)
+    logger.info('SNR comp = %f', snr)
 
-    # ,FreeEnergyArray
-    return (loop, nrls_mean, hrf_mean, hrf_covar, labels_proba, noise_var,
-            nrls_class_mean, nrls_class_var, beta, drift_coeffs, drift,
-            contrasts_mean, contrasts_var, compute_time[2:], compute_time_mean,
-            nrls_covar, stimulus_induced_signal, mahalanobis_zero,
-            mahalanobis_cano, mahalanobis_diff, mahalanobis_prod, ppm_a_nrl,
-            ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, variation_coeff,
-            free_energy[1:], free_energy_crit[1:], beta_list[1:],
-            delay_of_response, delay_of_undershoot, dispersion_of_response,
-            dispersion_of_undershoot, ratio_resp_under, delay)
-
+    return (loop, nrls_mean, hrf_mean, hrf_covar, labels_proba, noise_var, nrls_class_mean, nrls_class_var, beta,
+            drift_coeffs, drift, contrasts_mean, contrasts_var, compute_time[2:], compute_time_mean, nrls_covar,
+            stimulus_induced_signal, mahalanobis_zero, mahalanobis_cano, mahalanobis_diff, mahalanobis_prod, ppm_a_nrl,
+            ppm_g_nrl, ppm_a_contrasts, ppm_g_contrasts, variation_coeff, free_energy[1:], free_energy_crit[1:],
+            beta_list[1:], delay_of_response, delay_of_undershoot, dispersion_of_response, dispersion_of_undershoot,
+            ratio_resp_under, delay)
