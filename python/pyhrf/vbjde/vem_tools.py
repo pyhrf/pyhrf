@@ -529,15 +529,14 @@ def sum_over_neighbours(neighbours_indexes, array_to_sum):
     return array_cat_zero[..., neighbours_indexes].sum(axis=-1)
 
 
-def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar,
-                               nrls_class_mean, nrls_class_var, nb_contrasts,
-                               nb_classes, nb_voxels):
-    """Computes the contrasts nrls from the conditions nrls and the mean and
-    variance of the gaussian classes of the contrasts (in the cases of all
-    inactive conditions and all active conditions)
+def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar, nrls_class_mean, nrls_class_var,
+                               nb_contrasts, nb_classes, nb_voxels):
+    """Computes the contrasts nrls from the conditions nrls and the mean and variance of the gaussian classes of the
+    contrasts (in the cases of all inactive conditions and all active conditions).
+
     Parameters
     ----------
-    def_contrasts : OrderedDict
+    contrasts : OrderedDict
         TODO.
     condition_names : list
         TODO.
@@ -551,6 +550,8 @@ def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar
         TODO.
     nb_contrasts : int
     nb_classes : int
+    nb_voxels : int
+
     Returns
     -------
     contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
@@ -566,9 +567,10 @@ def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar
 
     for i, contrast_name in enumerate(contrasts):
         parsed_contrast = parse_expr(contrasts[contrast_name])
-        for condition_name in condition_names:
-            condition_nb = condition_names.index(condition_name)
+
+        for condition_nb, condition_name in enumerate(condition_names):
             coeff = parsed_contrast.coeff(condition_name)
+
             if coeff:
                 contrasts_mean[:, i] += float(coeff) * nrls_mean[:, condition_nb]
                 contrasts_var[:, i] += float(coeff)**2 * nrls_covar[condition_nb, condition_nb, :]
@@ -2262,19 +2264,32 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
     return EPtilde + Total_Entropy
 
 
-
 # Other functions
 ##############################################################
 
-def computeFit(m_H, m_A, X, J, N):
-    # print 'Computing Fit ...'
-    stimIndSignal = np.zeros((N, J), dtype=np.float64)
-    for i in xrange(0, J):
-        m = 0
-        for k in X:
-            stimIndSignal[:, i] += m_A[i, m] * np.dot(X[k], m_H)
-            m += 1
-    return stimIndSignal
+def computeFit(hrf_mean, nrls_mean, X, nb_voxels, nb_scans):
+    """Compute the estimated induced signal by each stimulus.
+
+    Parameters
+    ----------
+    hrf_mean: ndarray
+    nrls_mean: ndarray
+    X: OrderedDict
+    nb_voxels: int
+    nb_scans: int
+
+    Returns
+    -------
+    ndarray
+    """
+
+    stim_ind_signal = np.zeros((nb_scans, nb_voxels), dtype=np.float64)
+
+    for voxel in xrange(0, nb_voxels):
+        for m, condition in enumerate(X):
+            stim_ind_signal[:, voxel] += nrls_mean[voxel, m] * np.dot(X[condition], hrf_mean)
+
+    return stim_ind_signal
 
 
 def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
