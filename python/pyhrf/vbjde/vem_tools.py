@@ -744,13 +744,23 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
                      labels_proba, nrls_class_mean, nrls_class_var,
                      nb_conditions, y_tilde, nrls_covar,
                      hrf_covar, noise_var):
-    """Computes the VE-A step of the JDE-VEM algorithm.
+    r"""Computes the VE-A step of the JDE-VEM algorithm.
 
     .. math::
 
-        p_{A} = \underset{a}{\operatorname{arg\,max}}(E_pc,pq,ph,pg[\log p(a|y, h, c, g, q; \\theta)])
-            \propto exp(E_pc,ph,pg[\log p(y|h, a, c, g; \\theta)] \
-                      + E_pq[\log p(a|q; \\mu_{Ma}, \\sigma_{Ma})])
+       \Sigma^{(r)}_{A_{j}} &= \left( \sum\limits^{I}_{i=1} \Delta_{ij} + \widetilde{H}_{j} \right)^{-1} \\
+       m^{(r)}_{A_{j}} &= \Sigma^{(r)}_{A{j}} \left( \sum\limits^{I}_{i=1} \Delta_{ij} \mu_{i}^{(r-1)} + \widetilde{G}^{t}\Gamma_{j}^{(r-1)}\left(y_{j} - P\ell^{(r-1)} \right)\right)
+
+    where:
+
+    The mth column of :math:`\widetilde{G}` is denote by :math:`\widetilde{g}_{m}  = X_{m}m^{(r)}_{H} \in \mathbb{R}^{N}`
+
+    .. math::
+
+        \Delta_{ij} &= \mathrm{diag}_{M}\left[\frac{q^{(r-1)}_{Z_{mj}}(i)}{\sigma^{2(r)}_{mi}}\right] \\
+
+        \widetilde{H}_{j} &= \widetilde{g}^{t}_{m} \Gamma^{(r-1)}_{j} \widetilde{g}_{m'} + \mathrm{tr}\left( \Gamma^{(r-1)}_{j}X_{m} \Sigma^{(r)}_{H}X^{t}_{m'} \right)
+
 
     Parameters
     ----------
@@ -775,28 +785,29 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
     """
 
     # Pre-compute some matrix products
-    om_hm_prod = occurence_matrix.dot(hrf_mean).T
+    om_hm_prod = occurence_matrix.dot(hrf_mean).T  # matrix G made of columns g_m = X_m * m_H
     om_hc_prod = occurence_matrix.dot(hrf_covar.T)
-    om_ns_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
+    ns_om_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
 
-    ## nrls_covar computation
-    # first term of Sigma_A: XH.T*Gamma*XH / sigma_eps
-    nrls_covar = om_hm_prod.T.dot(noise_struct).dot(om_hm_prod)[..., np.newaxis]
+    # first term of nrls_covar: p_q / sigma_h
+    delta_k = labels_proba / nrls_class_var[:, :, np.newaxis]
+    delta = delta_k.sum(axis=1)  # sum across classes K
 
-    # second term of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
-    nrls_covar += np.einsum('ijk, jlk', om_hc_prod, om_ns_prod)[..., np.newaxis]
-    nrls_covar = nrls_covar / noise_var
+    # second term of nrls_covar: G.T*Gamma*G + tr(Gamma*X*Sigma_H*X.T)
+    h_tilde = om_hm_prod.T.dot(noise_struct).dot(om_hm_prod)[..., np.newaxis]
+    h_tilde += np.einsum('ijk, jlk', om_hc_prod, ns_om_prod)[..., np.newaxis]
+    h_tilde = h_tilde / noise_var
 
-    # third term of nrls_covar: part of p(a|q; theta_A)
-    delta_k = (labels_proba / nrls_class_var[:, :, np.newaxis])
-    delta = delta_k.sum(axis=1)         # sum across classes K
-    nrls_covar = nrls_covar.transpose(2, 0, 1) + delta.T[:, np.newaxis, :] * np.eye(nb_conditions)
+    # nrls_covar computation
+    nrls_covar = h_tilde.transpose(2, 0, 1) + delta.T[:, np.newaxis, :] * np.eye(nb_conditions)
     nrls_covar = np.linalg.inv(nrls_covar).transpose(1, 2, 0)
 
-    ## m_A computation
+    # first term of nrls_mean: G.T*Gamma*y_tilde
     ns_yt_prod = noise_struct.dot(y_tilde).T
-    x_tilde = (ns_yt_prod.dot(om_hm_prod) / noise_var[:, np.newaxis]
-               + (delta_k * nrls_class_mean[:, :, np.newaxis]).sum(axis=1).T)
+    x_tilde = ns_yt_prod.dot(om_hm_prod) / noise_var[:, np.newaxis]
+
+    # second term of nrls_mean
+    x_tilde += (delta_k * nrls_class_mean[:, :, np.newaxis]).sum(axis=1).T
 
     # dot product across voxels of nrls_covar and x_tilde
     nrls_mean = np.einsum('ijk,kj->ki', nrls_covar, x_tilde)
