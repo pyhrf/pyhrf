@@ -267,6 +267,8 @@ def fit_hrf_two_gammas(hrf_mean, dt, duration):
 
     Parameters
     ----------
+    dt: float
+    duration: float
     hrf_mean : ndarray, shape (hrf_len,)
 
     Returns
@@ -520,11 +522,9 @@ def sum_over_neighbours(neighbours_indexes, array_to_sum):
     if neighbours_indexes.max() > array_to_sum.shape[-1] - 1:
         raise Exception("Can't sum over neighbours. Please check dimensions")
 
-    array_cat_zero = np.concatenate(
-        (array_to_sum,
-         np.zeros(array_to_sum.shape[:-1]+(1,), dtype=array_to_sum.dtype)),
-        axis=-1
-    )
+    array_cat_zero = np.concatenate((array_to_sum,
+                                     np.zeros(array_to_sum.shape[:-1]+(1,), dtype=array_to_sum.dtype)),
+                                    axis=-1)
 
     return array_cat_zero[..., neighbours_indexes].sum(axis=-1)
 
@@ -885,10 +885,44 @@ def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
     return hrf_mean, hrf_covar
 
 
-def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
-                       beta, labels_proba, neighbours_indexes, nb_conditions,
-                       nb_classes, nb_voxels=None, parallel=True, nans_init=False):
-    """Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta, labels_proba, neighbours_indexes,
+                       nb_conditions, nb_classes, nb_voxels=None, parallel=True, nans_init=False):
+    r"""Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+
+    Using the *mean-field* approximation,
+    :math:`\widetilde{p}^{(r)}_{Q^{m}}(q^{m})` is approximated by a factorized density
+    :math:`\widetilde{p}^{(r)}_{Q^{m}}(q^{m})=
+    \prod\limits_{j \in \mathcal{P}_{\gamma}}\widetilde{p}^{(r)}_{Q^{m}_{j}}(q^{m}_{j})` such that if
+    :math:`q^{m}_{j} = i`, then :math:`\widetilde{p}^{(r)}_{Q^{m}_{j}}(i) \propto \mathcal{N} \left(m^{(r)}_{A^{m}_{j}};
+    \mu^{(r-1)}_{im}, v^{(r-1)}_{im} \right) f\left(q^{m}_{j} = i \,|\, \widetilde{q}^{m}_{\sim j};
+    \beta^{(r-1)}_{m}, v^{(r-1)}_{m} \right)` where :math:`\widetilde{q}^{m}` is a particular configuration of
+    :math:`q^{m}` updated at each iteration according to a specific scheme and
+
+    .. math::
+
+        f\left( q^{m}_{j} \,|\, \widetilde{q}^{m}_{\sim j}; \beta^{(r-1)}_{m}, v^{(r-1)}_{m} \right) \propto
+        \exp\left(\alpha^{m(r)}_{j}(q^{m}_{j}) + \beta^{(r-1)}_{m}\sum\limits_{k \sim j}
+        I\left(\widetilde{q}^{m}_{k} = q^{m}_{j}\right) \right)
+
+    where
+
+    .. math::
+
+        \left\{ \alpha^{m(r)}_{j} = \left( -v^{(r)}_{A_{j}^{m}A^{m''}_{j}} \left[ \frac{1}{v^{(r-1)}_{0m}},
+        \frac{1}{v^{(r-1)}_{1m}} \right] \right)^{t}, j \in \mathcal{P}_{\gamma}\right\}
+
+
+    and :math:`v^{(r)}_{A_{j}^{m}A^{m''}_{j}}` denotes the :math:`(m,m')` entries of the covariance matrix
+    :math:`\Sigma^{(r)}_{A_{j}}`
+
+
+    Notes
+    -----
+        The *mean-field fixed point* equation is defined in:
+
+            Celeux, G., Forbes, F., & Peyrard, N. (2003). EM procedures using mean field-like approximations for
+            Markov model-based image segmentation. Pattern Recognition, 36(1), 131–144.
+            https://doi.org/10.1016/S0031-3203(02)00027-4
 
     Parameters
     ----------
@@ -903,48 +937,55 @@ def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
         the maximum ones are filled with -1
     nb_conditions : int
     nb_classes : int
+    nb_voxels : int
+    parallel : bool
+    nans_init : bool
 
     Returns
     -------
     labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
     """
 
-    alpha = (-0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / (nrls_class_var[np.newaxis, :, :])).transpose(1, 2, 0)
-
+    alpha = (-0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / nrls_class_var[np.newaxis, :, :]).transpose(1, 2, 0)
     alpha -= alpha.mean(axis=2)[:, :, np.newaxis]
-    gauss = normpdf(nrls_mean[...,np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var)).transpose(1, 2, 0)
 
-    # Update Ztilde ie the quantity which is involved in the a priori
-    # Potts field [by solving for the mean-field fixed point Equation]
+    gauss = normpdf(nrls_mean[..., np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var)).transpose(1, 2, 0)
+
+    # update z_tilde (q_tilde), i.e., the quantity which is involved in the a priori Potts field
+    # (by solving for the mean-field fixed point Equation)
     if not parallel and nb_voxels:
         energy = np.zeros_like(labels_proba)
         local_energy = np.zeros_like(labels_proba)
+
         for vox in xrange(nb_voxels):
-            local_energy[:, :, vox] = sum_over_neighbours(
-                neighbours_indexes[vox, :],
-                beta[..., np.newaxis, np.newaxis] * labels_proba
-            )
+            local_energy[:, :, vox] = sum_over_neighbours(neighbours_indexes[vox, :],
+                                                          beta[..., np.newaxis, np.newaxis] * labels_proba)
+
             energy[:, :, vox] = alpha[:, :, vox] + local_energy[:, :, vox]
-            labels_proba[:, :, vox] = np.exp(energy[:, :, vox])*gauss[:, :, vox]
-            labels_proba[:, :, vox] = labels_proba[:, :, vox]/labels_proba[:, :, vox].sum(axis=1)[:, np.newaxis]
+
+            labels_proba[:, :, vox] = np.exp(energy[:, :, vox]) * gauss[:, :, vox]
+            labels_proba[:, :, vox] = labels_proba[:, :, vox] / labels_proba[:, :, vox].sum(axis=1)[:, np.newaxis]
+
     else:
         if not parallel:
-            logger.warning("Could not use ascynchronous expectation."
-                           " Please provide the nb_voxels parameter")
-        local_energy = sum_over_neighbours(
-            neighbours_indexes, beta[..., np.newaxis, np.newaxis] * labels_proba
-        )
+            logger.warning("Could not use asynchronous expectation. Please provide the nb_voxels parameter")
+
+        local_energy = sum_over_neighbours(neighbours_indexes,
+                                           beta[..., np.newaxis, np.newaxis] * labels_proba)
         energy = alpha + local_energy
+
         if nans_init:
-            labels_proba_nans = np.ones_like(labels_proba)/nb_classes
+            labels_proba_nans = np.ones_like(labels_proba) / nb_classes
         else:
             labels_proba_nans = labels_proba.copy()
-        labels_proba = (np.exp(energy) * gauss)
 
-        # Remove NaNs and Infs (# TODO: check for sequential mode)
-        if (labels_proba.sum(axis=1)==0).any():
-            mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
+        labels_proba = np.exp(energy) * gauss
+
+        # Remove NaNs and Infs (TODO: check for sequential mode)
+        if (labels_proba.sum(axis=1) == 0).any():
+            mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1) == 0
             labels_proba[mask] = labels_proba_nans[mask]
+
         if np.isinf(labels_proba.sum(axis=1)).any():
             mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
             labels_proba[mask] = labels_proba_nans[mask]
