@@ -1089,9 +1089,25 @@ def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
     return sigmaH
 
 
-def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
-                           nrls_covar, noise_struct, data_drift, nb_scans):
-    """Computes the M-sigma_epsilon step of the JDE-VEM algorithm."""
+def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean, nrls_covar, noise_struct, data_drift,
+                           nb_scans):
+    r"""Computes the M-sigma_epsilon step of the JDE-VEM algorithm.
+
+    .. math::
+
+        \sigma^{2(r)}_{j} = \frac{1}{N} \left(\mathrm{E}_{\widetilde{p}^{(r)}_{A_{j}}} \left[a^{t}_{j}
+        \widetilde{\Lambda}^{(r)}_{j} a_{j} \right] - 2 \left(m^{(r)}_{A_{j}}\right)^{t} \widetilde{G}^{(r)}_{j}
+        y^{(r)}_{j} + \left(y^{(r)}_{j}\right)^{t} \Lambda^{(r)}_{j}y^{(r)}_{j} \right)
+
+
+    where matrix :math:`\widetilde{\Lambda}^{(r)}_{j} = \mathrm{E}_{\widetilde{p}^{(r)}_{H}}
+    \left[ G^{t}\Lambda^{(r)}_{j}G \right]` is a :math:`M \times M` whose element :math:`(m, m')` is given by
+
+    .. math::
+
+        \widetilde{g}^{t}_{m}\Lambda^{(r)}_{j}\widetilde{g}_{m'} + \mathrm{tr}\left(\Lambda^{(r)}_{j} X_{m}
+        \Sigma^{(r)}_{H} X^{t}_{m'} \right)
+    """
 
     # Precomputations
     om_hm = occurence_matrix.dot(hrf_mean)
@@ -1099,14 +1115,10 @@ def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
     nm_om_hm = nrls_mean.dot(om_hm)
 
     hm_om_ns_om_hm = ns_om.transpose(1, 0, 2).dot(hrf_mean).dot(om_hm.T)
-    hc_om_ns_om = np.einsum('ijk,ljk->il', occurence_matrix.dot(hrf_covar.T),
-                            ns_om.transpose(1, 0, 2))
+    hc_om_ns_om = np.einsum('ijk,ljk->il', occurence_matrix.dot(hrf_covar.T), ns_om.transpose(1, 0, 2))
 
-    hm_om_nm_ns_nm_om_hm = np.einsum('ij,ij->i', nrls_mean.dot(hm_om_ns_om_hm +
-                                                               hc_om_ns_om),
-                                     nrls_mean)
+    hm_om_nm_ns_nm_om_hm = np.einsum('ij,ij->i', nrls_mean.dot(hm_om_ns_om_hm + hc_om_ns_om), nrls_mean)
 
-    # trace(Sigma_A (X.T H.T H X + SH X.T X) ) in each voxel
     tr_nc_om_ns_om = np.einsum('ijk,ji->k', nrls_covar, hm_om_ns_om_hm + hc_om_ns_om)
 
     ns_df = noise_struct.dot(data_drift)
@@ -1114,8 +1126,9 @@ def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
 
     nm_om_hm_ns_df = np.einsum('ij,ji->i', nm_om_hm, ns_df)
 
-    return (hm_om_nm_ns_nm_om_hm + tr_nc_om_ns_om +
-            df_ns_df - 2 * nm_om_hm_ns_df) / nb_scans
+    sigma = (hm_om_nm_ns_nm_om_hm + tr_nc_om_ns_om + df_ns_df - 2 * nm_om_hm_ns_df) / nb_scans
+
+    return sigma
 
 
 def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma, gradient_method="m1"):
@@ -1174,10 +1187,9 @@ def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
     labels_neigh = sum_over_neighbours(neighbours_indexes, labels_proba)
 
     try:
-        beta_new, res = brentq(
-            beta_gradient, 0., 10, args=(labels_proba, labels_neigh, neighbours_indexes, gamma),
-            full_output=True
-        )
+        beta_new, res = brentq(beta_gradient, 0., 10,
+                               args=(labels_proba, labels_neigh, neighbours_indexes, gamma),
+                               full_output=True)
         converged = res.converged
     except ValueError:
         beta_new = beta
@@ -2164,7 +2176,7 @@ def labels_entropy(labels_proba):
 
     .. math::
 
-        -E_{q}[\log q(A, H, Z)]
+        -\sum p_{Q} \log p_{Q}
 
     Parameters
     ----------
