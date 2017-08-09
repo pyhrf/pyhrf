@@ -815,15 +815,32 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
     return nrls_mean, nrls_covar
 
 
-def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
-                    hrf_regu_prior_inv, sigmaH, nb_voxels, y_tilde, noise_var,
-                    prior_mean_term=0., prior_cov_term=0.):
+def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct, hrf_regu_prior_inv, sigmaH, nb_voxels,
+                    y_tilde, noise_var, prior_mean_term=0., prior_cov_term=0.):
 
-    """Computes the VE-H step of the JDE-VEM algorithm.
+    r"""Computes the VE-H step of the JDE-VEM algorithm.
 
     .. math::
 
-        p_{H} = \underset{h}{\operatorname{arg\,max}} (E_{pa}[\log p(h|y, a ; \\theta)]) \propto exp(E_{pa}[\log p(y|h, a; \\theta) + \log p(h; sigmaH)])
+        m^{(r)}_{H}  &= \Sigma^{(r)}_{H} \left( \sum\limits_{i \in \mathcal{P}} \widetilde{S}_{i}^{t}
+        \widetilde{y}^{(r)}_{i} \right) \\
+
+        \left(\Sigma^{(r)}_{H}\right)^{-1} &= \frac{\mathbf{R}^{-1}}{\sigma^{2(r)}_{h}} + \sum\limits_{i\in
+        \mathcal{P}} \left( \sum\limits_{m,m'} \sigma^{(r-1)}_{A_{mi}A_{m'i}} \mathbf{X}^{t}_{m} \Gamma^{(r)}_{i}
+        \mathbf{X}_{m'} + \widetilde{S}_{i}^{t} \Gamma^{(r)}_{i} \widetilde{S}_{i}\right)
+
+    where
+
+    .. math::
+
+        \widetilde{S}_{i} &= \sum\limits^{M}_{m=1} m^{(r-1)}_{A_{mi}}\mathbf{X}_{m} \\
+
+        \widetilde{y}^{(r)}_{i} &= \Gamma^{(r)}_{i} \left( y_{i} - \mathbf{P}\ell^{(r)}_{i} \right)
+
+
+    Here, :math:`m^{(r-1)}_{A_{mi}}` and :math:`\sigma^{(r-1)}_{A_{mi}A_{m'i}}` denote the
+    :math:`m^{th}` and :math:`(m,m')^{th}` entries of the mean vector and covariance matrix of the current
+    :math:`q^{(r-1)}_{A_{i}}`, respectively.
 
     Parameters
     ----------
@@ -851,35 +868,32 @@ def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
     ns_om_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
     om_ns_om_prod = np.tensordot(occurence_matrix.T, ns_om_prod, axes=(1, 0))
     cov_noise = np.maximum(noise_var, eps)[:, np.newaxis, np.newaxis]
-    nm_om_ns_prod = np.tensordot(nm_om_prod, noise_struct, axes=(1, 0))/cov_noise
+    nm_om_ns_prod = np.tensordot(nm_om_prod, noise_struct, axes=(1, 0)) / cov_noise
 
-    ## Sigma_H computation
+    # Sigma_H computation
     # first term: part of the prior -> R^-1 / sigmaH
-    hrf_covar_inv = hrf_regu_prior_inv/sigmaH
+    hrf_covar_inv = hrf_regu_prior_inv / sigmaH
 
-    # second term: E_pa[Saj.T*noise_struct*Saj] op1
-    # sum_{m, m'} Sigma_a(m,m') X_m.T noise_struct_i X_m'
-    hrf_covar_inv += (np.einsum('ijk,lijm->klm', nrls_covar, om_ns_om_prod)/cov_noise).sum(0)
+    # second term: sum_{m, m'} (Sigma_a(m,m') * X_m.T * noise_struct_i * X_m')
+    hrf_covar_inv += (np.einsum('ijk,lijm->klm', nrls_covar, om_ns_om_prod) / cov_noise).sum(0)
 
-    # third term: E_pa[Saj.T*noise_struct*Saj] op2
-    # (sum_m m_a X_m).T noise_struct_i (sum_m m_a X_m)
+    # third term: let S=sum_m (m_a * X_m), then S.T * noise_struct_i * S
     for i in xrange(nb_voxels):
         hrf_covar_inv += nm_om_ns_prod[i, :, :].dot(nm_om_prod[i, :, :])
 
-    # forth term (depends on prior type):
-    # we sum the term that corresponds to the prior
+    # forth term (depends on prior type): we sum the term that corresponds to the prior
     hrf_covar_inv += prior_cov_term
 
-    # Sigma_H = S_a^-1
+    # Sigma_H
     hrf_covar = np.linalg.inv(hrf_covar_inv)
 
-    ## m_H
-    # (sum_m m_a X_m).T noise_struct_i y_tildeH
+    # m_H computation: S.T * noise_struct_i * y_tilde
     y_bar_tilde = np.einsum('ijk,ki->j', nm_om_ns_prod, y_tilde)
+
     # we sum the term that corresponds to the prior
     y_bar_tilde += prior_mean_term
 
-    # m_H = S_a^-1 y_bar_tilde
+    # m_H = Sigma_H * y_bar_tilde
     hrf_mean = hrf_covar.dot(y_bar_tilde)
 
     return hrf_mean, hrf_covar
