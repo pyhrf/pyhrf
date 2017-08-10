@@ -2176,7 +2176,7 @@ def labels_entropy(labels_proba):
 
     .. math::
 
-        -\sum p_{Q} \log p_{Q}
+        -\sum\limits^{1}_{x=0} p_{Q}(x) \log p_{Q}(x)
 
     Parameters
     ----------
@@ -2405,6 +2405,14 @@ def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
 
 def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
                            hrf_regu_prior_inv, hrf_len):
+    r"""Expectation  with respect to p_tilde hrf.
+
+    .. math::
+          \mathrm{E}_{\widetilde{p}_{h}}\left[ \log p(h | \sigma_{h}) \right] = -\frac{D+1}{2}\log 2\pi -
+          \frac{D-1}{2}\log \sigma_{h} - \frac{\log \left| \mathbf{R} \right|}{2} - \frac{m^{t}_{h}\mathbf{R}^{-1}m_{h}
+          + \mathrm{tr} \left( \Sigma_{h} \mathbf{R}^{-1} \right)}{2 \sigma_{h}}
+
+    """
 
     const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(sigma_h)
              + np.linalg.slogdet(hrf_regu_prior)[1])
