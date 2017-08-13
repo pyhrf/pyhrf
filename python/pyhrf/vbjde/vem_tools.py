@@ -619,12 +619,32 @@ def ppm_contrasts(contrasts_mean, contrasts_var, contrasts_class_mean,
 
 
 def ppms_computation(elements_mean, elements_var, class_mean, class_var, threshold_a="std_inact", threshold_g=0.9):
-    """Considering the `elements_mean` and `elements_var` from a gaussian distribution, commutes the posterior
+    r"""Considering the `elements_mean` and `elements_var` from a gaussian distribution, commutes the posterior
     probability maps considering for the alpha threshold, either the standard deviation of the
     [all inactive conditions] gaussian class or the intersection of the [all (in)active conditions] gaussian classes;
     and for the gamma threshold 0.9 (default).
 
-    Be careful, this computation considers the mean of the inactive class as zero.
+    The posterior probability maps (PPM) per experimental condition is computed as
+    :math:`p(a^{m}_{j} > \delta | y_{j}) > \alpha`. Note that we have to thresholds to set. We set :math:`\delta` to get
+    a posterior probability distribution, and :math:`\alpha` is the threshold that we set to see a certain level of
+    significance. As default, we chose a threshold :math:`\delta` for each experimental condition *m* as the
+    intersection of the two Gaussian densities of the Gaussian Mixture Model (GMM) that represent active and non-active
+    voxel.
+
+    .. math::
+
+        \frac{(\delta - \mu^{m}_{1})^{2}}{v^{m}_{1}} - \frac{(\delta - \mu^{m}_{0})^{2}}{v^{m}_{0}} =
+        \log\left( \frac{v^{m}_{1}}{v^{m}_{0}} \right)
+
+    :math:`\mu^{m}_{i}` and :math:`v^{m}_{i}` being the parameters of the GMM in :math:`a^{m}_{j}` corresponding to
+    active (*i=0*) and non-active (*i=1*) voxels for experimental condition *m*.
+
+    .. math::
+
+        \delta = \frac{\mu_{1}\sigma_{0}^{2} \pm \sigma_{0}\sigma_{1}\sqrt{\mu^{2}_{1} + 2 \left(\sigma^{2}_{0} -
+        \sigma^{2}_{1} \right) \log \left( \frac{\sigma_{0}}{\sigma_{1}} \right)}}{\sigma^{2}_{0} - \sigma^{2}_{1}}
+
+    **Be careful, this computation considers the mean of the inactive class as zero.**
 
     Notes
     -----
@@ -655,22 +675,21 @@ def ppms_computation(elements_mean, elements_var, class_mean, class_var, thresho
     elif threshold_a == "intersect":  # intersection of the [all inactive/all active conditions]
         intersect1 = class_mean[:, 1] * class_var[:, 0]
 
-        intersect2 = np.sqrt(
-            class_var.prod(axis=1) * (
-                class_mean[:, 1]**2
-                + 2*class_var[:, 0]*np.log(np.sqrt(class_var[:, 0]/class_var[:, 1]))
-                - 2*class_var[:, 1]*np.log(np.sqrt(class_var[:, 0]/class_var[:, 1]))
-            )
+        class_sd = np.sqrt(class_var)  # standard deviation
+        class_var_diff = class_var[:, 0] - class_var[:, 1]  # sigma^2_0 - sigma^2_1
+
+        intersect2 = class_sd.prod(axis=1) * np.sqrt(
+            class_mean[:, 1]**2 +
+            2 * class_var_diff * np.log(class_sd[:, 0] / class_sd[:, 1])
         )
 
         threshs = np.concatenate(((intersect1 - intersect2)[:, np.newaxis],
                                   (intersect1 + intersect2)[:, np.newaxis]),
-                                 axis=1) / (class_var[:, 0] - class_var[:, 1])[:, np.newaxis]
+                                 axis=1) / class_var_diff[:, np.newaxis]
 
-        mask = (
-            ((threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis]))
-            | (~((threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis])).any(axis=1)[:, np.newaxis]
-               & (threshs == threshs.max(axis=1)[:, np.newaxis])))
+        mask_mean = (threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis])
+        mask = (mask_mean |
+                (~mask_mean.any(axis=1)[:, np.newaxis] & (threshs == threshs.max(axis=1)[:, np.newaxis])))
 
         thresh = threshs[mask]
 
