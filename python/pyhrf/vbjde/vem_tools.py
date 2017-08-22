@@ -2442,20 +2442,44 @@ def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior, hrf_reg
 
 
 def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta, nb_conditions, nb_classes):
+    r"""Expectation with respect to p_tilde q (or z).
 
-    labels_neigh = np.concatenate((labels_proba, np.zeros((nb_conditions, nb_classes, 1), dtype=labels_proba.dtype)), axis=2)
+    .. math::
+
+        \mathrm{E}_{\widetilde{p}_{q}} \left[ \log p (q | \beta ) \right] = \sum\limits_{m} & \left\{
+          - \sum\limits_{j} \left\{ \log \left( \sum\limits^{1}_{i=0} \exp \left(
+          \beta^{m} \sum\limits_{k \in N(j)} \widetilde{p}_{q^{m}_{k}} (i) \right)
+          \right) \right\} \right. \\
+          & \left. - \beta^{m} \sum\limits_{j}\sum\limits_{k \in N(j)}\sum\limits^{1}_{i=0}
+          \left[ p^{MF}_{j}(i) \left( \frac{p^{MF}_{k}(i)}{2} -
+          \widetilde{p}_{q^{m}_{k}} (i) \right) -
+          \frac{1}{2}\widetilde{p}_{q^{m}_{j}}(i)\widetilde{p}_{q^{m}_{k}}(i) \right]
+          \right\}
+
+    """
+
+    # term p_{q^{m}_{k}}
+    labels_neigh = np.concatenate((labels_proba,
+                                   np.zeros((nb_conditions, nb_classes, 1), dtype=labels_proba.dtype)),
+                                  axis=2)
     labels_neigh = labels_neigh[:, :, neighbours_indexes].sum(axis=3)
+
     beta_labels_neigh = beta[:, np.newaxis, np.newaxis] * labels_neigh
 
+    # term p^{MF}_{j}
     energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
     energy /= energy.sum(axis=0)
 
-    # energy_neigh = np.concatenate((energy, np.zeros((nb_conditions, nb_classes, 1), dtype=energy.dtype)), axis=2)
+    # term p^{MF}_{k}
     energy_neigh = energy[:, :, neighbours_indexes].sum(axis=3)
 
-    return (-np.log(np.exp(beta_labels_neigh).sum(axis=1)).sum()
-            + (beta*(labels_proba*labels_neigh/2.
-                     + energy*(labels_neigh-energy_neigh/2.)).sum(axis=(1, 2))).sum())
+    first_sum = -np.log(np.exp(beta_labels_neigh).sum(axis=1)).sum()
+    second_sum = (beta * (labels_proba * labels_neigh/2.
+                          + energy * (labels_neigh-energy_neigh/2.)
+                          ).sum(axis=(1, 2))
+                  ).sum()
+
+    return first_sum + second_sum
 
 
 def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var, nrls_mean, nrls_covar):
@@ -2464,11 +2488,11 @@ def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var, nrls_
     .. math::
 
         \mathrm{E}_{\widetilde{p}_{a}\widetilde{p}_{q}}[\log p (a | q, \theta_{a})] = \sum\limits_{m}\sum\limits_{j}
-        \left\{ \left[ 1 - \widetilde{p}_{q^{m}_{j}}(1) \right] \left[\log\frac{1}{\sqrt{2\pi\sigma^{2m}_{0}}} -
-        \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{0} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{0}} \right]  +
-        \widetilde{p}_{q^{m}_{j}}(1)  \left[ \log\frac{1}{\sqrt{2\pi\sigma^{2m}_{1}}} - \frac{\left(m_{a^{m}_{j}} -
-        \mu^{m}_{1} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{1}} \right] \right\}
-
+        & \left\{ \left[1 - \widetilde{p}_{q^{m}_{j}}(1) \right] \left[\log\frac{1}{\sqrt{2\pi\sigma^{2m}_{0}}} -
+        \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{0} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{0}} \right] +
+        \right. \\ &  \left. \widetilde{p}_{q^{m}_{j}}(1)  \left[\log\frac{1}{\sqrt{2\pi\sigma^{2m}_{1}}} -
+        \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{1} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{1}} \right] \right\}
+        
     """
 
     diag_nrls_covar = np.diagonal(nrls_covar)[:, :, np.newaxis]
