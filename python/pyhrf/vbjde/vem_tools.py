@@ -2389,11 +2389,23 @@ def computeFit(hrf_mean, nrls_mean, X, nb_voxels, nb_scans):
     return stim_ind_signal
 
 
-def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
-                                  hrf_covar, occurence_matrix, noise_var,
+def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean, hrf_covar, occurence_matrix, noise_var,
                                   noise_struct, nb_voxels, nb_scans):
-    """likelihood
-    # TODO
+    r"""Expectation with respect to likelihood.
+
+    .. math::
+
+        \mathrm{E}_{\widetilde{p}_{a}\widetilde{p}_{h}\widetilde{p}_{q}}\left[\log p(y | a,h,q; \theta) \right] =
+        -\frac{NJ}{2} \log 2\pi + \frac{J}{2}\log\left| \Lambda_{j} \right| - N\sum\limits_{j \in J}\log
+        v_{b_{j}} + \frac{1}{2v_{b_{j}}}\sum\limits_{j \in J}V_{j}
+
+    where
+
+    .. math::
+
+        V_{j} = \widetilde{m}^{t}_{a_{j}}\mathbf{X}^{t}_{h}\Lambda_{j}\mathbf{X}_{h}\widetilde{m}_{a_{j}}
+        + \mathrm{tr}\left( \Sigma_{a_{j}}\mathbf{X}^{t}_{h}\Lambda_{j}\mathbf{X}_h \right) -
+        2\widetilde{m}^{t}_{a_{j}} \mathbf{X}^{t}_{h}\Lambda_{j}\left( y_{j} - \mathbf{P}\ell_{j} \right)
 
     Parameters
     ----------
@@ -2417,9 +2429,10 @@ def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
     noise_var_tmp = maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
                                            nrls_covar, noise_struct, data_drift, nb_scans)
 
-    return - (nb_scans*nb_voxels*np.log(2*np.pi) - nb_voxels*np.log(np.linalg.det(noise_struct))
-              + nb_scans*np.log(np.absolute(noise_var)).sum()
-              + nb_scans*(noise_var_tmp / noise_var).sum()) / 2.
+    return - (nb_scans * nb_voxels*np.log(2*np.pi)
+              - nb_voxels * np.log(np.linalg.det(noise_struct))
+              + nb_scans * np.log(np.absolute(noise_var)).sum()
+              + nb_scans * (noise_var_tmp / noise_var).sum()) / 2.
 
 
 def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior, hrf_regu_prior_inv, hrf_len):
@@ -2492,7 +2505,7 @@ def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var, nrls_
         \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{0} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{0}} \right] +
         \right. \\ &  \left. \widetilde{p}_{q^{m}_{j}}(1)  \left[\log\frac{1}{\sqrt{2\pi\sigma^{2m}_{1}}} -
         \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{1} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{1}} \right] \right\}
-        
+
     """
 
     diag_nrls_covar = np.diagonal(nrls_covar)[:, :, np.newaxis]
