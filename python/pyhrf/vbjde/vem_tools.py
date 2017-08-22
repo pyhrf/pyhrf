@@ -2422,8 +2422,7 @@ def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
               + nb_scans*(noise_var_tmp / noise_var).sum()) / 2.
 
 
-def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
-                           hrf_regu_prior_inv, hrf_len):
+def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior, hrf_regu_prior_inv, hrf_len):
     r"""Expectation  with respect to p_tilde hrf.
 
     .. math::
@@ -2434,10 +2433,10 @@ def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
     """
 
     const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(sigma_h)
-             + np.linalg.slogdet(hrf_regu_prior)[1])
+              + np.linalg.slogdet(hrf_regu_prior)[1])
 
     s = -(np.dot(np.dot(hrf_mean.T, hrf_regu_prior_inv), hrf_mean)
-         + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
+          + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
 
     return (const + s) / 2.
 
@@ -2459,16 +2458,25 @@ def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta, nb_conditi
                      + energy*(labels_neigh-energy_neigh/2.)).sum(axis=(1, 2))).sum())
 
 
-def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
-                            nrls_mean, nrls_covar):
+def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var, nrls_mean, nrls_covar):
+    r"""Expectation with respect to p_tilde a.
+
+    .. math::
+
+        \mathrm{E}_{\widetilde{p}_{a}\widetilde{p}_{q}}[\log p (a | q, \theta_{a})] = \sum\limits_{m}\sum\limits_{j}
+        \left\{ \left[ 1 - \widetilde{p}_{q^{m}_{j}}(1) \right] \left[\log\frac{1}{\sqrt{2\pi\sigma^{2m}_{0}}} -
+        \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{0} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{0}} \right]  +
+        \widetilde{p}_{q^{m}_{j}}(1)  \left[ \log\frac{1}{\sqrt{2\pi\sigma^{2m}_{1}}} - \frac{\left(m_{a^{m}_{j}} -
+        \mu^{m}_{1} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{1}} \right] \right\}
+
+    """
 
     diag_nrls_covar = np.diagonal(nrls_covar)[:, :, np.newaxis]
 
-    s = -labels_proba.transpose(2, 0, 1) * (
-        np.log(2*np.pi*nrls_class_var)
-        + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
-           + diag_nrls_covar) / nrls_class_var[np.newaxis, :, :]
-    ) / 2
+    s = -labels_proba.transpose(2, 0, 1) * (np.log(2*np.pi*nrls_class_var)
+                                            + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
+                                               + diag_nrls_covar) / nrls_class_var[np.newaxis, :, :]
+                                            ) / 2
 
     return s.sum()
 
