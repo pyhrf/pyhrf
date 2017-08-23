@@ -1151,7 +1151,33 @@ def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean, nrl
 
 
 def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma, gradient_method="m1"):
-    """Computes the gradient of the beta function
+    r"""Computes the gradient of the beta function.
+
+    The maximization of :math:`f(\beta^{m})` needs the computation of its derivative with respect to :math:`\beta^{m}`.
+
+    **Method 1**
+
+    .. math::
+
+        \frac{\partial f(\beta^{m})}{\partial \beta^{m}} = -\frac{1}{2} \sum\limits_{j}
+        \sum\limits_{k \in N(j)} \sum\limits_{i \in \{0,1\}} \left\{ p_{mf_{j}}(i)p_{mf_{k}}(i) -
+        \widetilde{p}_{q^{m}_{j}}(i)\widetilde{p}_{q^{m}_{k}}(i) \right\} - \lambda_{\beta}
+
+    **Method 2**
+
+    .. math::
+
+        \frac{\partial f(\beta^{m})}{\partial \beta^{m}} = - \sum\limits_{j}
+        \sum\limits_{k \in N(j)} \sum\limits_{i \in \{0,1\}} \widetilde{p}_{q^{m}_{k}} (i) \left\{ p_{mf_{j}} (i) -
+        \frac{1}{2}\widetilde{p}_{q^{m}_{j}} (i) \right\} - \lambda_{\beta}
+
+    where
+
+    .. math::
+
+          p_{mf_{j}} (i) = \frac{\exp \left( \beta \sum\limits_{k \in N(j)} \widetilde{p}_{q^{m}_{k}} (i) \right)}
+          {\sum\limits_{i \in \{0,1\}} \exp \left( \beta \sum\limits_{k \in N(j)} \widetilde{p}_{q^{m}_{k}} (i) \right)}
+
 
     Parameters
     ----------
@@ -1170,8 +1196,10 @@ def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma, g
     """
 
     beta_labels_neigh = beta * labels_neigh
+
     energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
     energy /= energy.sum(axis=0)
+
     energy_neigh = sum_over_neighbours(neighbours_indexes, energy)
 
     if gradient_method == "m1":
@@ -1185,7 +1213,14 @@ def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma, g
 
 
 def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
-    """Computes the Beta Maximization step of the JDE VEM algorithm
+    r"""Computes the Beta Maximization step of the JDE VEM algorithm.
+
+    The maximization over each :math:`\beta^{m}` corresponds to the M-step obtained for a standard Hiddden MRF model:
+
+    .. math::
+
+        \hat{\beta}^{m} = \underset{\beta^{m}}{\mathrm{arg\, max}} f(\beta^{m})
+
 
     Parameters
     ----------
@@ -1201,6 +1236,10 @@ def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
         the new value of beta
     success : bool
         True if the maximization has succeeded
+
+    Notes
+    -----
+    See :meth:`beta_gradient` function.
     """
 
     labels_neigh = sum_over_neighbours(neighbours_indexes, labels_proba)
