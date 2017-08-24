@@ -42,33 +42,42 @@ def save_treatment(t, f):
 def prepare_treatment_jobs(treatment, tmp_local_dir, local_result_path,
                            local_user, local_host, remote_host, remote_user,
                            remote_path, label_for_cluster):
-    """
-    Prepare somaworkflow jobs to perform one treatment (ie one subject).
+    """Prepare soma-workflow jobs to perform one treatment (i.e., one subject).
 
-    Args:
-        treatment (FMRITreatment): the treatment defining the analysis
-        tmp_local_dir (str): a path where to store the temporary config file
-                             before sending it to the remote host
-        local_result_path (str): path where to store the final result
-        local_user (str): the user on the local host who enables SHH connection
-                          from the remote cluster
-        local_host (str): local host (used to send back the result)
-        remote_host (str): remote machine where the treatment will be run
-        remote_user (str): user login on the remote machine.
-        remote_path (str): path on the remote machine where to store ROI data and
-                           analysis results
-        label_for_cluster (str): label prefix to name job in somaworkflow
+    Parameters
+    ----------
+    treatment : FMRITreatment
+        the treatment defining the analysis
+    tmp_local_dir : str
+        a path where to store the temporary config file before sending it to the remote host
+    local_result_path : str
+        path where to store the final result
+    local_user : str
+        the user on the local host who enables SHH connection from the remote cluster
+    local_host : str
+        local host (used to send back the result)
+    remote_host : str
+        remote machine where the treatment will be run
+    remote_user : str
+        user login on the remote machine.
+    remote_path : str
+        path on the remote machine where to store ROI data and analysis results
+    label_for_cluster : str
+        label prefix to name job in soma-workflow
 
-    Returns:
-            a tuple (job_split, jobs, dependencies, mainGroup)
+    Returns
+    -------
+    a tuple (job_split, jobs, dependencies, mainGroup)
+    job_split (Job)
+        job handling splitting of input data into ROI data
+    jobs (list of Job)
+        all jobs except the splitting jobs -> roi analyses, result merge, scp of result back to local host, data
+        cleaning
+    dependencies (list of job pairs)
+        define the pipeline structure
+    mainGroup (Group)
+        top-level object gathering all jobs for this treatment.
 
-            job_split (Job): job handling splitting of input data into ROI data
-            jobs (list of Job): all jobs except the splitting jobs
-                               -> roi analyses, result merge,
-                                  scp of result back to local host, data cleaning
-            dependencies (list of Job pairs): define the pipeline structure
-            mainGroup (Group): top-level object gathering all jobs for
-                               this treatment.
     """
 
     # roiFiles contains the list of files that will be produced by job_split
@@ -172,22 +181,30 @@ def run_soma_workflow(treatments, exec_cmd, tmp_local_dirs, server_id,
                       remote_host, remote_user, remote_pathes,
                       local_result_pathes, label_for_cluster,
                       wait_ending=False):
-    """
-    Dispatch treatments using soma-workflow.
-    - 'treatments' is a dict mapping a treatment name to a treatment object
-    - 'exec_cmd' is the command to run on each ROI data.
-    - 'tmp_local_dirs' is a dict mapping a treatment name to a local tmp dir
-      (used to store a temporary configuration file)
-    - 'server_id' is the server ID as expected by WorkflowController
-    - 'remote_host' is the remote machine where treatments are treated in parallel
-    - 'remote_user' is used to log in remote_host
-    - 'remote_pathes' is a dict mapping a treatment name to an existing remote dir
-      which will be used to store ROI data and result files
-    - 'local_result_pathes' is a dict mapping a treatment name to a local path
-      where final results will be sorted (host will send it there by scp)
-    - 'label_for_cluster' is the base name used to label workflows and sub jobs
-    - 'make_outputs' is a flag to tell wether to build outputs from result or not.
-      -> not operational yet (#TODO)
+    """Dispatch treatments using soma-workflow.
+
+    Parameters
+    ----------
+    treatments
+        it is a dict mapping a treatment name to a treatment object
+    exec_cmd
+        it is the command to run on each ROI data.
+    tmp_local_dirs
+        it is a dict mapping a treatment name to a local tmp dir (used to store a temporary configuration file)
+    server_id
+        it is the server ID as expected by WorkflowController
+    remote_host
+        it is the remote machine where treatments are treated in parallel
+    remote_user
+        it is used to log in remote_host
+    remote_pathes
+        it is a dict mapping a treatment name to an existing remote dir which will be used to store ROI data and result
+        files
+    local_result_pathes
+        it is a dict mapping a treatment name to a local path where final results will be sorted (host will send it
+        there by scp)
+    label_for_cluster
+        it is the base name used to label workflows and sub jobs
     """
 
     import getpass

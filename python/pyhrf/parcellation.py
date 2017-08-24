@@ -91,15 +91,20 @@ def parcellation_report(d):
 
 
 def parcellation_ward_spatial(func_data, n_clusters, graph=None):
-    """
-    Make parcellation based upon ward hierarchical clustering from scikit-learn
-    Inputs: - func_data: functional data: array of shape
-              (nb_positions, dim_feature_1, [dim_feature2, ...])
-            - n_clusters: chosen number of clusters to create
-            - graph: adjacency list defining neighbours
-              (if None, no connectivity defined: clustering is spatially
-            independent)
-    Output: parcellation labels
+    """Make parcellation based upon ward hierarchical clustering from scikit-learn
+
+    Parameters
+    ----------
+    func_data: array of shape (nb_positions, dim_feature_1, [dim_feature2, ...])
+        functional data:
+    n_clusters
+        chosen number of clusters to create
+    graph
+        adjacency list defining neighbours. if None, no connectivity defined: clustering is spatially independent
+
+    Returns
+    -------
+    parcellation labels
     """
     try:
         # sklearn version < 0.17

@@ -466,30 +466,18 @@ if pygraph_available:
 
 
 def split_mask_into_cc_iter(mask, min_size=0, kerMask=None):
-    """ Return an iterator over all connected components (CC) within input mask.
-    CC which are smaller than min_size are discarded. 'kerMask' defines the connexity,
-    eg kerMask3D_6n for 6-neighbours in 3D.
-    Example:
-    vol = np.array( [[1,1,0,1,1],
-                     [1,1,0,1,1],
-                     [0,0,0,0,0],
-                     [1,0,1,1,0],
-                     [0,0,1,1,0]], dtype=int )
-    for cc in split_mask_into_cc_iter(vol):
-        print cc
+    """ Return an iterator over all connected components (CC) within input mask. CC which are smaller than `min_size`
+    are discarded. `kerMask` defines the connectivity, e.g., kerMask3D_6n for 6-neighbours in 3D.
 
-    Should output:
-    np.array( [[1,1,0,0,0],
-               [1,1,0,0,0],
-               [0,0,0,0,0],
-               [0,0,0,0,0],
-               [0,0,0,0,0]]
-    np.array( [[0,0,0,1,1],
-               [0,0,0,1,1],
-               [0,0,0,0,0],
-               [0,0,0,0,0],
-               [0,0,0,0,0]]
-    ...
+    Examples
+    --------
+
+    >>> vol = np.array([[1,1,0,1,1], [1,1,0,1,1], [0,0,0,0,0], [1,0,1,1,0], [0,0,1,1,0]], dtype=int)
+    >>> for cc in split_mask_into_cc_iter(vol):
+    ...     print cc
+    np.array([[1,1,0,0,0], [1,1,0,0,0], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0]]
+    np.array([[0,0,0,1,1], [0,0,0,1,1], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0]]
+
     """
     assert isinstance(min_size, int)
     flat_mask = mask[np.where(mask)]
@@ -543,15 +531,22 @@ def sub_graph(graph, nodes):
     return subg, nodeMap
 
 
-def parcels_to_graphs(parcellation, kerMask, toKeep=None,
-                      toDiscard=None):
-    """
-    Compute graphs for each parcel in parcels. A graph is simply defined as
-    a list of neihbour indexes.
-    'parcellation' is a n-ary numpy array.
-    'kerMask' defines the connectivity
-    Return :
-     - a dictionnary mapping a roi ID to its graph
+def parcels_to_graphs(parcellation, kerMask, toKeep=None, toDiscard=None):
+    """Compute graphs for each parcel in parcels. A graph is simply defined as a list of neighbour indexes.
+
+    Parameters
+    ----------
+    parcellation:
+        is a n-ary numpy array.
+    kerMask:
+        defines the connectivity
+    toKeep
+    toDiscard
+
+    Returns
+    -------
+    a dictionary mapping a roi ID to its graph
+
     """
     # determine the set of parcels to work on:
     parcelIds = np.unique(parcellation)  # everything

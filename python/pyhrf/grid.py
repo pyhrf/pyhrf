@@ -613,17 +613,18 @@ class TaskHierarchical(Task):
 
 
 class User(object):
-    '''
-    User(name, passwd, keytype)
+    """Define user launching task and identification process.
 
-    Define user launching task and identification process.
-
-    name :     username.
-    passwd :   user passwd or if None, try to get ~/.ssh/id_dsa dsa key
-               for key connection.
-    keytype :  'rsa' or 'dsa'.
-    '''
-    def __init__(self, name = None, passwd = None, keytype = None):
+    Parameters
+    ----------
+    name
+        username.
+    passwd
+        user passwd or if None, try to get `~/.ssh/id_dsa` dsa key for key connection.
+    keytype
+        `rsa` or `dsa`.
+    """
+    def __init__(self, name=None, passwd=None, keytype=None):
         if name is None:
             name = os.getenv('USER')
         self.name = name

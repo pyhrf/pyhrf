@@ -2,10 +2,13 @@
 Performs parcellation to a list of subjects
 
 Directory structure:
+
 - subject:
-    - preprocessed_data --> GM+WM mask, functional data, normalised tissue masks
-    - t_maps --> T-maps previously computed with GLM (nipy, SALMA)
-    - parcellation --> Output
+
+    * preprocessed_data --> GM+WM mask, functional data, normalised tissue masks
+    * t_maps --> T-maps previously computed with GLM (nipy, SALMA)
+    * parcellation --> Output
+
 """
 
 import os

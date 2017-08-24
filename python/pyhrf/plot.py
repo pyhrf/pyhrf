@@ -349,28 +349,28 @@ def plot_gaussian_mixture(values, props=None, color='k', lw=1.75):
     #plt.yticks(np.arange(nyticks), ['']*nyticks)
 
 
+def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='', show_axis_labels=True, show_legend=False,
+                      axes=None, axis_label_fontsize=12):
+    """Plot a cuboid (ndims <= 2) as curve(s).
 
+    - If the input is 1D: one single curve.
+    - If the input is 2D:
+        * multiple curves are plotted: one for each domain value on the 1st axis.
+        * legends are shown to display which domain value is associated
+          to which curve.
 
-def plot_cub_as_curve(c, colors=None, plot_kwargs=None, legend_prefix='',
-                      show_axis_labels=True, show_legend=False, axes=None,
-                      axis_label_fontsize=12):
-    """
-    Plot a cuboid (ndims <= 2) as curve(s).
-    If the input is 1D: one single curve.
-    If the input is 2D:
-       * multiple curves are plotted: one for each domain value on the 1st axis.
-       * legends are shown to display which domain value is associated
-         to which curve.
+    Parameters
+    ----------
+    colors : dict <domain value>: <matplotlib color>
+        associate domain values of the 1st axis to color curves
+    plot_kwargs : dict <arg name>:<arg value>
+        dictionary of named argument passed to the plot function
+    legend_prefix : str
+        prefix to prepend to legend labels.
 
-    Args:
-        - colors (dict <domain value>: <matplotlib color>):
-            associate domain values of the 1st axis to color curves
-        - plot_kwargs (dict <arg name>:<arg value>):
-            dictionary of named argument passed to the plot function
-        - legend_prefix (str): prefix to prepend to legend labels.
-
-    Return:
-        None
+    Returns
+    -------
+    None
     """
     import matplotlib.pyplot as plt
 
