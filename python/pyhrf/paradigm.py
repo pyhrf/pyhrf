@@ -19,15 +19,17 @@ from pyhrf.tools._io.spmio import load_paradigm_from_mat
 logger = logging.getLogger(__name__)
 
 
-def merge_onsets(onsets, new_condition, criterion=None, durations=None,
-                 discard=None):
-    """
-     Convention for definition of onsets or durations:
-     OrderedDict({
-         'condition_name': [<array of timings for sess1>,
-                            <array of timings for sess2>,
-                            ...]
-      }
+def merge_onsets(onsets, new_condition, criterion=None, durations=None, discard=None):
+    """Convention for definition of onsets or durations.
+
+    .. code::
+
+        OrderedDict({
+            'condition_name': [ <array of timings for sess1>,
+                                <array of timings for sess2>,
+                                ...]
+            }
+
     """
 
     if discard is None:
@@ -675,18 +677,21 @@ class Paradigm:
         return max([self.sessionDurations[i] for i in xrange(ns)])
 
     def get_rastered(self, dt, tMax=None):
-        """ Return binary sequences of stimulus arrivals. Each stimulus event
-        is approximated to the closest time point on the time grid defined
-        by dt. eg return:
-        { 'cond1' : [np.array([ 0 0 0 1 0 0 1 1 1 0 1]),
-                     np.array([ 0 1 1 1 0 0 1 0 1 0 0])] },
-          'cond2' : [np.array([ 0 0 0 1 0 0 1 1 1 0 0]),
-                     np.array([ 1 1 0 1 0 1 0 0 0 0 0])] },
+        """ Return binary sequences of stimulus arrivals. Each stimulus event is approximated to the closest time point
+        on the time grid defined by dt. eg return ::
 
-        Arg:
-            - dt (float): temporal resolution of the target grid
-            - tMax (float): total duration of the paradigm
-                            If None, then use the session lengths
+            { 'cond1' : [np.array([ 0 0 0 1 0 0 1 1 1 0 1]),
+                         np.array([ 0 1 1 1 0 0 1 0 1 0 0])] },
+              'cond2' : [np.array([ 0 0 0 1 0 0 1 1 1 0 0]),
+                         np.array([ 1 1 0 1 0 1 0 0 0 0 0])] },
+
+        Parameters
+        ----------
+        dt : float
+            temporal resolution of the target grid
+        tMax : float
+            total duration of the paradigm. If None, then use the session lengths
+
         """
         assert dt > 0.
         rasteredParadigm = OrderedDict({})

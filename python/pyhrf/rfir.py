@@ -183,10 +183,12 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def InitStorageMat(self):
-        """
-        initialization of the matrices that will store all voxel resuls
-        requires:
-            input signals must have been read (in ReadRealSignal)
+        """Initialization of the matrices that will store all voxel results.
+
+        Notes
+        -----
+        Input signals must have been read (in ReadRealSignal)
+
         """
         npos = self.bold.shape[1]
         self.Pvalues = -0.1 * numpy.ones((self.M, npos), dtype=float)
@@ -223,11 +225,13 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def ReadPointOfInterestData(self, POI):
-        """
-        Initialize the parameters for a voxel analysis. The voxel ID is 'POI' in 'ConsideredCoord'
-        initialized in 'ReadRealSignal'
-        requires:
-            input signals must have been read (in ReadRealSignal)
+        """Initialize the parameters for a voxel analysis. The voxel ID is 'POI' in 'ConsideredCoord' initialized in
+        'ReadRealSignal'
+
+        Notes
+        -----
+        Input signals must have been read (in ReadRealSignal)
+
         """
         # initialization
 
@@ -243,12 +247,7 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def InitMatrixAndVectors(self, POI):
-        """
-        initialize to zeros: X, y, P, l, h, InvR, Sigma
-        initialize to ones: TauM, rb (<-scalar)
-        requires:
-            I / Ni / K /  M / Qi
-        """
+        """Initialize to zeros: X, y, P, l, h, InvR, Sigma. Initialize to ones: TauM, rb (<-scalar)."""
 
         logger.info('InitMatrixAndVectors ...')
 
@@ -293,11 +292,13 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def Compute_INV_R_and_R_and_DET_R(self):
-        """
-        both computes self.InvR and self.DetR
-        requires:
-            * K-1
-            * InvR initialized
+        """Both computes `self.InvR` and `self.DetR`
+
+        **Requires:**
+
+        - K-1
+        - InvR initialized
+
         """
 
         # for compactness
@@ -338,23 +339,25 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def Compute_onset_matrix3(self):
-        """
-        computes the onset matrix. Each stimulus onset is considered over
-        a period of LengthOnsets seconds if (LengthOnsets>DetlaT) and a
-        time step otherwise.
-        requires:
-            * X initialized
-            * OnsetList
-            * TR
-            * DeltaT
-            * K
-            * LengthOnsets
+        """Computes the onset matrix. Each stimulus onset is considered over a period of `LengthOnsets` seconds if
+        (`LengthOnsets > DetlaT`) and a time step otherwise.
 
-        where 'self.X[i][m,n,k]' is such that:
-            * session i (\in 0:I-1)
-            * condition m (\in 0:M-1)
-            * data nb n (\in 0:Ni[i]-1)
-            * hrf coef nb k (\in 0:K-2)
+        **Requires:**
+
+        - X initialized
+        - OnsetList
+        - TR
+        - DeltaT
+        - K
+        - LengthOnsets
+
+        where `self.X[i][m,n,k]` is such that:
+
+        - session i (\in 0:I-1)
+        - condition m (\in 0:M-1)
+        - data nb n (\in 0:Ni[i]-1)
+        - hrf coef nb k (\in 0:K-2)
+
         """
         # Onset matrix ('X') initialization: self.X[i][m,n,k] -> binary value of the onset matrix for session i / condition m / data nb n (real time) / hrf coef nb k (oversampled time)
         # Warning: since the first and the last values of the HRFs = 0, the nb
@@ -441,15 +444,7 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def buildLowFreqMat(self):
-        """
-        build the low frequency basis matrix P
-        requires:
-            * self.OrthoBtype
-            * self.Qi
-            * self.TR
-            * self.Ni
-            * self.I
-        """
+        """Build the low frequency basis matrix P."""
         for i in xrange(self.I):
             if self.OrthoBtype == 'cosine':
                 self.P[i] = self.buildCosMat(self.Qi[i], self.TR, self.Ni[i])
@@ -460,15 +455,22 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def buildPolyMat(self, fctNb, tr, ny):
-        """
-        build a polynomial low frequency basis in P (adapted from samplerbase.py)
-        requires:
-            * fctNb: columns number in the current session
-            * tr: the time resolution of the BOLD data (in second)
-            * ny: number of data for the current session
-        problems:
-            * there may have no constant column in the orthogonal matrix (the algorithm suppose there is one such column)
-            * the columns number is not always as expected
+        """Build a polynomial low frequency basis in P (adapted from `samplerbase.py`)
+
+        Parameters
+        ----------
+        fctNb
+            columns number in the current session
+        tr
+            the time resolution of the BOLD data (in second)
+        ny
+            number of data for the current session
+
+        Notes
+        -----
+        - there may have no constant column in the orthogonal matrix (the algorithm suppose there is one such column)
+        - the columns number is not always as expected
+
         """
         paramLFD = fctNb - \
             1  # order of the orthonormal basis for the drift component for the current session
@@ -484,12 +486,16 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def buildCosMat(self, fctNb, tr, ny):
-        """
-        build a cosine low frequency basis in P (adapted from samplerbase.py)
-        requires:
-            * fctNb: columns number in the current session
-            * tr: the time resolution of the BOLD data (in second)
-            * ny: number of data for the current session
+        """Build a cosine low frequency basis in P (adapted from `samplerbase.py`)
+
+        Parameters
+        ----------
+        fctNb
+            columns number in the current session
+        tr
+            the time resolution of the BOLD data (in second)
+        ny
+            number of data for the current session
         """
         paramLFD = fix(2 * (ny * tr) / (fctNb - 1.)
                        )  # order of the orthonormal basis for the drift component for the current session / +1 stands for the mean/cst regressor
@@ -506,16 +512,10 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def CptSigma(self):
-        """
-        Computes the Sigma at a given iteration
-        requires:
-            * InvR
-            * TauM
-            * rb
-            * X
-            * M
-        remark:
-            self.Sigma[m*SBS:(m+1)*SBS,n*SBS:(n+1)*SBS]] -> (m,n)^th block of Sigma in session i
+        """Computes the Sigma at a given iteration.
+
+        `self.Sigma[m*SBS:(m+1)*SBS,n*SBS:(n+1)*SBS]]` -> `(m,n)^th` block of Sigma in session `i`.
+
         """
         # 0 ) for compactness
         SBS = self.K - 1
@@ -547,13 +547,17 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def CptFctQ(self, CptType):
-        """
-        Computes the function Q(\Theta',\tilde{\Theta};y) at a given iteration
-        requires:
-            * All parameters and hyperparameters
-            * Sigma
-            * InvR
-            * CptType = 'K_Km1' or 'K_K'
+        r"""Computes the function :math:`Q(\Theta',\tilde{\Theta};y)` at a given iteration
+
+        Notes
+        -----
+        It requires:
+
+        * All parameters and hyperparameters
+        * Sigma
+        * InvR
+        * CptType = 'K_Km1' or 'K_K'
+
         """
         # 0 ) Initialisation
         SBS = self.K - 1
@@ -589,10 +593,11 @@ class RFIREstim(xmlio.XmlInitable):
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def StoreRes(self, POI):
-        """
-        Store results computed in the voxel defined in POI
-        requires:
-            * the estimation at this voxel must have been performed
+        """Store results computed in the voxel defined in POI.
+
+        Notes
+        -----
+        The estimation at this voxel must have been performed
         """
 
         for m in xrange(self.M):
@@ -1040,39 +1045,38 @@ class RFIREstim(xmlio.XmlInitable):
             "iteration: %s -> delta_h=%s", str(iteration), str(delta_h))
 
 
-def rfir(func_data, fir_duration=42, fir_dt=.6, nb_its_max=100,
-         nb_its_min=5, fixed_taum=False, lambda_reg=100.):
-    """
-    Fit a Regularized FIR on functional data *func_data*:
+def rfir(func_data, fir_duration=42, fir_dt=.6, nb_its_max=100, nb_its_min=5, fixed_taum=False, lambda_reg=100.):
+    """Fit a Regularized FIR on functional data `func_data`:
+
     - multisession voxel-based fwd model: y = \sum Xh + Pl + b
     - heteroscedastic noise
     - session dependent drift coefficients
     - one HRF per condition
     - solved by Expectation-Minimization (EM) (iterative scheme)
 
-    Reference: "Unsupervised robust non-parametric estimation of the hemodynamic
-    response function for any fMRI experiment." Ciuciu, J.-B. Poline,
-    G. Marrelec, J. Idier, Ch. Pallier, and H. Benali.
-    IEEE Trans. Med. Imag., 22(10):1235-1251, Oct. 2003.
+    **Reference:** "Unsupervised robust non-parametric estimation of the hemodynamic response function for any fMRI
+    experiment." Ciuciu, J.-B. Poline, G. Marrelec, J. Idier, Ch. Pallier, and H. Benali. IEEE Trans. Med. Imag.,
+    22(10):1235-1251, Oct. 2003.
 
-    Args:
-        *func_data* (pyhrf.core.FmriData)
-        *fir_duration* (float): FIR duration in seconds
-        *fir_dt* (float): FIR temporal resolution
-        *fixed_taum* (bool): enable faster (drafter) RFIR version where
-                             the HRF variance hyper-parameter is fixed.
-        *lambda_reg* (float): amount of temporal regularization for the HRF.
-                              Only used if *fixed_taum* is true.
-        *nb_its_min*: minimum number of iterations for the EM
-        *nb_its_max*: maximum number of iterations for the EM
+    Parameters
+    ----------
+    func_data : pyhrf.core.FmriData
+    fir_duration : float
+        FIR duration in seconds
+    fir_dt : float
+        FIR temporal resolution
+    fixed_taum : bool
+        enable faster (drafter) RFIR version where the HRF variance hyper-parameter is fixed.
+    lambda_reg : float
+        amount of temporal regularization for the HRF. Only used if `fixed_taum` is true.
+    nb_its_min
+        minimum number of iterations for the EM
+    nb_its_max
+        maximum number of iterations for the EM
 
-    Returns: dict of xndarray instances
-
-        The returned dict contains:
-        {"":
-         "":
-        }
-
+    Returns
+    -------
+    dict of xndarray instances
 
     """
     rfir_estimator = RFIREstim(hrf_nb_coeffs=int(np.round(fir_duration / fir_dt)),

@@ -36,17 +36,20 @@ class ArrayMappingError(Exception):
 
 
 class xndarray:
-    """ Handles a multidimensional numpy array with axes that are labeled
-    and mapped to domain values.
+    """ Handles a multidimensional numpy array with axes that are labeled and mapped to domain values.
 
-    Example :
-    c = xndarray( [ [4,5,6],[8,10,12] ], ['time','position'], {'time':[0.1,0.2]} )
+    Examples
+    --------
+    >>> c = xndarray( [ [4,5,6],[8,10,12] ], ['time','position'], {'time':[0.1,0.2]} )
+
     Will represent the following situation:
 
-    position
-    ------->
-    4  5  6 | t=0.1   |time
-    8 10 12 | t=0.2   v
+    .. code::
+
+        position
+        ------->
+        4  5  6 | t=0.1   |time
+        8 10 12 | t=0.2   v
 
     """
 
@@ -193,10 +196,10 @@ class xndarray:
     # set_axis_domain
 
     def get_domain(self, axis_id):
-        """
-        Return the domain of the axis *axis_id*
+        """Return the domain of the axis `axis_id`
 
-        example:
+        Examples
+        --------
         >>> from pyhrf.ndarray import xndarray
         >>> c = xndarray(np.random.randn(10,2), axes_names=['x','y'], \
                        axes_domains={'y' : ['plop','plip']})
@@ -204,6 +207,7 @@ class xndarray:
         True
         >>> c.get_domain('x') #default domain made of slice indexes
         array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
         """
         if axis_id in self.axes_domains:
             return self.axes_domains[axis_id]
@@ -735,15 +739,15 @@ class xndarray:
         return self.expand(cmask.data, axis, cmask.axes_names,
                            cmask.axes_domains, dest=dest)
 
-    def expand(self, mask, axis, target_axes=None,
-               target_domains=None, dest=None, do_checks=True, m=None):
-        """ Create a new xndarray instance (or store into an existing 'dest'
-        cuboid) where 'axis' is expanded and values are mapped according to
-        'mask'.
-        'target_axes' is a list of the names of the new axes replacing 'axis'.
-        'target_domains' is a dict of domains for the new axes.
+    def expand(self, mask, axis, target_axes=None, target_domains=None, dest=None, do_checks=True, m=None):
+        """ Create a new xndarray instance (or store into an existing `dest` cuboid) where `axis` is expanded and
+        values are mapped according to `mask`.
 
-        Example:
+        - `target_axes` is a list of the names of the new axes replacing `axis`.
+        - `target_domains` is a dict of domains for the new axes.
+
+        Examples
+        --------
         >>> import numpy as np
         >>> from pyhrf.ndarray import xndarray
         >>> c_flat = xndarray(np.arange(2*6).reshape(2,6).astype(np.int64), \
@@ -772,6 +776,7 @@ class xndarray:
           'x': arange(0,3,1)
           'y': arange(0,3,1)
           'z': arange(0,3,1)
+
         """
         logger.debug('expand ... mask: %s -> region size=%d, '
                      'axis: %s, target_axes: %s, target_domains: %s',
@@ -844,18 +849,19 @@ class xndarray:
                         meta_data=self.meta_data)
 
     def map_onto(self, xmapping):
-        """
-        Reshape the array by mapping the axis corresponding to
-        xmapping.value_label onto the shape of xmapping.
-        Args:
-            - xmapping (xndarray): array whose attribute value_label
-                                   matches an axis of the current array
+        """Reshape the array by mapping the axis corresponding to xmapping.value_label onto the shape of xmapping.
 
-        Return:
-            - a new array (xndarray) where values from the current array
-              have been mapped according to xmapping
+        Parameters
+        ----------
+        xmapping : xndarray
+            array whose attribute value_label matches an axis of the current array
 
-        Example:
+        Returns
+        -------
+        a new array (xndarray) where values from the current array have been mapped according to xmapping
+
+        Examples
+        --------
         >>> from pyhrf.ndarray import xndarray
         >>> import numpy as np
         >>> # data with a region axis:
@@ -1731,13 +1737,12 @@ def xndarray_like(c, data=None):
 
 
 def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
-    """ Stack xndarray instances in list 'c_list' along a new axis label 'axis'.
-    If 'domain' (numpy array or list) is provided, it is associated to the
-    new axis.
-    All cuboids in 'c_list' must have the same orientation and domains.
-    'axis_pos' defines the position of the new axis: either 'first' or 'last'.
+    """ Stack xndarray instances in list `c_list` along a new axis label `axis`. If `domain` (numpy array or list) is
+    provided, it is associated to the new axis. All cuboids in `c_list` must have the same orientation and domains.
+    `axis_pos` defines the position of the new axis: either `first` or `last`.
 
-    Example:
+    Examples
+    --------
     >>> import numpy as np
     >>> from pyhrf.ndarray import xndarray, stack_cuboids
     >>> c1 = xndarray(np.arange(4*3).reshape(4,3), ['x','y'])
@@ -1803,20 +1808,21 @@ def stack_cuboids(c_list, axis, domain=None, axis_pos='first'):
 
 
 def expand_array_in_mask(flat_data, mask, flat_axis=0, dest=None, m=None):
-    """ Map the flat_axis of flat_data onto the region within mask.
-    flat_data is then reshaped so that flat_axis is replaced with mask.shape
+    """ Map the `flat_axis` of `flat_data` onto the region within mask. `flat_data` is then reshaped so that flat_axis
+    is replaced with `mask.shape`.
 
-    *m* is the result of np.where(mask) -> can be passed to speed up if already
-    done before
+    Notes
+    -----
+    `m` is the result of `np.where(mask)` -> can be passed to speed up if already done before.
 
-    Example 1
+    Examples
+    --------
     >>> a = np.array([1,2,3])
     >>> m = np.array([[0,1,0], [0,1,1]] )
     >>> expand_array_in_mask(a,m)
     array([[0, 1, 0],
            [0, 2, 3]])
 
-    Example 2
     >>> a = np.array([[1,2,3],[4,5,6]])
     >>> m = np.array([[0,1,0], [0,1,1]] )
     >>> expand_array_in_mask(a,m,flat_axis=1)
@@ -1879,21 +1885,22 @@ def merge(arrays, mask, axis, fill_value=0):
 
 
 def tree_to_xndarray(tree, level_labels=None):
-    """
-    Stack all arrays within input tree into a single array.
+    """Stack all arrays within input tree into a single array.
 
-    Args:
-        - tree (dict): nested dictionnaries of xndarray objects.
-                       Each level of the tree correspond to a target axis,
-                       each key of the tree correspond to an element of the
-                       domain associated to that axis.
-        - level_labels (list of str): axis labels corresponding to each level
-                       of the tree
+    Parameters
+    ----------
+    tree : dict
+        nested dictionaries of xndarray objects. Each level of the tree correspond to a target axis, each key of the
+        tree correspond to an element of the domain associated to that axis.
+    level_labels : list of str
+        axis labels corresponding to each level of the tree
 
-    Return:
-        xndarray object
+    Returns
+    -------
+    xndarray object
 
-    Example:
+    Examples
+    --------
     >>> from pyhrf.ndarray import xndarray, tree_to_xndarray
     >>> d = { 1 : { .1 : xndarray([1,2], axes_names=['inner_axis']), \
                     .2 : xndarray([3,4], axes_names=['inner_axis']), \
@@ -1908,6 +1915,7 @@ def tree_to_xndarray(tree, level_labels=None):
     <BLANKLINE>
            [[1, 2],
             [3, 4]]])
+
     """
     tree_depth = len(treeBranches(tree).next())
     level_labels = level_labels or ['axis_%d' % i for i in xrange(tree_depth)]
