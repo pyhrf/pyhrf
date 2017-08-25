@@ -263,13 +263,20 @@ def cartesian_combine_args(varying_args, fixed_args=None):
     ----------
     varying_args
         Specify varying arguments as a dict mapping arg names to iterables of arg values.
-        e.g::
-        >>> {'my_arg1' : ['a','b','c'],
-        ...  'my_arg2' : [2, 5, 10]}
+        e.g:
+
+        .. code::
+
+            {'my_arg1' : ['a','b','c'],
+             'my_arg2' : [2, 5, 10]}
+
     fixed_args
         Specify constant arguments as a dict mapping arg names to arg values.
         e.g:
-        >>> { 'my_arg3' : ['fixed_value'] }
+
+        .. code::
+
+            { 'my_arg3' : ['fixed_value'] }
 
     Examples
     --------

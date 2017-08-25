@@ -472,11 +472,31 @@ def split_mask_into_cc_iter(mask, min_size=0, kerMask=None):
     Examples
     --------
 
-    >>> vol = np.array([[1,1,0,1,1], [1,1,0,1,1], [0,0,0,0,0], [1,0,1,1,0], [0,0,1,1,0]], dtype=int)
-    >>> for cc in split_mask_into_cc_iter(vol):
-    ...     print cc
-    np.array([[1,1,0,0,0], [1,1,0,0,0], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0]]
-    np.array([[0,0,0,1,1], [0,0,0,1,1], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0]]
+    .. code::
+
+        vol = np.array( [[1,1,0,1,1],
+                        [1,1,0,1,1],
+                        [0,0,0,0,0],
+                        [1,0,1,1,0],
+                        [0,0,1,1,0]], dtype=int )
+        for cc in split_mask_into_cc_iter(vol):
+            print cc
+
+
+    Should output:
+
+    .. code::
+
+        np.array( [[1,1,0,0,0],
+                   [1,1,0,0,0],
+                   [0,0,0,0,0],
+                   [0,0,0,0,0],
+                   [0,0,0,0,0]]
+        np.array( [[0,0,0,1,1],
+                   [0,0,0,1,1],
+                   [0,0,0,0,0],
+                   [0,0,0,0,0],
+                   [0,0,0,0,0]]
 
     """
     assert isinstance(min_size, int)
