@@ -1039,12 +1039,12 @@ class Ward(BaseEstimator, ClusterMixin):
         The number of clusters to find.
 
     connectivity : sparse matrix.
-        Connectivity matrix. Defines for each sample the neigbhoring
+        Connectivity matrix. Defines for each sample the neighboring
         samples following a given structure of the data.
-        Default is None, i.e, the hiearchical clustering algorithm is
+        Default is None, i.e, the hierarchical clustering algorithm is
         unstructured.
 
-    memory : Instance of joblib.Memory or string
+    memory : Instance of joblib.Memory or str
         Used to cache the output of the computation of the tree.
         By default, no caching is done. If a string is given, it is the
         path to the caching directory.
@@ -1053,10 +1053,9 @@ class Ward(BaseEstimator, ClusterMixin):
         Copy the connectivity matrix or work inplace.
 
     n_components : int (optional)
-        The number of connected components in the graph defined by the \
-        connectivity matrix. If not set, it is estimated.
+        The number of connected components in the graph defined by the connectivity matrix. If not set, it is estimated.
 
-    compute_full_tree: bool or 'auto' (optional)
+    compute_full_tree: bool or `auto` (optional)
         Stop early the construction of the tree at n_clusters. This is
         useful to decrease computation time if the number of clusters is
         not small compared to the number of samples. This option is
@@ -1067,16 +1066,16 @@ class Ward(BaseEstimator, ClusterMixin):
 
     Attributes
     ----------
-    `children_` : array-like, shape = [n_nodes, 2]
+    children_ : array-like, shape = [n_nodes, 2]
         List of the children of each nodes.  Leaves of the tree do not appear.
 
-    `labels_` : array [n_samples]
+    labels_ : array [n_samples]
         cluster labels for each point
 
-    `n_leaves_` : int
-        Number of leaves in the hiearchical tree.
+    n_leaves_ : int
+        Number of leaves in the hierarchical tree.
 
-    `n_components_` : sparse matrix.
+    n_components_ : sparse matrix.
         The estimated number of connected components in the graph.
 
     """
@@ -1173,12 +1172,12 @@ class WardAgglomeration(AgglomerationTransform, Ward):
         The number of clusters.
 
     connectivity : sparse matrix
-        connectivity matrix. Defines for each feature the neigbhoring
+        connectivity matrix. Defines for each feature the neighboring
         features following a given structure of the data.
-        Default is None, i.e, the hiearchical agglomeration algorithm is
+        Default is None, i.e, the hierarchical agglomeration algorithm is
         unstructured.
 
-    memory : Instance of joblib.Memory or string
+    memory : Instance of joblib.Memory or str
         Used to cache the output of the computation of the tree.
         By default, no caching is done. If a string is given, it is the
         path to the caching directory.
@@ -1190,7 +1189,7 @@ class WardAgglomeration(AgglomerationTransform, Ward):
         The number of connected components in the graph defined by the
         connectivity matrix. If not set, it is estimated.
 
-    compute_full_tree: bool or 'auto' (optional)
+    compute_full_tree: bool or `auto` (optional)
         Stop early the construction of the tree at n_clusters. This is
         useful to decrease computation time if the number of clusters is
         not small compared to the number of samples. This option is
@@ -1203,20 +1202,20 @@ class WardAgglomeration(AgglomerationTransform, Ward):
 
     activation: level of activation detected (default: None)
         Used to weight voxels depending on level of activation in inertia computation.
-        A non-activ voxel will not estimate the HRF correctly,
+        A non-active voxel will not estimate the HRF correctly,
         so features will not be correct either.
 
     Attributes
     ----------
-    `children_` : array-like, shape = [n_nodes, 2]
+    children_ : array-like, shape = [n_nodes, 2]
         List of the children of each nodes.
         Leaves of the tree do not appear.
 
-    `labels_` : array [n_samples]
+    labels_ : array [n_samples]
         cluster labels for each point
 
-    `n_leaves_` : int
-        Number of leaves in the hiearchical tree.
+    n_leaves_ : int
+        Number of leaves in the hierarchical tree.
 
     """
 
