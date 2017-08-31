@@ -180,9 +180,6 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes, 
     hrf_len = np.int(np.ceil(hrf_duration / dt)) + 1
 
     nb_conditions = len(onsets)
-    if nb_conditions != 2:
-        logger.warn('The number of conditions is different to two.')
-
     nb_scans = bold_data.shape[0]
     nb_voxels = bold_data.shape[1]
     X, occurence_matrix, condition_names = vt.create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr,
@@ -212,6 +209,9 @@ def jde_vem_bold(graph, bold_data, onsets, durations, hrf_duration, nb_classes, 
     noise_struct = np.identity(nb_scans)
 
     noise_var = np.ones(nb_voxels)
+
+    if nb_classes != 2:
+        logger.warn('The number of classes is different to two.')
 
     labels_proba = np.zeros((nb_conditions, nb_classes, nb_voxels), dtype=np.float64)
     logger.info("Labels are initialized by setting everything to {}".format(1. / nb_classes))
