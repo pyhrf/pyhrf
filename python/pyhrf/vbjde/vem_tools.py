@@ -2580,24 +2580,30 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
     free_energy : float
     """
 
-    total_entropy = (nrls_entropy(nrls_covar, nb_conditions) +
-                     hrf_entropy(hrf_covar, hrf_len) +
-                     labels_entropy(labels_proba))
+    expectation_likelihood = expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
+                                                           hrf_mean, hrf_covar, occurence_matrix,
+                                                           noise_var, noise_struct, nb_voxels, nb_scans)
 
-    total_expectation = (
-        expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
-                                      hrf_mean, hrf_covar, occurence_matrix,
-                                      noise_var, noise_struct, nb_voxels, nb_scans)
-        + expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
-                                  nrls_mean, nrls_covar)
-        + expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
-                                    nb_conditions, nb_classes)
-        + expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
-                                 hrf_regu_prior_inv, hrf_len)
-    )
+    entropy_nrls = nrls_entropy(nrls_covar, nb_conditions)
+    expectation_nrls = expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var, nrls_mean, nrls_covar)
+
+    entropy_labels = labels_entropy(labels_proba)
+    expectation_labels = expectation_ptilde_labels(labels_proba, neighbours_indexes, beta, nb_conditions, nb_classes)
+
+    # hrf_covar is set to 0 when the hrf is not estimated
+    if np.linalg.det(hrf_covar) == 0:
+        expectation_hrf = 0
+        entropy_hrf = 0
+        hrf_hyperprior = 0
+    else:
+        expectation_hrf = expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior, hrf_regu_prior_inv,
+                                                 hrf_len)
+        entropy_hrf = hrf_entropy(hrf_covar, hrf_len)
+
+    total_expectation = expectation_likelihood + expectation_nrls + expectation_labels + expectation_hrf
+    total_entropy = entropy_nrls + entropy_hrf + entropy_labels
 
     total_prior = 0
-
     if gamma:
         total_prior += nb_conditions*np.log(gamma) - gamma*beta.sum()
 
