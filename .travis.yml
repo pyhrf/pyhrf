@@ -8,15 +8,8 @@ services:
   - docker
 
 before_install:
-  - pip install coveralls
   - git clone https://github.com/pyhrf/docker-pyhrf.git
   - docker build --build-arg PYHRF_BRANCH=$TRAVIS_BRANCH -t pyhrf/pyhrf docker-pyhrf
 
 script:
-  - mkdir coverage_output
-  - docker run --rm -v ${PWD}/coverage_output:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf; cp .coverage /output"
-
-after_success:
-  - mv coverage_output/.coverage .coverage
-  - sed -i "s/\"\/pyhrf/\"$(echo ${TRAVIS_BUILD_DIR} | sed 's/\//\\\//g')/g" .coverage
-  - coveralls
+  - docker run --rm -v ${PWD}/coverage_output:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf; sed -i "s/\"\/pyhrf/\"$(echo ${TRAVIS_BUILD_DIR} | sed 's/\//\\\//g')/g" .coverage; coveralls"
