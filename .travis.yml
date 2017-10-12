@@ -1,23 +1,14 @@
-language: python
 sudo: required
-
-python:
-  - "2.7"
 
 services:
   - docker
 
 before_install:
-  - docker pull pyhrf/pyhrf
-
-install:
-  - pip install coveralls
+  - git clone https://github.com/pyhrf/docker-pyhrf.git
+  - docker build --build-arg PYHRF_BRANCH=$TRAVIS_BRANCH -t pyhrf/pyhrf docker-pyhrf
 
 script:
-  - docker run --name pyhrf -d pyhrf/pyhrf sleep 300
-  - docker exec pyhrf /bin/sh -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf"
+  - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf && cp .coverage /output"
 
 after_success:
-  - docker exec pyhrf cat .coverage > .coverage
-  - sed -i "s/\"\/pyhrf/\"$(echo ${TRAVIS_BUILD_DIR} | sed 's/\//\\\//g')/g" .coverage
-  - coveralls
+  - docker run --rm -e TRAVIS=$TRAVIS -e TRAVIS_JOB_ID=$TRAVIS_JOB_ID -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cd /output; coveralls"
