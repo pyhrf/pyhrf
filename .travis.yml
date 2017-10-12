@@ -1,12 +1,16 @@
+language: python
 sudo: required
+
+python:
+  - "2.7"
 
 services:
   - docker
 
 before_install:
+  - pip install coveralls
   - git clone https://github.com/pyhrf/docker-pyhrf.git
   - docker build --build-arg PYHRF_BRANCH=$TRAVIS_BRANCH -t pyhrf/pyhrf docker-pyhrf
-  - pip install coveralls
 
 script:
   - mkdir coverage_output
