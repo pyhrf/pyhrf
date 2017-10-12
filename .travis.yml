@@ -1,19 +1,14 @@
-language: python
 sudo: required
-
-python:
-  - "2.7"
 
 services:
   - docker
 
 before_install:
   - docker pull pyhrf/pyhrf
-  - mkdir coverage_output
 
 script:
-  - docker run --rm -v ${PWD}/coverage_output:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf \
-    bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf; cp .coverage /output"
+  - mkdir coverage_output
+  - docker run --rm -v ${PWD}/coverage_output:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf; cp .coverage /output"
 
 after_success:
   - mv coverage_output/.coverage .coverage
