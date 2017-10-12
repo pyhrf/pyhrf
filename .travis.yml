@@ -12,10 +12,7 @@ before_install:
   - mkdir coverage_output
 
 script:
-  - docker run --rm \
-    -v coverage_output:/output:rw \
-    -e LOCAL_USER_ID=`id -u $USER` \
-    pyhrf/pyhrf \
+  - docker run --rm -v ${PWD}/coverage_output:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf \
     bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf; cp .coverage /output"
 
 after_success:
