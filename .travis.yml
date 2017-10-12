@@ -11,4 +11,4 @@ script:
   - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf && cp .coverage /output"
 
 after_success:
-  - docker run --rm -e TRAVIS=$TRAVIS -e TRAVIS_JOB_ID=$TRAVIS_JOB_ID -v ${pwd}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cd /output; coveralls"
+  - docker run --rm -e TRAVIS=$TRAVIS -e TRAVIS_JOB_ID=$TRAVIS_JOB_ID -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cd /output; coveralls"
