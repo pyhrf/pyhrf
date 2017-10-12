@@ -54,7 +54,7 @@ def setup_package():
                         'nibabel>=1.1, <2.1.0',
                         'sympy>=0.7',
                         'nipy>=0.3.0',
-                        'matplotlib>=1.1',
+                        'matplotlib>=1.1, <2.1.0',
                         'colorama',
                         'click',
                         'Sphinx',
