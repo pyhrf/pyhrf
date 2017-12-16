@@ -1,5 +1,5 @@
-pyhrf.version module
-====================
+pyhrf\.version module
+=====================
 
 .. automodule:: pyhrf.version
     :members:

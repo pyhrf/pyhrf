@@ -1,25 +1,20 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python2
 """Setup script for PyHRF"""
 from __future__ import print_function
+from setuptools import setup
 import sys
 
-# setuptools is used to build and distribute pyhrf
-from ez_setup import use_setuptools
 
-use_setuptools()
-
-# The current version of pyhrf works with python 2.6 or 2.7
-if sys.version_info[:2] < (2, 6) or (3, 0) <= sys.version_info[:2]:
-    raise RuntimeError("Python version 2.7 or 2.6 required.")
+# The current version of PyHRF works with python 2.7.X
+if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2]:
+    raise RuntimeError("Python version 2.7 required.")
 
 
 def parse_setuppy_commands():
-    """Check the commands and respond appropriately. Disable broken
-    commands.
+    """Check the commands and respond appropriately. Disable broken commands.
 
     Returns:
-        bool: Return a boolean value for whether or not to run the
-        build (avoid installing numpy and other dependencies)
+        bool: Return a boolean value for whether or not to run the build (avoid installing numpy and other dependencies)
     """
     if len(sys.argv) < 2:
         # User forgot to give an argument probably, let setuptools handle that.
@@ -41,24 +36,20 @@ def setup_package():
     """Configuration of the setup"""
 
     if parse_setuppy_commands():
-        from setuptools import setup
         extra_setuptools_args = dict()
     else:
-        from setuptools import setup, find_packages, Extension
+        from setuptools import find_packages, Extension
         from glob import glob
         import pip
 
         # Dependencies for building C Extensions
-        dependencies = ['numpy>=1.6, <1.12',
-                        'scipy>=0.9',
-                        'nibabel>=1.1, <2.1.0',
-                        'sympy>=0.7',
-                        'nipy>=0.3.0',
-                        'matplotlib>=1.1, <2.1.0',
-                        'colorama',
-                        'click',
-                        'Sphinx',
-                        'sphinx_bootstrap_theme']
+        try:
+            dependencies = list(pip.req.parse_requirements('requirements.txt'))
+        except TypeError:
+            # new versions of pip requires a session
+            dependencies = list(pip.req.parse_requirements('requirements.txt', session=pip.download.PipSession()))
+
+        dependencies = [str(package.req) for package in dependencies]
 
         # Installing the required packages to build C extensions
         for package in dependencies:
@@ -69,8 +60,7 @@ def setup_package():
         c_extensions = [Extension(ext_name, sources=['src/pyhrf/' + filepath])
                         for (ext_name, filepath) in
                         [('pyhrf.jde.intensivecalc', 'jde/intensivecalc.c'),
-                         ('pyhrf.boldsynth.pottsfield.pottsfield_c',
-                          'boldsynth/pottsfield/pottsField.c'),
+                         ('pyhrf.boldsynth.pottsfield.pottsfield_c', 'boldsynth/pottsfield/pottsField.c'),
                          ('pyhrf.vbjde.UtilsC', 'vbjde/utilsmodule.c'),
                          ('pyhrf.cparcellation', 'cparcellation.c')]]
 
@@ -84,9 +74,7 @@ def setup_package():
             include_dirs=[numpy.get_include()],
             setup_requires=dependencies,
             install_requires=dependencies,
-            extras_require={"Ward": ["scikit-learn>=0.10"],
-                            "parallel": ["joblib>=0.5"],
-                            "cluster": ["soma-workflow"],
+            extras_require={"cluster": ["soma-workflow"],
                             "simulation": ["Pillow>=2.3"],
                             "parcellation": ["munkres>=1.0"],
                             "pipelines": ["pygraphviz>=1.1"],
@@ -172,8 +160,6 @@ if __name__ == '__main__':
 
         # Optional deps and description of associated feature:
         OPTIONAL_DEPS = {
-            'sklearn': '(scikit-learn) -- spatial ward parcellation',
-            'joblib': 'local parallel feature (eg pyhrf_jde_estim -x local)',
             "soma_workflow": 'cluster parallel feature (eg pyhrf_jde_estim -x cluster)',
             'PIL': "loading of image file as simulation maps",
             'munkres': 'computation of distance between parcellations',

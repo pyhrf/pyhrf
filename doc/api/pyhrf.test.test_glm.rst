@@ -1,5 +1,5 @@
-pyhrf.test.test_glm module
-==========================
+pyhrf\.test\.test\_glm module
+=============================
 
 .. automodule:: pyhrf.test.test_glm
     :members:

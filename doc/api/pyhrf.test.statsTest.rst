@@ -1,5 +1,5 @@
-pyhrf.test.statsTest module
-===========================
+pyhrf\.test\.statsTest module
+=============================
 
 .. automodule:: pyhrf.test.statsTest
     :members:

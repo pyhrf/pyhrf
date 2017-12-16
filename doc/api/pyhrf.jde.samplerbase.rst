@@ -1,5 +1,5 @@
-pyhrf.jde.samplerbase module
-============================
+pyhrf\.jde\.samplerbase module
+==============================
 
 .. automodule:: pyhrf.jde.samplerbase
     :members:

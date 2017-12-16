@@ -1,5 +1,5 @@
-pyhrf.validation package
-========================
+pyhrf\.validation package
+=========================
 
 .. automodule:: pyhrf.validation
     :members:

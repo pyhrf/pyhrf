@@ -1,5 +1,5 @@
-pyhrf.boldsynth.pottsfield.swendsenwang module
-==============================================
+pyhrf\.boldsynth\.pottsfield\.swendsenwang module
+=================================================
 
 .. automodule:: pyhrf.boldsynth.pottsfield.swendsenwang
     :members:

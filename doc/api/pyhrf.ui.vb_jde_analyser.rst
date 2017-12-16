@@ -1,5 +1,5 @@
-pyhrf.ui.vb_jde_analyser module
-===============================
+pyhrf\.ui\.vb\_jde\_analyser module
+===================================
 
 .. automodule:: pyhrf.ui.vb_jde_analyser
     :members:

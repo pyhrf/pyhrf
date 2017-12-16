@@ -1,5 +1,5 @@
-pyhrf.validation.valid_jde_asl module
-=====================================
+pyhrf\.validation\.valid\_jde\_asl module
+=========================================
 
 .. automodule:: pyhrf.validation.valid_jde_asl
     :members:

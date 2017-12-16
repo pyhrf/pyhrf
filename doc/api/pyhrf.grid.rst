@@ -1,5 +1,5 @@
-pyhrf.grid module
-=================
+pyhrf\.grid module
+==================
 
 .. automodule:: pyhrf.grid
     :members:

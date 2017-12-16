@@ -31,22 +31,17 @@ logger = logging.getLogger(__name__)
 
 
 class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
-    """
-    Class handling the Gibbs sampling of Neural Response Levels with a prior
-    bi-gaussian mixture model. It handles independent and spatial versions.
+    """Class handling the Gibbs sampling of Neural Response Levels with a prior bi-gaussian mixture model. It handles
+    independent and spatial versions.
 
-      - Vincent, T., Risser, L., & Ciuciu, P. (2010). Spatially Adaptive
-      Mixture Modeling for Analysis of fMRI Time Series. IEEE Transactions on
-      Medical Imaging, 29(4), 1059–1074.
-      https://doi.org/10.1109/TMI.2010.2042064
+    - Vincent, T., Risser, L., & Ciuciu, P. (2010). Spatially Adaptive Mixture Modeling for Analysis of fMRI Time
+      Series. IEEE Transactions on Medical Imaging, 29(4), 1059–1074. https://doi.org/10.1109/TMI.2010.2042064
 
-      - Makni, S., Idier, J., Vincent, T., Thirion, B., Dehaene-Lambertz, G.,
-      & Ciuciu, P. (2008). A fully Bayesian approach to the parcel-based
-      detection-estimation of brain activity in fMRI. NeuroImage, 41(3),
-      941–969. https://doi.org/10.1016/j.neuroimage.2008.02.017
+    - Makni, S., Idier, J., Vincent, T., Thirion, B., Dehaene-Lambertz, G., & Ciuciu, P. (2008). A fully Bayesian
+      approach to the parcel-based detection-estimation of brain activity in fMRI. NeuroImage, 41(3), 941–969.
+      https://doi.org/10.1016/j.neuroimage.2008.02.017
 
-      - Sockel 2009 ICASSP (TODO: Complete reference)
-    #TODO : comment attributes
+    - Sockel 2009 ICASSP (TODO: Complete reference)
     """
 
     if pyhrf.__usemode__ == pyhrf.ENDUSER:

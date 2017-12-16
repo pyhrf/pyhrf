@@ -1,5 +1,5 @@
-pyhrf.test.test_plot module
-===========================
+pyhrf\.test\.test\_plot module
+==============================
 
 .. automodule:: pyhrf.test.test_plot
     :members:

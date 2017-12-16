@@ -1083,12 +1083,11 @@ class HRFwithHabSampler(HRFSampler):
 ############################################################################
 
 class HRFSamplerWithRelVar(HRFSampler):
+    """This class introduce a new variable w (Relevant Variable) that takes its value in {0, 1} with :
 
-    """
-    This class introduce a new variable w (Relevant Variable)
-    w take its value in {0, 1} with :
-            w = 1  condition m is relevant in the studied parcel
-            w = 1  otherwise
+    - w = 1  condition m is relevant in the studied parcel
+    - w = 1  otherwise
+
     """
 
     def linkToData(self, dataInput):

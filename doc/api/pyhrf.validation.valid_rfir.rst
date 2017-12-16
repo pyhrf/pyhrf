@@ -1,5 +1,5 @@
-pyhrf.validation.valid_rfir module
-==================================
+pyhrf\.validation\.valid\_rfir module
+=====================================
 
 .. automodule:: pyhrf.validation.valid_rfir
     :members:

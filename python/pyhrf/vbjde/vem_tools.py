@@ -13,7 +13,7 @@ import scipy
 
 from numpy.matlib import repmat
 from scipy.linalg import toeplitz
-from scipy.optimize import fmin_slsqp, brentq
+from scipy.optimize import fmin_slsqp, brentq, least_squares, leastsq
 from scipy.stats import norm
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -126,7 +126,7 @@ def PolyMat(Nscans, paramLFD, tr):
 
 
 def poly_drifts_basis(nb_scans, param_lfd, tr):
-    """Build polynomial drifts basis
+    """Build polynomial drifts basis.
 
     Parameters
     ----------
@@ -144,20 +144,19 @@ def poly_drifts_basis(nb_scans, param_lfd, tr):
 
     regressors = tr * np.arange(0, nb_scans)
     time_power = np.arange(0, param_lfd + 1, dtype=int)
-    reg_mat = np.zeros((len(regressors), param_lfd + 1), dtype=np.float64)
+    reg_mat = np.zeros((nb_scans, param_lfd + 1), dtype=np.float64)
 
     for v in xrange(param_lfd + 1):
         reg_mat[:, v] = regressors[:]
 
-    time_power_mat = repmat(time_power, nb_scans, 1)
-    drifts_basis = np.power(reg_mat, time_power_mat)
+    drifts_basis = np.power(reg_mat, time_power)
     drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
 
     return drifts_basis
 
 
 def cosine_drifts_basis(nb_scans, param_lfd, tr):
-    """Build cosine drifts basis
+    """Build cosine drifts basis.
 
     Parameters
     ----------
@@ -173,16 +172,18 @@ def cosine_drifts_basis(nb_scans, param_lfd, tr):
         effective rank of the matrix it is applied to (see function's docstring)
     """
 
-    n = np.arange(0, nb_scans)
-    fct_nb = int(np.fix(2. * (nb_scans * tr) / param_lfd + 1.))  # +1 stands for the
-                                                                 # mean/cst regressor
+    fct_nb = int(np.fix(2. * (nb_scans * tr) / param_lfd + 1.))  # +1 stands for the mean/cst regressor
+
     drifts_basis = np.zeros((nb_scans, fct_nb), dtype=float)
     drifts_basis[:, 0] = np.ones(nb_scans, dtype=float) / np.sqrt(nb_scans)
-    samples = 1 + np.arange(fct_nb - 2)
 
+    amplitude = np.sqrt(2. / nb_scans)
+    n = np.arange(0, nb_scans)
+    omega = np.pi * (2. * n + 1.) / (2. * nb_scans)
+
+    samples = np.arange(1, fct_nb - 1)
     for k in samples:
-        drifts_basis[:, k] = np.sqrt(2. / nb_scans) \
-            * np.cos(np.pi * (2. * n + 1.) * k / (2. * nb_scans))
+        drifts_basis[:, k] = amplitude * np.cos(omega*k)
 
     drifts_basis = np.array(scipy.linalg.orth(drifts_basis))
 
@@ -266,6 +267,8 @@ def fit_hrf_two_gammas(hrf_mean, dt, duration):
 
     Parameters
     ----------
+    dt: float
+    duration: float
     hrf_mean : ndarray, shape (hrf_len,)
 
     Returns
@@ -287,17 +290,18 @@ def fit_hrf_two_gammas(hrf_mean, dt, duration):
         ratio_resp_under = params[4]
         delay = params[5]
 
-        return getCanoHRF(duration, dt, True, delay_of_response,
-                          delay_of_undershoot, dispersion_of_response,
-                          dispersion_of_undershoot, ratio_resp_under, delay)[1] - hrf_mean
+        canonical_hrf = getCanoHRF(duration, dt, True, delay_of_response,
+                                   delay_of_undershoot, dispersion_of_response,
+                                   dispersion_of_undershoot, ratio_resp_under, delay)[1]
 
+        return canonical_hrf - hrf_mean
+
+    x0 = np.asarray([6., 16., 1., 1., 6., 0.])
     try:
-        from scipy.optimize import least_squares
-        res = least_squares(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]),
+        res = least_squares(two_gamma_hrf, x0,
                             bounds=(np.zeros(6), duration + np.zeros(6))).x
     except ImportError as e:
-        from scipy.optimize import leastsq
-        res, cov_res = leastsq(two_gamma_hrf, np.asarray([6., 16., 1., 1., 6., 0.]))
+        res = leastsq(two_gamma_hrf, x0).x
 
     return res
 
@@ -348,6 +352,7 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
                 n=order)
     b = a[len(a)//2:]
     diffMat = toeplitz(np.concatenate((b, np.zeros(size - len(b)))))
+
     if regularization is not None:
         regularization = np.array(regularization)
         if regularization.shape != (size,):
@@ -360,23 +365,29 @@ def buildFiniteDiffMatrix(order, size, regularization=None):
         # diffMat = (np.triu(diffMat, 1) + np.tril(diffMat, -1) +
                    # np.diag(diffMat.diagonal() * regularization))
         # diffMat = diffMat * regularization
+
     return diffMat
 
 
 def create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr, dt):
-    """Generate the occurences matrix
+    """Generate the occurrences matrix.
 
     Parameters
     ----------
     onsets : dict
-        dictionary of onsets
+        dictionary of onsets for each condition.
     durations : dict
-        # TODO
+        dictionary of durations for each condition.
     nb_conditions : int
+        number of experimental conditions.
     nb_scans : int
+        number of scans.
     hrf_len : int
+        number of points of the hrf
     tr : float
+        time of repetition
     dt : float
+        hrf temporal precision
 
     Returns
     -------
@@ -386,35 +397,36 @@ def create_conditions(onsets, durations, nb_conditions, nb_scans, hrf_len, tr, d
     condition_names : list
     """
     condition_names = []
-    X = OrderedDict()
-    for condition, onset in onsets.iteritems():
+    matrix_x = OrderedDict()
+    occurrence_matrix = np.zeros((nb_conditions, nb_scans, hrf_len), dtype=np.int32)
+
+    for nc, (condition, onset) in enumerate(onsets.iteritems()):
         duration = np.asarray(durations[condition]).flatten()
-        X[condition] = compute_mat_X_2(nb_scans, tr, hrf_len, dt,
-                                       onset, durations=duration)
+        mat_x_2 = compute_mat_X_2(nb_scans, tr, hrf_len, dt, onset, durations=duration)
+
+        matrix_x[condition] = mat_x_2
+        occurrence_matrix[nc, :, :] = mat_x_2
+
         condition_names.append(condition)
-    occurence_matrix = np.zeros((nb_conditions, nb_scans, hrf_len), dtype=np.int32)
-    nc = 0
-    for condition, onset in onsets.iteritems():
-        occurence_matrix[nc, :, :] = X[condition]
-        nc += 1
-    return X, occurence_matrix, condition_names
+
+    return matrix_x, occurrence_matrix, condition_names
 
 
 def create_neighbours(graph):
-    """Transforms the graph list in ndarray. This is for performances purposes.
-    Sets the empty neighbours to -1.
+    """Transforms the graph list in ndarray. This is for performances purposes. Sets the empty neighbours to -1.
 
     Parameters
     ----------
-    graph : ndarray of lists
+    graph : list of ndarray
         each graph[i] represents the list of neighbours of the ith voxel
-    nb_voxels : int
 
     Returns
     -------
     neighbours_indexes : ndarray
     """
-    max_neighbours = max([len(nl) for nl in graph])
+
+    max_neighbours = len(max(graph, key=len))
+
     neighbours_indexes = [np.concatenate((arr, np.zeros(max_neighbours-len(arr))-1))
                           for arr in graph]
 
@@ -510,23 +522,21 @@ def sum_over_neighbours(neighbours_indexes, array_to_sum):
     if neighbours_indexes.max() > array_to_sum.shape[-1] - 1:
         raise Exception("Can't sum over neighbours. Please check dimensions")
 
-    array_cat_zero = np.concatenate(
-        (array_to_sum,
-         np.zeros(array_to_sum.shape[:-1]+(1,), dtype=array_to_sum.dtype)),
-        axis=-1
-    )
+    array_cat_zero = np.concatenate((array_to_sum,
+                                     np.zeros(array_to_sum.shape[:-1]+(1,), dtype=array_to_sum.dtype)),
+                                    axis=-1)
+
     return array_cat_zero[..., neighbours_indexes].sum(axis=-1)
 
 
-def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar,
-                               nrls_class_mean, nrls_class_var, nb_contrasts,
-                               nb_classes, nb_voxels):
-    """Computes the contrasts nrls from the conditions nrls and the mean and
-    variance of the gaussian classes of the contrasts (in the cases of all
-    inactive conditions and all active conditions)
+def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar, nrls_class_mean, nrls_class_var,
+                               nb_contrasts, nb_classes, nb_voxels):
+    """Computes the contrasts nrls from the conditions nrls and the mean and variance of the gaussian classes of the
+    contrasts (in the cases of all inactive conditions and all active conditions).
+
     Parameters
     ----------
-    def_contrasts : OrderedDict
+    contrasts : OrderedDict
         TODO.
     condition_names : list
         TODO.
@@ -540,6 +550,8 @@ def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar
         TODO.
     nb_contrasts : int
     nb_classes : int
+    nb_voxels : int
+
     Returns
     -------
     contrasts_mean : ndarray, shape (nb_voxels, nb_contrasts)
@@ -555,9 +567,10 @@ def contrasts_mean_var_classes(contrasts, condition_names, nrls_mean, nrls_covar
 
     for i, contrast_name in enumerate(contrasts):
         parsed_contrast = parse_expr(contrasts[contrast_name])
-        for condition_name in condition_names:
-            condition_nb = condition_names.index(condition_name)
+
+        for condition_nb, condition_name in enumerate(condition_names):
             coeff = parsed_contrast.coeff(condition_name)
+
             if coeff:
                 contrasts_mean[:, i] += float(coeff) * nrls_mean[:, condition_nb]
                 contrasts_var[:, i] += float(coeff)**2 * nrls_covar[condition_nb, condition_nb, :]
@@ -605,19 +618,38 @@ def ppm_contrasts(contrasts_mean, contrasts_var, contrasts_class_mean,
                             contrasts_class_var, threshold_a, threshold_g)
 
 
-def ppms_computation(elements_mean, elements_var, class_mean, class_var, threshold_a="std_inact",
-                     threshold_g=0.9):
-    """Considering the `elements_mean` and `elements_var` from a gaussian distribution, comutes
-    the posterior probability maps considering for the alpha threshold, either
-    the standard deviation of the [all inactive conditions] class guassian or
-    the intersection of the [all (in)active conditions] classes guassians; and
-    for the gamma threshold 0.9 (default)
-    Be carefull, this computation considers the mean of the inactive class as zero.
+def ppms_computation(elements_mean, elements_var, class_mean, class_var, threshold_a="std_inact", threshold_g=0.9):
+    r"""Considering the `elements_mean` and `elements_var` from a gaussian distribution, commutes the posterior
+    probability maps considering for the alpha threshold, either the standard deviation of the
+    [all inactive conditions] gaussian class or the intersection of the [all (in)active conditions] gaussian classes;
+    and for the gamma threshold 0.9 (default).
+
+    The posterior probability maps (PPM) per experimental condition is computed as
+    :math:`p(a^{m}_{j} > \delta | y_{j}) > \alpha`. Note that we have to thresholds to set. We set :math:`\delta` to get
+    a posterior probability distribution, and :math:`\alpha` is the threshold that we set to see a certain level of
+    significance. As default, we chose a threshold :math:`\delta` for each experimental condition *m* as the
+    intersection of the two Gaussian densities of the Gaussian Mixture Model (GMM) that represent active and non-active
+    voxel.
+
+    .. math::
+
+        \frac{(\delta - \mu^{m}_{1})^{2}}{v^{m}_{1}} - \frac{(\delta - \mu^{m}_{0})^{2}}{v^{m}_{0}} =
+        \log\left( \frac{v^{m}_{1}}{v^{m}_{0}} \right)
+
+    :math:`\mu^{m}_{i}` and :math:`v^{m}_{i}` being the parameters of the GMM in :math:`a^{m}_{j}` corresponding to
+    active (*i=0*) and non-active (*i=1*) voxels for experimental condition *m*.
+
+    .. math::
+
+        \delta = \frac{\mu_{1}\sigma_{0}^{2} \pm \sigma_{0}\sigma_{1}\sqrt{\mu^{2}_{1} + 2 \left(\sigma^{2}_{0} -
+        \sigma^{2}_{1} \right) \log \left( \frac{\sigma_{0}}{\sigma_{1}} \right)}}{\sigma^{2}_{0} - \sigma^{2}_{1}}
+
+    **Be careful, this computation considers the mean of the inactive class as zero.**
 
     Notes
     -----
-    nb_elements refers either to the number of contrats (for the PPMs contrasts
-    computation) or for the number of conditions (for the PPMs nrls computation)
+    nb_elements refers either to the number of contrasts (for the PPMs contrasts computation) or for the number of
+    conditions (for the PPMs nrls computation).
 
     Parameters
     ----------
@@ -626,10 +658,8 @@ def ppms_computation(elements_mean, elements_var, class_mean, class_var, thresho
     class_mean : ndarray, shape (nb_elements, nb_classes)
     class_var : ndarray, shape (nb_elements, nb_classes)
     threshold_a : str, optional
-        if "std_inact" (default) uses the standard deviation of the
-        [all inactive conditions] gaussian class as PPM_a threshold, if "intersect"
-        uses the intersection of the [all inactive/all active conditions]
-        gaussian classes
+        if "std_inact" (default) uses the standard deviation of the [all inactive conditions] gaussian class as PPM_a
+        threshold. If "intersect" uses the intersection of the [all inactive/all active conditions] gaussian classes.
     threshold_g : float, optional
         the threshold of the PPM_g
 
@@ -640,33 +670,41 @@ def ppms_computation(elements_mean, elements_var, class_mean, class_var, thresho
     """
 
     if threshold_a == "std_inact":
-        thresh = np.sqrt(class_var[:, 0])
-    elif threshold_a == "intersect":
+        thresh = np.sqrt(class_var[:, 0])  # standard deviation of the [all inactive conditions]
+
+    elif threshold_a == "intersect":  # intersection of the [all inactive/all active conditions]
         intersect1 = class_mean[:, 1] * class_var[:, 0]
-        intersect2 = np.sqrt(
-            class_var.prod(axis=1) * (
-                class_mean[:, 1]**2
-                + 2*class_var[:, 0]*np.log(np.sqrt(class_var[:, 0]/class_var[:, 1]))
-                - 2*class_var[:, 1]*np.log(np.sqrt(class_var[:, 0]/class_var[:, 1]))
-            )
+
+        class_sd = np.sqrt(class_var)  # standard deviation
+        class_var_diff = class_var[:, 0] - class_var[:, 1]  # sigma^2_0 - sigma^2_1
+
+        intersect2 = class_sd.prod(axis=1) * np.sqrt(
+            class_mean[:, 1]**2 +
+            2 * class_var_diff * np.log(class_sd[:, 0] / class_sd[:, 1])
         )
+
         threshs = np.concatenate(((intersect1 - intersect2)[:, np.newaxis],
                                   (intersect1 + intersect2)[:, np.newaxis]),
-                                 axis=1) / (class_var[:, 0] - class_var[:, 1])[:, np.newaxis]
+                                 axis=1) / class_var_diff[:, np.newaxis]
 
-        mask = (
-            ((threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis]))
-            | (~((threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis])).any(axis=1)[:, np.newaxis]
-               & (threshs == threshs.max(axis=1)[:, np.newaxis])))
+        mask_mean = (threshs > 0) & (threshs < class_mean[:, 1][:, np.newaxis])
+        mask = (mask_mean |
+                (~mask_mean.any(axis=1)[:, np.newaxis] & (threshs == threshs.max(axis=1)[:, np.newaxis])))
+
         thresh = threshs[mask]
+
         if len(thresh) < len(threshs):
-            logger.warning("The gaussians do not have one intersection between means."
-                           " Choosing the highest")
+            logger.warning("The gaussians do not have one intersection between means. Choosing the highest")
             thresh = threshs.max(axis=1)
             thresh = np.concatenate((thresh[:, np.newaxis], class_var[:, 0][:, np.newaxis]), axis=1).max(axis=1)
 
-    return (norm.sf(thresh, elements_mean, elements_var**.5),
-            norm.isf(threshold_g, elements_mean, elements_var**.5))
+    else:
+        raise NotImplemented
+
+    ppm_a = norm.sf(thresh, elements_mean, elements_var**.5)
+    ppm_g = norm.isf(threshold_g, elements_mean, elements_var**.5)
+
+    return ppm_a, ppm_g
 
 
 def norm1_constraint(function, variance):
@@ -700,18 +738,21 @@ def norm1_constraint(function, variance):
     else:
         disp = 2
 
-    def minimized_function(fct):
+    def objective_function(fct):
         """Function to minimize"""
-        return np.dot(np.dot((fct - function).T, variance_inv), (fct - function))
+        diff = fct - function
+        return np.dot(np.dot(diff.T, variance_inv), diff)
 
     def norm1_constraint_equation(fct):
         """Norm2(fct) == 1"""
         return np.linalg.norm(fct, 2) - 1
 
+    minimized_function = fmin_slsqp(objective_function, function,
+                                    eqcons=[norm1_constraint_equation],
+                                    bounds=[(None, None)] * len(function),
+                                    disp=disp)
 
-    return fmin_slsqp(minimized_function, function,
-                      eqcons=[norm1_constraint_equation],
-                      bounds=[(None, None)] * (len(function)), disp=disp)
+    return minimized_function
 
 
 # Expectation functions
@@ -722,13 +763,23 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
                      labels_proba, nrls_class_mean, nrls_class_var,
                      nb_conditions, y_tilde, nrls_covar,
                      hrf_covar, noise_var):
-    """Computes the E-A step of the JDE-VEM algorithm.
+    r"""Computes the VE-A step of the JDE-VEM algorithm.
 
-    p_A = argmax_h(E_pc,pq,ph,pg[log p(a|y, h, c, g, q; theta)])
-        \propto exp(E_pc,ph,pg[log p(y|h, a, c, g; theta)] \
-                  + E_pq[log p(a|q; mu_Ma, sigma_Ma)])
+    .. math::
 
-    # TODO: add formulas using reST
+       \Sigma^{(r)}_{A_{j}} &= \left( \sum\limits^{I}_{i=1} \Delta_{ij} + \widetilde{H}_{j} \right)^{-1} \\
+       m^{(r)}_{A_{j}} &= \Sigma^{(r)}_{A{j}} \left( \sum\limits^{I}_{i=1} \Delta_{ij} \mu_{i}^{(r-1)} + \widetilde{G}^{t}\Gamma_{j}^{(r-1)}\left(y_{j} - P\ell^{(r-1)} \right)\right)
+
+    where:
+
+    The mth column of :math:`\widetilde{G}` is denote by :math:`\widetilde{g}_{m}  = X_{m}m^{(r)}_{H} \in \mathbb{R}^{N}`
+
+    .. math::
+
+        \Delta_{ij} &= \mathrm{diag}_{M}\left[\frac{q^{(r-1)}_{Z_{mj}}(i)}{\sigma^{2(r)}_{mi}}\right] \\
+
+        \widetilde{H}_{j} &= \widetilde{g}^{t}_{m} \Gamma^{(r-1)}_{j} \widetilde{g}_{m'} + \mathrm{tr}\left( \Gamma^{(r-1)}_{j}X_{m} \Sigma^{(r)}_{H}X^{t}_{m'} \right)
+
 
     Parameters
     ----------
@@ -739,10 +790,7 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
     labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
     nrls_class_mean : ndarray, shape (nb_conditions, nb_classes)
     nrls_class_var : ndarray, shape (nb_conditions, nb_classes)
-    hrf_len : int
-    nb_voxels : int
     nb_conditions : int
-    nb_classes : int
     y_tilde : ndarray, shape (nb_scans, nb_voxels)
         BOLD data minus drifts
     nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
@@ -756,44 +804,62 @@ def nrls_expectation(hrf_mean, nrls_mean, occurence_matrix, noise_struct,
     """
 
     # Pre-compute some matrix products
-    om_hm_prod = occurence_matrix.dot(hrf_mean).T
-    hc_om_prod = occurence_matrix.dot(hrf_covar.T)
+    om_hm_prod = occurence_matrix.dot(hrf_mean).T  # matrix G made of columns g_m = X_m * m_H
+    om_hc_prod = occurence_matrix.dot(hrf_covar.T)
     ns_om_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
 
-    ## nrls_covar computation
-    # first term of Sigma_A: XH.T*Gamma*XH / sigma_eps
-    nrls_covar = om_hm_prod.T.dot(noise_struct).dot(om_hm_prod)[..., np.newaxis]
-    # second term of Sigma_A: tr(X.T*Gamma*X*Sigma_H / sigma_eps)
-    nrls_covar += np.einsum('ijk, jlk', hc_om_prod, ns_om_prod)[..., np.newaxis]
-    nrls_covar = nrls_covar / noise_var
+    # first term of nrls_covar: p_q / sigma_h
+    delta_k = labels_proba / nrls_class_var[:, :, np.newaxis]
+    delta = delta_k.sum(axis=1)  # sum across classes K
 
-    # third term of nrls_covar: part of p(a|q; theta_A)
-    delta_k = (labels_proba / nrls_class_var[:, :, np.newaxis])
-    delta = delta_k.sum(axis=1)         # sum across classes K
-    nrls_covar = nrls_covar.transpose(2, 0, 1) + delta.T[:, np.newaxis, :] * np.eye(nb_conditions)
+    # second term of nrls_covar: G.T*Gamma*G + tr(Gamma*X*Sigma_H*X.T)
+    h_tilde = om_hm_prod.T.dot(noise_struct).dot(om_hm_prod)[..., np.newaxis]
+    h_tilde += np.einsum('ijk, jlk', om_hc_prod, ns_om_prod)[..., np.newaxis]
+    h_tilde = h_tilde / noise_var
+
+    # nrls_covar computation
+    nrls_covar = h_tilde.transpose(2, 0, 1) + delta.T[:, np.newaxis, :] * np.eye(nb_conditions)
     nrls_covar = np.linalg.inv(nrls_covar).transpose(1, 2, 0)
 
-    ## m_A computation
+    # first term of nrls_mean: G.T*Gamma*y_tilde
     ns_yt_prod = noise_struct.dot(y_tilde).T
-    x_tilde = (ns_yt_prod.dot(om_hm_prod) / noise_var[:, np.newaxis]
-               + (delta_k * nrls_class_mean[:, :, np.newaxis]).sum(axis=1).T)
+    x_tilde = ns_yt_prod.dot(om_hm_prod) / noise_var[:, np.newaxis]
+
+    # second term of nrls_mean
+    x_tilde += (delta_k * nrls_class_mean[:, :, np.newaxis]).sum(axis=1).T
+
     # dot product across voxels of nrls_covar and x_tilde
     nrls_mean = np.einsum('ijk,kj->ki', nrls_covar, x_tilde)
 
     return nrls_mean, nrls_covar
 
 
-def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
-                    hrf_regu_prior_inv, sigmaH, nb_voxels, y_tilde, noise_var,
-                    prior_mean_term=0., prior_cov_term=0.):
+def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct, hrf_regu_prior_inv, sigmaH, nb_voxels,
+                    y_tilde, noise_var, prior_mean_term=0., prior_cov_term=0.):
 
-    """Computes the E-H step of the JDE-VEM algorithm.
-
-    Expectation-H step:
+    r"""Computes the VE-H step of the JDE-VEM algorithm.
 
     .. math::
 
-        p_H = argmax_h(E_pa[log p(h|y, a ; \theta)]) \propto exp(E_pa[log p(y|h, a; \theta) + log p(h; sigmaH)])
+        m^{(r)}_{H}  &= \Sigma^{(r)}_{H} \left( \sum\limits_{i \in \mathcal{P}} \widetilde{S}_{i}^{t}
+        \widetilde{y}^{(r)}_{i} \right) \\
+
+        \left(\Sigma^{(r)}_{H}\right)^{-1} &= \frac{\mathbf{R}^{-1}}{\sigma^{2(r)}_{h}} + \sum\limits_{i\in
+        \mathcal{P}} \left( \sum\limits_{m,m'} \sigma^{(r-1)}_{A_{mi}A_{m'i}} \mathbf{X}^{t}_{m} \Gamma^{(r)}_{i}
+        \mathbf{X}_{m'} + \widetilde{S}_{i}^{t} \Gamma^{(r)}_{i} \widetilde{S}_{i}\right)
+
+    where
+
+    .. math::
+
+        \widetilde{S}_{i} &= \sum\limits^{M}_{m=1} m^{(r-1)}_{A_{mi}}\mathbf{X}_{m} \\
+
+        \widetilde{y}^{(r)}_{i} &= \Gamma^{(r)}_{i} \left( y_{i} - \mathbf{P}\ell^{(r)}_{i} \right)
+
+
+    Here, :math:`m^{(r-1)}_{A_{mi}}` and :math:`\sigma^{(r-1)}_{A_{mi}A_{m'i}}` denote the
+    :math:`m^{th}` and :math:`(m,m')^{th}` entries of the mean vector and covariance matrix of the current
+    :math:`q^{(r-1)}_{A_{i}}`, respectively.
 
     Parameters
     ----------
@@ -821,44 +887,75 @@ def hrf_expectation(nrls_covar, nrls_mean, occurence_matrix, noise_struct,
     ns_om_prod = np.tensordot(noise_struct, occurence_matrix, axes=(1, 1))
     om_ns_om_prod = np.tensordot(occurence_matrix.T, ns_om_prod, axes=(1, 0))
     cov_noise = np.maximum(noise_var, eps)[:, np.newaxis, np.newaxis]
-    nm_om_ns_prod = np.tensordot(nm_om_prod, noise_struct, axes=(1, 0))/cov_noise
+    nm_om_ns_prod = np.tensordot(nm_om_prod, noise_struct, axes=(1, 0)) / cov_noise
 
-    ## Sigma_H computation
+    # Sigma_H computation
     # first term: part of the prior -> R^-1 / sigmaH
-    hrf_covar_inv = hrf_regu_prior_inv/sigmaH
+    hrf_covar_inv = hrf_regu_prior_inv / sigmaH
 
-    # second term: E_pa[Saj.T*noise_struct*Saj] op1
-    # sum_{m, m'} Sigma_a(m,m') X_m.T noise_struct_i X_m'
-    hrf_covar_inv += (np.einsum('ijk,lijm->klm', nrls_covar, om_ns_om_prod)/cov_noise).sum(0)
+    # second term: sum_{m, m'} (Sigma_a(m,m') * X_m.T * noise_struct_i * X_m')
+    hrf_covar_inv += (np.einsum('ijk,lijm->klm', nrls_covar, om_ns_om_prod) / cov_noise).sum(0)
 
-    # third term: E_pa[Saj.T*noise_struct*Saj] op2
-    # (sum_m m_a X_m).T noise_struct_i (sum_m m_a X_m)
+    # third term: let S=sum_m (m_a * X_m), then S.T * noise_struct_i * S
     for i in xrange(nb_voxels):
         hrf_covar_inv += nm_om_ns_prod[i, :, :].dot(nm_om_prod[i, :, :])
 
-    # forth term (depends on prior type):
-    # we sum the term that corresponds to the prior
+    # forth term (depends on prior type): we sum the term that corresponds to the prior
     hrf_covar_inv += prior_cov_term
 
-    # Sigma_H = S_a^-1
+    # Sigma_H
     hrf_covar = np.linalg.inv(hrf_covar_inv)
 
-    ## m_H
-    # (sum_m m_a X_m).T noise_struct_i y_tildeH
+    # m_H computation: S.T * noise_struct_i * y_tilde
     y_bar_tilde = np.einsum('ijk,ki->j', nm_om_ns_prod, y_tilde)
+
     # we sum the term that corresponds to the prior
     y_bar_tilde += prior_mean_term
 
-    # m_H = S_a^-1 y_bar_tilde
+    # m_H = Sigma_H * y_bar_tilde
     hrf_mean = hrf_covar.dot(y_bar_tilde)
 
     return hrf_mean, hrf_covar
 
 
-def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
-                       beta, labels_proba, neighbours_indexes, nb_conditions,
-                       nb_classes, nb_voxels=None, parallel=True, nans_init=False):
-    """Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean, beta, labels_proba, neighbours_indexes,
+                       nb_conditions, nb_classes, nb_voxels=None, parallel=True, nans_init=False):
+    r"""Computes the E-Z (or E-Q) step of the JDE-VEM algorithm.
+
+    Using the *mean-field* approximation,
+    :math:`\widetilde{p}^{(r)}_{Q^{m}}(q^{m})` is approximated by a factorized density
+    :math:`\widetilde{p}^{(r)}_{Q^{m}}(q^{m})=
+    \prod\limits_{j \in \mathcal{P}_{\gamma}}\widetilde{p}^{(r)}_{Q^{m}_{j}}(q^{m}_{j})` such that if
+    :math:`q^{m}_{j} = i`, then :math:`\widetilde{p}^{(r)}_{Q^{m}_{j}}(i) \propto \mathcal{N} \left(m^{(r)}_{A^{m}_{j}};
+    \mu^{(r-1)}_{im}, v^{(r-1)}_{im} \right) f\left(q^{m}_{j} = i \,|\, \widetilde{q}^{m}_{\sim j};
+    \beta^{(r-1)}_{m}, v^{(r-1)}_{m} \right)` where :math:`\widetilde{q}^{m}` is a particular configuration of
+    :math:`q^{m}` updated at each iteration according to a specific scheme and
+
+    .. math::
+
+        f\left( q^{m}_{j} \,|\, \widetilde{q}^{m}_{\sim j}; \beta^{(r-1)}_{m}, v^{(r-1)}_{m} \right) \propto
+        \exp\left(\alpha^{m(r)}_{j}(q^{m}_{j}) + \beta^{(r-1)}_{m}\sum\limits_{k \sim j}
+        I\left(\widetilde{q}^{m}_{k} = q^{m}_{j}\right) \right)
+
+    where
+
+    .. math::
+
+        \left\{ \alpha^{m(r)}_{j} = \left( -v^{(r)}_{A_{j}^{m}A^{m''}_{j}} \left[ \frac{1}{v^{(r-1)}_{0m}},
+        \frac{1}{v^{(r-1)}_{1m}} \right] \right)^{t}, j \in \mathcal{P}_{\gamma}\right\}
+
+
+    and :math:`v^{(r)}_{A_{j}^{m}A^{m''}_{j}}` denotes the :math:`(m,m')` entries of the covariance matrix
+    :math:`\Sigma^{(r)}_{A_{j}}`
+
+
+    Notes
+    -----
+        The *mean-field fixed point* equation is defined in:
+
+            Celeux, G., Forbes, F., & Peyrard, N. (2003). EM procedures using mean field-like approximations for
+            Markov model-based image segmentation. Pattern Recognition, 36(1), 131–144.
+            https://doi.org/10.1016/S0031-3203(02)00027-4
 
     Parameters
     ----------
@@ -873,48 +970,55 @@ def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
         the maximum ones are filled with -1
     nb_conditions : int
     nb_classes : int
+    nb_voxels : int
+    parallel : bool
+    nans_init : bool
 
     Returns
     -------
     labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
     """
 
-    alpha = (-0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / (nrls_class_var[np.newaxis, :, :])).transpose(1, 2, 0)
-
+    alpha = (-0.5 * np.diagonal(nrls_covar)[:, :, np.newaxis] / nrls_class_var[np.newaxis, :, :]).transpose(1, 2, 0)
     alpha -= alpha.mean(axis=2)[:, :, np.newaxis]
-    gauss = normpdf(nrls_mean[...,np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var)).transpose(1, 2, 0)
 
-    # Update Ztilde ie the quantity which is involved in the a priori
-    # Potts field [by solving for the mean-field fixed point Equation]
+    gauss = normpdf(nrls_mean[..., np.newaxis], nrls_class_mean, np.sqrt(nrls_class_var)).transpose(1, 2, 0)
+
+    # update z_tilde (q_tilde), i.e., the quantity which is involved in the a priori Potts field
+    # (by solving for the mean-field fixed point Equation)
     if not parallel and nb_voxels:
         energy = np.zeros_like(labels_proba)
         local_energy = np.zeros_like(labels_proba)
+
         for vox in xrange(nb_voxels):
-            local_energy[:, :, vox] = sum_over_neighbours(
-                neighbours_indexes[vox, :],
-                beta[..., np.newaxis, np.newaxis] * labels_proba
-            )
+            local_energy[:, :, vox] = sum_over_neighbours(neighbours_indexes[vox, :],
+                                                          beta[..., np.newaxis, np.newaxis] * labels_proba)
+
             energy[:, :, vox] = alpha[:, :, vox] + local_energy[:, :, vox]
-            labels_proba[:, :, vox] = np.exp(energy[:, :, vox])*gauss[:, :, vox]
-            labels_proba[:, :, vox] = labels_proba[:, :, vox]/labels_proba[:, :, vox].sum(axis=1)[:, np.newaxis]
+
+            labels_proba[:, :, vox] = np.exp(energy[:, :, vox]) * gauss[:, :, vox]
+            labels_proba[:, :, vox] = labels_proba[:, :, vox] / labels_proba[:, :, vox].sum(axis=1)[:, np.newaxis]
+
     else:
         if not parallel:
-            logger.warning("Could not use ascynchronous expectation."
-                           " Please provide the nb_voxels parameter")
-        local_energy = sum_over_neighbours(
-            neighbours_indexes, beta[..., np.newaxis, np.newaxis] * labels_proba
-        )
+            logger.warning("Could not use asynchronous expectation. Please provide the nb_voxels parameter")
+
+        local_energy = sum_over_neighbours(neighbours_indexes,
+                                           beta[..., np.newaxis, np.newaxis] * labels_proba)
         energy = alpha + local_energy
+
         if nans_init:
-            labels_proba_nans = np.ones_like(labels_proba)/nb_classes
+            labels_proba_nans = np.ones_like(labels_proba) / nb_classes
         else:
             labels_proba_nans = labels_proba.copy()
-        labels_proba = (np.exp(energy) * gauss)
 
-        # Remove NaNs and Infs (# TODO: check for sequential mode)
-        if (labels_proba.sum(axis=1)==0).any():
-            mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1)==0
+        labels_proba = np.exp(energy) * gauss
+
+        # Remove NaNs and Infs (TODO: check for sequential mode)
+        if (labels_proba.sum(axis=1) == 0).any():
+            mask = labels_proba.sum(axis=1)[:, np.newaxis, :].repeat(2, axis=1) == 0
             labels_proba[mask] = labels_proba_nans[mask]
+
         if np.isinf(labels_proba.sum(axis=1)).any():
             mask = np.isinf(labels_proba.sum(axis=1))[:, np.newaxis, :].repeat(1, axis=1)
             labels_proba[mask] = labels_proba_nans[mask]
@@ -928,49 +1032,100 @@ def labels_expectation(nrls_covar, nrls_mean, nrls_class_var, nrls_class_mean,
 ##############################################################
 
 def maximization_class_proba(labels_proba, nrls_mean, nrls_covar):
+    r"""Computes the M-(mu, sigma) step of the JDE-VEM algorithm.
+
+    .. math::
+
+        \bar{q}^{(r)}_{mk}   & = \sum \limits_{i \in \mathcal{P}} q^{(r)}_{Z_{mi}} (k) \\
+        \mu^{(r+1)}_{mk}     & = \frac{\sum \limits_{i \in \mathcal{P}} q^{(r)}_{Z_{mi}} (k) m^{(r)}_{A_{mi}}}{\bar{q}^{(r)}_{mk}} \\
+        \sigma^{2(r+1)}_{mk} &= \frac{\sum \limits_{i \in \mathcal{P}} q^{(r)}_{Z_{mi}} (k) \left(\left(m^{(r)}_{A_{mi}} - \mu^{(r+1)}_{mk}\right)^{2} + \sigma^{(r)}_{A_{im}A_{im}} \right)}{\bar{q}^{(r)}_{mk}}
+
+    """
 
     labels_proba_sum = labels_proba.sum(axis=2)
+
     nrls_class_mean = np.zeros_like(labels_proba_sum)
-    nrls_class_mean[:, 1] = ((labels_proba[:, 1, :] * nrls_mean.T).sum(axis=1)
-                             / labels_proba_sum[:, 1])
-    nm_minus_ncm = (nrls_mean[..., np.newaxis]
-                    - nrls_class_mean[np.newaxis, ...]).transpose(1, 2, 0)**2
+    nrls_class_mean[:, 1] = (labels_proba[:, 1, :] * nrls_mean.T).sum(axis=1) / labels_proba_sum[:, 1]
+
+    nm_minus_ncm = (nrls_mean[..., np.newaxis] - nrls_class_mean[np.newaxis, ...]).transpose(1, 2, 0)**2
+
     nrls_covar_diag = np.diagonal(nrls_covar).T
-    nrls_class_var = (
-        (labels_proba* (nm_minus_ncm + nrls_covar_diag[:, np.newaxis, :])).sum(axis=2)
-        /labels_proba_sum
-    )
+
+    nrls_class_var = (labels_proba * (nm_minus_ncm + nrls_covar_diag[:, np.newaxis, :])).sum(axis=2) / labels_proba_sum
 
     return nrls_class_mean, nrls_class_var
 
 
-def maximization_drift_coeffs(data, nrls_mean, occurence_matrix, hrf_mean,
-                              noise_struct, drift_basis):
+def maximization_drift_coeffs(data, nrls_mean, occurence_matrix, hrf_mean, noise_struct, drift_basis):
+    r"""Computes the M-(l, Gamma) step of the JDE-VEM algorithm. In the AR(1) case:
+
+    .. math::
+
+        \ell^{(r)}_{j} = \left( \bm{P}^{\intercal} \bm{\Lambda}^{(r)}_{j} \bm{P} \right)^{-1} \bm{P}^{\intercal} \bm{\Lambda}^{(r)}_{j} \left( y_{j} - \bm{\widetilde{S}}_{j} m^{(r)}_{H} \right)
+
+    """
+
     # Precomputations
     db_ns_db = drift_basis.T.dot(noise_struct).dot(drift_basis)
 
     data_s = data - nrls_mean.dot(occurence_matrix.dot(hrf_mean)).T
+
     return np.linalg.inv(db_ns_db).dot(drift_basis.T).dot(noise_struct).dot(data_s)
 
 
 def maximization_sigmaH(D, Sigma_H, R, m_H):
+    r"""Computes the M-sigma_h step of the JDE-VEM algorithm.
+
+    .. math::
+
+        \sigma^{2(r+1)}_{h} = \frac{\mathrm{tr} ((\Sigma^{(r)}_{H} + m^{(r)}_{H} (m^{(r)}_{H})^{\intercal})\mathbf{R}^{-1})}{D-1}
+
+    """
     sigmaH = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
     sigmaH /= D
     return sigmaH
 
 
 def maximization_sigmaH_prior(D, Sigma_H, R, m_H, gamma_h):
+    r"""Computes the M-sigma_h step of the JDE-VEM algorithm with a prior.
+
+    .. math::
+
+        \sigma_{h}^{(r)} = \frac{(D-1) + \sqrt{8 \lambda_{\sigma_{h}} C + (D-1)^{2}}}{4\lambda_{\sigma_{h}}}
+
+    where
+
+    .. math::
+
+        C = \mathrm{tr}\left( \left( \Sigma^{(r)}_{H} + m^{(r)}_{H} (m^{(r)}_{H})^{\intercal} \right) \mathbf{R}^{-1} \right)
+    """
+
     alpha = (np.dot(mult(m_H, m_H) + Sigma_H, R)).trace()
-    #sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
+
+    # sigmaH = (D + sqrt(D*D + 8*gamma_h*alpha)) / (4*gamma_h)
     sigmaH = (-D + np.sqrt(D * D + 8 * gamma_h * alpha)) / (4 * gamma_h)
 
     return sigmaH
 
 
-def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
-                           nrls_covar, noise_struct, data_drift, nb_scans):
-    """Computes the M-sigma_epsilone step of the JDE-VEM algorithm.
+def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean, nrls_covar, noise_struct, data_drift,
+                           nb_scans):
+    r"""Computes the M-sigma_epsilon step of the JDE-VEM algorithm.
 
+    .. math::
+
+        \sigma^{2(r)}_{j} = \frac{1}{N} \left(\mathrm{E}_{\widetilde{p}^{(r)}_{A_{j}}} \left[a^{t}_{j}
+        \widetilde{\Lambda}^{(r)}_{j} a_{j} \right] - 2 \left(m^{(r)}_{A_{j}}\right)^{t} \widetilde{G}^{(r)}_{j}
+        y^{(r)}_{j} + \left(y^{(r)}_{j}\right)^{t} \Lambda^{(r)}_{j}y^{(r)}_{j} \right)
+
+
+    where matrix :math:`\widetilde{\Lambda}^{(r)}_{j} = \mathrm{E}_{\widetilde{p}^{(r)}_{H}}
+    \left[ G^{t}\Lambda^{(r)}_{j}G \right]` is a :math:`M \times M` whose element :math:`(m, m')` is given by
+
+    .. math::
+
+        \widetilde{g}^{t}_{m}\Lambda^{(r)}_{j}\widetilde{g}_{m'} + \mathrm{tr}\left(\Lambda^{(r)}_{j} X_{m}
+        \Sigma^{(r)}_{H} X^{t}_{m'} \right)
     """
 
     # Precomputations
@@ -979,14 +1134,10 @@ def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
     nm_om_hm = nrls_mean.dot(om_hm)
 
     hm_om_ns_om_hm = ns_om.transpose(1, 0, 2).dot(hrf_mean).dot(om_hm.T)
-    hc_om_ns_om = np.einsum('ijk,ljk->il', occurence_matrix.dot(hrf_covar.T),
-                            ns_om.transpose(1, 0, 2))
+    hc_om_ns_om = np.einsum('ijk,ljk->il', occurence_matrix.dot(hrf_covar.T), ns_om.transpose(1, 0, 2))
 
-    hm_om_nm_ns_nm_om_hm = np.einsum('ij,ij->i', nrls_mean.dot(hm_om_ns_om_hm +
-                                                               hc_om_ns_om),
-                                     nrls_mean)
+    hm_om_nm_ns_nm_om_hm = np.einsum('ij,ij->i', nrls_mean.dot(hm_om_ns_om_hm + hc_om_ns_om), nrls_mean)
 
-    # trace(Sigma_A (X.T H.T H X + SH X.T X) ) in each voxel
     tr_nc_om_ns_om = np.einsum('ijk,ji->k', nrls_covar, hm_om_ns_om_hm + hc_om_ns_om)
 
     ns_df = noise_struct.dot(data_drift)
@@ -994,13 +1145,39 @@ def maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
 
     nm_om_hm_ns_df = np.einsum('ij,ji->i', nm_om_hm, ns_df)
 
-    return (hm_om_nm_ns_nm_om_hm + tr_nc_om_ns_om +
-            df_ns_df - 2 * nm_om_hm_ns_df) / nb_scans
+    sigma = (hm_om_nm_ns_nm_om_hm + tr_nc_om_ns_om + df_ns_df - 2 * nm_om_hm_ns_df) / nb_scans
+
+    return sigma
 
 
-def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma,
-                  gradient_method="m1"):
-    """Computes the gradient of the beta function
+def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma, gradient_method="m1"):
+    r"""Computes the gradient of the beta function.
+
+    The maximization of :math:`f(\beta^{m})` needs the computation of its derivative with respect to :math:`\beta^{m}`.
+
+    **Method 1**
+
+    .. math::
+
+        \frac{\partial f(\beta^{m})}{\partial \beta^{m}} = -\frac{1}{2} \sum\limits_{j}
+        \sum\limits_{k \in N(j)} \sum\limits_{i \in \{0,1\}} \left\{ p_{mf_{j}}(i)p_{mf_{k}}(i) -
+        \widetilde{p}_{q^{m}_{j}}(i)\widetilde{p}_{q^{m}_{k}}(i) \right\} - \lambda_{\beta}
+
+    **Method 2**
+
+    .. math::
+
+        \frac{\partial f(\beta^{m})}{\partial \beta^{m}} = - \sum\limits_{j}
+        \sum\limits_{k \in N(j)} \sum\limits_{i \in \{0,1\}} \widetilde{p}_{q^{m}_{k}} (i) \left\{ p_{mf_{j}} (i) -
+        \frac{1}{2}\widetilde{p}_{q^{m}_{j}} (i) \right\} - \lambda_{\beta}
+
+    where
+
+    .. math::
+
+          p_{mf_{j}} (i) = \frac{\exp \left( \beta \sum\limits_{k \in N(j)} \widetilde{p}_{q^{m}_{k}} (i) \right)}
+          {\sum\limits_{i \in \{0,1\}} \exp \left( \beta \sum\limits_{k \in N(j)} \widetilde{p}_{q^{m}_{k}} (i) \right)}
+
 
     Parameters
     ----------
@@ -1019,8 +1196,10 @@ def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma,
     """
 
     beta_labels_neigh = beta * labels_neigh
+
     energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
     energy /= energy.sum(axis=0)
+
     energy_neigh = sum_over_neighbours(neighbours_indexes, energy)
 
     if gradient_method == "m1":
@@ -1029,10 +1208,19 @@ def beta_gradient(beta, labels_proba, labels_neigh, neighbours_indexes, gamma,
     elif gradient_method == "m2":
         return (gamma*np.ones_like(beta)
                 + ((energy - labels_proba)*labels_neigh).sum()/2.)
+    else:
+        raise NotImplemented
 
 
 def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
-    """Computes the Beta Maximization step of the JDE VEM algorithm
+    r"""Computes the Beta Maximization step of the JDE VEM algorithm.
+
+    The maximization over each :math:`\beta^{m}` corresponds to the M-step obtained for a standard Hiddden MRF model:
+
+    .. math::
+
+        \hat{\beta}^{m} = \underset{\beta^{m}}{\mathrm{arg\, max}} f(\beta^{m})
+
 
     Parameters
     ----------
@@ -1048,14 +1236,18 @@ def beta_maximization(beta, labels_proba, neighbours_indexes, gamma):
         the new value of beta
     success : bool
         True if the maximization has succeeded
+
+    Notes
+    -----
+    See :meth:`beta_gradient` function.
     """
 
     labels_neigh = sum_over_neighbours(neighbours_indexes, labels_proba)
+
     try:
-        beta_new, res = brentq(
-            beta_gradient, 0., 10, args=(labels_proba, labels_neigh, neighbours_indexes, gamma),
-            full_output=True
-        )
+        beta_new, res = brentq(beta_gradient, 0., 10,
+                               args=(labels_proba, labels_neigh, neighbours_indexes, gamma),
+                               full_output=True)
         converged = res.converged
     except ValueError:
         beta_new = beta
@@ -1944,14 +2136,20 @@ eps_freeenergy = 0.00000001
 
 
 def nrls_entropy(nrls_covar, nb_conditions):
-    """Compute the entropy of neural response levels.
+    r"""Compute the entropy of neural response levels. The entropy of a multivariate normal distribution is
+
+    .. math::
+
+        \ln\left( \sqrt{(2\pi e)^{n} \left|\Sigma \right|} \right)
+
+    where *n* is the dimensionality of the vector space and :math:`\left|\Sigma \right|` is the determinant of the
+    covariance matrix.
 
     Parameters
     ----------
     nrls_covar : ndarray, shape (nb_conditions, nb_conditions, nb_voxels)
         Covariance of the NRLs
     nb_conditions : int
-    nb_voxels : int
 
     Returns
     -------
@@ -1982,7 +2180,14 @@ def A_Entropy(Sigma_A, M, J):
 
 
 def hrf_entropy(hrf_covar, hrf_len):
-    """Compute the entropy of the heamodynamic response function.
+    r"""Compute the entropy of the hemodynamic response function. The entropy of a multivariate normal distribution is
+
+    .. math::
+
+        \ln\left( \sqrt{(2\pi e)^{n} \left|\Sigma \right|} \right)
+
+    where *n* is the dimensionality of the vector space and :math:`\left|\Sigma \right|` is the determinant of the
+    covariance matrix.
 
     Parameters
     ----------
@@ -1996,13 +2201,14 @@ def hrf_entropy(hrf_covar, hrf_len):
     entropy : float
     """
 
-    const = (2*np.pi)**hrf_len * np.exp(hrf_len)
     det_hrf_covar = np.linalg.det(hrf_covar)
 
     if det_hrf_covar == 0:
         return 0
-    else:
-        return np.log(np.sqrt(const*det_hrf_covar))
+
+    const = (2 * np.pi) ** hrf_len * np.exp(hrf_len)
+    return np.log(np.sqrt(const*det_hrf_covar))
+
 
 def H_Entropy(Sigma_H, D):
     import warnings
@@ -2024,14 +2230,16 @@ def H_Entropy(Sigma_H, D):
 
 
 def labels_entropy(labels_proba):
-    """Compute the labels entropy.
+    r"""Compute the labels entropy.
+
+    .. math::
+
+        -\sum\limits^{1}_{x=0} p_{Q}(x) \log p_{Q}(x)
 
     Parameters
     ----------
     labels_proba : ndarray, shape (nb_conditions, nb_classes, nb_voxels)
         Probability of each voxel to be in one class
-    nb_conditions : int
-    nb_voxels : int
 
     Returns
     -------
@@ -2041,7 +2249,8 @@ def labels_entropy(labels_proba):
     # To prevent log of zero we put in another variable the zeros to epsilon
     # This doesn't change the results since the log is multiplied by zero
     labels_proba_log = labels_proba.copy()
-    labels_proba_log[labels_proba_log==0] = eps
+    labels_proba_log[labels_proba_log == 0] = eps
+
     return -(labels_proba * np.log(labels_proba_log)).sum()
 
 
@@ -2191,26 +2400,51 @@ def Compute_FreeEnergy(y_tilde, m_A, Sigma_A, mu_Ma, sigma_Ma, m_H, Sigma_H, Aux
     return EPtilde + Total_Entropy
 
 
-
 # Other functions
 ##############################################################
 
-def computeFit(m_H, m_A, X, J, N):
-    # print 'Computing Fit ...'
-    stimIndSignal = np.zeros((N, J), dtype=np.float64)
-    for i in xrange(0, J):
-        m = 0
-        for k in X:
-            stimIndSignal[:, i] += m_A[i, m] * np.dot(X[k], m_H)
-            m += 1
-    return stimIndSignal
+def computeFit(hrf_mean, nrls_mean, X, nb_voxels, nb_scans):
+    """Compute the estimated induced signal by each stimulus.
+
+    Parameters
+    ----------
+    hrf_mean: ndarray
+    nrls_mean: ndarray
+    X: OrderedDict
+    nb_voxels: int
+    nb_scans: int
+
+    Returns
+    -------
+    ndarray
+    """
+
+    stim_ind_signal = np.zeros((nb_scans, nb_voxels), dtype=np.float64)
+
+    for voxel in xrange(0, nb_voxels):
+        for m, condition in enumerate(X):
+            stim_ind_signal[:, voxel] += nrls_mean[voxel, m] * np.dot(X[condition], hrf_mean)
+
+    return stim_ind_signal
 
 
-def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
-                                  hrf_covar, occurence_matrix, noise_var,
+def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean, hrf_covar, occurence_matrix, noise_var,
                                   noise_struct, nb_voxels, nb_scans):
-    """likelihood
-    # TODO
+    r"""Expectation with respect to likelihood.
+
+    .. math::
+
+        \mathrm{E}_{\widetilde{p}_{a}\widetilde{p}_{h}\widetilde{p}_{q}}\left[\log p(y | a,h,q; \theta) \right] =
+        -\frac{NJ}{2} \log 2\pi + \frac{J}{2}\log\left| \Lambda_{j} \right| - N\sum\limits_{j \in J}\log
+        v_{b_{j}} + \frac{1}{2v_{b_{j}}}\sum\limits_{j \in J}V_{j}
+
+    where
+
+    .. math::
+
+        V_{j} = \widetilde{m}^{t}_{a_{j}}\mathbf{X}^{t}_{h}\Lambda_{j}\mathbf{X}_{h}\widetilde{m}_{a_{j}}
+        + \mathrm{tr}\left( \Sigma_{a_{j}}\mathbf{X}^{t}_{h}\Lambda_{j}\mathbf{X}_h \right) -
+        2\widetilde{m}^{t}_{a_{j}} \mathbf{X}^{t}_{h}\Lambda_{j}\left( y_{j} - \mathbf{P}\ell_{j} \right)
 
     Parameters
     ----------
@@ -2228,52 +2462,97 @@ def expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar, hrf_mean,
 
     Returns
     -------
-    ptilde_likelyhood : float
+    ptilde_likelihood : float
     """
 
     noise_var_tmp = maximization_noise_var(occurence_matrix, hrf_mean, hrf_covar, nrls_mean,
                                            nrls_covar, noise_struct, data_drift, nb_scans)
-    return - (nb_scans*nb_voxels*np.log(2*np.pi) - nb_voxels*np.log(np.linalg.det(noise_struct))
-              + nb_scans*np.log(np.absolute(noise_var)).sum()
-              + nb_scans*(noise_var_tmp / noise_var).sum()) / 2.
+
+    return - (nb_scans * nb_voxels*np.log(2*np.pi)
+              - nb_voxels * np.log(np.linalg.det(noise_struct))
+              + nb_scans * np.log(np.absolute(noise_var)).sum()
+              + nb_scans * (noise_var_tmp / noise_var).sum()) / 2.
 
 
-def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
-                           hrf_regu_prior_inv, hrf_len):
-    #logger.info('Computing hrf_regu_priorF expectation Ptilde ...')
+def expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior, hrf_regu_prior_inv, hrf_len):
+    r"""Expectation  with respect to p_tilde hrf.
+
+    .. math::
+          \mathrm{E}_{\widetilde{p}_{h}}\left[ \log p(h | \sigma_{h}) \right] = -\frac{D+1}{2}\log 2\pi -
+          \frac{D-1}{2}\log \sigma_{h} - \frac{\log \left| \mathbf{R} \right|}{2} - \frac{m^{t}_{h}\mathbf{R}^{-1}m_{h}
+          + \mathrm{tr} \left( \Sigma_{h} \mathbf{R}^{-1} \right)}{2 \sigma_{h}}
+
+    """
+
     const = -(hrf_len*np.log(2*np.pi) + hrf_len*np.log(sigma_h)
-             + np.linalg.slogdet(hrf_regu_prior)[1])
+              + np.linalg.slogdet(hrf_regu_prior)[1])
+
     s = -(np.dot(np.dot(hrf_mean.T, hrf_regu_prior_inv), hrf_mean)
-         + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
+          + np.dot(hrf_covar, hrf_regu_prior_inv).trace()) / sigma_h
 
     return (const + s) / 2.
 
 
-def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
-                              nb_conditions, nb_classes):
-    labels_neigh = np.concatenate((labels_proba, np.zeros((nb_conditions, nb_classes, 1), dtype=labels_proba.dtype)), axis=2)
+def expectation_ptilde_labels(labels_proba, neighbours_indexes, beta, nb_conditions, nb_classes):
+    r"""Expectation with respect to p_tilde q (or z).
+
+    .. math::
+
+        \mathrm{E}_{\widetilde{p}_{q}} \left[ \log p (q | \beta ) \right] = \sum\limits_{m} & \left\{
+          - \sum\limits_{j} \left\{ \log \left( \sum\limits^{1}_{i=0} \exp \left(
+          \beta^{m} \sum\limits_{k \in N(j)} \widetilde{p}_{q^{m}_{k}} (i) \right)
+          \right) \right\} \right. \\
+          & \left. - \beta^{m} \sum\limits_{j}\sum\limits_{k \in N(j)}\sum\limits^{1}_{i=0}
+          \left[ p^{MF}_{j}(i) \left( \frac{p^{MF}_{k}(i)}{2} -
+          \widetilde{p}_{q^{m}_{k}} (i) \right) -
+          \frac{1}{2}\widetilde{p}_{q^{m}_{j}}(i)\widetilde{p}_{q^{m}_{k}}(i) \right]
+          \right\}
+
+    """
+
+    # term p_{q^{m}_{k}}
+    labels_neigh = np.concatenate((labels_proba,
+                                   np.zeros((nb_conditions, nb_classes, 1), dtype=labels_proba.dtype)),
+                                  axis=2)
     labels_neigh = labels_neigh[:, :, neighbours_indexes].sum(axis=3)
+
     beta_labels_neigh = beta[:, np.newaxis, np.newaxis] * labels_neigh
 
+    # term p^{MF}_{j}
     energy = np.exp(beta_labels_neigh - beta_labels_neigh.max(axis=0))
     energy /= energy.sum(axis=0)
 
-    energy_neigh = np.concatenate((energy, np.zeros((nb_conditions, nb_classes, 1), dtype=energy.dtype)), axis=2)
+    # term p^{MF}_{k}
     energy_neigh = energy[:, :, neighbours_indexes].sum(axis=3)
 
-    return (-np.log(np.exp(beta_labels_neigh).sum(axis=1)).sum()
-            + (beta*(labels_proba*labels_neigh/2.
-                     + energy*(labels_neigh-energy_neigh/2.)).sum(axis=(1, 2))).sum())
+    first_sum = -np.log(np.exp(beta_labels_neigh).sum(axis=1)).sum()
+    second_sum = (beta * (labels_proba * labels_neigh/2.
+                          + energy * (labels_neigh-energy_neigh/2.)
+                          ).sum(axis=(1, 2))
+                  ).sum()
+
+    return first_sum + second_sum
 
 
-def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
-                            nrls_mean, nrls_covar):
+def expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var, nrls_mean, nrls_covar):
+    r"""Expectation with respect to p_tilde a.
+
+    .. math::
+
+        \mathrm{E}_{\widetilde{p}_{a}\widetilde{p}_{q}}[\log p (a | q, \theta_{a})] = \sum\limits_{m}\sum\limits_{j}
+        & \left\{ \left[1 - \widetilde{p}_{q^{m}_{j}}(1) \right] \left[\log\frac{1}{\sqrt{2\pi\sigma^{2m}_{0}}} -
+        \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{0} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{0}} \right] +
+        \right. \\ &  \left. \widetilde{p}_{q^{m}_{j}}(1)  \left[\log\frac{1}{\sqrt{2\pi\sigma^{2m}_{1}}} -
+        \frac{\left(m_{a^{m}_{j}} - \mu^{m}_{1} \right)^{2} + \Sigma_{a^{m,m}_{j}}}{2\sigma^{2m}_{1}} \right] \right\}
+
+    """
+
     diag_nrls_covar = np.diagonal(nrls_covar)[:, :, np.newaxis]
-    s = -labels_proba.transpose(2, 0, 1)* (
-        np.log(2*np.pi*nrls_class_var)
-        + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
-           + diag_nrls_covar) / nrls_class_var[np.newaxis, :, :]
-    ) / 2
+
+    s = -labels_proba.transpose(2, 0, 1) * (np.log(2*np.pi*nrls_class_var)
+                                            + ((nrls_mean[:, :, np.newaxis] - nrls_class_mean[np.newaxis, :, :])**2
+                                               + diag_nrls_covar) / nrls_class_var[np.newaxis, :, :]
+                                            ) / 2
 
     return s.sum()
 
@@ -2284,7 +2563,14 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
                             nrls_class_mean, nrls_class_var, neighbours_indexes,
                             beta, sigma_h, hrf_regu_prior, hrf_regu_prior_inv,
                             gamma, hrf_hyperprior):
-    """Compute the free energy.
+    r"""Compute the free energy functional.
+
+    .. math::
+
+        \mathcal{F}(q, \theta) = \mathrm{E}_{q}\left[ \log p(y, A, H, Z ; \theta) \right] +  \mathcal{G}(q)
+
+    where :math:`E_{q}[\cdot]` denotes the expectation with respect to *q* and
+    :math:`\mathcal{G}(q)` is the entropy of *q*.
 
     Parameters
     ----------
@@ -2294,24 +2580,33 @@ def free_energy_computation(nrls_mean, nrls_covar, hrf_mean, hrf_covar, hrf_len,
     free_energy : float
     """
 
-    total_entropy = (nrls_entropy(nrls_covar, nb_conditions) +
-                     hrf_entropy(hrf_covar, hrf_len) +
-                     labels_entropy(labels_proba))
-    total_expectation = (
-        expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
-                                      hrf_mean, hrf_covar, occurence_matrix,
-                                      noise_var, noise_struct, nb_voxels, nb_scans)
-        + expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var,
-                                  nrls_mean, nrls_covar)
-        + expectation_ptilde_labels(labels_proba, neighbours_indexes, beta,
-                                    nb_conditions, nb_classes)
-        + expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior,
-                                 hrf_regu_prior_inv, hrf_len)
-    )
+    expectation_likelihood = expectation_ptilde_likelihood(data_drift, nrls_mean, nrls_covar,
+                                                           hrf_mean, hrf_covar, occurence_matrix,
+                                                           noise_var, noise_struct, nb_voxels, nb_scans)
+
+    entropy_nrls = nrls_entropy(nrls_covar, nb_conditions)
+    expectation_nrls = expectation_ptilde_nrls(labels_proba, nrls_class_mean, nrls_class_var, nrls_mean, nrls_covar)
+
+    entropy_labels = labels_entropy(labels_proba)
+    expectation_labels = expectation_ptilde_labels(labels_proba, neighbours_indexes, beta, nb_conditions, nb_classes)
+
+    # hrf_covar is set to 0 when the hrf is not estimated
+    if np.linalg.det(hrf_covar) == 0:
+        expectation_hrf = 0
+        entropy_hrf = 0
+        hrf_hyperprior = 0
+    else:
+        expectation_hrf = expectation_ptilde_hrf(hrf_mean, hrf_covar, sigma_h, hrf_regu_prior, hrf_regu_prior_inv,
+                                                 hrf_len)
+        entropy_hrf = hrf_entropy(hrf_covar, hrf_len)
+
+    total_expectation = expectation_likelihood + expectation_nrls + expectation_labels + expectation_hrf
+    total_entropy = entropy_nrls + entropy_hrf + entropy_labels
 
     total_prior = 0
     if gamma:
         total_prior += nb_conditions*np.log(gamma) - gamma*beta.sum()
+
     if hrf_hyperprior:
         total_prior += np.log(hrf_hyperprior) - hrf_hyperprior*sigma_h
 

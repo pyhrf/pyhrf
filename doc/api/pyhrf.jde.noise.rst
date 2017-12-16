@@ -1,5 +1,5 @@
-pyhrf.jde.noise module
-======================
+pyhrf\.jde\.noise module
+========================
 
 .. automodule:: pyhrf.jde.noise
     :members:

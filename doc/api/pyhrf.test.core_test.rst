@@ -1,5 +1,5 @@
-pyhrf.test.core_test module
-===========================
+pyhrf\.test\.core\_test module
+==============================
 
 .. automodule:: pyhrf.test.core_test
     :members:

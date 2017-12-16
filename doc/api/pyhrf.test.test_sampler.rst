@@ -1,5 +1,5 @@
-pyhrf.test.test_sampler module
-==============================
+pyhrf\.test\.test\_sampler module
+=================================
 
 .. automodule:: pyhrf.test.test_sampler
     :members:

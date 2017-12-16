@@ -1,5 +1,5 @@
-pyhrf.test.analysertest module
-==============================
+pyhrf\.test\.analysertest module
+================================
 
 .. automodule:: pyhrf.test.analysertest
     :members:

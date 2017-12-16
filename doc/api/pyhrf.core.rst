@@ -1,5 +1,5 @@
-pyhrf.core module
-=================
+pyhrf\.core module
+==================
 
 .. automodule:: pyhrf.core
     :members:

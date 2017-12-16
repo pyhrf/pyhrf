@@ -1,5 +1,5 @@
-pyhrf.parallel module
-=====================
+pyhrf\.parallel module
+======================
 
 .. automodule:: pyhrf.parallel
     :members:

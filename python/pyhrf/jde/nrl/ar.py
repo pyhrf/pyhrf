@@ -15,18 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class NRLARSampler(NRLSampler):
-    """
-    Class handling the Gibbs sampling of Neural Response Levels according to:
+    """Class handling the Gibbs sampling of Neural Response Levels according to:
 
-      - Makni, S., Ciuciu, P., Idier, J., & Poline, J. (2006). Joint
-      Detection-Estimation of Brain Activity in fMRI using an Autoregressive
-      Noise Model. In 3rd IEEE International Symposium on Biomedical Imaging:
-      Macro to Nano, 2006. (pp. 1048–1051). IEEE.
-      https://doi.org/10.1109/ISBI.2006.1625101
+        Makni, S., Ciuciu, P., Idier, J., & Poline, J. (2006). Joint Detection-Estimation of Brain Activity in fMRI
+        using an Autoregressive Noise Model. In 3rd IEEE International Symposium on Biomedical Imaging: Macro to Nano,
+        2006. (pp. 1048–1051). IEEE. https://doi.org/10.1109/ISBI.2006.1625101
 
     Inherits the abstract class C{ GibbsSamplerVariable}.
-
-    #TODO : comment attributes
     """
 
     def linkToData(self, dataInput):

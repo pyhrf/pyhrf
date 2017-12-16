@@ -1,5 +1,5 @@
-pyhrf.test.graphtest module
-===========================
+pyhrf\.test\.graphtest module
+=============================
 
 .. automodule:: pyhrf.test.graphtest
     :members:

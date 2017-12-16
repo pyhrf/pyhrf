@@ -1,5 +1,5 @@
-pyhrf.boldsynth.pottsfield package
-==================================
+pyhrf\.boldsynth\.pottsfield package
+====================================
 
 .. automodule:: pyhrf.boldsynth.pottsfield
     :members:

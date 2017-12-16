@@ -1,5 +1,5 @@
-pyhrf.surface module
-====================
+pyhrf\.surface module
+=====================
 
 .. automodule:: pyhrf.surface
     :members:

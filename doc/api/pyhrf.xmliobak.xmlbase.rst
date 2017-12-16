@@ -1,5 +1,5 @@
-pyhrf.xmliobak.xmlbase module
-=============================
+pyhrf\.xmliobak\.xmlbase module
+===============================
 
 .. automodule:: pyhrf.xmliobak.xmlbase
     :members:

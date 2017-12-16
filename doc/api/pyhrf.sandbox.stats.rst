@@ -1,5 +1,5 @@
-pyhrf.sandbox.stats module
-==========================
+pyhrf\.sandbox\.stats module
+============================
 
 .. automodule:: pyhrf.sandbox.stats
     :members:

@@ -1,5 +1,5 @@
-pyhrf.tools.message module
-==========================
+pyhrf\.tools\.message module
+============================
 
 .. automodule:: pyhrf.tools.message
     :members:

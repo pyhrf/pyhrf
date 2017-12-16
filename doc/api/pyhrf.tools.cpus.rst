@@ -1,5 +1,5 @@
-pyhrf.tools.cpus module
-=======================
+pyhrf\.tools\.cpus module
+=========================
 
 .. automodule:: pyhrf.tools.cpus
     :members:

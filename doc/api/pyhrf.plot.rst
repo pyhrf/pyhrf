@@ -1,5 +1,5 @@
-pyhrf.plot module
-=================
+pyhrf\.plot module
+==================
 
 .. automodule:: pyhrf.plot
     :members:

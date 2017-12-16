@@ -1,5 +1,5 @@
-pyhrf.ui.jde module
-===================
+pyhrf\.ui\.jde module
+=====================
 
 .. automodule:: pyhrf.ui.jde
     :members:

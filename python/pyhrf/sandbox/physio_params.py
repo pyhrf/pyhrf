@@ -128,15 +128,13 @@ PHY_PARAMS_DUARTE12 = {
 
 
 def buildOrder1FiniteDiffMatrix_central(size, dt):
-    """
-    returns a toeplitz matrix
-    for central differences
+    """Returns a toeplitz matrix for central differences to correct for errors on the first and last points (due to the
+    fact that there is no rf[-1] or rf[size] to average with):
 
-    to correct for errors on the first and last points:
-    (due to the fact that there is no rf[-1] or rf[size] to average with)
-    - uses the last point to calcuate the first and vis-versa
-    - this is acceptable bc the rf is assumed to begin & end at steady state
-      (thus the first and last points should both be zero)
+    - uses the last point to calculate the first and vise-versa
+    - this is acceptable bc the rf is assumed to begin & end at steady state (thus the first and last points should
+      both be zero)
+
     """
     from scipy.linalg import toeplitz
 
@@ -150,25 +148,27 @@ def buildOrder1FiniteDiffMatrix_central(size, dt):
 
 
 def create_tbg_neural_efficacies(physiological_params, condition_defs, labels):
-    """
-    Create neural efficacies from a truncated bi-Gaussian mixture.
+    """Create neural efficacy from a truncated bi-Gaussian mixture.
 
-    Ars:
-        - physiological_params (dict (<param_name> : <param_value>):
-            parameters of the physiological model
-        - condition_defs (list of pyhrf.Condition):
-            list of condition definitions. Each item should have the following
-            fields (moments of the mixture):
-                - m_act (0<=float<eff_max): mean of activating component
-                - v_act (0<float): variance of activating component
-                - v_inact (0<float): variance of non-activating component
-        - labels (np.array((nb_cond, nb_vox), int)): binary activation states
+    Parameters
+    ----------
+    physiological_params : dict (<param_name> : <param_value>)
+        parameters of the physiological model
+    condition_defs : list of pyhrf.Condition
+        list of condition definitions. Each item should have the following fields (moments of the mixture):
 
-    Return:
-        np.array(np.array((nb_cond, nb_vox), float))
-        -> the generated neural efficacies
+        - m_act (0<=float<eff_max): mean of activating component
+        - v_act (0<float): variance of activating component
+        - v_inact (0<float): variance of non-activating component
+    labels : np.array((nb_cond, nb_vox), int)
+        binary activation states
 
-    TODO: settle how to relate brls and prls to neural efficacies
+    Returns
+    -------
+    np.array(np.array((nb_cond, nb_vox), float))
+        the generated neural efficacies
+
+    TODO: settle how to relate brls and prls to neural efficacy
     """
 
     eff_max = physiological_params['eps_max']
@@ -188,28 +188,30 @@ def create_tbg_neural_efficacies(physiological_params, condition_defs, labels):
 
 
 def phy_integrate_euler(phy_params, tstep, stim, epsilon, Y0=None):
-    """
-    Integrate the ODFs of the physiological model with the Euler method.
+    """Integrate the ODFs of the physiological model with the Euler method.
 
-    Args:
-        - phy_params (dict (<param_name> : <param_value>):
-            parameters of the physiological model
-        - tstep (float): time step of the integration, in seconds.
-        - stim (np.array(nb_steps, float)): stimulation sequence with temporal
-            resolution equal to the time step of the integration
-        - epsilon (float): neural efficacy
-        - Y0 (np.array(4, float) | None): initial values for the physiological
-                                          signals.
-                                          If None: [0, 1,   1, 1.]
-                                                    s  f_in q  v
-    Result:
-        - np.array((4, nb_steps), float)
-          -> the integrated physiological signals, where indexes of the first
-          axis correspond to:
-              0 : flow inducing
-              1 : inflow
-              2 : HbR
-              3 : blood volume
+    Parameters
+    ----------
+    phy_params : dict (<param_name> : <param_value>)
+        parameters of the physiological model
+    tstep : float
+        time step of the integration, in seconds.
+    stim : np.array(nb_steps, float)
+        stimulation sequence with temporal resolution equal to the time step of the integration
+    epsilon : float
+        neural efficacy
+    Y0 : np.array(4, float) | None
+        initial values for the physiological signals. If None: [0, 1,   1, 1.] s  f_in q  v
+
+    Returns
+    -------
+    np.array((4, nb_steps), float)
+        the integrated physiological signals, where indexes of the first axis correspond to:
+
+        - 0 : flow inducing
+        - 1 : inflow
+        - 2 : HbR
+        - 3 : blood volume
 
     TODO: should the output signals be rescaled wrt their value at rest?
     """
@@ -265,31 +267,32 @@ def phy_integrate_euler(phy_params, tstep, stim, epsilon, Y0=None):
     return res[1:, :].T
 
 
-def create_evoked_physio_signals(physiological_params, paradigm,
-                                 neural_efficacies, dt, integration_step=.05):
-    """
-    Generate evoked hemodynamics signals by integrating a physiological model.
+def create_evoked_physio_signals(physiological_params, paradigm, neural_efficacies, dt, integration_step=.05):
+    """Generate evoked hemodynamics signals by integrating a physiological model.
 
-    Args:
-        - physiological_params (dict (<pname (str)> : <pvalue (float)>)):
-             parameters of the physiological model.
-             In jde.sandbox.physio see PHY_PARAMS_FRISTON00, PHY_PARAMS_FMRII
-        - paradigm (pyhrf.paradigm.Paradigm) :
-             the experimental paradigm
-        - neural_efficacies (np.ndarray (nb_conditions, nb_voxels, float)):
-             neural efficacies involved in flow inducing signal.
-        - dt (float):
-             temporal resolution of the output signals, in second
-        - integration_step (float):
-             time step used for integration, in second
+    Parameters
+    ----------
+    physiological_params : dict (<pname (str)> : <pvalue (float)>)
+        parameters of the physiological model. In jde.sandbox.physio see PHY_PARAMS_FRISTON00, PHY_PARAMS_FMRII
+    paradigm : pyhrf.paradigm.Paradigm
+        the experimental paradigm
+    neural_efficacies : np.ndarray (nb_conditions, nb_voxels, float)
+        neural efficacies involved in flow inducing signal.
+    dt : float
+        temporal resolution of the output signals, in second
+    integration_step : float
+        time step used for integration, in second
 
-    Returns:
-        - np.array((nb_signals, nb_scans, nb_voxels), float)
-          -> All generated signals, indexes of the first axis correspond to:
-              - 0: flow inducing
-              - 1: inflow
-              - 2: blood volume
-              - 3: [HbR]
+    Returns
+    -------
+    np.array((nb_signals, nb_scans, nb_voxels), float)
+        All generated signals, indexes of the first axis correspond to:
+
+        - 0: flow inducing
+        - 1: inflow
+        - 2: blood volume
+        - 3: [HbR]
+
     """
     # TODO: handle multiple conditions
     # -> create input activity signal [0, 0, eff_c1, eff_c1, 0, 0, eff_c2, ...]

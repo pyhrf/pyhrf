@@ -1,5 +1,5 @@
-pyhrf.ui.analyser_ui module
-===========================
+pyhrf\.ui\.analyser\_ui module
+==============================
 
 .. automodule:: pyhrf.ui.analyser_ui
     :members:

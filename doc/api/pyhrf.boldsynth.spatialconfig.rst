@@ -1,5 +1,5 @@
-pyhrf.boldsynth.spatialconfig module
-====================================
+pyhrf\.boldsynth\.spatialconfig module
+======================================
 
 .. automodule:: pyhrf.boldsynth.spatialconfig
     :members:

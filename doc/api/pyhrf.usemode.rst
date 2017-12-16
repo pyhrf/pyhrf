@@ -1,5 +1,5 @@
-pyhrf.usemode module
-====================
+pyhrf\.usemode module
+=====================
 
 .. automodule:: pyhrf.usemode
     :members:

@@ -31,44 +31,44 @@ else:
 #################################
 
 
-def Cpt_Expected_U_graph(RefGraph, beta, LabelsNb, SamplesNb, GraphWeight=None, GraphNodesLabels=None, GraphLinks=None, RefGrphNgbhPosi=None):
-    """
-    Useless now!
+def Cpt_Expected_U_graph(RefGraph, beta, LabelsNb, SamplesNb, GraphWeight=None, GraphNodesLabels=None, GraphLinks=None,
+                         RefGrphNgbhPosi=None):
+    """**Useless now!**
 
-    Estimates the expectation of U for a given normalization constant Beta and
-    a given mask shape.
-    Swendsen-Wang sampling is used to assess the expectation on significant
-    images depending of beta.
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry
-                    represents a node of the graph and contains the list of
-                    its neighbors entry location in the graph.
-                    ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd
-                        node is the 10th node.
-                    => There exists i such that RefGraph[10][i]=2
-        * beta: normalization constant
-        * LabelsNb: Labels number
-        * SamplesNb: Samples number for the U expectation estimation
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the
-                       corresponding edge in RefGraph. If not defined
-                       the weights are set to 1.0.
-        * GraphNodesLabels: Optional list containing the nodes labels.
-                            The sampler aims to modify its values in function
-                            of beta and NbLabels. At this level this variable
-                            is seen as temporary and will be modified.
-                            Defining it slightly increases the calculation
-                            times.
-        * GraphLinks: Same shape as RefGraph. Each entry indicates if the link
-                      of the corresponding edge in RefGraph is considered
-                      (if yes ...=1 else ...=0). At this level this variable
-                      is seen as temporary and will be modified. Defining
-                      it slightly increases the calculation times.
-        * RefGrphNgbhPosi: Same shape as RefGraph. RefGrphNgbhPosi[i][j]
-                           indicates for which k is the link to i in
-                           RefGraph[RefGraph[i][j]][k]. This optional list
-                           is never modified.
-    output:
-        * ExpectU: U expectation
+    Estimates the expectation of U for a given normalization constant Beta and a given mask shape. Swendsen-Wang
+    sampling is used to assess the expectation on significant images depending of beta.
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists `i` such that `RefGraph[10][i]=2`
+    beta
+        normalization constant
+    LabelsNb
+        Labels number
+    SamplesNb
+        Samples number for the U expectation estimation
+    GraphWeight
+        Same shape as RefGraph. Each entry is the weight of the corresponding edge in RefGraph. If not defined the
+        weights are set to 1.0.
+    GraphNodesLabels
+        Optional list containing the nodes labels. The sampler aims to modify its values in function of beta and
+        NbLabels. At this level this variable is seen as temporary and will be modified. Defining it slightly increases
+        the calculation times.
+    GraphLinks
+        Same shape as RefGraph. Each entry indicates if the link of the corresponding edge in RefGraph is considered
+        (if yes ...=1 else ...=0). At this level this variable is seen as temporary and will be modified. Defining
+        it slightly increases the calculation times.
+    RefGrphNgbhPosi
+        Same shape as `RefGraph`. `RefGrphNgbhPosi[i][j]` indicates for which k is the link to i in
+        `RefGraph[RefGraph[i][j]][k]`. This optional list is never modified.
+
+    Returns
+    -------
+    ExpectU
+        U expectation
     """
     # initialization
     SumU = 0.
@@ -110,26 +110,30 @@ def Cpt_Expected_U_graph(RefGraph, beta, LabelsNb, SamplesNb, GraphWeight=None, 
 
 def Estim_lnZ_ngbhd_graph(RefGraph, beta_Ngbhd, beta_Ref, lnZ_ref, VecU_ref,
                           LabelsNb):
-    """
-    Estimates ln(Z) for beta=betaNgbhd. beta_Ngbhd is supposed close to beta_Ref
-    for which ln(Z) is known (lnZ_ref) and the energy U of fields generated
-    according to it have already been
-    computed (VecU_ref).
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry
-                    represents a node of the graph and contains the list of
-                    its neighbors entry location in the graph.
-                    ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node
-                    is the 10th node.
-                    => There exists i such that RefGraph[10][i]=2
-        * beta_Ngbhd: normalization constant for which ln(Z) will be estimated
-        * beta_Ref: normalization constant close to beta_Ngbhd for which ln(Z)
-                    already known
-        * lnZ_ref: ln(Z) for beta=beta_Ref
-        * VecU_ref: energy U of fields generated according to beta_Ref
-        * LabelsNb: Labels number
-    output:
-        * lnZ_Ngbhd: ln(Z) for beta=beta_Ngbhd
+    """Estimates ln(Z) for beta=betaNgbhd. `beta_Ngbhd` is supposed close to `beta_Ref` for which ln(Z) is known
+    (lnZ_ref) and the energy U of fields generated according to it have already been computed (`VecU_ref`).
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists `i` such that `RefGraph[10][i]=2`
+    beta_Ngbhd
+        normalization constant for which ln(Z) will be estimated
+    beta_Ref
+        normalization constant close to beta_Ngbhd for which ln(Z) already known
+    lnZ_ref
+        ln(Z) for beta=beta_Ref
+    VecU_ref
+        energy U of fields generated according to beta_Ref
+    LabelsNb
+        Labels number
+
+    Returns
+    -------
+    lnZ_Ngbhd
+        ln(Z) for beta=beta_Ngbhd
     """
 
     # print 'VecU_ref:'
@@ -154,22 +158,32 @@ def Estim_lnZ_ngbhd_graph(RefGraph, beta_Ngbhd, beta_Ref, lnZ_ref, VecU_ref,
 
 def Cpt_Vec_Estim_lnZ_Graph_fast3(RefGraph, LabelsNb, MaxErrorAllowed=5,
                                   BetaMax=1.4, BetaStep=0.05):
-    """
-    Estimate ln(Z(beta)) of Potts fields. The default Beta grid is between 0. and 1.4 with
+    """Estimate ln(Z(beta)) of Potts fields. The default Beta grid is between 0. and 1.4 with
     a step of 0.05. Extrapolation algorithm is used. Fast estimates are only performed for
     Ising fields (2 labels). Reference partition functions were pre-computed on Ising fields
     designed on regular and non-regular grids. They all respect a 6-connectivity system.
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-            and contains the list of its neighbors entry location in the graph.
-            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.  => There exists i such that RefGraph[10][i]=2
-        * LabelsNb: possible number of labels in each site of the graph
-        * MaxErrorAllowed: maximum error allowed in the graph estimation (in percents).
-        * BetaMax: Z(beta,mask) will be computed for beta between 0 and BetaMax. Maximum considered value is 1.4
-        * BetaStep: gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
-    output:
-        * Est_lnZ: Vector containing the ln(Z(beta)) estimates
-        * V_Beta: Vector of the same size as VecExpectZ containing the corresponding beta value
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists i such that `RefGraph[10][i]=2`
+    LabelsNb
+        possible number of labels in each site of the graph
+    MaxErrorAllowed
+        maximum error allowed in the graph estimation (in percents).
+    BetaMax
+        Z(beta,mask) will be computed for beta between 0 and `BetaMax`. Maximum considered value is 1.4
+    BetaStep
+        gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
+
+    Returns
+    -------
+    Est_lnZ
+        Vector containing the ln(Z(beta)) estimates
+    V_Beta
+        Vector of the same size as `VecExpectZ` containing the corresponding beta value
     """
 
     # launch a more general algorithm if the inputs are not appropriate
@@ -293,33 +307,36 @@ def Cpt_Vec_Estim_lnZ_Graph_fast3(RefGraph, LabelsNb, MaxErrorAllowed=5,
     return Est_lnZ, V_Beta
 
 
-def Cpt_Vec_Estim_lnZ_Graph(RefGraph, LabelsNb, SamplesNb=40, BetaMax=1.4,
-                            BetaStep=0.05, GraphWeight=None):
-    """
-    Estimates ln(Z) for fields of a given size and Beta values between 0 and
-    BetaMax. Estimates of ln(Z) are first computed on a coarse grid of Beta
-    values. They are then computed and returned on a fine grid. No
-    approximation using precomputed partition function is performed here.
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry
-                    represents a node of the graph and contains the list of
-                    its neighbors entry location in the graph.
-                    ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node
-                    is the 10th node.
-                    => There exists i such that RefGraph[10][i]=2
-        * LabelsNb: number of labels
-        * SamplesNb: number of fields estimated for each beta
-        * BetaMax: Z(beta,mask) will be computed for beta between 0 and BetaMax
-        * BetaStep: gap between two considered values of beta (...in the fine
-                    grid. This gap in the coarse grid is automatically fixed
-                    and depends on the graph size.)
-         * GraphWeight: Same shape as RefGraph. Each entry is the weight of
-                        the corresponding edge in RefGraph. If not defined
-                        the weights are set to 1.0.
-    output:
-        * VecEstim_lnZ: Vector containing the ln(Z(beta,mask)) estimates
-        * VecBetaVal: Vector of the same size as VecExpectZ containing the
-                      corresponding beta value
+def Cpt_Vec_Estim_lnZ_Graph(RefGraph, LabelsNb, SamplesNb=40, BetaMax=1.4, BetaStep=0.05, GraphWeight=None):
+    """Estimates ln(Z) for fields of a given size and Beta values between 0 and BetaMax. Estimates of ln(Z) are first
+    computed on a coarse grid of Beta values. They are then computed and returned on a fine grid. No approximation
+    using precomputed partition function is performed here.
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists `i` such that `RefGraph[10][i]=2`
+    LabelsNb
+        number of labels
+    SamplesNb
+        number of fields estimated for each beta
+    BetaMax
+        Z(beta,mask) will be computed for beta between 0 and BetaMax
+    BetaStep
+        gap between two considered values of beta (...in the fine grid. This gap in the coarse grid is automatically
+        fixed and depends on the graph size.)
+    GraphWeight
+        Same shape as RefGraph. Each entry is the weight of the corresponding edge in RefGraph. If not defined the
+        weights are set to 1.0.
+
+    Returns
+    -------
+    VecEstim_lnZ
+        Vector containing the ln(Z(beta,mask)) estimates
+    VecBetaVal
+        Vector of the same size as VecExpectZ containing the corresponding beta value
     """
 
     # initialization
@@ -3512,22 +3529,32 @@ def LoadBaseLogPartFctRef():
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def Cpt_Vec_Estim_lnZ_Graph_fast(RefGraph, LabelsNb, MaxErrorAllowed=5, BetaMax=1.4, BetaStep=0.05):
-    """
-    Estimate ln(Z(beta)) of Potts fields. The default Beta grid is between 0. and 1.4 with
-    a step of 0.05. Extrapolation algorithm is used. Fast estimates are only performed for
-    Ising fields (2 labels). Reference partition functions were pre-computed on Ising fields
-    designed on regular and non-regular grids. They all respect a 6-connectivity system.
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-            and contains the list of its neighbors entry location in the graph.
-            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.  => There exists i such that RefGraph[10][i]=2
-        * LabelsNb: possible number of labels in each site of the graph
-        * MaxErrorAllowed: maximum error allowed in the graph estimation (in percents).
-        * BetaMax: Z(beta,mask) will be computed for beta between 0 and BetaMax. Maximum considered value is 1.4
-        * BetaStep: gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
-    output:
-        * Est_lnZ: Vector containing the ln(Z(beta)) estimates
-        * V_Beta: Vector of the same size as VecExpectZ containing the corresponding beta value
+    """Estimate ln(Z(beta)) of Potts fields. The default Beta grid is between 0. and 1.4 with a step of 0.05.
+    Extrapolation algorithm is used. Fast estimates are only performed for Ising fields (2 labels). Reference partition
+    functions were pre-computed on Ising fields designed on regular and non-regular grids. They all respect a
+    6-connectivity system.
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node.  => There exists i such that `RefGraph[10][i]=2`
+    LabelsNb
+        possible number of labels in each site of the graph
+    MaxErrorAllowed
+        maximum error allowed in the graph estimation (in percents).
+    BetaMax
+        Z(beta,mask) will be computed for beta between 0 and `BetaMax`. Maximum considered value is 1.4
+    BetaStep
+        gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
+
+    Returns
+    -------
+    Est_lnZ
+        Vector containing the ln(Z(beta)) estimates
+    V_Beta
+        Vector of the same size as VecExpectZ containing the corresponding beta value
     """
 
     # launch a more general algorithm if the inputs are not appropriate
@@ -3637,21 +3664,28 @@ def Cpt_Vec_Estim_lnZ_Graph_fast(RefGraph, LabelsNb, MaxErrorAllowed=5, BetaMax=
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def Cpt_Vec_Estim_lnZ_Graph_fast2(RefGraph, BetaMax=1.4, BetaStep=0.05):
-    """
-    Estimate ln(Z(beta)) of Ising fields (2 labels). The default Beta grid is between 0. and 1.4 with
+    """Estimate ln(Z(beta)) of Ising fields (2 labels). The default Beta grid is between 0. and 1.4 with
     a step of 0.05. Bilinar estimation with the number of sites and cliques is used. The bilinear functions
     were estimated using bilinear regression on reference partition functions on 240 non-regular grids and with
     respect to a 6-connectivity system. (Pfs are found in LoadBaseLogPartFctRef -> PFs 0:239)
 
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-            and contains the list of its neighbors entry location in the graph.
-            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.  => There exists i such that RefGraph[10][i]=2
-        * BetaMax: Z(beta,mask) will be computed for beta between 0 and BetaMax. Maximum considered value is 1.4
-        * BetaStep: gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
-    output:
-        * Est_lnZ: Vector containing the ln(Z(beta)) estimates
-        * V_Beta: Vector of the same size as VecExpectZ containing the corresponding beta value
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node.  => There exists `i` such that `RefGraph[10][i]=2`
+    BetaMax
+        Z(beta,mask) will be computed for beta between 0 and `BetaMax`. Maximum considered value is 1.4
+    BetaStep
+        gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
+
+    Returns
+    -------
+    Est_lnZ
+        Vector containing the ln(Z(beta)) estimates
+    V_Beta
+        Vector of the same size as VecExpectZ containing the corresponding beta value
     """
 
     # launch a more general algorithm if the inputs are not appropriate
@@ -3740,13 +3774,19 @@ def logpf_ising_onsager(size, beta):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def Estim_lnZ_Onsager(n, beta):
-    """
-    Estimate ln(Z(beta)) using Onsager technique (2D periodic fields - 2 labels - 4 connectivity)
-    input:
-        * n: number of sites
-        * beta: beta
-    output:
-        * LogZ: ln(Z(beta)) estimate
+    """Estimate ln(Z(beta)) using Onsager technique (2D periodic fields - 2 labels - 4 connectivity)
+
+    Parameters
+    ---------
+    n
+        number of sites
+    beta
+        beta
+
+    Returns
+    -------
+    LogZ
+        ln(Z(beta)) estimate
     """
     # estimate u(beta)
     u = 2. * scipy.sinh(beta) / (scipy.cosh(beta) * scipy.cosh(beta))
@@ -3770,15 +3810,23 @@ def Estim_lnZ_Onsager(n, beta):
 
 
 def Cpt_Vec_Estim_lnZ_Onsager(n, BetaMax=1.2, BetaStep=0.05):
-    """
-    Estimate ln(Z(beta)) Onsager using Onsager technique (2D periodic fields - 2 labels - 4 connectivity)
-    input:
-        * n: number of sites
-        * BetaMax: Z(beta,mask) will be computed for beta between 0 and BetaMax. Maximum considered value is 1.2.
-        * BetaStep: gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
-    output:
-        * Est_lnZ: Vector containing the ln(Z(beta)) estimates
-        * V_Beta: Vector of the same size as VecExpectZ containing the corresponding beta value
+    """Estimate ln(Z(beta)) Onsager using Onsager technique (2D periodic fields - 2 labels - 4 connectivity)
+
+    Parameters
+    ----------
+    n
+        number of sites
+    BetaMax
+        Z(beta,mask) will be computed for beta between 0 and `BetaMax`. Maximum considered value is 1.2.
+    BetaStep
+        gap between two considered values of beta. Actual gaps are not exactly those asked but very close.
+
+    Returns
+    -------
+    Est_lnZ
+        Vector containing the ln(Z(beta)) estimates
+    V_Beta
+        Vector of the same size as `VecExpectZ` containing the corresponding beta value
     """
 
     # initialization
@@ -3803,23 +3851,32 @@ def Cpt_Vec_Estim_lnZ_Onsager(n, BetaMax=1.2, BetaStep=0.05):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def Cpt_Vec_Estim_lnZ_OLD_Graph(RefGraph, LabelsNb, SamplesNb=50, BetaMax=1.0, BetaStep=0.01, GraphWeight=None):
-    """
-    Useless now!
+    """**Useless now!**
 
-    Estimates ln(Z) for fields of a given size and Beta values between 0 and BetaMax
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
-        * LabelsNb: number of labels
-        * BetaMax: Z(beta,mask) will be computed for beta between 0 and BetaMax
-        * BetaStep: gap between two considered values of bseta
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                       edge in RefGraph. If not defined the weights are set to 1.0.
-    output:
-        * VecEstim_lnZ: Vector containing the ln(Z(beta,mask)) estimates
-        * VecBetaVal: Vector of the same size as VecExpectZ containing the corresponding beta value
+    Estimates ln(Z) for fields of a given size and Beta values between 0 and `BetaMax`.
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists `i` such that `RefGraph[10][i]=2`
+    LabelsNb
+        number of labels
+    BetaMax
+        Z(beta,mask) will be computed for beta between 0 and BetaMax
+    BetaStep
+        gap between two considered values of bseta
+    GraphWeight
+        Same shape as `RefGraph`. Each entry is the weight of the corresponding edge in RefGraph. If not defined the
+        weights are set to 1.0.
+
+    Returns
+    -------
+    VecEstim_lnZ
+        Vector containing the ln(Z(beta,mask)) estimates
+    VecBetaVal
+        Vector of the same size as VecExpectZ containing the corresponding beta value
     """
 
     # initialization
@@ -3863,19 +3920,26 @@ def Cpt_Vec_Estim_lnZ_OLD_Graph(RefGraph, LabelsNb, SamplesNb=50, BetaMax=1.0, B
 
 
 def Cpt_Exact_lnZ_graph(RefGraph, beta, LabelsNb, GraphWeight=None):
-    """
-    Computes the logarithm of the exact partition function Z(\beta).
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
-        * beta: spatial regularization parameter
-        * LabelsNb: number of labels in each site (typically 2 or 3)
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                       edge in RefGraph. If not defined the weights are set to 1.0.
-    output:
-        * exact_lnZ: exact value of ln(Z)
+    r"""Computes the logarithm of the exact partition function :math:`Z(\beta)`.
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists i such that `RefGraph[10][i]=2`
+    beta
+        spatial regularization parameter
+    LabelsNb
+        number of labels in each site (typically 2 or 3)
+    GraphWeight
+        Same shape as `RefGraph`. Each entry is the weight of the corresponding edge in `RefGraph`. If not defined the
+        weights are set to 1.0.
+
+    Returns
+    -------
+    exact_lnZ
+        exact value of ln(Z)
     """
 
     # initialization
@@ -3924,22 +3988,31 @@ def Cpt_Exact_lnZ_graph(RefGraph, beta, LabelsNb, GraphWeight=None):
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def Cpt_Distrib_P_beta_graph(RefGraph, GraphNodesLabels, VecEstim_lnZ, VecBetaVal,
                              thresh=1.5, GraphWeight=None):
-    """
-    Computes the distribution P(beta|q)
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
-        * GraphNodesLabels: Nodes labels. GraphNodesLabels[i] is the node i label.
-        * VecEstim_lnZ: Vector containing the ln(Z(beta,mask)) estimates (in accordance with the defined graph).
-        * VecBetaVal: Vector of the same size as VecExpectZ containing the corresponding beta
-                      value (in accordance with the defined graph).
-        * thresh: the prior on beta is uniform between 0 and thresh and linearly decrease between thresh and VecBetaVal[-1]
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                       edge in RefGraph. If not defined the weights are set to 1.0.
-    output:
-        * Vec_P_Beta: contains the P(beta|q) values  (consistant with VecBetaVal).
+    r"""Computes the distribution :math:`P(beta|q)`
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists `i` such that `RefGraph[10][i]=2`
+    GraphNodesLabels
+        Nodes labels. `GraphNodesLabels[i]` is the node `i` label.
+    VecEstim_lnZ
+        Vector containing the :math:`ln(Z(beta,mask))` estimates (in accordance with the defined graph).
+    VecBetaVal
+        Vector of the same size as `VecExpectZ` containing the corresponding beta value (in accordance with the
+        defined graph).
+    thresh
+        the prior on beta is uniform between 0 and thresh and linearly decrease between thresh and `VecBetaVal[-1]`
+    GraphWeight
+        Same shape as `RefGraph`. Each entry is the weight of the corresponding edge in `RefGraph`. If not defined the
+        weights are set to 1.0.
+
+    Returns
+    -------
+    Vec_P_Beta
+        contains the :math:`P(beta|q)` values  (consistent with `VecBetaVal`).
     """
 
     # initialization
@@ -3997,28 +4070,42 @@ def Cpt_Distrib_P_beta_graph(RefGraph, GraphNodesLabels, VecEstim_lnZ, VecBetaVa
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
-def Cpt_AcceptNewBeta_Graph(RefGraph, GraphNodesLabels, VecEstim_lnZ, VecBetaVal, CurrentBeta, sigma, thresh=1.2, GraphWeight=None):
+def Cpt_AcceptNewBeta_Graph(RefGraph, GraphNodesLabels, VecEstim_lnZ, VecBetaVal, CurrentBeta, sigma, thresh=1.2,
+                            GraphWeight=None):
     """
-    Starting from a given Beta vector (1 value for each condition) 'CurrentBeta', computes new Beta values in 'NewBeta'
+    Starting from a given Beta vector (1 value for each condition) `CurrentBeta`, computes new Beta values in `NewBeta`
     using a Metropolis-Hastings step.
-    input:
-        * RefGraph: List which contains the connectivity graph. Each entry represents a node of the graph
-                            and contains the list of its neighbors entry location in the graph.
-                            ex: RefGraph[2][3]=10 means 3rd neighbour of the 2nd node is the 10th node.
-                                 => There exists i such that RefGraph[10][i]=2
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                       edge in RefGraph. If not defined the weights are set to 1.0.
-        * GraphNodesLabels: Nodes labels. GraphNodesLabels[i] is the node i label.
-        * VecEstim_lnZ: Vector containing the ln(Z(beta,mask)) estimates (in accordance with the defined mask).
-        * VecBetaVal: Vector of the same size as VecExpectZ containing the corresponding beta
-                      value (in accordance with the defined mask).
-        * CurrentBeta: Beta at the current iteration
-        * sigma: such as NewBeta = CurrentBeta + N(0,sigma)
-        * thresh: the prior on beta is uniform between 0 and thresh and linearly decrease between thresh and VecBetaVal[-1]
-        * GraphWeight: Same shape as RefGraph. Each entry is the weight of the corresponding
-                       edge in RefGraph. If not defined the weights are set to 1.0.
-    output:
-        * NewBeta: Contains the accepted beta value at the next iteration
+
+    Parameters
+    ----------
+    RefGraph
+        List which contains the connectivity graph. Each entry represents a node of the graph and contains the list of
+        its neighbors entry location in the graph. Ex: `RefGraph[2][3]=10` means 3rd neighbour of the 2nd node is the
+        10th node. => There exists `i` such that `RefGraph[10][i]=2`
+    GraphWeight
+        Same shape as RefGraph. Each entry is the weight of the corresponding edge in RefGraph. If not defined the
+        weights are set to 1.0.
+    GraphNodesLabels
+        Nodes labels. `GraphNodesLabels[i]` is the node `i` label.
+    VecEstim_lnZ
+        Vector containing the `ln(Z(beta,mask))` estimates (in accordance with the defined mask).
+    VecBetaVal
+        Vector of the same size as `VecExpectZ` containing the corresponding beta value (in accordance with the defined
+        mask).
+    CurrentBeta
+        Beta at the current iteration
+    sigma
+        such as `NewBeta = CurrentBeta + N(0,sigma)`
+    thresh
+        the prior on beta is uniform between 0 and thresh and linearly decrease between thresh and `VecBetaVal[-1]`
+    GraphWeight
+        Same shape as RefGraph. Each entry is the weight of the corresponding edge in RefGraph. If not defined the
+        weights are set to 1.0.
+
+    Returns
+    -------
+    NewBeta
+        Contains the accepted beta value at the next iteration
     """
 
     # 1) initialization
@@ -4112,16 +4199,14 @@ def Cpt_AcceptNewBeta_Graph(RefGraph, GraphNodesLabels, VecEstim_lnZ, VecBetaVal
 
 
 def beta_estim_obs_field(graph, labels, gridLnz, method='MAP', weights=None):
-    """
-    Estimate the amount of spatial correlation of an Ising observed field.
-    'graph' is the neighbours list defining the topology
-    'labels' is the field realisation
-    'gridLnz' is the log-partition function associated to the topology, ie a grid
-    where gridLnz[0] stores values of lnz and gridLnz[1] stores corresponding values of
-    beta.
-    Return :
-     - estimated beta
-     - tabulated distribution p(beta|labels)
+    """Estimate the amount of spatial correlation of an Ising observed field. `graph` is the neighbours list defining
+    the topology `labels` is the field realisation `gridLnz` is the log-partition function associated to the topology,
+    ie a grid where `gridLnz[0]` stores values of lnz and `gridLnz[1]` stores corresponding values of beta.
+
+    Returns
+    -------
+    estimated beta
+    tabulated distribution p(beta|labels)
     """
     if method == 'MAP':
         # p(beta | labels):

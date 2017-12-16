@@ -1,5 +1,5 @@
-pyhrf.parcellation module
-=========================
+pyhrf\.parcellation module
+==========================
 
 .. automodule:: pyhrf.parcellation
     :members:

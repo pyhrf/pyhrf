@@ -1,5 +1,5 @@
-pyhrf.configuration module
-==========================
+pyhrf\.configuration module
+===========================
 
 .. automodule:: pyhrf.configuration
     :members:

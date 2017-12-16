@@ -1,5 +1,5 @@
-pyhrf.test.test_parallel module
-===============================
+pyhrf\.test\.test\_parallel module
+==================================
 
 .. automodule:: pyhrf.test.test_parallel
     :members:

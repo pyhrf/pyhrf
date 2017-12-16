@@ -1,5 +1,5 @@
-pyhrf.test.commandTest module
-=============================
+pyhrf\.test\.commandTest module
+===============================
 
 .. automodule:: pyhrf.test.commandTest
     :members:

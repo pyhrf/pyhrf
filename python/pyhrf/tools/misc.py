@@ -257,21 +257,29 @@ def cartesian(*sequences):
 
 
 def cartesian_combine_args(varying_args, fixed_args=None):
-    """
-    Construst the cartesian product of varying_args and append fixed_args to it.
+    """Construct the cartesian product of varying_args and append fixed_args to it.
 
-    'varying_args': Specify varying arguments as a dict mapping
-                    arg names to iterables of arg values.
-                    e.g:
-                      { 'my_arg1' : ['a','b','c'],
-                        'my_arg2' : [2, 5, 10],
-                      }
-    'fixed_args' : Specify constant arguments as a dict mapping
-                   arg names to arg values
-                   e.g:
-                     { 'my_arg3' : ['fixed_value'] }
+    Parameters
+    ----------
+    varying_args
+        Specify varying arguments as a dict mapping arg names to iterables of arg values.
+        e.g:
 
-    Example:
+        .. code::
+
+            {'my_arg1' : ['a','b','c'],
+             'my_arg2' : [2, 5, 10]}
+
+    fixed_args
+        Specify constant arguments as a dict mapping arg names to arg values.
+        e.g:
+
+        .. code::
+
+            { 'my_arg3' : ['fixed_value'] }
+
+    Examples
+    --------
     >>> from pyhrf.tools import cartesian_combine_args
     >>> vargs = {'my_arg1' : ['a','b','c'],'my_arg2' : [2, 5, 10],}
     >>> fargs = { 'my_arg3' : 'fixed_value' }
@@ -309,39 +317,36 @@ def icartesian_combine_args(varying_args, fixed_args=None):
             for vp in iproduct(*varying_args.values()))
 
 
-def cartesian_apply(varying_args, func, fixed_args=None, nb_parallel_procs=1,
-                    joblib_verbose=0):
-    """
-    Apply function *func* iteratively on the cartesian product of *varying_args*
-    with fixed args *fixed_args*. Produce a tree (nested dicts) mapping arg values    to the corresponding evaluation of function *func*
+def cartesian_apply(varying_args, func, fixed_args=None, nb_parallel_procs=1, joblib_verbose=0):
+    """Apply function *func* iteratively on the cartesian product of `varying_args` with fixed args `fixed_args`.
+    Produce a tree (nested dicts) mapping arg values to the corresponding evaluation of function `func`
 
-    Arg:
-        - varying_args (OrderedDict): a dictionnary mapping argument names to
-                                      a list of values. The Orderdict is
-                                      used to keep track of argument order in
-                                      the result.
-                                      WARNING: all argument values must be
-                                               hashable
-        - func (function): the function to be applied on the cartesian product
-                           of given arguments
-        - fixed_args (dict): arguments that are fixed
-                             (do not enter cartesian product)
+    Parameters
+    ----------
+    varying_args : OrderedDict
+        a dictionary mapping argument names to a list of values. The `Orderdict` is used to keep track of argument order
+        in the result. *WARNING:* all argument values must be hashable
+    func : function
+        the function to be applied on the cartesian product of given arguments
+    fixed_args : dict
+        arguments that are fixed (do not enter cartesian product)
 
-    Return:
-        nested dicts (tree) where each node is an argument value from varying
-        args and each leaf is the result of the evaluation of the function.
-        The order to the tree levels corresponds the order in the input
-        OrderedDict of varying arguments.
+    Returns
+    -------
+    nested dicts : tree
+        where each node is an argument value from varying args and each leaf is the result of the evaluation of the
+        function. The order to the tree levels corresponds the order in the input `OrderedDict` of varying arguments.
 
-    Example:
+    Examples
+    --------
     >>> from pyhrf.tools import cartesian_apply
     >>> from pyhrf.tools.backports import OrderedDict
     >>> def foo(a,b,c): return a + b + c
     >>> v_args = OrderedDict( [('a',[0,1]), ('b',[1,2])] )
     >>> fixed_args = {'c': 3}
-    >>> cartesian_apply(v_args, foo, fixed_args) == \
-        { 0 : { 1:4, 2:5}, 1 : { 1:5, 2:6} }
+    >>> cartesian_apply(v_args, foo, fixed_args) == { 0 : { 1:4, 2:5}, 1 : { 1:5, 2:6} }
     True
+
     """
     from pyhrf.tools.backports import OrderedDict
     assert isinstance(varying_args, OrderedDict)
@@ -828,14 +833,15 @@ class Pipeline:
         return s
 
     def reprDep(self, label):
-        """
-        Build a string representing all dependencies and dependers of the
-        variable 'label'. The returned string is in the form :
-               label
-        depee1 <-
-        depee2 <-
-               -> deper1
-               -> deper2
+        """Build a string representing all dependencies and dependers of the variable `label`. The returned string is
+        in the form ::
+
+                   label
+            depee1 <-
+            depee2 <-
+                   -> deper1
+                   -> deper2
+
         """
         deps = self.dependencies[label]
         if len(deps) > 0:

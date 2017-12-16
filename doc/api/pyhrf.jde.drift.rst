@@ -1,5 +1,5 @@
-pyhrf.jde.drift module
-======================
+pyhrf\.jde\.drift module
+========================
 
 .. automodule:: pyhrf.jde.drift
     :members:

@@ -1,5 +1,5 @@
-pyhrf.xmliobak.xmlmatlab module
-===============================
+pyhrf\.xmliobak\.xmlmatlab module
+=================================
 
 .. automodule:: pyhrf.xmliobak.xmlmatlab
     :members:

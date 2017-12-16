@@ -3,13 +3,13 @@
 # modified hierachical.py from scikit learn
 """Hierarchical Agglomerative Clustering
 
-These routines perform some hierachical agglomerative clustering of some
-input data. Currently, only Ward's algorithm is implemented.
+These routines perform some hierarchical agglomerative clustering of some input data. Currently, only Ward's algorithm
+is implemented.
 
-Authors : Vincent Michel, Bertrand Thirion, Alexandre Gramfort,
-          Gael Varoquaux
+Authors : Vincent Michel, Bertrand Thirion, Alexandre Gramfort, Gael Varoquaux
 Modified: Aina Frau
 License: BSD 3 clause
+
 """
 
 import warnings
@@ -270,33 +270,30 @@ def informedGMM_MV_old(fm, am, cov_type = 'spherical'):
 """
 
 
-def compute_mixt_dist(features, alphas, coord_row, coord_col, cluster_masks,
-                      moments, cov_type, res):
-    """
-    within one given territory: bi-Gaussian mixture model with known posterior
-    weights:
+def compute_mixt_dist(features, alphas, coord_row, coord_col, cluster_masks, moments, cov_type, res):
+    r"""Within one given territory: bi-Gaussian mixture model with known posterior weights:
+
+    .. math::
         phi ~ \sum_i \lambda_i N(mu_i, v_i)
-        p(q_j = i | phi_j) is an input (alphas)
+        p(q_j = i | phi_j) \text{is an input (alphas)}
 
-    Estimation:
-        \lambda_1 = 1 - \lambda_0 is the mean of posterior weights
-        mu_i is estimated by weighted sample mean
-        v_i is  estimated by weighted sample variance
+    **Estimation:**
+    :math:`\lambda_1 = 1 - \lambda_0` is the mean of posterior weights. :math:`mu_i` is estimated by weighted sample
+    mean and :math:`v_i` is estimated by weighted sample variance.
 
-    Args:
-        - features (np.array((nsamples, nfeatures), float)):
-            the feature to parcellate
-        - alphas (np.array(nsamples, float)):
-            confidence levels on the features -> identified to posterior
-            weights of class activating in the GMM fit
-        - coord_row  (list of int): row candidates for merging
-        - coord_col (list of int): col candidates for merging
-        - cluster_masks ():
-        - moments: !!!
-        - res:
-
-    Return:
-
+    Parameters
+    ----------
+    features : np.array((nsamples, nfeatures), float)
+        the feature to parcellate
+    alphas : np.array(nsamples, float)
+        confidence levels on the features -> identified to posterior weights of class activating in the GMM fit
+    coord_row : list of int
+        row candidates for merging
+    coord_col : list of int
+        col candidates for merging
+    cluster_masks
+    moments
+    res
 
     """
     size_max = coord_row.shape[0]
@@ -1042,12 +1039,12 @@ class Ward(BaseEstimator, ClusterMixin):
         The number of clusters to find.
 
     connectivity : sparse matrix.
-        Connectivity matrix. Defines for each sample the neigbhoring
+        Connectivity matrix. Defines for each sample the neighboring
         samples following a given structure of the data.
-        Default is None, i.e, the hiearchical clustering algorithm is
+        Default is None, i.e, the hierarchical clustering algorithm is
         unstructured.
 
-    memory : Instance of joblib.Memory or string
+    memory : Instance of joblib.Memory or str
         Used to cache the output of the computation of the tree.
         By default, no caching is done. If a string is given, it is the
         path to the caching directory.
@@ -1056,10 +1053,9 @@ class Ward(BaseEstimator, ClusterMixin):
         Copy the connectivity matrix or work inplace.
 
     n_components : int (optional)
-        The number of connected components in the graph defined by the \
-        connectivity matrix. If not set, it is estimated.
+        The number of connected components in the graph defined by the connectivity matrix. If not set, it is estimated.
 
-    compute_full_tree: bool or 'auto' (optional)
+    compute_full_tree: bool or `auto` (optional)
         Stop early the construction of the tree at n_clusters. This is
         useful to decrease computation time if the number of clusters is
         not small compared to the number of samples. This option is
@@ -1070,16 +1066,16 @@ class Ward(BaseEstimator, ClusterMixin):
 
     Attributes
     ----------
-    `children_` : array-like, shape = [n_nodes, 2]
+    children_ : array-like, shape = [n_nodes, 2]
         List of the children of each nodes.  Leaves of the tree do not appear.
 
-    `labels_` : array [n_samples]
+    labels_ : array [n_samples]
         cluster labels for each point
 
-    `n_leaves_` : int
-        Number of leaves in the hiearchical tree.
+    n_leaves_ : int
+        Number of leaves in the hierarchical tree.
 
-    `n_components_` : sparse matrix.
+    n_components_ : sparse matrix.
         The estimated number of connected components in the graph.
 
     """
@@ -1176,12 +1172,12 @@ class WardAgglomeration(AgglomerationTransform, Ward):
         The number of clusters.
 
     connectivity : sparse matrix
-        connectivity matrix. Defines for each feature the neigbhoring
+        connectivity matrix. Defines for each feature the neighboring
         features following a given structure of the data.
-        Default is None, i.e, the hiearchical agglomeration algorithm is
+        Default is None, i.e, the hierarchical agglomeration algorithm is
         unstructured.
 
-    memory : Instance of joblib.Memory or string
+    memory : Instance of joblib.Memory or str
         Used to cache the output of the computation of the tree.
         By default, no caching is done. If a string is given, it is the
         path to the caching directory.
@@ -1193,7 +1189,7 @@ class WardAgglomeration(AgglomerationTransform, Ward):
         The number of connected components in the graph defined by the
         connectivity matrix. If not set, it is estimated.
 
-    compute_full_tree: bool or 'auto' (optional)
+    compute_full_tree: bool or `auto` (optional)
         Stop early the construction of the tree at n_clusters. This is
         useful to decrease computation time if the number of clusters is
         not small compared to the number of samples. This option is
@@ -1206,20 +1202,20 @@ class WardAgglomeration(AgglomerationTransform, Ward):
 
     activation: level of activation detected (default: None)
         Used to weight voxels depending on level of activation in inertia computation.
-        A non-activ voxel will not estimate the HRF correctly,
+        A non-active voxel will not estimate the HRF correctly,
         so features will not be correct either.
 
     Attributes
     ----------
-    `children_` : array-like, shape = [n_nodes, 2]
+    children_ : array-like, shape = [n_nodes, 2]
         List of the children of each nodes.
         Leaves of the tree do not appear.
 
-    `labels_` : array [n_samples]
+    labels_ : array [n_samples]
         cluster labels for each point
 
-    `n_leaves_` : int
-        Number of leaves in the hiearchical tree.
+    n_leaves_ : int
+        Number of leaves in the hierarchical tree.
 
     """
 
@@ -1413,27 +1409,24 @@ def GLM_method(name, data0, ncond, dt=.5, time_length=25., ndelays=0):
 
 
 def generate_features(parcellation, act_labels, feat_levels, noise_var=0.):
-    """
-    Generate noisy features with different levels across positions
-    depending on parcellation and activation clusters.
+    """Generate noisy features with different levels across positions depending on parcellation and activation clusters.
 
-    Args:
-        - parcellation (flat np.ndarray of integers in [1, nb_parcels]):
-            the input parcellation
-        - act_labels (flat binary np.ndarray):
-            define which positions are active (1) and non-active (0)
-        - feat_levels (dict of (int[1,N] : (array((n_features,), float),
-                                            array((n_features)), float))):
-            -> (dict of (parcel_idx : (feat_lvl_inact, feat_lvl_act))
-            map a parcel labels to feature levels in non-active and active-pos
-            eg: {1: ([1., .5], [10., 15])} indicates that features in parcel
-                1 have values [1., .5] in non-active positions (2 features per
-                position) and value 10. in active-positions
-        - noise_var (float>0):
-            variance of additive Gaussian noise
+    Parameters
+    ----------
+    parcellation : np.ndarray of integers in [1, nb_parcels]
+        the input parcellation
+    act_labels : binary np.ndarray
+        define which positions are active (1) and non-active (0)
+    feat_levels : dict of (int : (array((n_features,), float), array(n_features), float)) -> (dict of (parcel_idx : (feat_lvl_inact, feat_lvl_act))
+        map a parcel labels to feature levels in non-active and active-pos. Eg: `{1: ([1., .5], [10., 15])}` indicates
+        that features in parcel 1 have values [1., .5] in non-active positions (2 features per position) and value 10.
+        in active-positions
+    noise_var : float>0
+        variance of additive Gaussian noise
 
-    Return:
-        np.array((n_positions, n_features), float)
+    Returns
+    -------
+    np.array((n_positions, n_features), float)
         The simulated the features.
 
     """
@@ -1552,32 +1545,32 @@ def spatial_ward(features, graph, nb_clusters=0):
     return ward
 
 
-def spatial_ward_with_uncertainty(features, graph, variance, activation,
-                                  var_ini=None, act_ini=None, nb_clusters=0,
+def spatial_ward_with_uncertainty(features, graph, variance, activation, var_ini=None, act_ini=None, nb_clusters=0,
                                   dist_type='uward', cov_type='spherical', save_history=False):
-    """
-    Parcellation the given features with the spatial Ward algorithm, taking into
-    account uncertainty on features (variance) and activation level:
-        - the greater the variance of a given sample,
-          the lower its importance in the distance.
-        - the lower the activation level of a given sample,
-          the lower its distance to any other sample.
+    """Parcellation the given features with the spatial Ward algorithm, taking into account uncertainty on features
+    (variance) and activation level:
 
-    Args:
+    - the greater the variance of a given sample, the lower its importance in the distance.
+    - the lower the activation level of a given sample, the lower its distance to any other sample.
 
-        - feature (np.ndarray):
-             observations to parcellate - size: (nsamples, nfeatures)
-        - graph (listof (listof PositionIndex)) :
-             spatial dependency between positions
-        - variance (np.ndarray):
-             variance of features - size: (nsamples, nfeatures)
-        - activation (np.ndarray):
-             activation level associated with observation.
-             size: (nsamples)
-        - var_ini: !!!
-        - act_ini: !!!
-        - nb_clusters (int): number of clusters.
-        - dist_type (str): 'ward' | 'mixt'
+    Parameters
+    ----------
+    feature : np.ndarray
+        observations to parcellate - size: (nsamples, nfeatures)
+    graph : list of (list of PositionIndex)
+        spatial dependency between positions
+    variance : np.ndarray
+        variance of features - size: (nsamples, nfeatures)
+    activation : np.ndarray
+        activation level associated with observation.
+    size : int
+        n samples
+    var_ini
+    act_ini:
+    nb_clusters : int
+        number of clusters
+    dist_type : str
+        `ward` | `mixt`
 
     """
     # Spatial Ward parcellation with uncertainty. Returns distance and parcels

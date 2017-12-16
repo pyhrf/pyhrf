@@ -1,5 +1,5 @@
-pyhrf.tools.aexpression module
-==============================
+pyhrf\.tools\.aexpression module
+================================
 
 .. automodule:: pyhrf.tools.aexpression
     :members:

@@ -14,10 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class Trajectory:
-
     """ Keep track of a numpy array that is modified _inplace_ iteratively
-        TODO: when mature, should be moved to pyhrf.ndarray
-              should replace pyhrf.jde.samplerbase.Trajectory
+    TODO: when mature, should be moved to pyhrf.ndarray should replace pyhrf.jde.samplerbase.Trajectory
     """
 
     def __init__(self, variable, history_pace, history_start, max_iterations,

@@ -1,5 +1,5 @@
-pyhrf.sandbox package
-=====================
+pyhrf\.sandbox package
+======================
 
 .. automodule:: pyhrf.sandbox
     :members:

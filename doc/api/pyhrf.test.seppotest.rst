@@ -1,5 +1,5 @@
-pyhrf.test.seppotest module
-===========================
+pyhrf\.test\.seppotest module
+=============================
 
 .. automodule:: pyhrf.test.seppotest
     :members:

@@ -1,5 +1,5 @@
-pyhrf.sandbox.physio module
-===========================
+pyhrf\.sandbox\.physio module
+=============================
 
 .. automodule:: pyhrf.sandbox.physio
     :members:

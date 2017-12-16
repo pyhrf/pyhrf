@@ -1,5 +1,5 @@
-pyhrf.validation.config module
-==============================
+pyhrf\.validation\.config module
+================================
 
 .. automodule:: pyhrf.validation.config
     :members:

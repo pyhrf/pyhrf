@@ -1,5 +1,5 @@
-pyhrf.ndarray module
-====================
+pyhrf\.ndarray module
+=====================
 
 .. automodule:: pyhrf.ndarray
     :members:
