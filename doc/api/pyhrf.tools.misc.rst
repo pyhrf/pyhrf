@@ -1,5 +1,5 @@
-pyhrf.tools.misc module
-=======================
+pyhrf\.tools\.misc module
+=========================
 
 .. automodule:: pyhrf.tools.misc
     :members:

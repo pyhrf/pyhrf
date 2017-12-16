@@ -1,5 +1,5 @@
-pyhrf.ui package
-================
+pyhrf\.ui package
+=================
 
 .. automodule:: pyhrf.ui
     :members:

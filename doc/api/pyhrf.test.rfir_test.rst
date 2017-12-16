@@ -1,5 +1,5 @@
-pyhrf.test.rfir_test module
-===========================
+pyhrf\.test\.rfir\_test module
+==============================
 
 .. automodule:: pyhrf.test.rfir_test
     :members:

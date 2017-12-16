@@ -1,5 +1,5 @@
-pyhrf.test.toolsTest module
-===========================
+pyhrf\.test\.toolsTest module
+=============================
 
 .. automodule:: pyhrf.test.toolsTest
     :members:

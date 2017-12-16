@@ -1,5 +1,5 @@
-pyhrf.jde package
-=================
+pyhrf\.jde package
+==================
 
 .. automodule:: pyhrf.jde
     :members:

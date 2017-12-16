@@ -1,5 +1,5 @@
-pyhrf.jde.asl_physio_1step module
-=================================
+pyhrf\.jde\.asl\_physio\_1step module
+=====================================
 
 .. automodule:: pyhrf.jde.asl_physio_1step
     :members:

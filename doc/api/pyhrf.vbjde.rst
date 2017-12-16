@@ -1,5 +1,5 @@
-pyhrf.vbjde package
-===================
+pyhrf\.vbjde package
+====================
 
 .. automodule:: pyhrf.vbjde
     :members:

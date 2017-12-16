@@ -1,5 +1,5 @@
-pyhrf.xmlio module
-==================
+pyhrf\.xmlio module
+===================
 
 .. automodule:: pyhrf.xmlio
     :members:

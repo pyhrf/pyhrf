@@ -1,5 +1,5 @@
-pyhrf.boldsynth.field module
-============================
+pyhrf\.boldsynth\.field module
+==============================
 
 .. automodule:: pyhrf.boldsynth.field
     :members:

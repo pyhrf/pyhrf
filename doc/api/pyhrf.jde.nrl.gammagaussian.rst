@@ -1,5 +1,5 @@
-pyhrf.jde.nrl.gammagaussian module
-==================================
+pyhrf\.jde\.nrl\.gammagaussian module
+=====================================
 
 .. automodule:: pyhrf.jde.nrl.gammagaussian
     :members:

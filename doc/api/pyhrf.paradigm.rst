@@ -1,5 +1,5 @@
-pyhrf.paradigm module
-=====================
+pyhrf\.paradigm module
+======================
 
 .. automodule:: pyhrf.paradigm
     :members:

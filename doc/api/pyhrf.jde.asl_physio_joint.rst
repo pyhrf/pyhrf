@@ -1,5 +1,5 @@
-pyhrf.jde.asl_physio_joint module
-=================================
+pyhrf\.jde\.asl\_physio\_joint module
+=====================================
 
 .. automodule:: pyhrf.jde.asl_physio_joint
     :members:

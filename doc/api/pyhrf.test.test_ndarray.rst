@@ -1,5 +1,5 @@
-pyhrf.test.test_ndarray module
-==============================
+pyhrf\.test\.test\_ndarray module
+=================================
 
 .. automodule:: pyhrf.test.test_ndarray
     :members:

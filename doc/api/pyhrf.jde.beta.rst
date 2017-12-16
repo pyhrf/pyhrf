@@ -1,5 +1,5 @@
-pyhrf.jde.beta module
-=====================
+pyhrf\.jde\.beta module
+=======================
 
 .. automodule:: pyhrf.jde.beta
     :members:

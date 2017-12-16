@@ -1,5 +1,5 @@
-pyhrf.ui.rfir_ui module
-=======================
+pyhrf\.ui\.rfir\_ui module
+==========================
 
 .. automodule:: pyhrf.ui.rfir_ui
     :members:

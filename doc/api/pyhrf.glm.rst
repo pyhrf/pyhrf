@@ -1,5 +1,5 @@
-pyhrf.glm module
-================
+pyhrf\.glm module
+=================
 
 .. automodule:: pyhrf.glm
     :members:

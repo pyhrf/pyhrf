@@ -1,5 +1,5 @@
-pyhrf.test.test_paradigm module
-===============================
+pyhrf\.test\.test\_paradigm module
+==================================
 
 .. automodule:: pyhrf.test.test_paradigm
     :members:

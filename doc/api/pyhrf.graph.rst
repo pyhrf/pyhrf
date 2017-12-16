@@ -1,5 +1,5 @@
-pyhrf.graph module
-==================
+pyhrf\.graph module
+===================
 
 .. automodule:: pyhrf.graph
     :members:

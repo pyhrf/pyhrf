@@ -1,5 +1,5 @@
-pyhrf.tools package
-===================
+pyhrf\.tools package
+====================
 
 .. automodule:: pyhrf.tools
     :members:

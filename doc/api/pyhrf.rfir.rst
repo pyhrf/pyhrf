@@ -1,5 +1,5 @@
-pyhrf.rfir module
-=================
+pyhrf\.rfir module
+==================
 
 .. automodule:: pyhrf.rfir
     :members:

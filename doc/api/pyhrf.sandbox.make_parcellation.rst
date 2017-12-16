@@ -1,5 +1,5 @@
-pyhrf.sandbox.make_parcellation module
-======================================
+pyhrf\.sandbox\.make\_parcellation module
+=========================================
 
 .. automodule:: pyhrf.sandbox.make_parcellation
     :members:

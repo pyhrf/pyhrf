@@ -1,5 +1,5 @@
-pyhrf.jde.nrl package
-=====================
+pyhrf\.jde\.nrl package
+=======================
 
 .. automodule:: pyhrf.jde.nrl
     :members:

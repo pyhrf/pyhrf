@@ -1,5 +1,5 @@
-pyhrf.vbjde.vem_tools module
-============================
+pyhrf\.vbjde\.vem\_tools module
+===============================
 
 .. automodule:: pyhrf.vbjde.vem_tools
     :members:

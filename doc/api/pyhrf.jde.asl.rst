@@ -1,5 +1,5 @@
-pyhrf.jde.asl module
-====================
+pyhrf\.jde\.asl module
+======================
 
 .. automodule:: pyhrf.jde.asl
     :members:

@@ -1,5 +1,5 @@
-pyhrf.boldsynth package
-=======================
+pyhrf\.boldsynth package
+========================
 
 .. automodule:: pyhrf.boldsynth
     :members:

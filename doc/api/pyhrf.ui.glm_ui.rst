@@ -1,5 +1,5 @@
-pyhrf.ui.glm_ui module
-======================
+pyhrf\.ui\.glm\_ui module
+=========================
 
 .. automodule:: pyhrf.ui.glm_ui
     :members:

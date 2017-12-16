@@ -1,5 +1,5 @@
-pyhrf.jde.nrl.bigaussian module
-===============================
+pyhrf\.jde\.nrl\.bigaussian module
+==================================
 
 .. automodule:: pyhrf.jde.nrl.bigaussian
     :members:

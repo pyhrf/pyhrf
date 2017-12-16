@@ -1,5 +1,5 @@
-pyhrf.stats package
-===================
+pyhrf\.stats package
+====================
 
 .. automodule:: pyhrf.stats
     :members:

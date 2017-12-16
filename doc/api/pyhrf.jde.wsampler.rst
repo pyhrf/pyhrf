@@ -1,5 +1,5 @@
-pyhrf.jde.wsampler module
-=========================
+pyhrf\.jde\.wsampler module
+===========================
 
 .. automodule:: pyhrf.jde.wsampler
     :members:

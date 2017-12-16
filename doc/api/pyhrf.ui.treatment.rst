@@ -1,5 +1,5 @@
-pyhrf.ui.treatment module
-=========================
+pyhrf\.ui\.treatment module
+===========================
 
 .. automodule:: pyhrf.ui.treatment
     :members:

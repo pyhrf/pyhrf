@@ -1,5 +1,5 @@
-pyhrf.stats.misc module
-=======================
+pyhrf\.stats\.misc module
+=========================
 
 .. automodule:: pyhrf.stats.misc
     :members:
