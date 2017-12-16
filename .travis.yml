@@ -12,3 +12,7 @@ script:
 
 after_success:
   - docker run --rm -e TRAVIS=$TRAVIS -e TRAVIS_JOB_ID=$TRAVIS_JOB_ID -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cd /output; coveralls"
+  - if [ -n "$TRAVIS_TAG" ]; then
+      docker tag pyhrf/pyhrf pyhrf/pyhrf:$TRAVIS_TAG;
+      docker push pyhrf/pyhrf:$TRAVIS_TAG;
+    fi
