@@ -1,0 +1,12 @@
+numpy>=1.6, <1.12
+scipy>=0.9
+scikit-learn>=0.10
+nibabel>=1.1, <2.1.0
+sympy>=0.7
+nipy>=0.3.0
+joblib>=0.5
+matplotlib>=1.1, <2.1.0
+colorama
+click
+Sphinx
+sphinx_bootstrap_theme
