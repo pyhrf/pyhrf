@@ -5,31 +5,23 @@ services:
 
 before_install:
   - git clone https://github.com/pyhrf/docker-pyhrf.git
-  - docker build --build-arg PYHRF_BRANCH=$TRAVIS_BRANCH -t pyhrf/pyhrf docker-pyhrf
+  - docker build --build-arg PYHRF_BRANCH=$TRAVIS_BRANCH --build-arg DEPLOY=true -t pyhrf/pyhrf docker-pyhrf
 
 script:
   - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf /bin/bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf && cp .coverage /output"
 
 after_success:
   - docker run --rm -e TRAVIS=$TRAVIS -e TRAVIS_JOB_ID=$TRAVIS_JOB_ID -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cd /output; coveralls"
-  - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf /bin/bash -c "cd /pyhrf && python setup.py sdist bdist_wheel && cp -r /pyhrf/dist /output"
+  - docker run --rm  -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf /bin/bash -c "twine upload /dist/*"
   - if [ -n "$TRAVIS_TAG" ]; then
       docker tag pyhrf/pyhrf pyhrf/pyhrf:$TRAVIS_TAG;
       docker login -u $DOCKER_USER -p $DOCKER_PASS;
       docker push pyhrf/pyhrf:$TRAVIS_TAG;
     fi
 
-deploy:
-  provider: pypi
-  user: pyhrf
-  password:
-    secure: ObKoWykbyp2VrUiIQWgFg842+6a40k+n4SP6mXDfJbEiN5qXYKHrJp12d7RXQ7kw+rUqiCsXqPv+mZya3oLiOtOXurnq8XpqqiT9iFMmfmGsY+YICJf0B1SNnctlZ9wZOPThn8jroKYNn5FsjDFn8VYLvIIdeXUEjlBuL6qMw8Y=
-  distributions: "sdist bdist_wheel"
-  skip_cleanup: true
-  on:
-    tags: true
-
 env:
   global:
   - secure: bYWR3RZ1qWDfba6ayukpvfGSkoObyLTUzr0yeIXSR6a24iRoNEiwL1g/OJAtaZNMgVMSNrawvZpr3T+6Bu/3WILHrN9iK2p5q/31GwtXQJJJMsy5KH43+doP+P0siHdXbcEPt7VWpOFxS540AG/+7lzS78Qtj3XKWV6B8+pqkWs=
   - secure: gOua7OkapIyvsKekFoTGRKnzcGNXfENz2eTKZ0npuJB2KfNN4OOrncaJXgW3NFbj8qugZMqmXsvGnDTbW6Ihc+iICXaHlJTKsXcLQX8bRnBBmBNoLHvypHg0xqHUpZRc1Id5A07k18PxbVx86lt3W2WTpCrsSxM9ccGgS2wvtU0=
+  - secure: L23/EKELfDu1zDaYT1aEz2VYTdfdhPA7OzMxFk/H+4E5VcIN7ohWKJlmhFJrSM7sUPUrGI3ja8t2f7KWwehpnKM/q8Qc2dFGhVJ3DS97Iqkc6ne1647XQF0jtFMePHVvWwOdo3QxSRtS5VmWfIiL05rLvy7hPFGpnXvE6uTueBs=
+  - secure: IiiG0yzemQlKnWOV9wBdTZ6eWv+iskMaJ572NTAVwVmJSBvdyRZDQqrz6qpcB906IXwgMQcRgHtQvmwEMyqADRsYIFEzIaAopoNZ3QRlhpMVXYy04Rs9JA8oPLXnQERQqN3CQlcviDK+U4CJprfOQMVq4kVw2KjjnBMh7WfxoP8=
