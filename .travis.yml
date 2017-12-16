@@ -8,12 +8,11 @@ before_install:
   - docker build --build-arg PYHRF_BRANCH=$TRAVIS_BRANCH --build-arg DEPLOY=true -t pyhrf/pyhrf docker-pyhrf
 
 script:
-  - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf \
-      bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf && cp .coverage /output"
+  - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf /bin/bash -c "nosetests --with-doctest --with-coverage --cover-package=pyhrf -v -s pyhrf && cp .coverage /output"
 
 after_success:
   - docker run --rm -e TRAVIS=$TRAVIS -e TRAVIS_JOB_ID=$TRAVIS_JOB_ID -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cd /output; coveralls"
-  - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cp -r /pyhrf/dist /output"
+  - docker run --rm -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf /bin/bash -c "cp -r /pyhrf/dist /output"
   - if [ -n "$TRAVIS_TAG" ]; then
       docker tag pyhrf/pyhrf pyhrf/pyhrf:$TRAVIS_TAG;
       docker login -u $DOCKER_USER -p $DOCKER_PASS;
@@ -25,6 +24,7 @@ deploy:
   user: pyhrf
   password:
     secure: ObKoWykbyp2VrUiIQWgFg842+6a40k+n4SP6mXDfJbEiN5qXYKHrJp12d7RXQ7kw+rUqiCsXqPv+mZya3oLiOtOXurnq8XpqqiT9iFMmfmGsY+YICJf0B1SNnctlZ9wZOPThn8jroKYNn5FsjDFn8VYLvIIdeXUEjlBuL6qMw8Y=
+  distributions: "sdist bdist_wheel"
   skip_cleanup: true
   on:
     tags: true
