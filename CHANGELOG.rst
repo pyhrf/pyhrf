@@ -13,24 +13,19 @@ Fixes
 - Fix the float index error from the ``vem_tools.py`` script
 - Fix the cosine drift problem caused by the latest version of ``numpy``
 - Fix the error caused by trying to compute the `log(0)` in the entropy function
+- Fix the bug of the `free_energy_computation` function when the HRF is not estimated.
 
 
 Enhancements
 ------------
 
 - Requirements file (``requirements.txt``) for developing and installation
-- PyHRF visualization tool based on the `NeuroElf <http://neuroelf.net>`_ tool
 - Improvement of the installation script (``setup.py``)
 
   + Auto-install of dependencies using ``pip`` and the ``requirements.txt`` file.
   + Python version 2.7.x required
   + C extensions are only compiled when PyHRF is built or installed. The same for the installation of the dependencies
   + The outputs of the installation script are colored in order to highlight important information
-
-- Creation of a `Dockerfile <https://github.com/pyhrf/docker-pyhrf>`_
-  + Sharing the docker image on Docker Hub (`pyrhf/pyhrf`)
-  + The CI service (``travis``) runs the tests and the coveralls using the docker image
-  + The releases are now generated using and creating a docker image
 
 - Documentation
 
@@ -40,8 +35,41 @@ Enhancements
   + Extension of the documentation with the installation steps for different GNU/Linux distributions
   + Extension of the documentation with a developer section
   + Deprecated sections of the documentation are hidden
+
+
+New
+---
+
+- PyHRF visualization tool based on the `NeuroElf <http://neuroelf.net>`_ tool
+- Creation of a `Dockerfile <https://github.com/pyhrf/docker-pyhrf>`_
+
+  + Sharing the docker image on Docker Hub (`pyrhf/pyhrf`)
+  + The CI service (``travis``) runs the tests and the coveralls using the docker image
+  + The releases are now generated using and creating a docker image
+
+- Documentation
+
   + Using a responsive, friendly and beautiful Sphinx theme (``sphinx_bootstrap_theme``)
   + Using `readthedocs <https://readthedocs.org/projects/pyhrf/>`_ to build automatically the documentation
+
+
+Optimizations
+-------------
+
+- Optimization of some VEM methods
+
+  + ``pyhrf.vbjde.vem_tools.create_conditions``
+  + ``pyhrf.vbjde.vem_tools.create_neighbours``
+  + ``pyhrf.vbjde.vem_tools.poly_drifts_basis``
+  + ``pyhrf.vbjde.vem_tools.cosine_drifts_basis``
+  + ``pyhrf.vbjde.vem_tools.norm1_constraint``
+  + ``pyhrf.vbjde.vem_tools.nrls_expectation``
+  + ``pyhrf.vbjde.vem_tools.hrf_entropy``
+  + ``pyhrf.vbjde.vem_tools.two_gamma_hrf``
+  + ``pyhrf.vbjde.vem_tools.ppms_computation``
+  + ``pyhrf.vbjde.vem_tools.computeFit``
+  + ``pyhrf.vbjde.vem_tools.contrasts_mean_var_classes``
+  + ``pyhrf.vbjde.vem_bold.jde_vem_bold``
 
 
 0.4.3 (2016/07/08)
