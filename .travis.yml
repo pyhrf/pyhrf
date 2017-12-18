@@ -13,11 +13,11 @@ script:
 after_success:
   - docker run --rm -e TRAVIS=$TRAVIS -e TRAVIS_JOB_ID=$TRAVIS_JOB_ID -v ${PWD}:/output:rw -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf bash -c "cd /output; coveralls"
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
-  - $TRAVIS_BRANCH == "master" && docker push pyhrf/pyhrf
+  - if [ $TRAVIS_BRANCH == "master" ]; then docker push pyhrf/pyhrf ; fi
   - if [ -n "$TRAVIS_TAG" ]; then
       docker tag pyhrf/pyhrf pyhrf/pyhrf:$TRAVIS_TAG;
       docker push pyhrf/pyhrf:$TRAVIS_TAG;
-      docker run --rm -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf /bin/bash -c "twine upload -u $TWINE_USERNAME -p $TWINE_PASSWORD /dist/*.tar.gz"
+      docker run --rm -e LOCAL_USER_ID=`id -u $USER` pyhrf/pyhrf /bin/bash -c "twine upload -u $TWINE_USERNAME -p $TWINE_PASSWORD /dist/*.tar.gz";
     fi
 
 env:
