@@ -86,7 +86,7 @@ def setup_package():
 
     metadata = dict(
         name='pyhrf',
-        version='0.4.4',
+        version='0.5.0',
         description='Analysis of fMRI data based on the study of hemodynamics',
         long_description=long_description,
         maintainer='Jaime Arias',
