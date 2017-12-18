@@ -86,7 +86,7 @@ def setup_package():
 
     metadata = dict(
         name='pyhrf',
-        version='0.4.3',
+        version='0.4.4',
         description='Analysis of fMRI data based on the study of hemodynamics',
         long_description=long_description,
         maintainer='Jaime Arias',
@@ -99,18 +99,14 @@ def setup_package():
             "Environment :: Console",
             "Intended Audience :: Science/Research",
             "License :: OSI Approved",
-            "Operating System :: POSIX :: Linux",
             "Programming Language :: Python :: 2",
-            "Programming Language :: Python :: 2.6",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 2 :: Only",
             "Programming Language :: C",
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering",
             "Topic :: Scientific/Engineering :: Mathematics",
             "Topic :: Scientific/Engineering :: Medical Science Apps.",
         ],
-        platforms=["Linux"],
         **extra_setuptools_args
     )
 
