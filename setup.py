@@ -44,7 +44,8 @@ def setup_package():
             from pip._internal.req import parse_requirements
         except ImportError: # for pip <= 9.0.3
             from pip.req import parse_requirements
-
+        import pip
+        
         # Dependencies for building C Extensions
         try:
             dependencies = list(parse_requirements('requirements.txt'))
