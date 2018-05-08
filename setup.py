@@ -40,14 +40,18 @@ def setup_package():
     else:
         from setuptools import find_packages, Extension
         from glob import glob
+        try: # for pip >= 10
+            from pip._internal.req import parse_requirements
+        except ImportError: # for pip <= 9.0.3
+            from pip.req import parse_requirements
         import pip
-
+        
         # Dependencies for building C Extensions
         try:
-            dependencies = list(pip.req.parse_requirements('requirements.txt'))
+            dependencies = list(parse_requirements('requirements.txt'))
         except TypeError:
             # new versions of pip requires a session
-            dependencies = list(pip.req.parse_requirements('requirements.txt', session=pip.download.PipSession()))
+            dependencies = list(parse_requirements('requirements.txt', session=pip.download.PipSession()))
 
         dependencies = [str(package.req) for package in dependencies]
 
