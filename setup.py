@@ -48,7 +48,7 @@ def setup_package():
         
         # Dependencies for building C Extensions
         try:
-            dependencies = list(parse_requirements('requirements.txt'))
+            dependencies = list(parse_requirements('requirements.txt', session=False))
         except TypeError:
             # new versions of pip requires a session
             dependencies = list(parse_requirements('requirements.txt', session=pip.download.PipSession()))
