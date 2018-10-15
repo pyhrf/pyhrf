@@ -399,7 +399,7 @@ def connected_components_iter(g):
         g = graph_pygraph(g)
         bfs = bfs_pygraph
     else:
-        logger.warning('Warning: pygraph not available ... fall back to slow BFS function')
+        logger.info('Warning: pygraph not available ... fall back to slow BFS function')
         bfs = breadth_first_search
 
     visited = np.zeros(len(g), dtype=bool)
@@ -418,7 +418,7 @@ def connected_components(g):
         g = graph_pygraph(g)
         bfs = bfs_pygraph
     else:
-        logger.warning('Warning: pygraph not available ... fall back to slow BFS function')
+        logger.info('Warning: pygraph not available ... fall back to slow BFS function')
         bfs = breadth_first_search
 
     if 1:

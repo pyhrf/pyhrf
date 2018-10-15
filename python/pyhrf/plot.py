@@ -103,7 +103,7 @@ def plot_func_slice(func_slice_data, anatomy=None, parcellation=None,
     anat_cmap = plt.get_cmap('gray')
 
     plt.figure()
-    plt.hold(True)
+    # plt.hold(True) Deprecated function, no longer necessary to call it. 
 
     if anatomy is not None:
         ax = plt.imshow(mix_cmap(func_masked, func_cmap,
@@ -115,13 +115,13 @@ def plot_func_slice(func_slice_data, anatomy=None, parcellation=None,
         ax = plt.imshow(func_masked, cmap=func_cmap,
                         norm=func_norm,
                         interpolation='nearest')
-    ax.get_axes().set_axis_off()
+    ax.axes.set_axis_off()
 
 
     if resolution is not None:
         ratio = resolution[0] / resolution[1]
         print 'Set aspect ratio to:', ratio
-        ax.get_axes().set_aspect(ratio)
+        ax.axes.set_aspect(ratio)
 
     if parcellation is not None:
         labs = np.unique(parcellation)
@@ -187,7 +187,7 @@ def plot_anat_parcel_func_fusion(anat, func, parcel, parcel_col='white',
                                  norm1=func_norm,
                                  norm2=anat_norm, blend_r=.5),
                         interpolation='nearest')
-        ax.get_axes().set_axis_off()
+        ax.axes.set_axis_off()
 
     if 0:
         plt.imshow(func_rebin_ma*anat, interpolation='nearest',

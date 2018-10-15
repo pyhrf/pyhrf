@@ -10,7 +10,11 @@ from time import strftime, localtime, time
 
 import numpy as np
 from numpy.random import rand, randint, permutation
-from nipy.labs.spatial_models.parcel_io import fixed_parcellation
+
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", FutureWarning)
+    from nipy.labs.spatial_models.parcel_io import fixed_parcellation
 
 try:
     from nipy.algorithms.clustering.clustering import voronoi

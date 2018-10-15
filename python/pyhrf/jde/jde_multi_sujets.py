@@ -769,7 +769,7 @@ class HRF_Sampler(GibbsSamplerVariable):
         logger.info(self.finalValue)
 
     def getScaleFactor(self):
-        if self.finalValue == None:
+        if self.finalValue is None:
             self.setFinalValue()
         # Use amplitude :
         #scaleF = self.finalValue.max()-self.finalValue.min()
@@ -987,7 +987,7 @@ class HRFVarianceSubjectSampler(GibbsSamplerVariable):
                 raise Exception('Needed a true value for %s init but '
                                 'None defined' % self.name)
 
-        if self.currentValue == None:
+        if self.currentValue is None:
             if not self.sampleFlag and self.dataInput.simulData != None \
                     and self.dataInput.simulData.hrf.hrfParams.has_key('rh'):
                 simulRh = self.dataInput.simulData.hrf.hrfParams['rh']
@@ -1313,7 +1313,7 @@ class HRF_Group_Sampler(GibbsSamplerVariable):
         logger.info(self.finalValue)
 
     def getScaleFactor(self):
-        if self.finalValue == None:
+        if self.finalValue is None:
             self.setFinalValue()
         # Use amplitude :
         #scaleF = self.finalValue.max()-self.finalValue.min()
@@ -2325,7 +2325,7 @@ class BOLDSampler_MultiSujInput:
         logger.debug(availableDataIndex)
 
         # suppose same nb of scans for all subjects
-        lgt = (self.nySubj[0] + 2) * osf
+        lgt = int((self.nySubj[0] + 2) * osf)
         matH = np.zeros((lgt, self.nbConditions), dtype=int)
         for j in xrange(self.nbConditions):
             matH[:len(parData[j]), j] = parData[j][:]

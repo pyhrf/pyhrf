@@ -29,4 +29,4 @@ from test_jde_vem_bold import *
 from test_ndarray import *
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
