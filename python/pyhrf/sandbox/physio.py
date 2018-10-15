@@ -753,6 +753,8 @@ def  buildOrder1FiniteDiffMatrix_central(size,dt):
     """
     from scipy.linalg import toeplitz
 
+    size = int(size)
+
     r = np.zeros(size)
     c = np.zeros(size)
     r[1] = .5
@@ -811,7 +813,7 @@ def linear_rf_operator(rf_size, phy_params, dt, calculating_brf=False):
 
     from pyhrf.sandbox.physio import buildOrder1FiniteDiffMatrix_central
     D = buildOrder1FiniteDiffMatrix_central(rf_size,dt) #numpy matrix
-    eye = np.matrix(np.eye(rf_size))  #numpy matrix
+    eye = np.matrix(np.eye(int(rf_size)))  #numpy matrix
 
     A3 = tau_m_inv*( (D + (alpha_w_inv*tau_m_inv)*eye).I )
     A4 = c * (D+tau_m_inv*eye).I - (D+tau_m_inv*eye).I*((1-alpha_w)*alpha_w_inv* tau_m_inv**2)* (D+alpha_w_inv*tau_m_inv*eye).I

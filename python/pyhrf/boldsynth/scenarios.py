@@ -352,6 +352,7 @@ def get_bold_shape(stim_induced_signal, dsf):
 
 
 def calc_asl_shape(bold_stim_induced, dsf):
+    dsf = int(dsf)
     return bold_stim_induced[0:-1:dsf, :].shape
 
 
@@ -795,6 +796,7 @@ def create_asl_from_stim_induced(bold_stim_induced, perf_stim_induced,
     add noise and drift (nuisance signals) which has to be at downsampled
     temporal resolution.
     """
+    dsf = int(dsf)
     bold = bold_stim_induced[0:-1:dsf, :].copy()
     perf = np.dot(ctrl_tag_mat, (perf_stim_induced[0:-1:dsf, :].copy() +
                                  perf_baseline))

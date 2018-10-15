@@ -10,7 +10,11 @@ import logging
 
 import scipy as sp
 
-from nipy.labs.glm import glm
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", FutureWarning)
+    from nipy.labs.glm import glm
+
 from nipy.modalities.fmri import design_matrix as dm
 try:
     from nipy.modalities.fmri.experimental_paradigm import \

@@ -876,8 +876,8 @@ class NRLSampler(xmlio.XmlInitable, GibbsSamplerVariable):
         for c in xrange(self.nbClasses):
             ivc = self.voxIdx[c][j]
             logger.info('nrl %s cond %d = %1.3f(%1.3f)', self.CLASS_NAMES[c], j,
-                        self.currentValue[c, ivc].mean(),
-                        self.currentValue[j, ivc].std())
+                self.currentValue[c, ivc].mean() if len(self.currentValue[c, ivc]) else np.nan,
+                self.currentValue[j, ivc].std()  if len(self.currentValue[j, ivc]) else np.nan)
 
     def sampleNrlsParallel(self, varXh, rb, h, varLambda, varCI, varCA,
                            meanCA, gTQg, variables):
